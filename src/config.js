@@ -1,5 +1,5 @@
 /**
- * Configuration partagée d'AR Football Tactics.
+ * Configuration partagée de Football Simulator.
  *
  * Toutes les longueurs de la scène sont en mètres. Le terrain miniature mesure
  * environ 60 × 39 cm (cahier des charges, §1.4) : il pourra être posé tel quel

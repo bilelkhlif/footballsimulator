@@ -1,4 +1,4 @@
-# AR Football Tactics
+# Football Simulator
 
 Tableau tactique de football en réalité augmentée, accessible depuis un simple lien web.
 

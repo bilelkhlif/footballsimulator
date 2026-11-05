@@ -1,5 +1,5 @@
 /**
- * Point d'entrée d'AR Football Tactics.
+ * Point d'entrée de Football Simulator.
  * Sprint 1 : vue 3D hors AR du terrain, des deux équipes et du ballon.
  */
 import { createSceneContext } from './scene.js';

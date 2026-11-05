@@ -1,6 +1,6 @@
 # Architecture
 
-AR Football Tactics s'exécute entièrement dans le navigateur : des fichiers statiques servis en HTTPS par GitHub Pages, sans serveur applicatif ni étape de compilation.
+Football Simulator s'exécute entièrement dans le navigateur : des fichiers statiques servis en HTTPS par GitHub Pages, sans serveur applicatif ni étape de compilation.
 
 ## Modules
 

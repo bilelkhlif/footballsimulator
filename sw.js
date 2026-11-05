@@ -1,5 +1,5 @@
 /**
- * Service Worker d'AR Football Tactics (cahier §2.3 et §3.3).
+ * Service Worker de Football Simulator (cahier §2.3 et §3.3).
  * Il met l'application en cache à l'installation, pour qu'elle se lance
  * hors-ligne après une première visite.
  *
@@ -11,7 +11,7 @@
  * CACHE_VERSION quand une bibliothèque ou une ressource change.
  */
 const CACHE_VERSION = 1;
-const CACHE_PREFIX = 'ar-football-tactics-';
+const CACHE_PREFIX = 'football-simulator-';
 const CACHE_NAME = `${CACHE_PREFIX}v${CACHE_VERSION}`;
 
 /** Fichiers nécessaires au lancement hors-ligne, relatifs à l'emplacement de ce fichier. */
