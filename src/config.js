@@ -30,6 +30,32 @@ export const BOARD_WIDTH = (REAL_PITCH.width + 2 * PITCH_RUNOFF) * PITCH_SCALE;
 /** Épaisseur du plateau sous le gazon, en mètres. */
 export const BOARD_THICKNESS = 0.008;
 
+/**
+ * Dimensions d'un pion joueur, en mètres. Elles sont exagérées par rapport à
+ * l'échelle du terrain pour que les joueurs restent visibles et sélectionnables.
+ */
+export const PLAYER_SIZE = Object.freeze({
+  radius: 0.0065,
+  height: 0.028,
+  hitboxRadius: 0.014, // zone de sélection élargie (cahier, §6.3), utilisée au sprint 5
+  labelSize: 0.014,
+});
+
+/** Rayon du ballon, en mètres. */
+export const BALL_RADIUS = 0.0042;
+
+/**
+ * Équipes : l'équipe bleue attaque vers +X, l'équipe rouge vers -X.
+ * `cssColor` sert aux textures dessinées sur canvas et à l'interface.
+ */
+export const TEAMS = Object.freeze({
+  blue: Object.freeze({ id: 'blue', label: 'Bleus', color: 0x2f55d4, cssColor: '#2f55d4', attacksPositiveX: true }),
+  red: Object.freeze({ id: 'red', label: 'Rouges', color: 0xd63b2f, cssColor: '#d63b2f', attacksPositiveX: false }),
+});
+
+/** Formations affichées au démarrage : celles du scénario de démonstration (cahier, §4.1). */
+export const DEFAULT_FORMATIONS = Object.freeze({ blue: '4-3-3', red: '4-4-2' });
+
 /** Couleurs de la scène hors AR et du terrain. */
 export const SCENE_COLORS = Object.freeze({
   background: 0x101915,
