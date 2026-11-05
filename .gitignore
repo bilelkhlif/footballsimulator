@@ -1,0 +1,15 @@
+# Dépendances et outils locaux
+node_modules/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Éditeurs
+.vscode/
+.idea/
+*.swp
+
+# Journaux
+*.log
