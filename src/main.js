@@ -11,6 +11,7 @@ import { getFormation } from './formations.js';
 import { DEFAULT_FORMATIONS, TEAMS } from './config.js';
 import { installEmulatorIfRequested } from './dev-emulator.js';
 import { isImmersiveArSupported, showXrStatus } from './xr-support.js';
+import { registerServiceWorker } from './pwa.js';
 
 /**
  * Construit la scène, branche l'interface et lance la boucle de rendu.
@@ -74,6 +75,7 @@ function showStartupError(error) {
 try {
   init();
   detectAugmentedReality();
+  registerServiceWorker();
 } catch (error) {
   showStartupError(error);
 }
