@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <!-- Métadonnées : encodage, affichage mobile plein écran et description -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AR Football Tactics</title>
+  <meta name="description" content="Tableau tactique de football en réalité augmentée, dans le navigateur.">
+  <meta name="theme-color" content="#0f4a2a">
+
+  <!-- Feuille de style principale -->
+  <link rel="stylesheet" href="src/styles.css">
+
+  <!-- Carte d'import : « three » pointe vers la copie locale, servie depuis la même origine -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./src/vendor/three/build/three.module.js",
+        "three/addons/": "./src/vendor/three/examples/jsm/"
+      }
+    }
+  </script>
+
+  <!-- Point d'entrée JavaScript (module, exécuté après l'analyse de la page) -->
+  <script type="module" src="src/main.js"></script>
+</head>
+<body>
+  <!-- Zone de rendu 3D : le canvas three.js y est inséré -->
+  <main id="scene-container" aria-label="Terrain de football en 3D"></main>
+
+  <!-- Interface superposée ; elle servira de racine au DOM Overlay en AR (sprint 2) -->
+  <div id="overlay">
+    <!-- Bandeau supérieur : nom de l'application -->
+    <header class="topbar">
+      <h1 class="brand">AR Football Tactics</h1>
+    </header>
+
+    <!-- Bandeau inférieur : aide aux gestes et recentrage de la vue -->
+    <footer class="bottombar">
+      <p class="hint">Glissez pour tourner, pincez pour zoomer.</p>
+      <button id="reset-view" class="button" type="button">Recentrer</button>
+    </footer>
+  </div>
+
+  <!-- Écran de chargement, masqué dès que la scène est prête -->
+  <div id="loader" class="loader" role="status">Chargement du terrain…</div>
+
+  <!-- Message affiché si JavaScript est désactivé -->
+  <noscript>
+    <p class="noscript">AR Football Tactics a besoin de JavaScript pour afficher le terrain.</p>
+  </noscript>
+</body>
+</html>
