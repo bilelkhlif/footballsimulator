@@ -9,6 +9,8 @@ import { createTeam } from './team.js';
 import { createBall } from './ball.js';
 import { getFormation } from './formations.js';
 import { DEFAULT_FORMATIONS, TEAMS } from './config.js';
+import { installEmulatorIfRequested } from './dev-emulator.js';
+import { isImmersiveArSupported, showXrStatus } from './xr-support.js';
 
 /**
  * Construit la scène, branche l'interface et lance la boucle de rendu.
@@ -42,6 +44,22 @@ function init() {
 }
 
 /**
+ * Détecte la réalité augmentée, avec l'émulateur IWER si l'adresse le demande,
+ * et affiche le résultat dans le badge d'état.
+ */
+async function detectAugmentedReality() {
+  const statusElement = document.getElementById('xr-status');
+  showXrStatus(statusElement, 'checking');
+  const emulated = await installEmulatorIfRequested();
+  const supported = await isImmersiveArSupported();
+  if (!supported) {
+    showXrStatus(statusElement, 'unsupported');
+  } else {
+    showXrStatus(statusElement, emulated ? 'emulated' : 'supported');
+  }
+}
+
+/**
  * Remplace l'écran de chargement par un message si la scène ne peut pas démarrer
  * (WebGL indisponible, par exemple).
  * @param {Error} error
@@ -55,6 +73,7 @@ function showStartupError(error) {
 
 try {
   init();
+  detectAugmentedReality();
 } catch (error) {
   showStartupError(error);
 }

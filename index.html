@@ -30,9 +30,12 @@
 
   <!-- Interface superposée ; elle servira de racine au DOM Overlay en AR (sprint 2) -->
   <div id="overlay">
-    <!-- Bandeau supérieur : nom de l'application et formations en place -->
+    <!-- Bandeau supérieur : nom de l'application, état de l'AR et formations en place -->
     <header class="topbar">
-      <h1 class="brand">AR Football Tactics</h1>
+      <div class="topbar__group">
+        <h1 class="brand">AR Football Tactics</h1>
+        <span id="xr-status" class="status" data-state="checking" role="status">Vérification de l’AR…</span>
+      </div>
       <ul class="teams" aria-label="Formations en place">
         <li class="team-chip team-chip--blue">Bleus <strong id="formation-blue" data-formation></strong></li>
         <li class="team-chip team-chip--red">Rouges <strong id="formation-red" data-formation></strong></li>
