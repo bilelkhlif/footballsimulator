@@ -1,16 +1,38 @@
-# Football Simulator
+<p align="center">
+  <img src="docs/images/banner.jpg" alt="Football Simulator : un terrain de football en 3D, Bleus en 4-3-3 et Rouges en 4-4-2" width="100%">
+</p>
 
-Tableau tactique de football en réalité augmentée, accessible depuis un simple lien web.
+<p align="center">
+  <b>Tableau tactique de football en réalité augmentée, ouvert depuis un simple lien.</b><br>
+  Application web progressive · WebXR · three.js r186 · SUP'COM, module Réalité Étendue, 2026–2027
+</p>
 
-Application web progressive (PWA) construite avec WebXR et three.js : elle pose un mini-terrain 3D d'environ 60 × 40 cm sur une vraie table, à travers la caméra d'un smartphone Android. Sans AR, elle s'utilise en vue 3D.
+---
 
-Projet du module de Réalité Étendue, SUP'COM, département SIA, année 2026–2027.
+## En bref
+
+- **Le besoin.** Les entraîneurs amateurs expliquent la tactique sur un tableau blanc : une vue de dessus en 2D, des déplacements difficiles à montrer, aucun partage à distance.
+- **Notre réponse.** Une PWA qui pose un mini-terrain 3D de 60 × 39 cm sur une vraie table, à travers la caméra d'un smartphone Android, depuis une URL ou un QR code.
+- **Où nous en sommes.** Le sprint 1 est livré : terrain et 22 joueurs en 3D hors AR, formations, application installable et utilisable hors-ligne.
+
+## Aperçu
+
+<table>
+  <tr>
+    <td width="72%"><img src="docs/images/app-desktop.jpg" alt="Vue 3D sur ordinateur : terrain, Bleus en 4-3-3, Rouges en 4-4-2 et badge d'état de l'AR"></td>
+    <td width="28%"><img src="docs/images/app-mobile.png" alt="L'application sur mobile, terrain vu depuis le but bleu"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Vue 3D hors AR sur ordinateur : rotation, zoom et recentrage</sub></td>
+    <td align="center"><sub>Sur mobile, cadrage en portrait</sub></td>
+  </tr>
+</table>
 
 ## Avancement
 
 | Sprint | Contenu | État |
 | --- | --- | --- |
-| S1 | Dépôt, structure PWA, scène three.js : terrain et joueurs visibles hors AR | Terminé |
+| S1 | Dépôt, structure PWA, scène three.js : terrain et joueurs visibles hors AR | Livré |
 | S2 | Session `immersive-ar`, `XRWebGLLayer`, espace de référence `local-floor` | À faire |
 | S3 | Hit testing, réticule, pose du terrain par un tap | À faire |
 | S4 | Changement de formation (Strategy), deux équipes, ballon, boutons HTML | À faire |
@@ -18,6 +40,46 @@ Projet du module de Réalité Étendue, SUP'COM, département SIA, année 2026�
 | S6 | Service Worker finalisé, optimisation mobile, tests, vidéo ; bonus : animation | À faire |
 
 Le compte rendu du sprint 1 est dans [docs/sprint-1.md](docs/sprint-1.md).
+
+## État de l'art
+
+> [!TIP]
+> **Aucune solution recensée ne réunit les trois propriétés visées** : un terrain en réalité augmentée posé sur une vraie table, un accès par simple lien web et la gratuité. Le projet occupe un espace libre, et des briques existantes réduisent le risque technique.
+
+<img src="docs/images/etat-de-l-art-positionnement.jpg" alt="Carte de positionnement : seul Football Simulator combine AR immersive et accès par lien web" width="100%">
+
+### Ce que montre la veille
+
+- **Tableaux tactiques.** Les trois tableaux au code public (boardx, soccer-tactics-board, Sports Tactics Board) sont en 2D. La 3D n'existe que dans des produits commerciaux, et aucun ne pose le terrain sur une vraie table.
+- **Recherche.** Dans l'étude XRTactics (2024), 12 joueurs de Division I sur 17 préfèrent l'AR mobile au tableau classique ; les casques sont écartés pour le confort et la praticité.
+- **Briques techniques.** three.js est le seul socle qui coche tous nos critères, et son exemple `webxr_ar_hittest` couvre déjà BF1 à BF3.
+- **Navigateurs.** WebXR n'est pris en charge que par Chrome Android et Samsung Internet ; Safari sur iOS ne l'a pas.
+- **Données.** SkillCorner publie sous licence MIT le suivi de 10 matchs tiré de la vidéo TV, de quoi rejouer une vraie action sur la table (bonus BF9).
+
+<details>
+<summary><b>Comparatif des approches techniques</b></summary>
+<br>
+<img src="docs/images/etat-de-l-art-briques.jpg" alt="Matrice : three.js, A-Frame, Babylon.js, model-viewer, 8th Wall et SDK natifs comparés sur six critères" width="100%">
+</details>
+
+<details>
+<summary><b>Tableaux tactiques existants</b></summary>
+<br>
+<img src="docs/images/etat-de-l-art-tableaux.jpg" alt="Sept tableaux tactiques comparés : plateforme, rendu, licence ou prix" width="100%">
+</details>
+
+### Ce que nous réutilisons
+
+| Brique | Licence | Besoin couvert | Sprint |
+| --- | --- | --- | --- |
+| IWER 2.7.0, émulateur WebXR (Meta) | MIT | Tests sur PC | S1, intégré |
+| Exemple `webxr_ar_hittest` (three.js) | MIT | BF1 à BF3 | S2–S3 |
+| Échantillon `hit-test-anchors` (Immersive Web) | MIT | Ancrage du terrain | S3 |
+| 13 formations de boardx | MIT | BF4 | S4 |
+| Format d'étapes et interpolation `easeInOutQuad` | Idée seulement | BF9 | S6 |
+| Extrait de match SkillCorner | MIT | BF9 (bonus) | S6 |
+
+Le rapport complet, rédigé en LaTeX, est dans [docs/etat-de-l-art/etat_de_l_art.pdf](docs/etat-de-l-art/etat_de_l_art.pdf) : 12 pages, 10 tableaux et 29 références, avec sa source dans le même dossier.
 
 ## Lancer l'application en local
 
@@ -66,7 +128,11 @@ WebXR exige HTTPS. Deux possibilités :
 │   ├── styles.css       Styles de l'interface
 │   └── vendor/three/    three.js r186 (licence MIT)
 ├── assets/icons/        Icônes de l'application
-└── docs/                Architecture et comptes rendus de sprint
+└── docs/
+    ├── architecture.md  Modules, graphe de scène, repère et mise en cache
+    ├── sprint-1.md      Compte rendu du sprint 1
+    ├── etat-de-l-art/   Rapport d'état de l'art (PDF et source LaTeX)
+    └── images/          Captures et illustrations de ce README
 ```
 
 L'architecture est détaillée dans [docs/architecture.md](docs/architecture.md).
