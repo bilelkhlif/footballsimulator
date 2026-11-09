@@ -31,6 +31,8 @@ const APP_SHELL = [
   './src/xr-support.js',
   './src/dev-emulator.js',
   './src/pwa.js',
+  './src/events.js',
+  './src/xr-session.js',
   './src/vendor/three/build/three.module.js',
   './src/vendor/three/build/three.core.js',
   './src/vendor/three/examples/jsm/controls/OrbitControls.js',
