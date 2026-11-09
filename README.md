@@ -13,7 +13,7 @@
 
 - **Le besoin.** Les entraîneurs amateurs expliquent la tactique sur un tableau blanc : une vue de dessus en 2D, des déplacements difficiles à montrer, aucun partage à distance.
 - **Notre réponse.** Une PWA qui pose un mini-terrain 3D de 60 × 39 cm sur une vraie table, à travers la caméra d'un smartphone Android, depuis une URL ou un QR code.
-- **Où nous en sommes.** Le sprint 1 est livré : terrain et 22 joueurs en 3D hors AR, formations, application installable et utilisable hors-ligne.
+- **Où nous en sommes.** Les sprints 1 et 2 sont faits : terrain et 22 joueurs en 3D, formations, application installable et utilisable hors-ligne, et session AR immersive validée avec l'émulateur IWER. Le test sur téléphone reste à faire.
 
 ## Aperçu
 
@@ -28,18 +28,23 @@
   </tr>
 </table>
 
+<p align="center">
+  <img src="docs/images/sprint2-ar-iwer.jpg" alt="Session AR émulée avec IWER : le terrain est placé devant la vue, avec le bouton Quitter l'AR" width="100%">
+</p>
+<p align="center"><sub>Sprint 2 : session AR émulée sur PC avec IWER, le terrain placé devant la vue. Sur un téléphone, l'image de la caméra remplace le fond sombre.</sub></p>
+
 ## Avancement
 
 | Sprint | Contenu | État |
 | --- | --- | --- |
 | S1 | Dépôt, structure PWA, scène three.js : terrain et joueurs visibles hors AR | Livré |
-| S2 | Session `immersive-ar`, `XRWebGLLayer`, espace de référence `local-floor` | À faire |
+| S2 | Session `immersive-ar`, `XRWebGLLayer`, espace de référence `local-floor` | Fait, validé avec l'émulateur IWER ; test Android à faire |
 | S3 | Hit testing, réticule, pose du terrain par un tap | À faire |
 | S4 | Changement de formation (Strategy), deux équipes, ballon, boutons HTML | À faire |
 | S5 | Sélection et déplacement des joueurs (raycasting), flèches, annulation (Command) | À faire |
 | S6 | Service Worker finalisé, optimisation mobile, tests, vidéo ; bonus : animation | À faire |
 
-Le compte rendu du sprint 1 est dans [docs/sprint-1.md](docs/sprint-1.md). Le code est expliqué fichier par fichier, avec les questions probables du jury, dans [docs/guide-du-code.md](docs/guide-du-code.md).
+Les comptes rendus sont dans [docs/sprint-1.md](docs/sprint-1.md) et [docs/sprint-2.md](docs/sprint-2.md). Le code est expliqué fichier par fichier, avec les questions probables du jury, dans [docs/guide-du-code.md](docs/guide-du-code.md) et, pour la session AR, dans le compte rendu du sprint 2.
 
 ## État de l'art
 
@@ -95,29 +100,34 @@ python -m http.server 8080     # ou bien, puis ouvrir http://localhost:8080
 
 ### Tester l'AR sur PC
 
-Ajouter `?iwer` à l'adresse, par exemple `http://localhost:3000/?iwer`. L'émulateur IWER simule un casque Meta Quest 3 et le badge affiche « AR émulée (IWER) ».
+Ajouter `?iwer` à l'adresse, par exemple `http://127.0.0.1:8080/?iwer`. L'émulateur IWER simule un casque Meta Quest 3 et le badge affiche « AR émulée (IWER) ».
 
-- Une session `immersive-ar` s'ouvre, avec `local-floor` et les ancres.
+- « Entrer en AR » ouvre une session `immersive-ar` : le terrain apparaît devant la vue, et « Quitter l'AR » ramène la vue 3D.
+- IWER n'affiche pas d'image de caméra : le fond reste sombre.
 - Le hit test demande en plus le module `@iwer/sem`, à décider au sprint 3.
-- Le DOM Overlay n'est pas émulé : l'interface HTML se teste dans la vue 3D.
+- Ajouter aussi `&debug` expose les objets internes dans `window.__footballSimulator`, pour la console.
 
 ### Tester sur un téléphone Android
 
-WebXR exige HTTPS. Deux possibilités :
+Il faut un téléphone compatible ARCore, avec les Services Google Play pour la RA, et Chrome. WebXR exige HTTPS. Deux possibilités :
 
 1. **GitHub Pages** : Settings → Pages → Deploy from a branch → `main`, dossier `/ (root)`. L'application est alors servie à l'adresse `https://bilelkhlif.github.io/footballsimulator/`.
 2. **Redirection de port USB** : brancher le téléphone, ouvrir `chrome://inspect/#devices` sur le PC et rediriger le port du serveur local. Sur le téléphone, `http://localhost:<port>` est alors un contexte sécurisé.
 
+Le protocole de test sur le téléphone est dans [docs/sprint-2.md](docs/sprint-2.md#12-test-sur-android).
+
 ## Tests
 
-Les vérifications du sprint 1 faites sur PC sont automatisées. Prérequis : Node.js 18 ou plus et Google Chrome.
+Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou plus et Google Chrome.
 
 ```bash
-npm install    # une seule fois : installe playwright-core 1.64.1
-npm test       # 11 vérifications dans Chrome, sans interface
+npm install         # une seule fois : installe playwright-core 1.64.1
+npm test            # tests unitaires, puis tests de bout en bout
+npm run test:unit   # 28 tests unitaires, sans navigateur (doublures de WebXR)
+npm run test:e2e    # 18 vérifications dans Chrome, sans interface
 ```
 
-Elles couvrent le chargement sans erreur (bureau, mobile, sous-chemin comme sur GitHub Pages), les trois formations, le badge d'état de l'AR, le Service Worker et le rechargement hors-ligne, et l'ouverture d'une session `immersive-ar` émulée. Résultat le 9 novembre 2026 : 11 réussies sur 11. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans le [guide du code](docs/guide-du-code.md#6-tests).
+Les tests de bout en bout couvrent le chargement sans erreur (bureau, mobile, sous-chemin comme sur GitHub Pages), les trois formations, le badge d'état de l'AR, le Service Worker et le rechargement hors-ligne, et le parcours AR complet avec l'émulateur IWER : entrée, terrain devant la vue, sortie et retour à la vue 3D. Résultat le 10 novembre 2026 : 28 tests unitaires et 18 vérifications de bout en bout, tous réussis. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans le [guide du code](docs/guide-du-code.md#6-tests) et dans [docs/sprint-2.md](docs/sprint-2.md#10-tests).
 
 ## Arborescence
 
@@ -125,7 +135,7 @@ Elles couvrent le chargement sans erreur (bureau, mobile, sous-chemin comme sur 
 ├── index.html           Page, carte d'import et interface superposée
 ├── manifest.json        Manifeste de la PWA
 ├── sw.js                Service Worker (cache hors-ligne)
-├── package.json         Commandes npm start et npm test
+├── package.json         Commandes npm start, npm test, test:unit et test:e2e
 ├── ATTRIBUTION.md       Origine des ressources et usage de l'IA
 ├── src/
 │   ├── main.js          Point d'entrée : assemble la scène et l'interface
@@ -137,18 +147,25 @@ Elles couvrent le chargement sans erreur (bureau, mobile, sous-chemin comme sur 
 │   ├── team.js          Placement d'une équipe selon sa formation
 │   ├── ball.js          Ballon
 │   ├── xr-support.js    Détection de l'AR et badge d'état
+│   ├── xr-session.js    Session AR immersive, reliée à three.js (sprint 2)
+│   ├── events.js        Émetteur d'événements (Observer)
+│   ├── ar-view.js       Passage entre la vue 3D et la vue AR
+│   ├── ar-placement.js  Position du terrain devant l'utilisateur
+│   ├── render-loop.js   Boucle de rendu, en 3D comme en AR
 │   ├── dev-emulator.js  Émulateur IWER, en développement seulement
 │   ├── pwa.js           Enregistrement du Service Worker
 │   ├── styles.css       Styles de l'interface
 │   └── vendor/three/    three.js r186 (licence MIT)
 ├── tests/
 │   ├── serve.mjs        Serveur local (npm start), aussi utilisé par les tests
-│   └── run-tests.mjs    Tests de bout en bout dans Chrome (npm test)
+│   ├── run-tests.mjs    Tests de bout en bout dans Chrome (npm run test:e2e)
+│   └── unit/            Tests unitaires (npm run test:unit)
 ├── assets/icons/        Icônes de l'application
 └── docs/
     ├── guide-du-code.md Explication du code, fichier par fichier
     ├── architecture.md  Modules, graphe de scène, repère et mise en cache
     ├── sprint-1.md      Compte rendu du sprint 1
+    ├── sprint-2.md      Compte rendu du sprint 2 : session AR
     ├── etat-de-l-art/   Rapport d'état de l'art (PDF et source LaTeX)
     └── images/          Captures et illustrations de ce README
 ```

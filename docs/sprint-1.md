@@ -50,3 +50,5 @@ Pas encore testé : un vrai smartphone Android avec ARCore, puisqu'aucune foncti
 - Demander `immersive-ar` avec `local-floor`, et en options `hit-test`, `anchors` et `dom-overlay`, avec `#overlay` comme racine du DOM Overlay.
 - En AR, masquer la table (`table`) et le fond (`scene.background = null`), et désactiver les contrôles d'orbite.
 - Tester d'abord sur PC avec `?iwer`, puis sur Android via GitHub Pages.
+
+Réalisé au sprint 2, avec un écart : la session est ouverte par notre module `src/xr-session.js` plutôt que par `ARButton.js`, et `hit-test` et `anchors` attendent le sprint 3. Voir [sprint-2.md](sprint-2.md).

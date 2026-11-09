@@ -2,7 +2,7 @@
 
 Football Simulator s'exécute entièrement dans le navigateur : des fichiers statiques servis en HTTPS par GitHub Pages, sans serveur applicatif ni étape de compilation.
 
-Cette page résume l'architecture. Le détail de chaque fichier, avec les raisons des choix, est dans [guide-du-code.md](guide-du-code.md).
+Cette page résume l'architecture. Le détail de chaque fichier, avec les raisons des choix, est dans [guide-du-code.md](guide-du-code.md), et celui de la session AR dans [sprint-2.md](sprint-2.md).
 
 ## Modules
 
@@ -16,11 +16,16 @@ Cette page résume l'architecture. Le détail de chaque fichier, avec les raison
 | `src/team.js` | Place les 11 joueurs d'une équipe selon sa formation | |
 | `src/ball.js` | Ballon | |
 | `src/xr-support.js` | Détecte `immersive-ar` et met à jour le badge d'état | |
+| `src/xr-session.js` | Ouvre et ferme la session `immersive-ar`, la relie à three.js et signale son cycle de vie | Observer (sujet) |
+| `src/events.js` | Émetteur d'événements : abonnement, désabonnement, notification | Observer |
+| `src/ar-view.js` | Passe la scène de la vue 3D à la vue AR, et la restaure à la sortie | |
+| `src/ar-placement.js` | Calcule la position du terrain devant l'utilisateur | |
+| `src/render-loop.js` | Boucle de rendu : contrôles d'orbite hors AR, placement du terrain en AR | |
 | `src/dev-emulator.js` | Installe l'émulateur IWER quand l'adresse contient `?iwer` | |
 | `src/pwa.js`, `sw.js` | Installation de l'application et cache hors-ligne | |
 | `src/config.js` | Constantes partagées : dimensions, échelle, équipes, couleurs | |
 
-Les patrons Command (annulation, sprint 5) et Observer (interface abonnée aux événements de la scène, sprints 4 et 5) restent à mettre en place.
+Le patron Observer est en place depuis le sprint 2 : `main.js` s'abonne aux événements `sessionstart`, `sessionend` et `sessionerror` de la session AR. Le patron Command (annulation) arrive au sprint 5.
 
 ## Graphe de scène
 
