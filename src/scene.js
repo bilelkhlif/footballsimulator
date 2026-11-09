@@ -128,7 +128,8 @@ function createControls(camera, canvas) {
  * ou ancrer ce groupe déplace l'ensemble du terrain (cahier, §3.2).
  * @param {HTMLElement} container élément qui reçoit le canvas
  * @returns {{renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera,
- *   controls: OrbitControls, pitchGroup: THREE.Group, resetView: () => void}}
+ *   controls: OrbitControls, pitchGroup: THREE.Group, table: THREE.Mesh, resetView: () => void,
+ *   resize: () => void}}
  */
 export function createSceneContext(container) {
   const renderer = createRenderer(container);
@@ -139,7 +140,8 @@ export function createSceneContext(container) {
   const controls = createControls(camera, renderer.domElement);
 
   addLights(scene);
-  scene.add(createTable());
+  const table = createTable();
+  scene.add(table);
 
   const pitchGroup = new THREE.Group();
   pitchGroup.name = 'pitchGroup';
@@ -151,16 +153,26 @@ export function createSceneContext(container) {
   // Un redimensionnement simple (barre d'adresse mobile) garde la vue choisie ;
   // seul un changement d'orientation recadre le terrain.
   let wasPortrait = camera.aspect < 1;
-  window.addEventListener('resize', () => {
+
+  /**
+   * Adapte le rendu et la caméra à la taille du conteneur. Sans effet pendant une session AR :
+   * la taille du rendu vient alors de la session, et three.js la restaure à la sortie.
+   */
+  const resize = () => {
+    if (renderer.xr.isPresenting) {
+      return;
+    }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(container.clientWidth, container.clientHeight);
     camera.aspect = container.clientWidth / container.clientHeight;
     camera.updateProjectionMatrix();
-    renderer.setSize(container.clientWidth, container.clientHeight);
     const isPortrait = camera.aspect < 1;
     if (isPortrait !== wasPortrait) {
       wasPortrait = isPortrait;
       resetView();
     }
-  });
+  };
+  window.addEventListener('resize', resize);
 
-  return { renderer, scene, camera, controls, pitchGroup, resetView };
+  return { renderer, scene, camera, controls, pitchGroup, table, resetView, resize };
 }

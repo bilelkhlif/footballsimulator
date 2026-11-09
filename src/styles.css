@@ -73,9 +73,17 @@ body {
   pointer-events: auto;
 }
 
+/* ---- Session AR : l'interface reste au-dessus de la vue AR ----
+   Sur téléphone, le DOM Overlay s'en charge. Avec l'émulateur IWER sur PC, le canvas passe
+   dans un conteneur plein écran de z-index 999 : sans ce réglage, il cacherait les boutons. */
+body[data-xr="active"] #overlay {
+  z-index: 1000;
+}
+
 /* ---- Panneau translucide commun aux éléments de l'interface ---- */
 .brand,
-.hint {
+.hint,
+.notice {
   margin: 0;
   padding: 10px 14px;
   background: var(--color-panel);
@@ -192,6 +200,20 @@ body {
   color: var(--color-muted);
 }
 
+/* ---- Message d'échec de l'entrée en AR ---- */
+.notice {
+  font-size: 0.9rem;
+  color: #ffb4a8;
+}
+
+/* ---- Groupe de boutons du bandeau inférieur, aligné à droite même sur deux lignes ---- */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
 /* ---- Bouton : grande cible tactile, utilisable d'une seule main (cahier, §2.3) ---- */
 .button {
   min-height: var(--tap-size);
@@ -212,6 +234,23 @@ body {
 .button:focus-visible {
   outline: 3px solid var(--color-gold);
   outline-offset: 2px;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* ---- Bouton secondaire : panneau translucide, pour quitter l'AR ---- */
+.button--secondary {
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-border);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.button--secondary:hover {
+  background: rgba(12, 26, 18, 0.92);
 }
 
 /* ---- Écran de chargement et message d'erreur au démarrage ---- */
