@@ -1,11 +1,14 @@
 {
   "name": "football-simulator",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
+  "type": "module",
   "description": "Tableau tactique de football en réalité augmentée (PWA, WebXR, three.js).",
   "scripts": {
     "start": "node tests/serve.mjs",
-    "test": "node tests/run-tests.mjs"
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "node --test",
+    "test:e2e": "node tests/run-tests.mjs"
   },
   "devDependencies": {
     "playwright-core": "1.64.1"
