@@ -13,3 +13,11 @@ desktop.ini
 
 # Journaux
 *.log
+
+# Fichiers intermédiaires de LaTeX (docs/etat-de-l-art)
+*.aux
+*.toc
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Variante « maskable » : fond plein cadre, motif réduit à 80 % dans la zone sûre d'Android -->
+  <rect width="512" height="512" fill="#0f4a2a"/>
+  <g transform="translate(51.2 51.2) scale(0.8)">
+    <rect x="72" y="140" width="368" height="232" rx="20" fill="#1e7b45"/>
+    <g fill="none" stroke="#f3f7f2" stroke-width="9">
+      <rect x="96" y="162" width="320" height="188" rx="4"/>
+      <line x1="256" y1="162" x2="256" y2="350"/>
+      <circle cx="256" cy="256" r="38"/>
+    </g>
+    <g stroke="#ffffff" stroke-width="5">
+      <circle cx="168" cy="214" r="17" fill="#2f55d4"/>
+      <circle cx="168" cy="298" r="17" fill="#2f55d4"/>
+      <circle cx="344" cy="214" r="17" fill="#d63b2f"/>
+      <circle cx="344" cy="298" r="17" fill="#d63b2f"/>
+    </g>
+    <line x1="184" y1="290" x2="234" y2="240" stroke="#e3a81a" stroke-width="12" stroke-linecap="round"/>
+    <polygon points="252,222 242.8,249.6 224.4,231.2" fill="#e3a81a"/>
+  </g>
+</svg>
