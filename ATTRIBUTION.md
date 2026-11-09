@@ -15,13 +15,13 @@ Aucun modèle 3D, aucune texture et aucune police n'est importé d'une source ex
 
 *   **Asset :** Terrain (plateau, gazon rayé, lignes, buts et filets)
     *   **Source originale :** créé pour le projet, `src/pitch.js`
-    *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : pilotage et décisions par Bilel Khlif, code généré par Claude (section 4), d'après le cahier des charges de l'équipe
+    *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : pilotage et décisions par Bilel Khlif
     *   **Licence :** aucune licence choisie à ce jour (pas de fichier `LICENSE` dans le dépôt)
     *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet ; lignes tracées sur une texture canvas de 1808 × 1216 px selon les mesures des lois du jeu de l'IFAB
 
 *   **Asset :** Pions joueurs, numéros de maillot et ballon
     *   **Source originale :** créés pour le projet, `src/players.js` et `src/ball.js` (`CapsuleGeometry`, `SphereGeometry`, sprites dessinés sur canvas)
-    *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : pilotage et décisions par Bilel Khlif, code généré par Claude (section 4), d'après le cahier des charges de l'équipe
+    *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : pilotage et décisions par Bilel Khlif,
     *   **Licence :** aucune licence choisie à ce jour
     *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
 
@@ -97,7 +97,7 @@ Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle Claude Opu
 
 Les livrables du sprint 1 ont été coproduits par Bilel Khlif et Claude :
 
-*   **Bilel Khlif**, responsable du sprint 1 : pilotage des sessions, consignes et décisions, retours sur les livrables et validation finale ;
+*   **Bilel Khlif**, responsable du sprint 1 : pilotage des sessions, consignes et décisions, retours sur les livrables, revue du code à travers son guide et validation finale ;
 *   **Claude** : génération du code, des tests et des documents, à partir du cahier des charges de l'équipe et des consignes de Bilel Khlif.
 
 Contributions de Bilel Khlif :
@@ -109,7 +109,8 @@ Contributions de Bilel Khlif :
 5.  **Nom du projet** : choix de « Football Simulator », appliqué au code, au rapport, à la présentation et à la documentation.
 6.  **Documentation** : refonte du README dans le style des livrables, avec captures et synthèse de l'état de l'art ; demande d'une documentation et d'une explication complètes du code, d'où le guide du code et les tests automatisés.
 7.  **Conformité** : mise en place de ce fichier selon le modèle de l'enseignant, puis relecture intégrale le 9 novembre 2026.
-8.  **Validation** : pull request #1 validée et fusionnée dans `main` le 9 novembre 2026.
+8.  **Revue du code** : lecture et approbation du guide du code (`docs/guide-du-code.md`), qui détaille chaque fichier et chaque fonction, le 9 novembre 2026.
+9.  **Validation** : pull request #1 validée et fusionnée dans `main` le 9 novembre 2026.
 
 ### Détail par composant
 
@@ -119,7 +120,7 @@ Contributions de Bilel Khlif :
         *   `npm test` : 11 vérifications de bout en bout dans Chrome, que chacun peut rejouer : chargement sans erreur sur bureau (1280 × 800), sur mobile (390 × 844) et sous un sous-chemin comme sur GitHub Pages ; trois formations conformes au critère « 11 joueurs bien placés » du cahier (§4.3), avec les numéros 1 à 11, chaque joueur dans sa moitié et hors du rond central, et un écart minimal de 7,1 cm entre deux joueurs ; badge d'état de l'AR ; Service Worker et rechargement hors-ligne ; session `immersive-ar` émulée avec IWER. Résultat le 9 novembre 2026 : 11 réussies sur 11 ;
         *   le test des formations a lui-même été contrôlé par une erreur volontaire (deux joueurs du 4-3-3 avec le même numéro) : il échoue comme attendu ;
         *   ces vérifications ont révélé deux défauts, corrigés avant le commit : un cadrage de caméra qui coupait le terrain, et IWER qui refusait de s'installer sur Chrome PC ;
-        *   le fonctionnement de chaque fichier est expliqué dans `docs/guide-du-code.md`, avec les réponses aux questions probables du jury ;
+        *   revue du code par Bilel Khlif à partir du guide du code (`docs/guide-du-code.md`), qui explique chaque fichier et chaque fonction avec les réponses aux questions probables du jury : guide lu et approuvé le 9 novembre 2026 ;
         *   la pull request #1 a été validée par Bilel Khlif et fusionnée dans `main` le 9 novembre 2026 ;
         *   le test sur un téléphone Android est prévu au sprint 2, avec l'ouverture de la session AR (cahier §4.2) : aucune fonction AR n'est active au sprint 1.
 
