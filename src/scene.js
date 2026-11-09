@@ -19,7 +19,8 @@ const BOARD_CORNERS = [-1, 1].flatMap((sx) => [-1, 1].flatMap((sz) => [0, -BOARD
 
 /**
  * Crée le moteur de rendu WebGL et insère son canvas dans le conteneur.
- * Le fond transparent (alpha) servira à superposer la scène à la caméra en AR.
+ * Le fond transparent (alpha) servira à superposer la scène à la caméra en AR,
+ * et WebXR est activé pour les sessions AR immersives.
  * @param {HTMLElement} container élément qui reçoit le canvas
  * @returns {THREE.WebGLRenderer}
  */
@@ -27,6 +28,9 @@ function createRenderer(container) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth, container.clientHeight);
+  // WebXR activé : pendant une session AR immersive, three.js pilote lui-même
+  // la caméra (position du téléphone) et la boucle de rendu (cadence de la session).
+  renderer.xr.enabled = true;
   container.appendChild(renderer.domElement);
   return renderer;
 }

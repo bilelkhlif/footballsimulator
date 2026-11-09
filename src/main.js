@@ -38,7 +38,10 @@ function init() {
 
   // setAnimationLoop plutôt que requestAnimationFrame : la même boucle servira en session WebXR.
   renderer.setAnimationLoop(() => {
-    controls.update();
+    // En session AR, le téléphone déplace la caméra : les contrôles d'orbite ne doivent pas la modifier.
+    if (!renderer.xr.isPresenting) {
+      controls.update();
+    }
     renderer.render(scene, camera);
   });
   document.body.classList.add('is-ready');
