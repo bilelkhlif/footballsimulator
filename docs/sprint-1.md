@@ -17,6 +17,7 @@ Objectif du cahier des charges (§5.3) : structure du dépôt GitHub et de la PW
 - [x] Badge d'état de l'AR : disponible, émulée ou indisponible.
 - [x] Émulateur IWER activable avec `?iwer`.
 - [x] PWA : manifeste, icônes, Service Worker et lancement hors-ligne.
+- [x] Ajoutés le 9 novembre 2026 : tests automatisés (`npm test`) et [guide du code](guide-du-code.md).
 
 ## Tests réalisés
 
@@ -30,6 +31,8 @@ Chrome 156 sur PC, sans interface graphique, avec un serveur local.
 | Application servie sous un sous-chemin, comme sur GitHub Pages | Réussi |
 | Avec `?iwer` : ouverture d'une session `immersive-ar` avec `local-floor` et les ancres | Réussi |
 | Avec `?iwer` : hit test | Refusé, demande le module `@iwer/sem` |
+
+Les cinq premières lignes sont automatisées : `npm test` les rejoue, avec le badge d'état de l'AR en plus (11 vérifications, toutes réussies le 9 novembre 2026). Voir la partie « Tests » du [guide du code](guide-du-code.md#6-tests).
 
 Pas encore testé : un vrai smartphone Android avec ARCore, puisqu'aucune fonction AR n'est active, et la fluidité de 30 images par seconde, à mesurer au sprint 6.
 

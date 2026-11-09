@@ -39,7 +39,7 @@
 | S5 | Sélection et déplacement des joueurs (raycasting), flèches, annulation (Command) | À faire |
 | S6 | Service Worker finalisé, optimisation mobile, tests, vidéo ; bonus : animation | À faire |
 
-Le compte rendu du sprint 1 est dans [docs/sprint-1.md](docs/sprint-1.md).
+Le compte rendu du sprint 1 est dans [docs/sprint-1.md](docs/sprint-1.md). Le code est expliqué fichier par fichier, avec les questions probables du jury, dans [docs/guide-du-code.md](docs/guide-du-code.md).
 
 ## État de l'art
 
@@ -79,18 +79,19 @@ Le compte rendu du sprint 1 est dans [docs/sprint-1.md](docs/sprint-1.md).
 | Format d'étapes et interpolation `easeInOutQuad` | Idée seulement | BF9 | S6 |
 | Extrait de match SkillCorner | MIT | BF9 (bonus) | S6 |
 
-Le rapport complet, rédigé en LaTeX, est dans [docs/etat-de-l-art/etat_de_l_art.pdf](docs/etat-de-l-art/etat_de_l_art.pdf) : 12 pages, 10 tableaux et 29 références, avec sa source dans le même dossier.
+Le rapport complet, rédigé en LaTeX, est dans [docs/etat-de-l-art/etat_de_l_art.pdf](docs/etat-de-l-art/etat_de_l_art.pdf) : 12 pages, 9 tableaux, 3 figures et 29 références, avec sa source dans le même dossier.
 
 ## Lancer l'application en local
 
 Les modules JavaScript et le Service Worker exigent un serveur HTTP : ouvrir `index.html` directement depuis le disque ne fonctionne pas. Aucune installation ni compilation n'est nécessaire, three.js est copié dans `src/vendor/three/`.
 
 ```bash
-npx serve .                    # puis ouvrir http://localhost:3000
+npm start                      # avec Node.js 18 ou plus, puis ouvrir http://127.0.0.1:8080
+npx serve .                    # ou bien, puis ouvrir http://localhost:3000
 python -m http.server 8080     # ou bien, puis ouvrir http://localhost:8080
 ```
 
-Sous Windows, si le navigateur refuse les modules avec une erreur de type MIME, utiliser `npx serve`.
+`npm start` ne demande aucun `npm install` : il lance le petit serveur de `tests/serve.mjs`. Sous Windows, si le navigateur refuse les modules avec une erreur de type MIME, utiliser `npm start` ou `npx serve`.
 
 ### Tester l'AR sur PC
 
@@ -107,12 +108,25 @@ WebXR exige HTTPS. Deux possibilités :
 1. **GitHub Pages** : Settings → Pages → Deploy from a branch → `main`, dossier `/ (root)`. L'application est alors servie à l'adresse `https://bilelkhlif.github.io/footballsimulator/`.
 2. **Redirection de port USB** : brancher le téléphone, ouvrir `chrome://inspect/#devices` sur le PC et rediriger le port du serveur local. Sur le téléphone, `http://localhost:<port>` est alors un contexte sécurisé.
 
+## Tests
+
+Les vérifications du sprint 1 faites sur PC sont automatisées. Prérequis : Node.js 18 ou plus et Google Chrome.
+
+```bash
+npm install    # une seule fois : installe playwright-core 1.64.1
+npm test       # 11 vérifications dans Chrome, sans interface
+```
+
+Elles couvrent le chargement sans erreur (bureau, mobile, sous-chemin comme sur GitHub Pages), les trois formations, le badge d'état de l'AR, le Service Worker et le rechargement hors-ligne, et l'ouverture d'une session `immersive-ar` émulée. Résultat le 9 novembre 2026 : 11 réussies sur 11. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans le [guide du code](docs/guide-du-code.md#6-tests).
+
 ## Arborescence
 
 ```text
 ├── index.html           Page, carte d'import et interface superposée
 ├── manifest.json        Manifeste de la PWA
 ├── sw.js                Service Worker (cache hors-ligne)
+├── package.json         Commandes npm start et npm test
+├── ATTRIBUTION.md       Origine des ressources et usage de l'IA
 ├── src/
 │   ├── main.js          Point d'entrée : assemble la scène et l'interface
 │   ├── config.js        Dimensions, échelle, équipes et couleurs
@@ -127,8 +141,12 @@ WebXR exige HTTPS. Deux possibilités :
 │   ├── pwa.js           Enregistrement du Service Worker
 │   ├── styles.css       Styles de l'interface
 │   └── vendor/three/    three.js r186 (licence MIT)
+├── tests/
+│   ├── serve.mjs        Serveur local (npm start), aussi utilisé par les tests
+│   └── run-tests.mjs    Tests de bout en bout dans Chrome (npm test)
 ├── assets/icons/        Icônes de l'application
 └── docs/
+    ├── guide-du-code.md Explication du code, fichier par fichier
     ├── architecture.md  Modules, graphe de scène, repère et mise en cache
     ├── sprint-1.md      Compte rendu du sprint 1
     ├── etat-de-l-art/   Rapport d'état de l'art (PDF et source LaTeX)
@@ -161,5 +179,6 @@ Encadrant : Dr. Ing. Mohamed-Bécha Kaâniche.
 
 - [three.js](https://github.com/mrdoob/three.js) r186, licence MIT (`src/vendor/three/LICENSE`).
 - [IWER](https://github.com/meta-quest/immersive-web-emulation-runtime) 2.7.0, Meta, licence MIT, chargé depuis jsDelivr en développement seulement.
+- [Playwright](https://github.com/microsoft/playwright) (`playwright-core` 1.64.1), Microsoft, licence Apache 2.0, pour les tests seulement.
 
-La licence du projet reste à définir par l'équipe.
+L'origine de chaque ressource et l'usage de l'IA sont déclarés dans [ATTRIBUTION.md](ATTRIBUTION.md). Aucune licence n'a encore été choisie pour le projet.

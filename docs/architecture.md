@@ -2,6 +2,8 @@
 
 Football Simulator s'exécute entièrement dans le navigateur : des fichiers statiques servis en HTTPS par GitHub Pages, sans serveur applicatif ni étape de compilation.
 
+Cette page résume l'architecture. Le détail de chaque fichier, avec les raisons des choix, est dans [guide-du-code.md](guide-du-code.md).
+
 ## Modules
 
 | Fichier | Rôle | Patron |
