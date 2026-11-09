@@ -2,6 +2,7 @@
 
 **Projet :** Football Simulator\
 **Équipe :** Iyed Rachdi, Bilel Khlif, Ghassen Dallekji\
+**Responsable du sprint 1 :** Bilel Khlif\
 **Version :** 1.0 — Évaluation SUP'COM (2026/2027)
 
 ---
@@ -14,25 +15,25 @@ Aucun modèle 3D, aucune texture et aucune police n'est importé d'une source ex
 
 *   **Asset :** Terrain (plateau, gazon rayé, lignes, buts et filets)
     *   **Source originale :** créé pour le projet, `src/pitch.js`
-    *   **Auteur / Créateur :** code généré avec Claude (section 4) pour l'équipe, d'après son cahier des charges
+    *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : pilotage et décisions par Bilel Khlif, code généré par Claude (section 4), d'après le cahier des charges de l'équipe
     *   **Licence :** aucune licence choisie à ce jour (pas de fichier `LICENSE` dans le dépôt)
     *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet ; lignes tracées sur une texture canvas de 1808 × 1216 px selon les mesures des lois du jeu de l'IFAB
 
 *   **Asset :** Pions joueurs, numéros de maillot et ballon
     *   **Source originale :** créés pour le projet, `src/players.js` et `src/ball.js` (`CapsuleGeometry`, `SphereGeometry`, sprites dessinés sur canvas)
-    *   **Auteur / Créateur :** code généré avec Claude (section 4) pour l'équipe, d'après son cahier des charges
+    *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : pilotage et décisions par Bilel Khlif, code généré par Claude (section 4), d'après le cahier des charges de l'équipe
     *   **Licence :** aucune licence choisie à ce jour
     *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
 
 *   **Asset :** Icônes de l'application (`assets/icons/icon.svg`, `icon-maskable.svg` et les PNG dérivés)
     *   **Source originale :** dessinées pour le projet en SVG, d'après l'illustration de couverture du cahier des charges ; PNG produits avec la bibliothèque sharp
-    *   **Auteur / Créateur :** Claude (section 4)
+    *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : dessin par Claude (section 4), dans le sprint piloté par Bilel Khlif
     *   **Licence :** aucune licence choisie à ce jour
     *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
 
 *   **Asset :** Bannière, captures et diapositives de `docs/images/`, figures de `docs/etat-de-l-art/figures/`
     *   **Source originale :** captures de l'application elle-même ; diapositives exportées de la présentation d'état de l'art du projet
-    *   **Auteur / Créateur :** Claude (section 4), par captures automatisées et mise en page
+    *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : refonte du README et des présentations orientée par Bilel Khlif ; captures automatisées et mise en page par Claude (section 4)
     *   **Licence :** aucune licence choisie à ce jour
     *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
 
@@ -92,13 +93,34 @@ L'utilisation d'IA est un outil de complétion. Elle doit être documentée et m
 
 Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle Claude Opus 5.5, du 5 au 9 novembre 2026.
 
+### Répartition du travail
+
+Les livrables du sprint 1 ont été coproduits par Bilel Khlif et Claude :
+
+*   **Bilel Khlif**, responsable du sprint 1 : pilotage des sessions, consignes et décisions, retours sur les livrables et validation finale ;
+*   **Claude** : génération du code, des tests et des documents, à partir du cahier des charges de l'équipe et des consignes de Bilel Khlif.
+
+Contributions de Bilel Khlif :
+
+1.  **Pilotage du sprint 1** (5 au 9 novembre 2026) : périmètre fixé d'après le cahier des charges (§5.3), consignes données à l'assistant, publication sur le dépôt GitHub du projet.
+2.  **Veille** : une publication LinkedIn sur l'analyse vidéo de match, fournie comme point de départ, à l'origine de la partie « vision par ordinateur » du rapport d'état de l'art.
+3.  **Direction des présentations** : première version de la présentation refusée, jugée trop générique ; refonte demandée sur le modèle de trois présentations de référence qu'il a fournies (BlurUAV, Trust before you trade, GreenBench), avec des transitions soignées entre les diapositives.
+4.  **Format du rapport** : rapport d'état de l'art exigé en LaTeX, au format PDF.
+5.  **Nom du projet** : choix de « Football Simulator », appliqué au code, au rapport, à la présentation et à la documentation.
+6.  **Documentation** : refonte du README dans le style des livrables, avec captures et synthèse de l'état de l'art ; demande d'une documentation et d'une explication complètes du code, d'où le guide du code et les tests automatisés.
+7.  **Conformité** : mise en place de ce fichier selon le modèle de l'enseignant, puis relecture intégrale le 9 novembre 2026.
+8.  **Validation** : pull request #1 validée et fusionnée dans `main` le 9 novembre 2026.
+
+### Détail par composant
+
 *   **Composant ou Shader concerné :** code du sprint 1 : `index.html`, `manifest.json`, `sw.js`, `src/*.js` et `src/styles.css` (hors `src/vendor/`), tests (`tests/`, `package.json`) et fichiers de configuration du dépôt (`.editorconfig`, `.gitattributes`, `.gitignore`)
-    *   **Prompt ou usage principal :** génération du code à partir du cahier des charges rédigé par l'équipe, avec la consigne de réaliser le sprint 1 et de le publier sur GitHub : périmètre du sprint (§5.3), patrons Strategy et Factory (§3.4), règles de code (§7.1). Les commits de la pull request #1 sont issus de ces sessions.
+    *   **Prompt ou usage principal :** génération du code à partir du cahier des charges rédigé par l'équipe, sur consigne de Bilel Khlif de réaliser le sprint 1 et de le publier sur GitHub : périmètre du sprint (§5.3), patrons Strategy et Factory (§3.4), règles de code (§7.1). Les commits de la pull request #1 sont issus de ces sessions.
     *   **Axe de vérification appliqué :**
         *   `npm test` : 11 vérifications de bout en bout dans Chrome, que chacun peut rejouer : chargement sans erreur sur bureau (1280 × 800), sur mobile (390 × 844) et sous un sous-chemin comme sur GitHub Pages ; trois formations conformes au critère « 11 joueurs bien placés » du cahier (§4.3), avec les numéros 1 à 11, chaque joueur dans sa moitié et hors du rond central, et un écart minimal de 7,1 cm entre deux joueurs ; badge d'état de l'AR ; Service Worker et rechargement hors-ligne ; session `immersive-ar` émulée avec IWER. Résultat le 9 novembre 2026 : 11 réussies sur 11 ;
         *   le test des formations a lui-même été contrôlé par une erreur volontaire (deux joueurs du 4-3-3 avec le même numéro) : il échoue comme attendu ;
         *   ces vérifications ont révélé deux défauts, corrigés avant le commit : un cadrage de caméra qui coupait le terrain, et IWER qui refusait de s'installer sur Chrome PC ;
         *   le fonctionnement de chaque fichier est expliqué dans `docs/guide-du-code.md`, avec les réponses aux questions probables du jury ;
+        *   la pull request #1 a été validée par Bilel Khlif et fusionnée dans `main` le 9 novembre 2026 ;
         *   le test sur un téléphone Android est prévu au sprint 2, avec l'ouverture de la session AR (cahier §4.2) : aucune fonction AR n'est active au sprint 1.
 
 *   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`), figures du rapport (`docs/etat-de-l-art/figures/`)
@@ -106,13 +128,13 @@ Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle Claude Opu
     *   **Axe de vérification appliqué :** contrôle visuel de chaque rendu ; les captures sont prises par script sur l'application réelle ; le motif de l'icône « maskable » tient dans la zone sûre d'Android (un cercle de 80 % de la largeur).
 
 *   **Composant ou Shader concerné :** documentation : `README.md`, `docs/architecture.md`, `docs/sprint-1.md`, `docs/guide-du-code.md`, `docs/etat-de-l-art/README.md`, `src/vendor/three/README.md` et ce fichier
-    *   **Prompt ou usage principal :** rédaction en français à partir du code et du cahier des charges. Le README a été refait à la demande de l'équipe, dans le style du rapport et de la présentation d'état de l'art, avec des captures et la synthèse de la veille ; ce fichier suit le modèle fourni par l'enseignant.
-    *   **Axe de vérification appliqué :** dimensions, valeurs et résultats de tests repris du code source et des sorties de `npm test` ; renvois aux sections du cahier (§) contrôlés sur le cahier des charges.
+    *   **Prompt ou usage principal :** rédaction en français à partir du code et du cahier des charges. Le README a été refait à la demande de Bilel Khlif, dans le style du rapport et de la présentation d'état de l'art, avec des captures et la synthèse de la veille ; ce fichier suit le modèle fourni par l'enseignant.
+    *   **Axe de vérification appliqué :** dimensions, valeurs et résultats de tests repris du code source et des sorties de `npm test` ; renvois aux sections du cahier (§) contrôlés sur le cahier des charges ; ce fichier a été relu en entier par Bilel Khlif le 9 novembre 2026.
 
 *   **Composant ou Shader concerné :** état de l'art : rapport LaTeX (`docs/etat-de-l-art/`) et présentation PowerPoint
-    *   **Prompt ou usage principal :** consigne de lire le cahier des charges et de chercher des projets existants sur la même idée, pour s'appuyer dessus ; recherche web (dépôts, applications, articles, jeux de données) à partir de ce cahier et d'une publication LinkedIn fournie par l'équipe, puis rédaction du rapport et de la présentation.
+    *   **Prompt ou usage principal :** consigne de Bilel Khlif de lire le cahier des charges et de chercher des projets existants sur la même idée, pour s'appuyer dessus ; recherche web (dépôts, applications, articles, jeux de données) à partir de ce cahier et de la publication LinkedIn qu'il a fournie, puis rédaction du rapport et de la présentation.
     *   **Axe de vérification appliqué :**
         *   les faits du rapport proviennent de pages citées parmi ses 29 références, toutes consultées le 5 novembre 2026 ; la fiche de Sports Tactics Board a été corrigée après vérification de sa page ;
-        *   la première version de la présentation a été refusée par l'équipe, jugée trop générique, puis refaite en s'inspirant de trois présentations fournies par l'équipe (BlurUAV, Trust before you trade, GreenBench), avec des transitions Morph ;
-        *   le rapport a été demandé par l'équipe en LaTeX, au format PDF ;
-        *   le projet a été renommé Football Simulator dans tous les documents, à la demande de l'équipe.
+        *   la première version de la présentation a été refusée par Bilel Khlif, jugée trop générique, puis refaite d'après les trois présentations de référence qu'il a fournies (BlurUAV, Trust before you trade, GreenBench) ;
+        *   le rapport a été demandé en LaTeX par Bilel Khlif, au format PDF ;
+        *   le projet a été renommé Football Simulator dans tous les documents, à la demande de Bilel Khlif.
