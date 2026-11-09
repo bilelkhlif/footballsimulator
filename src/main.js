@@ -46,7 +46,8 @@ function init() {
 
 /**
  * Détecte la réalité augmentée, avec l'émulateur IWER si l'adresse le demande,
- * et affiche le résultat dans le badge d'état.
+ * affiche le résultat dans le badge d'état et, si l'AR est disponible, le bouton
+ * « Entrer en AR ».
  */
 async function detectAugmentedReality() {
   const statusElement = document.getElementById('xr-status');
@@ -57,6 +58,9 @@ async function detectAugmentedReality() {
     showXrStatus(statusElement, 'unsupported');
   } else {
     showXrStatus(statusElement, emulated ? 'emulated' : 'supported');
+    // AR réelle ou émulée : le bouton d'entrée en AR devient visible.
+    const enterArButton = document.getElementById('enter-ar');
+    enterArButton.hidden = false;
   }
 }
 
