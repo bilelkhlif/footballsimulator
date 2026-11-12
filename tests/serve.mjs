@@ -31,10 +31,33 @@ const MIME_TYPES = {
  * @param {{root?: string, port?: number, basePath?: string}} [options]
  *   root : dossier servi ; port : 0 pour un port libre ;
  *   basePath : sous-chemin de l'application, par exemple « /footballsimulator/ ».
- * @returns {Promise<{url: string, close: () => Promise<void>}>}
+ * @returns {Promise<{url: string, close: () => Promise<void>, setLatency: (ms: number) => void}>}
+ *   setLatency : retarde chaque réponse, pour simuler un réseau lent (0 : aucun retard).
  */
 export function startServer({ root = REPO_ROOT, port = 0, basePath = '/' } = {}) {
+  let latencyMs = 0;
+  /** Réponses retardées en attente, annulées à l'arrêt du serveur. */
+  const delayed = new Set();
   const server = http.createServer((request, response) => {
+    if (latencyMs <= 0) {
+      serveFile(request, response);
+      return;
+    }
+    const timer = setTimeout(() => {
+      delayed.delete(timer);
+      if (!response.destroyed) {
+        serveFile(request, response);
+      }
+    }, latencyMs);
+    delayed.add(timer);
+  });
+
+  /**
+   * Répond à une requête avec le fichier demandé.
+   * @param {http.IncomingMessage} request
+   * @param {http.ServerResponse} response
+   */
+  function serveFile(request, response) {
     const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
     if (!pathname.startsWith(basePath)) {
       response.writeHead(404).end();
@@ -59,16 +82,19 @@ export function startServer({ root = REPO_ROOT, port = 0, basePath = '/' } = {})
       });
       response.end(data);
     });
-  });
+  }
 
   return new Promise((resolve) => {
     server.listen(port, '127.0.0.1', () => {
       const url = `http://127.0.0.1:${server.address().port}${basePath}`;
       const close = () => new Promise((done) => {
+        delayed.forEach(clearTimeout);
+        delayed.clear();
         server.closeAllConnections();
         server.close(done);
       });
-      resolve({ url, close });
+      const setLatency = (ms) => { latencyMs = ms; };
+      resolve({ url, close, setLatency });
     });
   });
 }

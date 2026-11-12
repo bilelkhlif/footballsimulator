@@ -234,9 +234,11 @@ Pendant une session, `resize()` ne fait rien : la taille du rendu vient alors de
 | Contrôles d'orbite en pause en AR | `render-loop` : aucune mise à jour en AR, rendu continu |
 | Placement du terrain | `ar-placement` (5 tests) et `render-loop` : une seule fois, dans l'espace `local-floor` |
 
-**Tests de bout en bout : 18**, dans `tests/run-tests.mjs` : les 11 du sprint 1, et 7 pour le parcours AR avec IWER (partie 11).
+**Tests de bout en bout : 19**, dans `tests/run-tests.mjs` : les 11 du sprint 1, 7 pour le parcours AR avec IWER (partie 11), et le lancement sur réseau très lent, ajouté le 12 novembre 2026 (partie 12).
 
 **Résultat le 10 novembre 2026** : 28 tests unitaires réussis sur 28, 18 vérifications de bout en bout réussies sur 18, en une trentaine de secondes.
+
+**Résultat le 12 novembre 2026**, après le correctif du réseau lent : 28 tests unitaires réussis sur 28, 19 vérifications de bout en bout réussies sur 19.
 
 Pour vérifier que les tests détectent vraiment une erreur, deux défauts ont été introduits volontairement, puis retirés : des contrôles d'orbite mis à jour même en AR (deux tests en échec), et une session laissée ouverte quand `local-floor` manque (un test en échec).
 
@@ -278,6 +280,23 @@ Limites de l'émulation : IWER n'affiche pas d'image de caméra (fond sombre sur
 
 Pas encore mesurés : la fluidité en images par seconde (sprint 6) et la stabilité du terrain pendant une minute, qui dépend de sa pose sur la table (sprint 3, cahier §4.3).
 
+**Correctif du 12 novembre 2026 : réseau lent**
+
+Après ces tests, Bilel Khlif a signalé que l'AR ne fonctionnait plus à la suite de problèmes de réseau.
+
+- **Le site publié n'était pas en cause.** Les 28 fichiers de `APP_SHELL` répondaient tous (code 200), dans la version de `main`. Le parcours AR rejoué avec IWER sur le site publié a réussi : entrée, terrain devant la vue, sortie, nouvelle entrée et message d'échec.
+- **Le point faible était le Service Worker.** Il demandait d'abord le réseau pour la page et le code, sans limite de temps. Une connexion coupée échoue vite et le cache prend le relais. En revanche, une connexion très lente, mais pas coupée, peut faire attendre le navigateur plus d'une minute par fichier : la page reste sur « Chargement du terrain… » et l'AR ne peut pas démarrer.
+- **Correctif dans `sw.js`.** Quand le cache possède le fichier, le réseau a 3 secondes pour répondre (`NETWORK_TIMEOUT_MS`), sinon le cache répond. Pendant les 15 secondes qui suivent (`SLOW_NETWORK_WINDOW_MS`), le cache répond directement : les autres fichiers de la page arrivent sans nouvelle attente, et ils viennent tous de la même version. Le téléchargement continue en arrière-plan et met le cache à jour pour le lancement suivant. Lors d'une première visite, sans cache, le réseau est attendu comme avant.
+- **Test ajouté.** « Lancement sur réseau très lent, depuis le cache » : l'application est installée, puis le serveur de test retarde chaque réponse de 30 secondes (`setLatency` dans `tests/serve.mjs`). Avec le correctif, la page est prête en 3,7 secondes. Avec l'ancien `sw.js`, elle n'est toujours pas prête après 30 secondes et le test échoue : il détecte bien le défaut.
+- **À confirmer sur téléphone** une fois le correctif publié sur GitHub Pages : ligne « réseau faible » du protocole ci-dessous.
+
+**Si l'AR ne se lance plus sur le téléphone**
+
+1. Recharger la page une fois le réseau revenu. Un Service Worker mis à jour s'installe au premier chargement et sert la nouvelle version au chargement suivant.
+2. Si le message « Session AR refusée… » s'affiche : toucher l'icône à gauche de l'adresse dans Chrome, puis « Autorisations », et réinitialiser les autorisations du site. Chrome redemande alors l'accès à la caméra et à la réalité augmentée.
+3. Vérifier dans le Play Store que les Services Google Play pour la RA sont installés et à jour. Leur installation ou leur mise à jour demande le réseau ; si elle a été interrompue, Chrome ne peut pas ouvrir la session AR.
+4. En dernier recours : dans les paramètres de Chrome, ouvrir « Paramètres des sites », puis « Tous les sites », choisir `bilelkhlif.github.io` et effacer ses données, puis rouvrir l'application avec le réseau.
+
 **Prérequis**
 
 - un téléphone Android compatible ARCore, avec les Services Google Play pour la RA à jour ;
@@ -299,6 +318,7 @@ Pas encore mesurés : la fluidité en images par seconde (sprint 6) et la stabil
 | Accepter | Image de la caméra, terrain devant soi, à peu près à hauteur de table ; boutons visibles par-dessus |
 | Tourner autour du terrain | Le terrain reste fixe dans la pièce |
 | Toucher « Quitter l'AR » | Retour à la vue 3D, cadrée |
+| Après une première visite, rouvrir l'application avec un réseau faible | Terrain affiché en quelques secondes, depuis le cache |
 | Entrer de nouveau, puis bouton retour du téléphone | Retour à la vue 3D, cadrée |
 | Refuser l'accès à la caméra (réglages du site) | Message « Session AR refusée… » |
 | Fluidité (outils de développement de Chrome) | Au moins 30 images par seconde, mesure prévue au sprint 6 |
@@ -334,6 +354,7 @@ Pas encore mesurés : la fluidité en images par seconde (sprint 6) et la stabil
 - **Pas de `hit-test` ni d'`anchors` dans la session** : ces fonctionnalités arrivent au sprint 3, avec leur code.
 - **Placement par rapport au téléphone** plutôt qu'à des coordonnées fixes : voir la partie 8.
 - **`?debug`** expose les objets internes pour les tests ; sans ce paramètre, rien n'est exposé.
+- **Délai d'attente du réseau de 3 secondes** dans le Service Worker, ajouté le 12 novembre 2026 (partie 12) : c'est la stratégie « réseau d'abord avec délai » des PWA. Plus court, une connexion simplement lente servirait souvent l'ancienne version ; plus long, la démonstration ferait attendre.
 - **`package.json`** : version 0.2.0, `"type": "module"` pour que Node.js lise les modules de `src/` dans les tests unitaires, et `npm test` qui enchaîne tests unitaires et tests de bout en bout.
 
 **Questions probables du jury**
@@ -352,6 +373,9 @@ Elle est abonnée à l'événement `sessionend` d'`ArSession` (patron Observer).
 
 **Pourquoi le terrain n'est-il pas posé sur la table ?**
 La détection de la table (hit test) est l'objet du sprint 3. Au sprint 2, il est placé devant l'utilisateur, à hauteur de table.
+
+**Que se passe-t-il si le réseau est mauvais pendant la démonstration ?**
+Après une première visite, l'application est dans le cache du Service Worker. Si le réseau ne répond pas en 3 secondes, le cache répond à sa place, et la page s'affiche en quelques secondes. Sans réseau du tout, elle se lance hors-ligne. L'AR elle-même n'a pas besoin du réseau : ARCore travaille sur le téléphone. Le test « Lancement sur réseau très lent » le vérifie à chaque `npm test`.
 
 **Comment testez-vous sans téléphone ?**
 Avec des doublures de WebXR dans les tests unitaires, et avec l'émulateur IWER dans les tests de bout en bout. L'application a ensuite été testée sur deux téléphones Android, un iPhone et un PC (partie 12).

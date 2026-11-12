@@ -5,7 +5,8 @@
  *
  * Stratégies :
  * - bibliothèques (src/vendor) et ressources (assets) : cache d'abord, car elles ne changent pas ;
- * - page, code et styles : réseau d'abord, avec repli sur le cache hors-ligne.
+ * - page, code et styles : réseau d'abord, avec repli sur le cache hors-ligne, ou quand le
+ *   réseau met plus de NETWORK_TIMEOUT_MS à répondre (connexion lente ou instable).
  *
  * Tout nouveau fichier de l'application doit être ajouté à APP_SHELL. Incrémenter
  * CACHE_VERSION quand une bibliothèque ou une ressource change.
@@ -48,6 +49,23 @@ const APP_SHELL = [
 
 /** Parties de chemin servies en « cache d'abord ». */
 const IMMUTABLE_PATHS = ['/src/vendor/', '/assets/'];
+
+/**
+ * Délai d'attente du réseau, en millisecondes, quand le cache peut répondre à sa place.
+ * Sur une connexion lente, le navigateur peut attendre plus d'une minute avant d'abandonner
+ * une requête : sans ce délai, la page resterait bloquée sur « Chargement du terrain… ».
+ */
+const NETWORK_TIMEOUT_MS = 3000;
+
+/**
+ * Après un réseau trop lent ou coupé, durée pendant laquelle le cache répond directement,
+ * sans attendre le réseau : les autres fichiers de la même page arrivent sans nouveau délai,
+ * et la page reste cohérente, puisque tous ses fichiers viennent alors du cache.
+ */
+const SLOW_NETWORK_WINDOW_MS = 15000;
+
+/** Instant jusqu'auquel le réseau est jugé trop lent (0 : réseau normal). */
+let slowNetworkUntil = 0;
 
 /**
  * Télécharge et met en cache les fichiers de l'application, puis active
@@ -101,29 +119,68 @@ async function cacheFirst(request) {
 }
 
 /**
- * Stratégie « réseau d'abord » : télécharge la version la plus récente et met le cache à jour.
- * Hors-ligne, répond depuis le cache, ou avec la page d'accueil pour une navigation.
+ * Télécharge un fichier et met à jour sa copie dans le cache.
  * @param {Request} request
  * @returns {Promise<Response>}
  */
-async function networkFirst(request) {
+async function fetchAndCache(request) {
+  const response = await fetch(request);
+  await storeInCache(request, response);
+  return response;
+}
+
+/**
+ * Cherche la copie d'un fichier dans le cache. Pour une navigation, les paramètres de l'adresse
+ * (« ?iwer », « ?debug ») sont ignorés, et la page d'accueil sert de repli.
+ * @param {Request} request
+ * @returns {Promise<Response|undefined>}
+ */
+async function findInCache(request) {
+  const isNavigation = request.mode === 'navigate';
+  const cached = await caches.match(request, { ignoreSearch: isNavigation });
+  if (cached || !isNavigation) {
+    return cached;
+  }
+  return caches.match('./index.html');
+}
+
+/**
+ * Attend une promesse au plus `ms` millisecondes, puis la rejette.
+ * @param {Promise<any>} promise
+ * @param {number} ms
+ * @returns {Promise<any>}
+ */
+function withTimeout(promise, ms) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`réseau trop lent (plus de ${ms} ms)`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/**
+ * Stratégie « réseau d'abord » : sert la version la plus récente du fichier.
+ * Le cache répond à sa place si le réseau est coupé, s'il met plus de NETWORK_TIMEOUT_MS à
+ * répondre, ou s'il vient d'être jugé trop lent. Le téléchargement continue alors en arrière-plan
+ * et met le cache à jour pour le prochain lancement.
+ * Sans copie en cache (première visite), la réponse du réseau est attendue sans limite.
+ * @param {Request} request
+ * @param {Promise<Response>} network téléchargement déjà lancé par fetchAndCache
+ * @returns {Promise<Response>}
+ */
+async function networkFirst(request, network) {
+  const cached = await findInCache(request);
+  if (!cached) {
+    return network;
+  }
+  if (Date.now() < slowNetworkUntil) {
+    return cached;
+  }
   try {
-    const response = await fetch(request);
-    await storeInCache(request, response);
-    return response;
-  } catch (error) {
-    const isNavigation = request.mode === 'navigate';
-    const cached = await caches.match(request, { ignoreSearch: isNavigation });
-    if (cached) {
-      return cached;
-    }
-    if (isNavigation) {
-      const home = await caches.match('./index.html');
-      if (home) {
-        return home;
-      }
-    }
-    throw error;
+    return await withTimeout(network, NETWORK_TIMEOUT_MS);
+  } catch {
+    slowNetworkUntil = Date.now() + SLOW_NETWORK_WINDOW_MS;
+    return cached;
   }
 }
 
@@ -152,5 +209,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   const isImmutable = IMMUTABLE_PATHS.some((path) => url.pathname.includes(path));
-  event.respondWith(isImmutable ? cacheFirst(request) : networkFirst(request));
+  if (isImmutable) {
+    event.respondWith(cacheFirst(request));
+    return;
+  }
+  // Le téléchargement est lancé ici pour que waitUntil garde le Service Worker actif
+  // jusqu'à la mise à jour du cache, même quand le cache a déjà répondu à la page.
+  const network = fetchAndCache(request);
+  event.waitUntil(network.catch(() => undefined));
+  event.respondWith(networkFirst(request, network));
 });
