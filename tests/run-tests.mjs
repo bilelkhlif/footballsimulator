@@ -153,6 +153,44 @@ async function testPwa(browser, url, label) {
   }
 }
 
+/** Retard simulé du serveur pour le test du réseau lent : plus long que la patience de l'utilisateur. */
+const SLOW_NETWORK_LATENCY_MS = 30000;
+
+/** Temps de lancement maximal accepté sur un réseau très lent, l'application étant en cache. */
+const SLOW_NETWORK_MAX_SECONDS = 10;
+
+/**
+ * Vérifie le lancement sur un réseau très lent (connexion faible ou instable) : une fois
+ * l'application en cache, la page doit être prête en quelques secondes, même quand le serveur
+ * met 30 s à répondre. Le Service Worker sert alors le cache au bout de 3 s d'attente.
+ * @param {import('playwright-core').Browser} browser
+ * @param {{url: string, setLatency: (ms: number) => void}} server serveur réservé à ce test
+ */
+async function testSlowNetwork(browser, server) {
+  const name = 'Lancement sur réseau très lent, depuis le cache';
+  const context = await browser.newContext(MOBILE);
+  try {
+    const { page } = await openApp(context, server.url);
+    await withTimeout(page.evaluate(async () => Boolean((await navigator.serviceWorker.ready).active)), 15000);
+    // Deuxième chargement : la page est désormais contrôlée par le Service Worker.
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForSelector('body.is-ready', { timeout: 20000 });
+
+    server.setLatency(SLOW_NETWORK_LATENCY_MS);
+    const start = Date.now();
+    await page.reload({ waitUntil: 'commit' });
+    await page.waitForSelector('body.is-ready', { timeout: SLOW_NETWORK_LATENCY_MS });
+    const seconds = (Date.now() - start) / 1000;
+    const detail = `page prête en ${seconds.toFixed(1)} s, serveur retardé de ${SLOW_NETWORK_LATENCY_MS / 1000} s`;
+    record(name, seconds <= SLOW_NETWORK_MAX_SECONDS ? 'ok' : 'échec', detail);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    server.setLatency(0);
+    await context.close();
+  }
+}
+
 /**
  * Vérifie l'émulateur IWER : avec ?iwer, une session immersive-ar doit s'ouvrir avec local-floor.
  * Le test est ignoré si le CDN de l'émulateur est injoignable (pas de réseau).
@@ -360,6 +398,7 @@ async function main() {
   const browser = await chromium.launch({ channel: CHANNEL, headless: true, args: LAUNCH_ARGS });
   const root = await startServer();
   const subPath = await startServer({ basePath: '/footballsimulator/' });
+  const slow = await startServer();
   try {
     await testLoading(browser, root.url, 'bureau, 1280 × 800', DESKTOP);
     await testLoading(browser, root.url, 'mobile, 390 × 844', MOBILE);
@@ -367,12 +406,14 @@ async function main() {
     await testPwa(browser, root.url, 'racine');
     await testLoading(browser, subPath.url, 'sous-chemin, comme GitHub Pages', DESKTOP);
     await testPwa(browser, subPath.url, 'sous-chemin');
+    await testSlowNetwork(browser, slow);
     await testEmulator(browser, root.url);
     await testArSession(browser, root.url);
   } finally {
     await browser.close();
     await root.close();
     await subPath.close();
+    await slow.close();
   }
 
   const symbols = { ok: '✓', échec: '✗', ignoré: '–' };
