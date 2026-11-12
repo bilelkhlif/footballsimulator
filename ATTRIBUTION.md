@@ -93,7 +93,7 @@ Les briques prévues pour les sprints suivants (exemple `webxr_ar_hittest` de th
 
 L'utilisation d'IA est un outil de complétion. Elle doit être documentée et maîtrisée.
 
-Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle Claude Opus 5.5, du 5 au 10 novembre 2026.
+Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle Claude Opus 5.5, du 5 au 12 novembre 2026.
 
 ### Répartition du travail
 
@@ -102,7 +102,7 @@ Les livrables du sprint 1 ont été coproduits par Bilel Khlif et Claude :
 *   **Bilel Khlif**, responsable du sprint 1 : pilotage des sessions, consignes et décisions, retours sur les livrables, revue du code à travers son guide et validation finale ;
 *   **Claude** : génération du code, des tests et des documents, à partir du cahier des charges de l'équipe et des consignes de Bilel Khlif.
 
-Au sprint 2, le code a de même été généré par Claude, sur les consignes détaillées fournies par Bilel Khlif. Aucune ligne n'en a été écrite ou modifiée à la main par l'équipe : voir le détail par composant.
+Au sprint 2, le code a de même été généré par Claude, sur les consignes détaillées fournies par Bilel Khlif. Aucune ligne n'en a été écrite ou modifiée à la main par l'équipe : voir le détail par composant. Les tests sur appareils réels ont été faits par Bilel Khlif.
 
 Contributions de Bilel Khlif :
 
@@ -116,6 +116,8 @@ Contributions de Bilel Khlif :
 8.  **Revue du code** : lecture et approbation du guide du code (`docs/guide-du-code.md`), qui détaille chaque fichier et chaque fonction, le 9 novembre 2026.
 9.  **Validation** : pull request #1 validée et fusionnée dans `main` le 9 novembre 2026.
 10. **Sprint 2** : consignes détaillées fournies à l'assistant pour les étapes 0 à 2, puis 3 à 6 (périmètre, contraintes techniques, tests attendus et exigences d'attribution), les 9 et 10 novembre 2026.
+11. **Tests sur appareils réels** : application testée le 12 novembre 2026 sur le site publié, sur deux téléphones Android avec Chrome (Samsung Galaxy S récent et TECNO POVA 6 Pro 5G), un iPhone 15 avec Safari et un PC ASUS TUF A15 avec Chrome.
+12. **Mise en ligne** : pull request #3 du sprint 2 validée et fusionnée dans `main`, puis publication sur GitHub Pages, le 12 novembre 2026.
 
 ### Détail par composant
 
@@ -127,7 +129,7 @@ Contributions de Bilel Khlif :
         *   ces vérifications ont révélé deux défauts, corrigés avant le commit : un cadrage de caméra qui coupait le terrain, et IWER qui refusait de s'installer sur Chrome PC ;
         *   revue du code par Bilel Khlif à partir du guide du code (`docs/guide-du-code.md`), qui explique chaque fichier et chaque fonction avec les réponses aux questions probables du jury : guide lu et approuvé le 9 novembre 2026 ;
         *   la pull request #1 a été validée par Bilel Khlif et fusionnée dans `main` le 9 novembre 2026 ;
-        *   le test sur un téléphone Android, prévu avec l'ouverture de la session AR (cahier §4.2), n'est pas encore fait : voir l'entrée du sprint 2 ci-dessous.
+        *   le test sur un téléphone Android, prévu avec l'ouverture de la session AR (cahier §4.2), a été fait le 12 novembre 2026 : voir l'entrée du sprint 2 ci-dessous.
 
 *   **Composant ou Shader concerné :** code du sprint 2, généré en deux sessions : étapes 0 à 2 le 9 novembre 2026 (bouton « Entrer en AR » dans `index.html` et `src/main.js`, activation de WebXR dans `src/scene.js`), puis étapes 3 à 6 les 9 et 10 novembre 2026 (`src/events.js`, `src/xr-session.js`, `src/ar-view.js`, `src/ar-placement.js`, `src/render-loop.js`, modifications de `src/main.js`, `src/scene.js`, `index.html`, `src/styles.css` et `sw.js`, tests unitaires de `tests/unit/`, parcours AR de `tests/run-tests.mjs` et `package.json`)
     *   **Prompt ou usage principal :** consignes détaillées fournies par Bilel Khlif pour chaque groupe d'étapes (périmètre, contraintes techniques, tests attendus), et cahier des charges (§5.3, §3.4, §7.1). Aucune ligne de ce code n'a été écrite ou modifiée à la main par l'équipe : les commits de la branche `feature/sprint-2` sont tous issus de ces sessions.
@@ -136,7 +138,7 @@ Contributions de Bilel Khlif :
         *   deux erreurs introduites volontairement (contrôles d'orbite actifs en AR, session laissée ouverte quand `local-floor` manque) ont fait échouer 3 tests, puis le code a été restauré ;
         *   l'enchaînement de la session (`renderer.xr.setSession`, couche `XRWebGLLayer`, espace de référence) a été vérifié dans le code de three.js r186 de la copie locale ;
         *   le fonctionnement est expliqué dans `docs/sprint-2.md`, avec les réponses aux questions probables du jury ;
-        *   le test sur un téléphone Android n'a pas encore été fait : son protocole est dans `docs/sprint-2.md`.
+        *   tests sur appareils réels par Bilel Khlif, le 12 novembre 2026, sur le site publié : entrée en AR, terrain visible et sortie conformes sur deux téléphones Android avec Chrome (Samsung Galaxy S récent, TECNO POVA 6 Pro 5G) ; vue 3D conforme sur iPhone 15 avec Safari, sans AR comme prévu, et sur PC ASUS TUF A15 avec Chrome. Résultats et protocole dans `docs/sprint-2.md`.
 
 *   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles du sprint 2), figures du rapport (`docs/etat-de-l-art/figures/`)
     *   **Prompt ou usage principal :** dessin des icônes en SVG d'après la couverture du cahier des charges, captures automatisées de l'application, mise en page de la bannière dans le style de la présentation d'état de l'art
