@@ -47,10 +47,17 @@
       </ul>
     </header>
 
-    <!-- Bandeau inférieur : aide aux gestes et recentrage de la vue -->
+    <!-- Bandeau inférieur : aide aux gestes, message d'échec de l'AR et actions.
+         « Entrer en AR » n'apparaît que si l'AR est disponible ; pendant une session,
+         « Quitter l'AR » remplace « Recentrer » et « Entrer en AR ». -->
     <footer class="bottombar">
-      <p class="hint">Glissez pour tourner, pincez pour zoomer.</p>
-      <button id="reset-view" class="button" type="button">Recentrer</button>
+      <p id="hint" class="hint">Glissez pour tourner, pincez pour zoomer.</p>
+      <p id="ar-message" class="notice" role="alert" hidden></p>
+      <div class="actions">
+        <button id="reset-view" class="button" type="button">Recentrer</button>
+        <button id="enter-ar" class="button" type="button" hidden>Entrer en AR</button>
+        <button id="exit-ar" class="button button--secondary" type="button" hidden>Quitter l’AR</button>
+      </div>
     </footer>
   </div>
 

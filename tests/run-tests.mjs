@@ -1,9 +1,10 @@
 /**
- * Tests de bout en bout du sprint 1, exécutés dans Chrome sans interface.
- * Ils rejouent les vérifications consignées dans docs/sprint-1.md.
+ * Tests de bout en bout des sprints 1 et 2, exécutés dans Chrome sans interface.
+ * Ils rejouent les vérifications consignées dans docs/sprint-1.md et docs/sprint-2.md.
  *
  * Prérequis : Node.js 18 ou plus, Google Chrome installé, puis « npm install ».
- * Usage : npm test   (BROWSER_CHANNEL=msedge pour utiliser Microsoft Edge)
+ * Usage : npm run test:e2e, ou npm test pour lancer aussi les tests unitaires
+ * (BROWSER_CHANNEL=msedge pour utiliser Microsoft Edge)
  */
 import { chromium } from 'playwright-core';
 import { startServer } from './serve.mjs';
@@ -198,6 +199,161 @@ async function testEmulator(browser, url) {
 }
 
 /**
+ * Parcours AR complet avec l'émulateur IWER, par les boutons de l'application (sprint 2) :
+ * entrée, terrain placé devant la vue, contrôles d'orbite en pause, sortie et restauration de
+ * la vue 3D, nouvelle entrée puis sortie décidée par le système, et échec d'entrée signalé.
+ * Les objets internes sont lus grâce au paramètre ?debug. Le parcours est ignoré si le CDN de
+ * l'émulateur est injoignable ; une étape en échec fait ignorer les suivantes.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ */
+async function testArSession(browser, url) {
+  const label = (step) => `Session AR avec IWER : ${step}`;
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const { page, errors } = await openApp(context, `${url}?iwer&debug`);
+    await page.waitForFunction(() => document.getElementById('xr-status')?.dataset.state !== 'checking', null, { timeout: 30000 });
+    if (await page.evaluate(() => document.getElementById('xr-status').dataset.state) !== 'emulated') {
+      record(label('parcours complet'), 'ignoré', 'émulateur indisponible (réseau ?)');
+      return;
+    }
+
+    /** Entre en AR par le bouton et attend que le terrain soit placé. */
+    const enterAr = async () => {
+      await page.click('#enter-ar');
+      await page.waitForFunction(() => document.body.dataset.xr === 'active', null, { timeout: 15000 });
+      await page.waitForFunction(() => !window.__footballSimulator.arView.needsPlacement, null, { timeout: 15000 });
+    };
+
+    /** État de la vue 3D, à comparer avant l'entrée et après la sortie. */
+    const readView = () => page.evaluate(() => {
+      const app = window.__footballSimulator;
+      const { position, rotation } = app.pitchGroup;
+      const visible = (id) => !document.getElementById(id).hidden;
+      return {
+        presenting: app.renderer.xr.isPresenting,
+        background: app.scene.background ? app.scene.background.getHexString() : null,
+        tableVisible: app.table.visible,
+        pitchAtOrigin: position.length() === 0 && rotation.y === 0 && app.pitchGroup.visible,
+        controlsEnabled: app.controls.enabled,
+        fov: app.camera.fov,
+        buttons: { enter: visible('enter-ar'), exit: visible('exit-ar'), reset: visible('reset-view') },
+        enterDisabled: document.getElementById('enter-ar').disabled,
+        hint: document.getElementById('hint').textContent,
+      };
+    });
+
+    /** Compte les appels à controls.update() et renderer.render() pendant une durée donnée. */
+    const countLoopCalls = async (ms) => {
+      await page.evaluate(() => {
+        const app = window.__footballSimulator;
+        if (!window.__loopCounts) {
+          const update = app.controls.update.bind(app.controls);
+          app.controls.update = (...args) => { window.__loopCounts.updates += 1; return update(...args); };
+          const render = app.renderer.render;
+          app.renderer.render = function countedRender(...args) { window.__loopCounts.renders += 1; return render.apply(this, args); };
+        }
+        window.__loopCounts = { updates: 0, renders: 0 };
+      });
+      await page.waitForTimeout(ms);
+      return page.evaluate(() => ({ ...window.__loopCounts }));
+    };
+
+    const initialView = await readView();
+    const sameAsInitial = (view) => JSON.stringify(view) === JSON.stringify(initialView);
+
+    const steps = [
+      ['entrée par « Entrer en AR »', async () => {
+        await enterAr();
+        const state = await page.evaluate(() => {
+          const app = window.__footballSimulator;
+          const { baseLayer, layers } = app.renderer.xr.getSession().renderState;
+          const visible = (id) => !document.getElementById(id).hidden;
+          return {
+            presenting: app.renderer.xr.isPresenting,
+            layer: baseLayer ? 'XRWebGLLayer' : (layers?.length ? 'XRProjectionLayer' : 'aucune'),
+            space: Boolean(app.renderer.xr.getReferenceSpace()),
+            tableHidden: !app.table.visible,
+            transparent: app.scene.background === null,
+            buttons: visible('exit-ar') && !visible('enter-ar') && !visible('reset-view'),
+          };
+        });
+        const ok = state.presenting && state.space && state.tableHidden && state.transparent && state.buttons && state.layer !== 'aucune';
+        return [ok, `couche ${state.layer}, table masquée : ${state.tableHidden}, fond transparent : ${state.transparent}`];
+      }],
+      ['terrain placé devant la vue', async () => {
+        const placement = await page.evaluate(async () => {
+          const THREE = await import('three');
+          const { BOARD_LENGTH, BOARD_WIDTH } = await import(new URL('src/config.js', document.baseURI).href);
+          const app = window.__footballSimulator;
+          app.pitchGroup.updateWorldMatrix(true, false);
+          const corners = [-1, 1].flatMap((sx) => [-1, 1].map((sz) => {
+            const ndc = app.pitchGroup.localToWorld(new THREE.Vector3((sx * BOARD_LENGTH) / 2, 0, (sz * BOARD_WIDTH) / 2)).project(app.camera);
+            return Math.abs(ndc.x) <= 1 && Math.abs(ndc.y) <= 1 && ndc.z > -1 && ndc.z < 1;
+          }));
+          const distance = app.camera.getWorldPosition(new THREE.Vector3()).distanceTo(app.pitchGroup.getWorldPosition(new THREE.Vector3()));
+          return { inView: corners.filter(Boolean).length, distance, visible: app.pitchGroup.visible };
+        });
+        const ok = placement.visible && placement.inView === 4 && placement.distance > 0.8 && placement.distance < 1.3;
+        return [ok, `${placement.inView} coins sur 4 à l'écran, à ${placement.distance.toFixed(2)} m`];
+      }],
+      ['contrôles d\'orbite en pause', async () => {
+        const counts = await countLoopCalls(1000);
+        return [counts.updates === 0 && counts.renders > 0, `${counts.updates} mise(s) à jour des contrôles pour ${counts.renders} images`];
+      }],
+      ['sortie par « Quitter l\'AR » et vue 3D restaurée', async () => {
+        await page.click('#exit-ar');
+        await page.waitForFunction(() => document.body.dataset.xr === 'inactive', null, { timeout: 15000 });
+        const view = await readView();
+        const counts = await countLoopCalls(800);
+        return [sameAsInitial(view) && counts.updates > 0, `vue identique au départ : ${sameAsInitial(view)}, contrôles relancés : ${counts.updates > 0}`];
+      }],
+      ['nouvelle entrée, puis sortie par le système', async () => {
+        await enterAr();
+        await page.evaluate(() => window.__footballSimulator.renderer.xr.getSession().end());
+        await page.waitForFunction(() => document.body.dataset.xr === 'inactive', null, { timeout: 15000 });
+        const view = await readView();
+        return [sameAsInitial(view), `vue identique au départ : ${sameAsInitial(view)}`];
+      }],
+      ['échec d\'entrée signalé', async () => {
+        await page.evaluate(() => {
+          navigator.xr.requestSession = () => Promise.reject(new DOMException('Refus simulé', 'NotAllowedError'));
+        });
+        await page.click('#enter-ar');
+        await page.waitForSelector('#ar-message:not([hidden])', { timeout: 15000 });
+        const state = await page.evaluate(() => ({
+          message: document.getElementById('ar-message').textContent,
+          xr: document.body.dataset.xr,
+          enterUsable: !document.getElementById('enter-ar').hidden && !document.getElementById('enter-ar').disabled,
+        }));
+        return [state.xr === 'inactive' && state.enterUsable && state.message.includes('caméra'), state.message];
+      }],
+    ];
+
+    let blocked = false;
+    for (const [step, run] of steps) {
+      if (blocked) {
+        record(label(step), 'ignoré', 'étape précédente en échec');
+        continue;
+      }
+      try {
+        const [ok, detail] = await run();
+        record(label(step), ok ? 'ok' : 'échec', detail);
+        blocked = !ok;
+      } catch (error) {
+        record(label(step), 'échec', error.message);
+        blocked = true;
+      }
+    }
+    record(label('aucune erreur dans la console'), errors.length ? 'échec' : 'ok', errors.join(' | '));
+  } catch (error) {
+    record(label('parcours complet'), 'échec', error.message);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Lance tous les tests, affiche le bilan et renvoie un code de sortie non nul en cas d'échec.
  */
 async function main() {
@@ -212,6 +368,7 @@ async function main() {
     await testLoading(browser, subPath.url, 'sous-chemin, comme GitHub Pages', DESKTOP);
     await testPwa(browser, subPath.url, 'sous-chemin');
     await testEmulator(browser, root.url);
+    await testArSession(browser, root.url);
   } finally {
     await browser.close();
     await root.close();

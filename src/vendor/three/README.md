@@ -20,4 +20,4 @@ tar -xzf three-0.186.1.tgz
 # copier les mêmes chemins depuis package/ vers src/vendor/three/
 ```
 
-Au sprint 2, ajouter `examples/jsm/webxr/ARButton.js` de la même version, puis l'ajouter à la liste de mise en cache de `sw.js`.
+Tout fichier ajouté ici doit l'être dans la même version, puis dans la liste de mise en cache de `sw.js`. Le sprint 2 n'a pas eu besoin d'`ARButton.js` : la session AR est ouverte par `src/xr-session.js`.
