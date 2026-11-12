@@ -4,7 +4,8 @@
 
 <p align="center">
   <b>Tableau tactique de football en réalité augmentée, ouvert depuis un simple lien.</b><br>
-  Application web progressive · WebXR · three.js r186 · SUP'COM, module Réalité Étendue, 2026–2027
+  Application web progressive · WebXR · three.js r186 · SUP'COM, module Réalité Étendue, 2026–2027<br>
+  <a href="https://bilelkhlif.github.io/footballsimulator/"><b>Ouvrir l'application</b></a> (en AR avec Chrome sur Android)
 </p>
 
 ---
@@ -13,7 +14,7 @@
 
 - **Le besoin.** Les entraîneurs amateurs expliquent la tactique sur un tableau blanc : une vue de dessus en 2D, des déplacements difficiles à montrer, aucun partage à distance.
 - **Notre réponse.** Une PWA qui pose un mini-terrain 3D de 60 × 39 cm sur une vraie table, à travers la caméra d'un smartphone Android, depuis une URL ou un QR code.
-- **Où nous en sommes.** Les sprints 1 et 2 sont faits : terrain et 22 joueurs en 3D, formations, application installable et utilisable hors-ligne, et session AR immersive validée avec l'émulateur IWER. Le test sur téléphone reste à faire.
+- **Où nous en sommes.** Les sprints 1 et 2 sont faits : terrain et 22 joueurs en 3D, formations, application installable et utilisable hors-ligne, et session AR immersive. Testés le 12 novembre 2026 sur deux téléphones Android, un iPhone 15 et un PC.
 
 ## Aperçu
 
@@ -38,7 +39,7 @@
 | Sprint | Contenu | État |
 | --- | --- | --- |
 | S1 | Dépôt, structure PWA, scène three.js : terrain et joueurs visibles hors AR | Livré |
-| S2 | Session `immersive-ar`, `XRWebGLLayer`, espace de référence `local-floor` | Fait, validé avec l'émulateur IWER ; test Android à faire |
+| S2 | Session `immersive-ar`, `XRWebGLLayer`, espace de référence `local-floor` | Fait : AR testée sur deux téléphones Android, vue 3D sur iPhone et PC |
 | S3 | Hit testing, réticule, pose du terrain par un tap | À faire |
 | S4 | Changement de formation (Strategy), deux équipes, ballon, boutons HTML | À faire |
 | S5 | Sélection et déplacement des joueurs (raycasting), flèches, annulation (Command) | À faire |
@@ -111,7 +112,7 @@ Ajouter `?iwer` à l'adresse, par exemple `http://127.0.0.1:8080/?iwer`. L'émul
 
 Il faut un téléphone compatible ARCore, avec les Services Google Play pour la RA, et Chrome. WebXR exige HTTPS. Deux possibilités :
 
-1. **GitHub Pages** : Settings → Pages → Deploy from a branch → `main`, dossier `/ (root)`. L'application est alors servie à l'adresse `https://bilelkhlif.github.io/footballsimulator/`.
+1. **GitHub Pages** : l'application est en ligne à l'adresse `https://bilelkhlif.github.io/footballsimulator/`, publiée depuis `main` (Settings → Pages). Chaque fusion dans `main` la met à jour en une à deux minutes.
 2. **Redirection de port USB** : brancher le téléphone, ouvrir `chrome://inspect/#devices` sur le PC et rediriger le port du serveur local. Sur le téléphone, `http://localhost:<port>` est alors un contexte sécurisé.
 
 Le protocole de test sur le téléphone est dans [docs/sprint-2.md](docs/sprint-2.md#12-test-sur-android).

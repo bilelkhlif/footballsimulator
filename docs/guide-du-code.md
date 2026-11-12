@@ -423,11 +423,11 @@ Ce que les tests ne couvrent pas : le rendu visuel (contrôlé à l'œil sur les
 
 ## 7. Limites connues
 
-- L'application n'a pas encore été essayée sur un vrai téléphone Android. Depuis le sprint 2, la session AR est en place et validée avec l'émulateur IWER ; le protocole du test sur Android est dans [sprint-2.md](sprint-2.md).
+- Depuis le sprint 2, la session AR est en place. Elle a été testée le 12 novembre 2026 sur deux téléphones Android avec Chrome, et la vue 3D sur un iPhone 15 et un PC : voir [sprint-2.md](sprint-2.md).
 - La fluidité de 30 images par seconde reste à mesurer sur un téléphone de milieu de gamme (sprint 6).
 - Le hit test ne peut pas encore être émulé sur PC : il faudra intégrer `@iwer/sem` ou tester sur téléphone (décision du sprint 3).
 - Les formations ne se changent pas encore depuis l'interface (sprint 4).
-- Safari sur iPhone ne prend pas en charge les sessions WebXR `immersive-ar` : sur iPhone, l'application restera en vue 3D.
+- Safari sur iPhone ne prend pas en charge les sessions WebXR `immersive-ar` : sur iPhone, l'application reste en vue 3D (vérifié sur un iPhone 15).
 
 ---
 

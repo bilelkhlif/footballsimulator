@@ -34,7 +34,7 @@ Chrome 156 sur PC, sans interface graphique, avec un serveur local.
 
 Les cinq premières lignes sont automatisées : `npm test` les rejoue, avec le badge d'état de l'AR en plus (11 vérifications, toutes réussies le 9 novembre 2026). Voir la partie « Tests » du [guide du code](guide-du-code.md#6-tests).
 
-Pas encore testé : un vrai smartphone Android avec ARCore, puisqu'aucune fonction AR n'est active, et la fluidité de 30 images par seconde, à mesurer au sprint 6.
+Pas encore testé au sprint 1 : un vrai smartphone Android avec ARCore, puisqu'aucune fonction AR n'est active, et la fluidité de 30 images par seconde, à mesurer au sprint 6. Le test sur téléphone a été fait au sprint 2, le 12 novembre 2026 : voir [sprint-2.md](sprint-2.md#12-test-sur-android).
 
 ## Écarts et décisions
 

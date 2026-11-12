@@ -33,7 +33,7 @@ Le cahier des charges (§5.3) fixe au sprint 2 : la session `immersive-ar`, la c
 | Espace de référence `local-floor` | Demandé et vérifié par notre module, puis confié à three.js |
 | Terrain visible dans la vue AR | Placé devant l'utilisateur au premier rendu de la session |
 | Sortie par « Quitter l'AR » ou par le système, retour à la vue 3D | Fait, avec une nouvelle entrée possible ensuite |
-| Test sur un téléphone Android | Pas encore fait : voir la partie 12 |
+| Test sur des appareils réels | Fait le 12 novembre 2026 : AR sur deux téléphones Android, vue 3D sur iPhone et PC (partie 12) |
 
 Hors du sprint 2, comme prévu : hit test, réticule, pose du terrain sur la table et ancres (sprint 3).
 
@@ -267,7 +267,16 @@ Limites de l'émulation : IWER n'affiche pas d'image de caméra (fond sombre sur
 
 ## 12. Test sur Android
 
-**État : pas encore testé sur un téléphone.** Aucun appareil n'était disponible pendant ce sprint ; rien dans ce document n'affirme le contraire.
+**Testé le 12 novembre 2026** par Bilel Khlif, sur le site publié ([bilelkhlif.github.io/footballsimulator](https://bilelkhlif.github.io/footballsimulator/)) :
+
+| Appareil | Navigateur | Résultat rapporté |
+| --- | --- | --- |
+| Samsung Galaxy S, modèle récent | Chrome | Fonctionne comme prévu : entrée en AR, terrain visible devant l'utilisateur, sortie de l'AR |
+| TECNO POVA 6 Pro 5G | Chrome | Fonctionne comme prévu : entrée en AR, terrain visible devant l'utilisateur, sortie de l'AR |
+| iPhone 15 | Safari | Vue 3D, sans AR, comme prévu : Safari sur iOS ne propose pas de session WebXR `immersive-ar` |
+| PC ASUS TUF A15 | Chrome | Vue 3D, comme prévu sur un ordinateur ; l'AR s'y teste avec l'émulateur IWER (`?iwer`) |
+
+Pas encore mesurés : la fluidité en images par seconde (sprint 6) et la stabilité du terrain pendant une minute, qui dépend de sa pose sur la table (sprint 3, cahier §4.3).
 
 **Prérequis**
 
@@ -278,10 +287,10 @@ Limites de l'émulation : IWER n'affiche pas d'image de caméra (fond sombre sur
 **Trois façons de servir l'application en contexte sécurisé**
 
 1. **USB, sans exposer le PC** : lancer `npm start` sur le PC, activer le débogage USB sur le téléphone, ouvrir `chrome://inspect/#devices` dans Chrome sur le PC, puis rediriger le port 8080 vers `localhost:8080`. Sur le téléphone, `http://localhost:8080` est un contexte sécurisé.
-2. **GitHub Pages** : publier la branche (Settings → Pages), puis ouvrir `https://bilelkhlif.github.io/footballsimulator/`. C'est la solution de la démonstration, avec un QR code (cahier §4.1).
+2. **GitHub Pages** : l'application y est en ligne depuis le 12 novembre 2026, publiée depuis `main`, à l'adresse `https://bilelkhlif.github.io/footballsimulator/`. C'est la solution de la démonstration, avec un QR code (cahier §4.1).
 3. **Tunnel HTTPS temporaire**, par exemple `cloudflared tunnel --url http://127.0.0.1:8080` : une adresse HTTPS publique pointe vers le serveur local tant que la commande tourne.
 
-**Protocole à suivre sur le téléphone**
+**Protocole de test sur le téléphone**, à rejouer à chaque sprint
 
 | Étape | Résultat attendu |
 | --- | --- |
@@ -345,7 +354,7 @@ Elle est abonnée à l'événement `sessionend` d'`ArSession` (patron Observer).
 La détection de la table (hit test) est l'objet du sprint 3. Au sprint 2, il est placé devant l'utilisateur, à hauteur de table.
 
 **Comment testez-vous sans téléphone ?**
-Avec des doublures de WebXR dans les tests unitaires, et avec l'émulateur IWER dans les tests de bout en bout. Le test sur Android reste à faire : le protocole est dans la partie 12.
+Avec des doublures de WebXR dans les tests unitaires, et avec l'émulateur IWER dans les tests de bout en bout. L'application a ensuite été testée sur deux téléphones Android, un iPhone et un PC (partie 12).
 
 ---
 
