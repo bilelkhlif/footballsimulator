@@ -125,10 +125,10 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
 npm run test:unit   # 28 tests unitaires, sans navigateur (doublures de WebXR)
-npm run test:e2e    # 18 vérifications dans Chrome, sans interface
+npm run test:e2e    # 19 vérifications dans Chrome, sans interface
 ```
 
-Les tests de bout en bout couvrent le chargement sans erreur (bureau, mobile, sous-chemin comme sur GitHub Pages), les trois formations, le badge d'état de l'AR, le Service Worker et le rechargement hors-ligne, et le parcours AR complet avec l'émulateur IWER : entrée, terrain devant la vue, sortie et retour à la vue 3D. Résultat le 10 novembre 2026 : 28 tests unitaires et 18 vérifications de bout en bout, tous réussis. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans le [guide du code](docs/guide-du-code.md#6-tests) et dans [docs/sprint-2.md](docs/sprint-2.md#10-tests).
+Les tests de bout en bout couvrent le chargement sans erreur (bureau, mobile, sous-chemin comme sur GitHub Pages), les trois formations, le badge d'état de l'AR, le Service Worker et le rechargement hors-ligne, le lancement depuis le cache sur un réseau très lent, et le parcours AR complet avec l'émulateur IWER : entrée, terrain devant la vue, sortie et retour à la vue 3D. Résultat le 12 novembre 2026 : 28 tests unitaires et 19 vérifications de bout en bout, tous réussis. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans le [guide du code](docs/guide-du-code.md#6-tests) et dans [docs/sprint-2.md](docs/sprint-2.md#10-tests).
 
 ## Arborescence
 

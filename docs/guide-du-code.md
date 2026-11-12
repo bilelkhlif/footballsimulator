@@ -321,12 +321,18 @@ flowchart TD
   R["Requête GET vers l'application"] --> Q{"Chemin dans src/vendor/ ou assets/ ?"}
   Q -- "oui" --> CF["Cache d'abord : ces fichiers ne changent pas"]
   Q -- "non" --> NF["Réseau d'abord : on récupère la dernière version"]
-  NF --> NET{"Réseau disponible ?"}
+  NF --> HAS{"Copie dans le cache ?"}
+  HAS -- "non (première visite)" --> W["Attendre le réseau, puis mettre le cache à jour"]
+  HAS -- "oui" --> SLOW{"Réseau jugé lent depuis moins de 15 s ?"}
+  SLOW -- "oui" --> C["Répondre depuis le cache (la page d'accueil pour une navigation)"]
+  SLOW -- "non" --> NET{"Réponse du réseau en moins de 3 s ?"}
   NET -- "oui" --> U["Répondre et mettre le cache à jour"]
-  NET -- "non" --> C["Répondre depuis le cache (la page d'accueil pour une navigation)"]
+  NET -- "non : lent ou coupé" --> C
 ```
 
 Pourquoi deux stratégies : three.js et les icônes ne changent pas d'une version à l'autre, donc le cache suffit et va plus vite ; le code et la page changent souvent, donc le réseau d'abord évite de servir une version périmée tant qu'on est en ligne.
+
+Pourquoi un délai de 3 secondes (ajouté le 12 novembre 2026, voir [sprint-2.md](sprint-2.md#12-test-sur-android)) : une connexion coupée échoue vite, mais une connexion très lente peut faire attendre le navigateur plus d'une minute par fichier, et la page restait alors sur « Chargement du terrain… ». Désormais, si le cache possède le fichier, le réseau a 3 secondes (`NETWORK_TIMEOUT_MS`) ; au-delà, le cache répond, et il répond directement pendant les 15 secondes suivantes (`SLOW_NETWORK_WINDOW_MS`), pour que toute la page vienne de la même version sans nouvelle attente. Le téléchargement continue en arrière-plan (`event.waitUntil`) et met le cache à jour pour le lancement suivant. Les fonctions : `fetchAndCache` télécharge et met en cache, `findInCache` cherche la copie, `withTimeout` limite l'attente, `networkFirst` choisit la réponse.
 
 Deux règles à respecter : **tout nouveau fichier de l'application doit être ajouté à `APP_SHELL`**, et il faut incrémenter `CACHE_VERSION` quand une bibliothèque ou une icône change.
 
@@ -396,7 +402,7 @@ Une copie de three.js r186 (version 0.186.1), sous licence MIT. Son `README.md` 
 
 ## 6. Tests
 
-`npm test` lance d'abord les 28 tests unitaires du sprint 2 (`npm run test:unit`, sans navigateur), puis rejoue dans Chrome, sans interface, les vérifications de bout en bout (`npm run test:e2e`) : les 11 du sprint 1, décrites ici, et les 7 du parcours AR, décrites dans [sprint-2.md](sprint-2.md). Prérequis : Node.js 18 ou plus, Google Chrome, et un premier `npm install`. Pour utiliser Microsoft Edge à la place de Chrome : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`).
+`npm test` lance d'abord les 28 tests unitaires du sprint 2 (`npm run test:unit`, sans navigateur), puis rejoue dans Chrome, sans interface, les vérifications de bout en bout (`npm run test:e2e`) : les 11 du sprint 1 et celle du réseau lent, décrites ici, et les 7 du parcours AR, décrites dans [sprint-2.md](sprint-2.md). Prérequis : Node.js 18 ou plus, Google Chrome, et un premier `npm install`. Pour utiliser Microsoft Edge à la place de Chrome : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`).
 
 | Test | Ce qu'il vérifie |
 | --- | --- |
@@ -404,6 +410,7 @@ Une copie de three.js r186 (version 0.186.1), sous licence MIT. Son `README.md` 
 | Formations | Pour chaque formation : 11 joueurs, numéros 1 à 11, tous dans leur moitié, hors du rond central, sans pions qui se chevauchent (écart minimal mesuré : 7,1 cm, pour des socles de 1,8 cm de diamètre) |
 | Badge d'état de l'AR | Le badge quitte l'état « vérification » et affiche un résultat |
 | Service Worker et hors-ligne | Le Service Worker s'active, puis la page se recharge réseau coupé |
+| Réseau très lent (ajouté le 12 novembre 2026) | L'application étant en cache, la page est prête en 10 secondes au plus quand le serveur met 30 secondes à répondre (3,7 secondes mesurées) |
 | Émulateur IWER | Avec `?iwer`, une session `immersive-ar` s'ouvre avec `local-floor` ; ignoré si le réseau manque |
 
 Le test des formations reprend le critère d'acceptation du cahier « 11 joueurs bien placés » (§4.3). Le 9 novembre 2026, les 11 vérifications ont réussi. Pour s'assurer que ce test détecte vraiment une erreur, le même numéro a été donné volontairement à deux joueurs du 4-3-3 : le test a échoué avec le message « 4-3-3 : numéros 1,2,3,4,5,6,7,8,10,10,11 », puis le fichier a été restauré.
@@ -414,6 +421,7 @@ Le test des formations reprend le critère d'acceptation du cahier « 11 joueurs
 - [`tests/run-tests.mjs`](../tests/run-tests.mjs) pilote le Chrome installé sur la machine avec `playwright-core` (aucun navigateur n'est téléchargé), en rendu WebGL logiciel (SwiftShader) pour fonctionner même sans carte graphique. Chaque test ouvre l'application et relève les erreurs de console, de script et les réponses HTTP en échec.
 - Le test des formations importe les vrais modules `formations.js` et `config.js` dans la page : il vérifie le code de l'application, pas une copie.
 - Le test hors-ligne recharge d'abord la page, pour qu'elle soit contrôlée par le Service Worker, puis coupe le réseau et la recharge encore.
+- Le test du réseau lent utilise un serveur à part, dont `setLatency` retarde chaque réponse de 30 secondes, puis il mesure le temps de rechargement. Avec l'ancien `sw.js`, sans délai d'attente, il échoue : la page n'est pas prête après 30 secondes.
 - `requestSession` exige une action de l'utilisateur : le test de l'émulateur ajoute un bouton à la page et clique dessus.
 - Le bilan s'affiche avec ✓, ✗ ou –, et la commande se termine en erreur si un test échoue.
 

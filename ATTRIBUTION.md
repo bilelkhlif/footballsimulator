@@ -118,6 +118,7 @@ Contributions de Bilel Khlif :
 10. **Sprint 2** : consignes détaillées fournies à l'assistant pour les étapes 0 à 2, puis 3 à 6 (périmètre, contraintes techniques, tests attendus et exigences d'attribution), les 9 et 10 novembre 2026.
 11. **Tests sur appareils réels** : application testée le 12 novembre 2026 sur le site publié, sur deux téléphones Android avec Chrome (Samsung Galaxy S récent et TECNO POVA 6 Pro 5G), un iPhone 15 avec Safari et un PC ASUS TUF A15 avec Chrome.
 12. **Mise en ligne** : pull request #3 du sprint 2 validée et fusionnée dans `main`, puis publication sur GitHub Pages, le 12 novembre 2026.
+13. **Signalement d'un défaut** : AR qui ne se lançait plus après des problèmes de réseau, signalé le 12 novembre 2026 avec la demande de la rétablir ; à l'origine du correctif du réseau lent (`sw.js`).
 
 ### Détail par composant
 
@@ -139,6 +140,14 @@ Contributions de Bilel Khlif :
         *   l'enchaînement de la session (`renderer.xr.setSession`, couche `XRWebGLLayer`, espace de référence) a été vérifié dans le code de three.js r186 de la copie locale ;
         *   le fonctionnement est expliqué dans `docs/sprint-2.md`, avec les réponses aux questions probables du jury ;
         *   tests sur appareils réels par Bilel Khlif, le 12 novembre 2026, sur le site publié : entrée en AR, terrain visible et sortie conformes sur deux téléphones Android avec Chrome (Samsung Galaxy S récent, TECNO POVA 6 Pro 5G) ; vue 3D conforme sur iPhone 15 avec Safari, sans AR comme prévu, et sur PC ASUS TUF A15 avec Chrome. Résultats et protocole dans `docs/sprint-2.md`.
+
+*   **Composant ou Shader concerné :** correctif du réseau lent, le 12 novembre 2026 : délai d'attente du réseau dans `sw.js`, retard simulé dans `tests/serve.mjs` (`setLatency`) et test « Lancement sur réseau très lent » dans `tests/run-tests.mjs`
+    *   **Prompt ou usage principal :** demande de Bilel Khlif de rétablir l'AR, qui ne se lançait plus après des problèmes de réseau. Diagnostic, code et test générés par l'assistant.
+    *   **Axe de vérification appliqué :**
+        *   site publié contrôlé avant toute modification : les 28 fichiers de `APP_SHELL` répondent (code 200) dans la version de `main`, et les 7 vérifications du parcours AR avec IWER réussissent sur le site publié ; seul le test séparé de l'émulateur a dépassé son délai, le CDN d'IWER ayant tardé à répondre ;
+        *   le nouveau test fait échouer l'ancien `sw.js` (page toujours pas prête après 30 secondes) et réussit avec le correctif (page prête en 3,7 secondes, serveur retardé de 30 secondes) ;
+        *   `npm test` le 12 novembre 2026 : 28 tests unitaires réussis sur 28, puis 19 vérifications de bout en bout réussies sur 19 ;
+        *   explication dans `docs/sprint-2.md` (partie 12) et dans `docs/guide-du-code.md` ; confirmation sur téléphone à faire une fois le correctif publié.
 
 *   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles du sprint 2), figures du rapport (`docs/etat-de-l-art/figures/`)
     *   **Prompt ou usage principal :** dessin des icônes en SVG d'après la couverture du cahier des charges, captures automatisées de l'application, mise en page de la bannière dans le style de la présentation d'état de l'art
