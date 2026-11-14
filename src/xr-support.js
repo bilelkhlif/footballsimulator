@@ -8,6 +8,7 @@
 const STATUS_TEXT = Object.freeze({
   checking: 'Vérification de l’AR…',
   supported: 'AR disponible (WebGPU)',
+  'supported-webgl-test': 'AR disponible (WebGL, mode test)',
   emulated: 'AR émulée (IWER)',
   'needs-flag': 'AR : réglage WebGPU à activer',
   unsupported: 'AR indisponible : vue 3D',
@@ -32,8 +33,9 @@ export async function isImmersiveArSupported() {
 /**
  * Met à jour le badge d'état de l'AR.
  * @param {HTMLElement} statusElement
- * @param {'checking'|'supported'|'emulated'|'needs-flag'|'unsupported'} state
- *   needs-flag : AR présente, mais sans liaison WebXR/WebGPU (réglage de Chrome à activer)
+ * @param {'checking'|'supported'|'supported-webgl-test'|'emulated'|'needs-flag'|'unsupported'} state
+ *   needs-flag : AR présente, mais sans liaison WebXR/WebGPU (réglage de Chrome à activer) ;
+ *   supported-webgl-test : AR disponible en mode test WebGL (?webgl dans l'adresse)
  */
 export function showXrStatus(statusElement, state) {
   statusElement.dataset.state = state;

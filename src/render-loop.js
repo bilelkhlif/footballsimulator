@@ -21,12 +21,16 @@
  * alors aussi dans une deuxième couche, qui n'existe pas dans la texture de la session, et WebGPU
  * rejetterait la commande à chaque image. three.js désigne cette cible comme cible de sortie avant
  * d'appeler la boucle de rendu : on la redimensionne à ce moment, par l'API publique.
- * @param {{getOutputRenderTarget: () => ({width: number, height: number, depth: number,
- *   setSize: (width: number, height: number, depth: number) => void}|null),
+ * En mode test WebGL, la cible XR de three.js a déjà une couche par vue : rien à faire.
+ * @param {{backend?: {isWebGPUBackend?: boolean}, getOutputRenderTarget: () => ({width: number,
+ *   height: number, depth: number, setSize: (width: number, height: number, depth: number) => void}|null),
  *   xr: {getCamera: () => {cameras: unknown[]}}}} renderer
  * @returns {boolean} vrai si la cible a été redimensionnée
  */
 export function matchXrTargetToViews(renderer) {
+  if (renderer.backend?.isWebGPUBackend !== true) {
+    return false;
+  }
   const target = renderer.getOutputRenderTarget();
   const viewCount = renderer.xr.getCamera().cameras.length;
   if (!target || viewCount === 0 || target.depth === viewCount) {

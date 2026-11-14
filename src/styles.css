@@ -154,7 +154,8 @@ body[data-xr="active"] #copy-flag {
 }
 
 .status[data-state="emulated"],
-.status[data-state="needs-flag"] {
+.status[data-state="needs-flag"],
+.status[data-state="supported-webgl-test"] {
   color: var(--color-gold);
 }
 
@@ -166,6 +167,12 @@ body[data-xr="active"] #copy-flag {
 .status[data-state="unavailable"],
 .status[data-state="offline"] {
   color: #ffb4a8;
+}
+
+/* Mode test WebGL (?webgl), réservé aux tests : badge doré, distinct du vert de WebGPU. */
+.status[data-state="webgl-test"] {
+  color: var(--color-gold);
+  border-color: rgba(227, 168, 26, 0.55);
 }
 
 /* ---- Pastilles des équipes : couleur et formation en place ---- */
@@ -303,6 +310,8 @@ body[data-xr="active"] #copy-flag {
   background: var(--color-bg);
   transition: opacity 0.3s ease;
 }
+
+
 
 body.is-ready .loader {
   opacity: 0;
