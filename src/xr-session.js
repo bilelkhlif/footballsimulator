@@ -1,12 +1,17 @@
 /**
- * Gestion des sessions WebXR immersive-ar (sprint 2, cahier §5.3).
+ * Gestion des sessions WebXR immersive-ar (sprint 2, cahier §5.3), rendues en WebGPU depuis
+ * le sprint 3.
  *
  * Enchaînement d'une entrée en AR :
- * 1. vérifier que WebXR existe et que le mode immersive-ar est pris en charge ;
- * 2. demander la session au navigateur (navigator.xr.requestSession) ;
+ * 1. vérifier que WebXR existe, que le mode immersive-ar est pris en charge et que le navigateur
+ *    sait relier WebXR à WebGPU (XRGPUBinding) : sans cette liaison, il n'y a pas d'AR, car
+ *    l'application ne se replie jamais sur WebGL ;
+ * 2. demander la session au navigateur (navigator.xr.requestSession), avec les fonctionnalités
+ *    obligatoires local-floor et webgpu, et facultatives hit-test, anchors et dom-overlay ;
  * 3. demander l'espace de référence local-floor, pour échouer tôt et clairement ;
- * 4. confier la session à three.js (renderer.xr.setSession) : il rend le contexte WebGL
- *    compatible XR, crée la couche de rendu XRWebGLLayer et cadence la boucle de rendu ;
+ * 4. confier la session à three.js (renderer.xr.setSession) : il crée la liaison XRGPUBinding
+ *    avec le périphérique WebGPU, une couche de projection (XRProjectionLayer) et cadence la
+ *    boucle de rendu ;
  * 5. donner à three.js l'espace local-floor obtenu à l'étape 3.
  *
  * Le module signale le cycle de vie par des événements (patron Observer) : sessionstart,
@@ -21,14 +26,33 @@ const SESSION_MODE = 'immersive-ar';
 /** Espace de référence : origine au sol, à l'endroit où se trouve l'utilisateur au départ. */
 const REFERENCE_SPACE_TYPE = 'local-floor';
 
+/** Fonctionnalité WebXR qui fait rendre la session en WebGPU (spécification WebXR/WebGPU Binding). */
+const WEBGPU_FEATURE = 'webgpu';
+
+/**
+ * Fonctionnalités facultatives : détection des surfaces et ancres (sprint 3). L'application
+ * reste utilisable sans elles : le terrain est alors placé devant l'utilisateur, comme au sprint 2.
+ */
+const OPTIONAL_FEATURES = Object.freeze(['hit-test', 'anchors']);
+
 /** Causes d'échec transmises avec l'événement sessionerror. */
 export const AR_ERROR_REASONS = Object.freeze({
   UNAVAILABLE: 'unavailable', // navigator.xr absent : navigateur sans WebXR ou page en HTTP
   UNSUPPORTED: 'unsupported', // WebXR présent, mais sans le mode immersive-ar
+  WEBGPU_BINDING: 'webgpu-binding', // XRGPUBinding absent : WebXR ne sait pas afficher du WebGPU
   REJECTED: 'rejected', // session refusée : autorisation de la caméra, ARCore absent…
   REFERENCE_SPACE: 'reference-space', // espace local-floor indisponible sur l'appareil
   LAYER: 'layer', // three.js n'a pas pu relier son rendu à la session
 });
+
+/**
+ * Indique si le navigateur expose la liaison WebXR/WebGPU. Dans Chrome 157, elle est encore
+ * derrière le réglage chrome://flags/#webxr-webgpu-binding, sur Android et sous Windows.
+ * @returns {boolean}
+ */
+export function hasWebGpuXrBinding() {
+  return typeof globalThis.XRGPUBinding === 'function';
+}
 
 /**
  * Termine une session sans propager d'erreur, si elle est déjà terminée par exemple.
@@ -44,23 +68,25 @@ async function endQuietly(session) {
 }
 
 /**
- * Indique la couche de rendu que three.js a attachée à la session.
+ * Indique la couche de rendu que three.js a attachée à la session. En WebGPU, c'est une couche
+ * de projection (XRProjectionLayer) créée par XRGPUBinding, listée dans renderState.layers.
  * @param {XRSession} session
- * @returns {'XRWebGLLayer'|'XRProjectionLayer'|null}
+ * @returns {'XRProjectionLayer'|'XRWebGLLayer'|null}
  */
 function describeLayer(session) {
   const { baseLayer, layers } = session.renderState ?? {};
-  if (baseLayer) {
-    return 'XRWebGLLayer';
+  if (layers?.length) {
+    return 'XRProjectionLayer';
   }
-  return layers?.length ? 'XRProjectionLayer' : null;
+  return baseLayer ? 'XRWebGLLayer' : null;
 }
 
 /**
  * Session AR immersive, reliée au moteur de rendu three.js.
  *
  * Événements :
- * - sessionstart : { session, referenceSpace, layer, domOverlay } quand la session est prête ;
+ * - sessionstart : { session, referenceSpace, layer, rendering, features, domOverlay } quand la
+ *   session est prête ; rendering vaut 'webgpu', features liste les fonctionnalités accordées ;
  * - sessionend : { session } quand elle se termine, par le bouton de l'application ou par le
  *   système (bouton retour du téléphone, par exemple), une fois le rendu de three.js restauré ;
  * - sessionerror : { reason, error } quand l'entrée en AR échoue ; aucune session ne reste ouverte.
@@ -68,6 +94,7 @@ function describeLayer(session) {
 export class ArSession extends EventEmitter {
   #renderer;
   #getXr;
+  #hasGpuBinding;
   #overlayRoot;
   #session = null;
   #referenceSpace = null;
@@ -76,15 +103,19 @@ export class ArSession extends EventEmitter {
 
   /**
    * @param {object} options
-   * @param {import('three').WebGLRenderer} options.renderer moteur de rendu, avec renderer.xr.enabled
+   * @param {import('./webgpu.js').WebGpuOnlyRenderer} options.renderer moteur de rendu WebGPU,
+   *   avec renderer.xr.enabled
    * @param {XRSystem} [options.xr] système WebXR ; par défaut navigator.xr, lu au moment de l'entrée
    *   en AR, car l'émulateur IWER le remplace après le chargement de la page
+   * @param {() => boolean} [options.hasGpuBinding] indique si XRGPUBinding existe ; lu lui aussi à
+   *   l'entrée en AR, car l'émulateur l'ajoute après le chargement
    * @param {HTMLElement} [options.overlayRoot] élément affiché par-dessus la vue AR (DOM Overlay)
    */
-  constructor({ renderer, xr, overlayRoot = null }) {
+  constructor({ renderer, xr, hasGpuBinding = hasWebGpuXrBinding, overlayRoot = null }) {
     super();
     this.#renderer = renderer;
     this.#getXr = xr === undefined ? () => globalThis.navigator?.xr : () => xr;
+    this.#hasGpuBinding = hasGpuBinding;
     this.#overlayRoot = overlayRoot;
   }
 
@@ -153,6 +184,9 @@ export class ArSession extends EventEmitter {
     if (!(await this.isSupported())) {
       return this.#fail(AR_ERROR_REASONS.UNSUPPORTED, new Error('Le mode immersive-ar n\'est pas pris en charge.'));
     }
+    if (!this.#hasGpuBinding()) {
+      return this.#fail(AR_ERROR_REASONS.WEBGPU_BINDING, new Error('XRGPUBinding est absent : WebXR ne peut pas afficher un rendu WebGPU.'));
+    }
 
     let session;
     try {
@@ -172,9 +206,9 @@ export class ArSession extends EventEmitter {
     const xrManager = this.#renderer.xr;
     try {
       xrManager.setReferenceSpaceType(REFERENCE_SPACE_TYPE);
-      // three.js : makeXRCompatible, puis XRWebGLLayer (ou couche de projection), puis boucle de rendu.
+      // three.js r187 : XRGPUBinding, couche de projection WebGPU, puis boucle de rendu de la session.
       await xrManager.setSession(session);
-      // setSession réinitialise l'espace personnalisé : on donne le nôtre après.
+      // Notre espace local-floor, celui que le hit test utilise aussi.
       xrManager.setReferenceSpace(referenceSpace);
     } catch (error) {
       await endQuietly(session);
@@ -184,24 +218,30 @@ export class ArSession extends EventEmitter {
     this.#session = session;
     this.#referenceSpace = referenceSpace;
     xrManager.addEventListener('sessionend', this.#onRendererSessionEnd);
+    const features = [...(session.enabledFeatures ?? [])];
     this.emit('sessionstart', {
       session,
       referenceSpace,
       layer: describeLayer(session),
+      rendering: features.includes(WEBGPU_FEATURE) ? 'webgpu' : null,
+      features,
       domOverlay: session.domOverlayState?.type ?? null,
     });
     return session;
   }
 
   /**
-   * Options de la session : local-floor obligatoire, DOM Overlay facultatif pour garder
-   * les boutons HTML visibles en AR. Le hit test et les ancres arrivent au sprint 3.
+   * Options de la session : local-floor et webgpu obligatoires ; hit test, ancres et DOM Overlay
+   * facultatifs, car l'application reste utilisable sans eux.
    * @returns {XRSessionInit}
    */
   #sessionInit() {
-    const sessionInit = { requiredFeatures: [REFERENCE_SPACE_TYPE] };
+    const sessionInit = {
+      requiredFeatures: [REFERENCE_SPACE_TYPE, WEBGPU_FEATURE],
+      optionalFeatures: [...OPTIONAL_FEATURES],
+    };
     if (this.#overlayRoot) {
-      sessionInit.optionalFeatures = ['dom-overlay'];
+      sessionInit.optionalFeatures.push('dom-overlay');
       sessionInit.domOverlay = { root: this.#overlayRoot };
     }
     return sessionInit;
@@ -224,7 +264,10 @@ export class ArSession extends EventEmitter {
    */
   #handleSessionEnd() {
     const session = this.#session;
-    this.#renderer.xr.removeEventListener('sessionend', this.#onRendererSessionEnd);
+    const xrManager = this.#renderer.xr;
+    xrManager.removeEventListener('sessionend', this.#onRendererSessionEnd);
+    // three.js r187 garde l'espace personnalisé d'une session à l'autre : on le retire.
+    xrManager.setReferenceSpace(null);
     this.#session = null;
     this.#referenceSpace = null;
     this.emit('sessionend', { session });
