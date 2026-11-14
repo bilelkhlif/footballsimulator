@@ -30,6 +30,12 @@ const REFERENCE_SPACE_TYPE = 'local-floor';
 const WEBGPU_FEATURE = 'webgpu';
 
 /**
+ * API de rendu de la session : WebGPU ; WebGL seulement en mode test (?webgl dans l'adresse,
+ * src/webgl-test-mode.js), réservé aux tests et jamais choisi comme repli.
+ */
+export const RENDERING_APIS = Object.freeze({ WEBGPU: 'webgpu', WEBGL: 'webgl' });
+
+/**
  * Fonctionnalités facultatives : détection des surfaces et ancres (sprint 3). L'application
  * reste utilisable sans elles : le terrain est alors placé devant l'utilisateur, comme au sprint 2.
  */
@@ -86,7 +92,8 @@ function describeLayer(session) {
  *
  * Événements :
  * - sessionstart : { session, referenceSpace, layer, rendering, features, domOverlay } quand la
- *   session est prête ; rendering vaut 'webgpu', features liste les fonctionnalités accordées ;
+ *   session est prête ; rendering vaut 'webgpu' (ou 'webgl' en mode test), features liste les
+ *   fonctionnalités accordées ;
  * - sessionend : { session } quand elle se termine, par le bouton de l'application ou par le
  *   système (bouton retour du téléphone, par exemple), une fois le rendu de three.js restauré ;
  * - sessionerror : { reason, error } quand l'entrée en AR échoue ; aucune session ne reste ouverte.
@@ -96,6 +103,7 @@ export class ArSession extends EventEmitter {
   #getXr;
   #hasGpuBinding;
   #overlayRoot;
+  #renderingApi;
   #session = null;
   #referenceSpace = null;
   #pendingStart = null;
@@ -110,13 +118,16 @@ export class ArSession extends EventEmitter {
    * @param {() => boolean} [options.hasGpuBinding] indique si XRGPUBinding existe ; lu lui aussi à
    *   l'entrée en AR, car l'émulateur l'ajoute après le chargement
    * @param {HTMLElement} [options.overlayRoot] élément affiché par-dessus la vue AR (DOM Overlay)
+   * @param {string} [options.renderingApi] une valeur de RENDERING_APIS : WebGPU par défaut ;
+   *   WebGL en mode test, où la session n'exige ni la fonctionnalité webgpu ni XRGPUBinding
    */
-  constructor({ renderer, xr, hasGpuBinding = hasWebGpuXrBinding, overlayRoot = null }) {
+  constructor({ renderer, xr, hasGpuBinding = hasWebGpuXrBinding, overlayRoot = null, renderingApi = RENDERING_APIS.WEBGPU }) {
     super();
     this.#renderer = renderer;
     this.#getXr = xr === undefined ? () => globalThis.navigator?.xr : () => xr;
     this.#hasGpuBinding = hasGpuBinding;
     this.#overlayRoot = overlayRoot;
+    this.#renderingApi = renderingApi;
   }
 
   /** Vrai pendant une session AR. */
@@ -184,7 +195,7 @@ export class ArSession extends EventEmitter {
     if (!(await this.isSupported())) {
       return this.#fail(AR_ERROR_REASONS.UNSUPPORTED, new Error('Le mode immersive-ar n\'est pas pris en charge.'));
     }
-    if (!this.#hasGpuBinding()) {
+    if (this.#renderingApi === RENDERING_APIS.WEBGPU && !this.#hasGpuBinding()) {
       return this.#fail(AR_ERROR_REASONS.WEBGPU_BINDING, new Error('XRGPUBinding est absent : WebXR ne peut pas afficher un rendu WebGPU.'));
     }
 
@@ -223,7 +234,7 @@ export class ArSession extends EventEmitter {
       session,
       referenceSpace,
       layer: describeLayer(session),
-      rendering: features.includes(WEBGPU_FEATURE) ? 'webgpu' : null,
+      rendering: features.includes(WEBGPU_FEATURE) ? RENDERING_APIS.WEBGPU : RENDERING_APIS.WEBGL,
       features,
       domOverlay: session.domOverlayState?.type ?? null,
     });
@@ -231,13 +242,17 @@ export class ArSession extends EventEmitter {
   }
 
   /**
-   * Options de la session : local-floor et webgpu obligatoires ; hit test, ancres et DOM Overlay
-   * facultatifs, car l'application reste utilisable sans eux.
+   * Options de la session : local-floor et webgpu obligatoires (webgpu sauf en mode test
+   * WebGL) ; hit test, ancres et DOM Overlay facultatifs, car l'application reste utilisable
+   * sans eux.
    * @returns {XRSessionInit}
    */
   #sessionInit() {
+    const requiredFeatures = this.#renderingApi === RENDERING_APIS.WEBGPU
+      ? [REFERENCE_SPACE_TYPE, WEBGPU_FEATURE]
+      : [REFERENCE_SPACE_TYPE];
     const sessionInit = {
-      requiredFeatures: [REFERENCE_SPACE_TYPE, WEBGPU_FEATURE],
+      requiredFeatures,
       optionalFeatures: [...OPTIONAL_FEATURES],
     };
     if (this.#overlayRoot) {

@@ -16,7 +16,9 @@
  *    d'IWER, qui produit l'événement select de WebXR, comme un toucher sur l'écran du téléphone ;
  * 5. la pose de départ : téléphone tenu à 1,35 m du sol, incliné de 35° vers la table ;
  * 6. une seule vue, comme l'écran d'un téléphone : IWER 2.7.0 rend toujours les deux yeux d'un
- *    casque (sans stéréo, la seconde vue a une largeur nulle) ; on ne garde que la première.
+ *    casque (sans stéréo, la seconde vue a une largeur nulle) ; on ne garde que la première ;
+ * 7. en mode test WebGL (?webgl) : un vrai framebuffer pour la couche WebGL de three.js, recopié
+ *    dans le canvas à la fin de chaque image (voir provideLayerFramebuffer).
  */
 
 /** Table virtuelle de l'émulateur, dans l'espace local-floor, en mètres. */
@@ -31,8 +33,11 @@ const TRIGGER_PRESS_MS = 120;
 /** Canvas WebGPU de l'application, cible de la couche de projection émulée. */
 let targetCanvas = null;
 
-/** Sessions qui ont déjà leur horloge d'images. */
-const sessionsWithClock = new WeakSet();
+/** Couche-horloge de chaque session (voir startFrameClock). */
+const clockLayers = new WeakMap();
+
+/** Framebuffer réel de chaque couche WebGL du mode test (voir provideLayerFramebuffer). */
+const layerFramebuffers = new WeakMap();
 
 /**
  * Fait tourner un vecteur par un quaternion unitaire (v' = q v q⁻¹).
@@ -193,10 +198,9 @@ class EmulatedProjectionLayer {
  * @param {XRSession} session
  */
 function startFrameClock(session) {
-  if (sessionsWithClock.has(session)) {
+  if (clockLayers.has(session)) {
     return;
   }
-  sessionsWithClock.add(session);
   const clockCanvas = document.createElement('canvas');
   clockCanvas.width = 1;
   clockCanvas.height = 1;
@@ -204,7 +208,10 @@ function startFrameClock(session) {
   clockCanvas.style.display = 'none';
   document.body.append(clockCanvas);
   const gl = clockCanvas.getContext('webgl2');
-  session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl) });
+  const clockLayer = new XRWebGLLayer(session, gl);
+  clockLayers.set(session, clockLayer);
+  clockSet.add(clockLayer);
+  session.updateRenderState({ baseLayer: clockLayer });
   session.addEventListener('end', () => clockCanvas.remove(), { once: true });
 }
 
@@ -277,14 +284,112 @@ function findGetter(object, name) {
 }
 
 /**
+ * Crée un framebuffer de la taille du canvas, avec couleur et profondeur, sans changer les
+ * liaisons WebGL que three.js connaît.
+ * @param {WebGL2RenderingContext} gl
+ * @param {number} width
+ * @param {number} height
+ * @returns {{framebuffer: WebGLFramebuffer, renderbuffers: WebGLRenderbuffer[], width: number, height: number}}
+ */
+function createLayerFramebuffer(gl, width, height) {
+  const previousFramebuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+  const previousRenderbuffer = gl.getParameter(gl.RENDERBUFFER_BINDING);
+  const framebuffer = gl.createFramebuffer();
+  const color = gl.createRenderbuffer();
+  const depth = gl.createRenderbuffer();
+  gl.bindRenderbuffer(gl.RENDERBUFFER, color);
+  gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA8, width, height);
+  gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
+  gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, width, height);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, color);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, depth);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+  gl.bindRenderbuffer(gl.RENDERBUFFER, previousRenderbuffer);
+  return { framebuffer, renderbuffers: [color, depth], width, height };
+}
+
+/**
+ * Mode test WebGL : IWER dessine la couche WebGL dans le framebuffer par défaut du canvas
+ * (XRWebGLLayer.framebuffer vaut null). Un vrai navigateur fournit un framebuffer opaque non
+ * nul, et le backend WebGL de three.js r187 l'exige : il s'en sert de clé dans une WeakMap.
+ * Chaque couche WebGL de l'application reçoit donc un vrai framebuffer ; copyLayerToCanvas le
+ * recopie dans le canvas à la fin de chaque image. La couche-horloge garde son framebuffer nul.
+ */
+function provideLayerFramebuffer() {
+  const proto = globalThis.XRWebGLLayer.prototype;
+  const readFramebuffer = Object.getOwnPropertyDescriptor(proto, 'framebuffer').get;
+  Object.defineProperty(proto, 'framebuffer', {
+    configurable: true,
+    get() {
+      const gl = this.context;
+      if (isClockLayer(this) || !(gl instanceof WebGL2RenderingContext)) {
+        return readFramebuffer.call(this);
+      }
+      const width = gl.drawingBufferWidth;
+      const height = gl.drawingBufferHeight;
+      let target = layerFramebuffers.get(this);
+      if (!target || target.width !== width || target.height !== height) {
+        if (target) {
+          gl.deleteFramebuffer(target.framebuffer);
+          target.renderbuffers.forEach((renderbuffer) => gl.deleteRenderbuffer(renderbuffer));
+        }
+        target = createLayerFramebuffer(gl, width, height);
+        layerFramebuffers.set(this, target);
+      }
+      return target.framebuffer;
+    },
+  });
+}
+
+/**
+ * Indique si une couche est la couche-horloge d'une session.
+ * @param {XRWebGLLayer} layer
+ * @returns {boolean}
+ */
+function isClockLayer(layer) {
+  return clockSet.has(layer);
+}
+
+/** Couches-horloges, pour les reconnaître depuis la couche elle-même. */
+const clockSet = new WeakSet();
+
+/**
+ * Recopie dans le canvas l'image que three.js a dessinée dans le framebuffer d'une couche WebGL,
+ * en rétablissant ensuite les liaisons et le test de découpe (scissor) de three.js.
+ * @param {XRWebGLLayer|null} layer couche de base de la session
+ */
+function copyLayerToCanvas(layer) {
+  const target = layer && layerFramebuffers.get(layer);
+  if (!target) {
+    return;
+  }
+  const gl = layer.context;
+  const previousRead = gl.getParameter(gl.READ_FRAMEBUFFER_BINDING);
+  const previousDraw = gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING);
+  const scissor = gl.isEnabled(gl.SCISSOR_TEST);
+  if (scissor) {
+    gl.disable(gl.SCISSOR_TEST);
+  }
+  gl.bindFramebuffer(gl.READ_FRAMEBUFFER, target.framebuffer);
+  gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+  gl.blitFramebuffer(0, 0, target.width, target.height, 0, 0, target.width, target.height, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+  gl.bindFramebuffer(gl.READ_FRAMEBUFFER, previousRead);
+  gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, previousDraw);
+  if (scissor) {
+    gl.enable(gl.SCISSOR_TEST);
+  }
+}
+
+/**
  * Prépare une session IWER : couches de projection visibles dans renderState, hit test sur la
  * table virtuelle, et clic sur la scène changé en select.
  * @param {XRSession} session
  * @param {object} xrDevice appareil émulé par IWER
  */
 function prepareSession(session, xrDevice) {
-  // renderState.layers : IWER ignore les couches ; on garde celles que three.js déclare, et la
-  // couche de l'horloge n'est pas montrée comme couche de rendu.
+  // renderState.layers : IWER ignore les couches ; on garde celles que three.js déclare. La couche
+  // de l'horloge n'est pas montrée comme couche de rendu ; une vraie couche WebGL (mode test) l'est.
   const readRenderState = findGetter(session, 'renderState');
   const updateRenderState = session.updateRenderState.bind(session);
   let layers = [];
@@ -298,9 +403,17 @@ function prepareSession(session, xrDevice) {
   Object.defineProperty(session, 'renderState', {
     configurable: true,
     get() {
-      const { depthNear, depthFar, inlineVerticalFieldOfView } = readRenderState.call(session);
-      return { depthNear, depthFar, inlineVerticalFieldOfView, baseLayer: null, layers };
+      const { depthNear, depthFar, inlineVerticalFieldOfView, baseLayer } = readRenderState.call(session);
+      const appBaseLayer = baseLayer && baseLayer !== clockLayers.get(session) ? baseLayer : null;
+      return { depthNear, depthFar, inlineVerticalFieldOfView, baseLayer: appBaseLayer, layers };
     },
+  });
+
+  // Mode test WebGL : après chaque image de l'application, l'image de la couche va dans le canvas.
+  const requestAnimationFrame = session.requestAnimationFrame.bind(session);
+  session.requestAnimationFrame = (callback) => requestAnimationFrame((time, frame) => {
+    callback(time, frame);
+    copyLayerToCanvas(readRenderState.call(session).baseLayer);
   });
 
   // Hit test : la table virtuelle, à la place du module d'environnement synthétique d'IWER.
@@ -336,6 +449,9 @@ function prepareSession(session, xrDevice) {
 export function installXrEmulationExtras({ xrDevice }) {
   // Une seule vue, comme l'écran d'un téléphone : la première vue couvre alors tout l'écran.
   xrDevice.stereoEnabled = false;
+
+  // Mode test WebGL : un vrai framebuffer par couche WebGL, comme dans un vrai navigateur.
+  provideLayerFramebuffer();
 
 
   // Pose de départ : téléphone tenu au-dessus de la table, incliné vers elle (rotation autour de X).

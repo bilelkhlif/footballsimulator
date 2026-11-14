@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BOARD_LENGTH, BOARD_THICKNESS, BOARD_WIDTH, SCENE_COLORS } from './config.js';
 import { createWebGpuRenderer } from './webgpu.js';
+import { createWebGlTestRenderer, RENDER_MODES } from './webgl-test-mode.js';
 
 /**
  * Part de l'écran que le plateau peut occuper lors du cadrage, en coordonnées
@@ -19,16 +20,20 @@ const BOARD_CORNERS = [-1, 1].flatMap((sx) => [-1, 1].flatMap((sz) => [0, -BOARD
 )));
 
 /**
- * Crée le moteur de rendu WebGPU et insère son canvas dans le conteneur.
+ * Crée le moteur de rendu et insère son canvas dans le conteneur : WebGPU, sauf si l'adresse
+ * demande le mode test WebGL (?webgl, src/webgl-test-mode.js), réservé aux tests.
  * Le fond transparent (alpha) sert à superposer la scène à la caméra en AR. WebXR est activé
  * avant l'initialisation : pendant une session AR immersive, three.js pilote lui-même la
  * caméra (position du téléphone) et la boucle de rendu (cadence de la session).
  * @param {HTMLElement} container élément qui reçoit le canvas
- * @returns {Promise<import('./webgpu.js').WebGpuOnlyRenderer>}
+ * @param {string} renderMode une valeur de RENDER_MODES
+ * @returns {Promise<import('three/webgpu').Renderer>}
  * @throws {import('./webgpu.js').WebGpuUnavailableError} si WebGPU est absent : aucun repli WebGL
  */
-async function createRenderer(container) {
-  const renderer = await createWebGpuRenderer({ xrEnabled: true });
+async function createRenderer(container, renderMode) {
+  const renderer = renderMode === RENDER_MODES.WEBGL_TEST
+    ? await createWebGlTestRenderer({ xrEnabled: true })
+    : await createWebGpuRenderer({ xrEnabled: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth, container.clientHeight);
   container.appendChild(renderer.domElement);
@@ -128,12 +133,13 @@ function createControls(camera, canvas) {
  * Tous les éléments du terrain doivent être ajoutés à `pitchGroup` : déplacer
  * ou ancrer ce groupe déplace l'ensemble du terrain (cahier, §3.2).
  * @param {HTMLElement} container élément qui reçoit le canvas
- * @returns {Promise<{renderer: import('./webgpu.js').WebGpuOnlyRenderer, scene: THREE.Scene,
+ * @param {{renderMode?: string}} [options] mode de rendu : WebGPU par défaut
+ * @returns {Promise<{renderer: import('three/webgpu').Renderer, scene: THREE.Scene,
  *   camera: THREE.PerspectiveCamera, controls: OrbitControls, pitchGroup: THREE.Group,
  *   table: THREE.Mesh, resetView: () => void, resize: () => void}>}
  */
-export async function createSceneContext(container) {
-  const renderer = await createRenderer(container);
+export async function createSceneContext(container, { renderMode = RENDER_MODES.WEBGPU } = {}) {
+  const renderer = await createRenderer(container, renderMode);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(SCENE_COLORS.background);
 

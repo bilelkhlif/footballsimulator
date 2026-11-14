@@ -40,6 +40,7 @@ const APP_SHELL = [
   './src/ar-view.js',
   './src/render-loop.js',
   './src/webgpu.js',
+  './src/webgl-test-mode.js',
   './src/reticle.js',
   './src/ar-surface.js',
   './src/vendor/three-r187/build/three.webgpu.js',

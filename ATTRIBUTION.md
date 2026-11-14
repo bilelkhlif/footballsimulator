@@ -52,7 +52,7 @@ Rappel : L'usage des versions "latest" depuis les CDN est proscrit.
 *   **Bibliothèque :** three.js, build WebGPU
     *   **Version fixée :** r187 (npm `three@0.187.0`, publiée le 30 octobre 2026), copie locale dans `src/vendor/three-r187/build/` : `three.webgpu.js`, `three.core.js` et `three.tsl.js`, identiques au paquet npm (empreintes SHA-256 dans `src/vendor/three-r187/README.md`)
     *   **Lien CDN de référence :** https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.webgpu.js
-    *   **Rôle dans le projet :** moteur de rendu 3D en WebGPU depuis le sprint 3 (sans repli WebGL), matériaux à nœuds et TSL, session WebXR rendue en WebGPU par `XRGPUBinding`. Aux sprints 1 et 2 : r186 (`three@0.186.1`), en WebGL, retirée du dépôt au sprint 3
+    *   **Rôle dans le projet :** moteur de rendu 3D en WebGPU depuis le sprint 3 (sans repli WebGL), matériaux à nœuds et TSL, session WebXR rendue en WebGPU par `XRGPUBinding`. Son backend WebGL 2 ne sert qu'au mode test (`?webgl` dans l'adresse), réservé aux tests. Aux sprints 1 et 2 : r186 (`three@0.186.1`), en WebGL, retirée du dépôt au sprint 3
 
 *   **Bibliothèque :** OrbitControls (module complémentaire de three.js)
     *   **Version fixée :** r187 (npm `three@0.187.0`), copie locale dans `src/vendor/three-r187/examples/jsm/controls/`
@@ -135,6 +135,11 @@ Contributions de Bilel Khlif :
 12. **Mise en ligne** : pull request #3 du sprint 2 validée et fusionnée dans `main`, puis publication sur GitHub Pages, le 12 novembre 2026.
 13. **Signalement d'un défaut** : AR qui ne se lançait plus après des problèmes de réseau, signalé le 12 novembre 2026 avec la demande de la rétablir ; à l'origine du correctif du réseau lent (`sw.js`).
 14. **Sprint 3** : transmission des demandes de l'enseignant, le 14 novembre 2026 : rendu WebGPU sans repli sur WebGL, application installable (PWA), explication de la boucle de rendu dans le README, et un nouveau sprint.
+15. **Tests sur appareils réels du sprint 3**, le 14 novembre 2026, sur le site publié :
+    *   PC ASUS TUF A15 avec Chrome : vue 3D en WebGPU ;
+    *   Samsung Galaxy S10e sous Android 9, avec Brave puis Chrome 138 : WebGPU bloqué, rapport `chrome://gpu` fourni ; essai du réglage `#enable-unsafe-webgpu` ; mise à jour d'Android vérifiée ;
+    *   iPhone sous iOS 18 : pas d'AR, comme prévu.
+16. **Mode test WebGL** : demande d'un moyen de tester l'AR sur son seul téléphone disponible, et décision que ce rendu WebGL serve uniquement aux tests, sans être un repli.
 
 ### Détail par composant
 
@@ -175,6 +180,14 @@ Contributions de Bilel Khlif :
         *   captures prises par script sur l'application réelle et contrôlées à l'œil ;
         *   fonctionnement expliqué dans `docs/sprint-3.md` et dans la partie « La boucle de rendu » du README ;
         *   test sur téléphone à faire par l'équipe, avec le réglage `webxr-webgpu-binding` de Chrome : protocole dans `docs/sprint-3.md` (partie 13).
+
+*   **Composant ou Shader concerné :** mode test WebGL, le 14 novembre 2026 : `src/webgl-test-mode.js` ; modifications de `src/main.js`, `src/scene.js`, `src/xr-session.js`, `src/xr-support.js`, `src/render-loop.js`, `src/dev-xr-emulation.js`, `src/styles.css` et `sw.js` ; tests (`tests/unit/`, `tests/run-tests.mjs`)
+    *   **Prompt ou usage principal :** demande de Bilel Khlif de pouvoir tester l'AR sur son seul téléphone disponible, un Galaxy S10e sous Android 9 où Chrome bloque WebGPU, avec la consigne que ce rendu WebGL soit réservé aux tests et ne soit pas un repli.
+    *   **Axe de vérification appliqué :**
+        *   le mode ne démarre qu'avec `?webgl` dans l'adresse. Aucun bouton n'y mène, et l'écran d'erreur sans WebGPU ne propose rien : un test de bout en bout vérifie l'absence de lien ou de bouton vers WebGL et de tout contexte WebGL ;
+        *   `npm test` le 14 novembre 2026 : 73 tests unitaires réussis sur 73, puis 37 vérifications de bout en bout réussies sur 37, dont le parcours AR émulé rejoué en mode test ;
+        *   un défaut propre à l'émulateur a été trouvé et contourné : IWER fournit un framebuffer nul, que le backend WebGL de three.js r187 refuse. Il est sans effet sur un vrai téléphone ;
+        *   test sur le Galaxy S10e à faire par l'équipe, une fois le mode publié.
 
 *   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles des sprints 2 et 3, et `assets/screenshots/`), figures du rapport (`docs/etat-de-l-art/figures/`)
     *   **Prompt ou usage principal :** dessin des icônes en SVG d'après la couverture du cahier des charges, captures automatisées de l'application, mise en page de la bannière dans le style de la présentation d'état de l'art

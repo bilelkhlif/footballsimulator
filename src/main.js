@@ -4,6 +4,7 @@
  * Sprint 2 : session AR immersive.
  * Sprint 3 : rendu WebGPU sans repli WebGL ; terrain posé sur une surface réelle (hit test,
  * réticule, toucher, ancre) ; application installable, avec avis de nouvelle version.
+ * Mode test WebGL : réservé aux tests, avec ?webgl dans l'adresse ; ce n'est pas un repli.
  */
 import { createSceneContext } from './scene.js';
 import { createPitch } from './pitch.js';
@@ -15,12 +16,13 @@ import { DEFAULT_FORMATIONS, TEAMS } from './config.js';
 import { installEmulatorIfRequested } from './dev-emulator.js';
 import { isImmersiveArSupported, showXrStatus } from './xr-support.js';
 import { registerServiceWorker, setUpInstallButton, watchForUpdates, watchNetworkStatus } from './pwa.js';
-import { ArSession, AR_ERROR_REASONS, hasWebGpuXrBinding } from './xr-session.js';
+import { ArSession, AR_ERROR_REASONS, hasWebGpuXrBinding, RENDERING_APIS } from './xr-session.js';
 import { createArView } from './ar-view.js';
 import { SurfacePlacement } from './ar-surface.js';
 import { createReticle } from './reticle.js';
 import { createRenderLoop } from './render-loop.js';
 import { describeAdapter, WebGpuUnavailableError, WEBGPU_ERROR_REASONS } from './webgpu.js';
+import { getRequestedRenderMode, RENDER_MODES, WebGlTestModeUnavailableError } from './webgl-test-mode.js';
 
 /** Réglage de Chrome qui active la liaison WebXR/WebGPU (Chrome 157, Android et Windows). */
 const WEBGPU_FLAG_URL = 'chrome://flags/#webxr-webgpu-binding';
@@ -43,6 +45,7 @@ const STARTUP_ERROR_MESSAGES = Object.freeze({
   [WEBGPU_ERROR_REASONS.NO_API]: 'Football Simulator a besoin de WebGPU, absent de ce navigateur. Ouvrez-le dans Chrome ou Edge à jour, sur ordinateur ou sur Android, ou dans Safari 26 sur iPhone.',
   [WEBGPU_ERROR_REASONS.NO_ADAPTER]: 'WebGPU est présent, mais aucun processeur graphique compatible n’a été trouvé sur cet appareil.',
   [WEBGPU_ERROR_REASONS.WRONG_BACKEND]: 'Le rendu ne tourne pas sur WebGPU : démarrage interrompu.',
+  'no-webgl': 'Le mode test WebGL demande WebGL 2, indisponible sur ce navigateur.',
 });
 
 /** Aide affichée en AR, selon l'état de la pose du terrain (src/ar-surface.js). */
@@ -57,11 +60,20 @@ const PLACEMENT_HINTS = Object.freeze({
 const AR_HINT = 'Visez la table avec le téléphone.';
 
 /**
- * Affiche dans le badge de rendu que la scène tourne en WebGPU, avec le processeur graphique.
- * @param {import('./webgpu.js').WebGpuOnlyRenderer} renderer
+ * Affiche dans le badge de rendu l'API utilisée : WebGPU, avec le processeur graphique, ou
+ * WebGL en mode test, pour que personne ne confonde les deux.
+ * @param {import('three/webgpu').Renderer} renderer
+ * @param {string} renderMode une valeur de RENDER_MODES
  */
-function showRendererStatus(renderer) {
+function showRendererStatus(renderer, renderMode) {
   const badge = document.getElementById('gpu-status');
+  if (renderMode === RENDER_MODES.WEBGL_TEST) {
+    badge.dataset.state = 'webgl-test';
+    badge.dataset.adapter = 'WebGL 2';
+    badge.textContent = 'Rendu WebGL (mode test)';
+    badge.title = 'Mode test demandé par ?webgl dans l’adresse. Ce n’est pas un repli : le rendu de l’application est WebGPU.';
+    return;
+  }
   const adapter = describeAdapter(renderer.backend.device?.adapterInfo);
   badge.dataset.state = 'webgpu';
   badge.dataset.adapter = adapter;
@@ -71,14 +83,15 @@ function showRendererStatus(renderer) {
 
 /**
  * Construit la scène, branche l'interface de la vue 3D et lance la boucle de rendu.
+ * @param {string} renderMode une valeur de RENDER_MODES : WebGPU, sauf demande explicite
  * @returns {Promise<{sceneContext: Awaited<ReturnType<typeof createSceneContext>>,
  *   arView: ReturnType<typeof createArView>, arState: {placement: SurfacePlacement|null}}>}
  */
-async function init() {
+async function init(renderMode) {
   const container = document.getElementById('scene-container');
-  const sceneContext = await createSceneContext(container);
+  const sceneContext = await createSceneContext(container, { renderMode });
   const { renderer, scene, camera, controls, pitchGroup, table, resetView, resize } = sceneContext;
-  showRendererStatus(renderer);
+  showRendererStatus(renderer, renderMode);
 
   pitchGroup.add(createPitch(renderer));
 
@@ -151,9 +164,10 @@ function showFlagHelp(text) {
  * @param {Awaited<ReturnType<typeof createSceneContext>>} sceneContext
  * @param {ReturnType<typeof createArView>} arView
  * @param {{placement: SurfacePlacement|null}} arState
+ * @param {string} renderMode une valeur de RENDER_MODES
  * @returns {ArSession}
  */
-function setUpArSession(sceneContext, arView, arState) {
+function setUpArSession(sceneContext, arView, arState, renderMode) {
   const overlay = document.getElementById('overlay');
   const enterButton = document.getElementById('enter-ar');
   const exitButton = document.getElementById('exit-ar');
@@ -163,7 +177,12 @@ function setUpArSession(sceneContext, arView, arState) {
   const message = document.getElementById('ar-message');
   const defaultHint = hint.textContent;
 
-  const arSession = new ArSession({ renderer: sceneContext.renderer, overlayRoot: overlay });
+  const arSession = new ArSession({
+    renderer: sceneContext.renderer,
+    overlayRoot: overlay,
+    // En mode test, la session est rendue par une couche WebGL : ni webgpu ni XRGPUBinding.
+    renderingApi: renderMode === RENDER_MODES.WEBGL_TEST ? RENDERING_APIS.WEBGL : RENDERING_APIS.WEBGPU,
+  });
 
   // Toucher sur l'écran pendant la session : WebXR le signale par l'événement select.
   const onSelect = () => arState.placement?.requestPlacement();
@@ -248,21 +267,24 @@ function setUpArSession(sceneContext, arView, arState) {
 
 /**
  * Détecte la réalité augmentée (réelle, ou émulée par IWER) et l'affiche dans le badge d'état.
- * Le bouton « Entrer en AR » n'apparaît que si l'AR peut être rendue en WebGPU.
+ * En WebGPU, le bouton « Entrer en AR » n'apparaît que si l'AR peut être rendue en WebGPU ;
+ * en mode test WebGL (?webgl), l'AR est rendue par une couche WebGL.
  * @param {boolean} emulated vrai si l'émulateur IWER est installé
+ * @param {string} renderMode une valeur de RENDER_MODES
  */
-async function detectAugmentedReality(emulated) {
+async function detectAugmentedReality(emulated, renderMode) {
   const statusElement = document.getElementById('xr-status');
   showXrStatus(statusElement, 'checking');
   const supported = await isImmersiveArSupported();
   if (!supported) {
     showXrStatus(statusElement, 'unsupported');
-  } else if (!hasWebGpuXrBinding()) {
+  } else if (renderMode === RENDER_MODES.WEBGPU && !hasWebGpuXrBinding()) {
     // AR présente, mais WebXR ne sait pas encore afficher du WebGPU : pas de repli WebGL.
     showXrStatus(statusElement, 'needs-flag');
     showFlagHelp(WEBGPU_FLAG_HELP);
   } else {
-    showXrStatus(statusElement, emulated ? 'emulated' : 'supported');
+    const webglTest = renderMode === RENDER_MODES.WEBGL_TEST;
+    showXrStatus(statusElement, emulated ? 'emulated' : (webglTest ? 'supported-webgl-test' : 'supported'));
     document.getElementById('enter-ar').hidden = false;
   }
 }
@@ -297,21 +319,27 @@ function exposeForDebugging(objects) {
 }
 
 /**
- * Remplace l'écran de chargement par un message si la scène ne peut pas démarrer :
- * WebGPU absent ou inutilisable, sans repli WebGL.
+ * Remplace l'écran de chargement par un message si la scène ne peut pas démarrer : WebGPU
+ * absent ou inutilisable. Il n'y a pas de repli : l'écran ne propose pas WebGL.
  * @param {Error} error
+ * @param {string} [renderMode] une valeur de RENDER_MODES
  */
-function showStartupError(error) {
+function showStartupError(error, renderMode = RENDER_MODES.WEBGPU) {
   console.error(error);
   const loader = document.getElementById('loader');
-  const reason = error instanceof WebGpuUnavailableError ? error.reason : 'error';
+  let reason = 'error';
+  if (error instanceof WebGpuUnavailableError) {
+    reason = error.reason;
+  } else if (error instanceof WebGlTestModeUnavailableError) {
+    reason = 'no-webgl';
+  }
   loader.textContent = STARTUP_ERROR_MESSAGES[reason] ?? `Impossible d’afficher le terrain : ${error.message}`;
   loader.dataset.state = 'error';
   loader.dataset.reason = reason;
   document.body.classList.remove('is-ready');
   const badge = document.getElementById('gpu-status');
   badge.dataset.state = 'unavailable';
-  badge.textContent = 'WebGPU indisponible';
+  badge.textContent = renderMode === RENDER_MODES.WEBGL_TEST ? 'WebGL indisponible' : 'WebGPU indisponible';
 }
 
 /**
@@ -319,21 +347,24 @@ function showStartupError(error) {
  */
 async function start() {
   setUpPwa();
+  // WebGPU, sauf si l'adresse demande le mode test WebGL (?webgl), réservé aux tests.
+  const renderMode = getRequestedRenderMode();
   // Avec ?iwer, l'émulateur s'installe avant le moteur de rendu : three.js vérifie la présence
   // de XRGPUBinding une seule fois, à la création du moteur.
   const emulator = await installEmulatorIfRequested();
   let context;
   try {
-    context = await init();
+    context = await init(renderMode);
   } catch (error) {
-    showStartupError(error);
+    showStartupError(error, renderMode);
     return;
   }
   const { sceneContext, arView, arState } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
-  const arSession = setUpArSession(sceneContext, arView, arState);
+  const arSession = setUpArSession(sceneContext, arView, arState, renderMode);
   exposeForDebugging({
     ...sceneContext,
+    renderMode,
     arView,
     arSession,
     xrDevice: emulator?.xrDevice ?? null,
@@ -341,7 +372,7 @@ async function start() {
       return arState.placement;
     },
   });
-  await detectAugmentedReality(Boolean(emulator));
+  await detectAugmentedReality(Boolean(emulator), renderMode);
 }
 
 start();
