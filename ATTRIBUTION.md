@@ -1,8 +1,9 @@
 # 📄 Fichier d'Attribution et d'Origine des Ressources (ATTRIBUTION.md)
 
-**Projet :** Football Simulator\
-**Équipe :** Iyed Rachdi, Bilel Khlif, Ghassen Dallekji\
-**Responsable du sprint 1 :** Bilel Khlif\
+**Projet :** Football Simulator
+
+**Équipe :** Iyed Rachdi, Bilel Khlif, Ghassen Dallekji
+
 **Version :** 1.0 — Évaluation SUP'COM (2026/2027)
 
 ---
@@ -14,34 +15,54 @@ Tout asset tri-dimensionnel ou visuel importé doit être consigné ci-dessous.
 Aucun modèle 3D, aucune texture et aucune police n'est importé d'une source externe : la géométrie est générée par le code avec les primitives de three.js, et les textures sont dessinées à l'exécution sur un canvas. Les éléments visuels présents dans le dépôt sont listés ci-dessous.
 
 *   **Asset :** Terrain (plateau, gazon rayé, lignes, buts et filets)
-    *   **Source originale :** créé pour le projet, `src/pitch.js`
-    *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : pilotage et décisions par Bilel Khlif
-    *   **Licence :** aucune licence choisie à ce jour (pas de fichier `LICENSE` dans le dépôt)
-    *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet ; lignes tracées sur une texture canvas de 1808 × 1216 px selon les mesures des lois du jeu de l'IFAB
+
+    * **Source originale :** créé pour le projet, `src/pitch.js`
+
+    * **Auteur / Créateur :** Équipe Football Simulator (conception collective selon le cahier des charges) ; pilotage de la réalisation par Bilel Khlif avec Claude Code.
+
+    * **Licence :** aucune licence choisie à ce jour (pas de fichier `LICENSE` dans le dépôt)
+
+    * **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet ; lignes tracées sur une texture canvas de 1808 × 1216 px selon les mesures des lois du jeu de l'IFAB
 
 *   **Asset :** Pions joueurs, numéros de maillot et ballon
-    *   **Source originale :** créés pour le projet, `src/players.js` et `src/ball.js` (`CapsuleGeometry`, `SphereGeometry`, sprites dessinés sur canvas)
-    *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : pilotage et décisions par Bilel Khlif,
-    *   **Licence :** aucune licence choisie à ce jour
-    *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
+
+    * **Source originale :** créés pour le projet, `src/players.js` et `src/ball.js` (`CapsuleGeometry`, `SphereGeometry`, sprites dessinés sur canvas)
+
+    * **Auteur / Créateur :** Équipe Football Simulator (conception collective selon le cahier des charges) ; pilotage de la réalisation par Bilel Khlif avec Claude Code.
+
+    * **Licence :** aucune licence choisie à ce jour
+
+    * **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
 
 *   **Asset :** Réticule de visée de l'AR (anneau doré pulsant)
-    *   **Source originale :** créé pour le projet au sprint 3, `src/reticle.js` (`RingGeometry` de three.js, matériau écrit en TSL)
-    *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : code généré par Claude (section 4) sur les demandes transmises par Bilel Khlif
-    *   **Licence :** aucune licence choisie à ce jour
-    *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
+
+    * **Source originale :** créé pour le projet au sprint 3, `src/reticle.js` (`RingGeometry` de three.js, matériau écrit en TSL)
+
+    * **Auteur / Créateur :** Claude Code (génération), sous le pilotage de Bilel Khlif.
+
+    * **Licence :** aucune licence choisie à ce jour
+
+    * **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
 
 *   **Asset :** Icônes de l'application (`assets/icons/icon.svg`, `icon-maskable.svg` et les PNG dérivés)
-    *   **Source originale :** dessinées pour le projet en SVG, d'après l'illustration de couverture du cahier des charges ; PNG produits avec la bibliothèque sharp
-    *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : dessin par Claude (section 4), dans le sprint piloté par Bilel Khlif
-    *   **Licence :** aucune licence choisie à ce jour
-    *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
+
+    * **Source originale :** dessinées pour le projet en SVG, d'après l'illustration de couverture du cahier des charges ; PNG produits avec la bibliothèque sharp
+
+    * **Auteur / Créateur :** Bilel Khlif (direction technique et spécifications), avec assistance de Claude Code pour la réalisation.
+
+    * **Licence :** aucune licence choisie à ce jour
+
+    * **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
 
 *   **Asset :** Bannière, captures et diapositives de `docs/images/`, captures du manifeste (`assets/screenshots/`), figures de `docs/etat-de-l-art/figures/`
-    *   **Source originale :** captures de l'application elle-même, prises par script dans Chrome ; diapositives exportées de la présentation d'état de l'art du projet
-    *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : refonte du README et des présentations orientée par Bilel Khlif ; captures automatisées et mise en page par Claude (section 4)
-    *   **Licence :** aucune licence choisie à ce jour
-    *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
+
+    * **Source originale :** captures de l'application elle-même, prises par script dans Chrome ; diapositives exportées de la présentation d'état de l'art du projet
+
+    * **Auteur / Créateur :** Bilel Khlif (direction technique et spécifications), avec assistance de Claude Code pour la réalisation.
+
+    * **Licence :** aucune licence choisie à ce jour
+
+    * **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
 
 ---
 
@@ -50,24 +71,36 @@ Aucun modèle 3D, aucune texture et aucune police n'est importé d'une source ex
 Rappel : L'usage des versions "latest" depuis les CDN est proscrit.
 
 *   **Bibliothèque :** three.js, build WebGPU
-    *   **Version fixée :** r187 (npm `three@0.187.0`, publiée le 30 octobre 2026), copie locale dans `src/vendor/three-r187/build/` : `three.webgpu.js`, `three.core.js` et `three.tsl.js`, identiques au paquet npm (empreintes SHA-256 dans `src/vendor/three-r187/README.md`)
-    *   **Lien CDN de référence :** https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.webgpu.js
-    *   **Rôle dans le projet :** moteur de rendu 3D en WebGPU depuis le sprint 3 (sans repli WebGL), matériaux à nœuds et TSL, session WebXR rendue en WebGPU par `XRGPUBinding`. Son backend WebGL 2 ne sert qu'au mode test (`?webgl` dans l'adresse), réservé aux tests. Aux sprints 1 et 2 : r186 (`three@0.186.1`), en WebGL, retirée du dépôt au sprint 3
+
+    * **Version fixée :** r187 (npm `three@0.187.0`, publiée le 30 octobre 2026), copie locale dans `src/vendor/three-r187/build/` : `three.webgpu.js`, `three.core.js` et `three.tsl.js`, identiques au paquet npm (empreintes SHA-256 dans `src/vendor/three-r187/README.md`)
+
+    * **Lien CDN de référence :** https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.webgpu.js
+
+    * **Rôle dans le projet :** moteur de rendu 3D en WebGPU depuis le sprint 3 (sans repli WebGL), matériaux à nœuds et TSL, session WebXR rendue en WebGPU par `XRGPUBinding`. Son backend WebGL 2 ne sert qu'au mode test (`?webgl` dans l'adresse), réservé aux tests. Aux sprints 1 et 2 : r186 (`three@0.186.1`), en WebGL, retirée du dépôt au sprint 3
 
 *   **Bibliothèque :** OrbitControls (module complémentaire de three.js)
-    *   **Version fixée :** r187 (npm `three@0.187.0`), copie locale dans `src/vendor/three-r187/examples/jsm/controls/`
-    *   **Lien CDN de référence :** https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/controls/OrbitControls.js
-    *   **Rôle dans le projet :** rotation, zoom et déplacement de la vue 3D hors AR
+
+    * **Version fixée :** r187 (npm `three@0.187.0`), copie locale dans `src/vendor/three-r187/examples/jsm/controls/`
+
+    * **Lien CDN de référence :** https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/controls/OrbitControls.js
+
+    * **Rôle dans le projet :** rotation, zoom et déplacement de la vue 3D hors AR
 
 *   **Bibliothèque :** IWER, Immersive Web Emulation Runtime (Meta, licence MIT)
-    *   **Version fixée :** 2.7.0 (la 2.8.0, publiée la veille du sprint 1, n'a pas été retenue)
-    *   **Lien CDN de référence :** https://cdn.jsdelivr.net/npm/iwer@2.7.0/build/iwer.module.js
-    *   **Rôle dans le projet :** émulation WebXR sur PC, chargée seulement avec le paramètre d'adresse `?iwer`, en développement ; complétée au sprint 3 par notre module `src/dev-xr-emulation.js` (liaison WebXR/WebGPU et hit test émulés)
+
+    * **Version fixée :** 2.7.0 (la 2.8.0, publiée la veille du sprint 1, n'a pas été retenue)
+
+    * **Lien CDN de référence :** https://cdn.jsdelivr.net/npm/iwer@2.7.0/build/iwer.module.js
+
+    * **Rôle dans le projet :** émulation WebXR sur PC, chargée seulement avec le paramètre d'adresse `?iwer`, en développement ; complétée au sprint 3 par notre module `src/dev-xr-emulation.js` (liaison WebXR/WebGPU et hit test émulés)
 
 *   **Bibliothèque :** playwright-core (Microsoft, licence Apache 2.0)
-    *   **Version fixée :** 1.64.1 (`package.json` et `package-lock.json`)
-    *   **Lien de référence (npm) :** https://www.npmjs.com/package/playwright-core/v/1.64.1
-    *   **Rôle dans le projet :** pilote Chrome pour les tests `npm test` ; outil de développement, jamais chargé par l'application
+
+    * **Version fixée :** 1.64.1 (`package.json` et `package-lock.json`)
+
+    * **Lien CDN de référence :** sans objet (outil de développement installé via npm) ; référence : https://www.npmjs.com/package/playwright-core/v/1.64.1
+
+    * **Rôle dans le projet :** pilote Chrome pour les tests `npm test` ; outil de développement, jamais chargé par l'application
 
 Outils utilisés hors du projet, non distribués avec l'application : Google Chrome pour les tests et les captures, le lanceur de tests intégré à Node.js (`node --test`) pour les tests unitaires, sharp pour les icônes PNG, Python et Pillow pour le traitement des images, pptxgenjs et PowerPoint pour la présentation, MiKTeX (pdfLaTeX, polices Latin Modern) pour le rapport.
 
@@ -78,27 +111,36 @@ Outils utilisés hors du projet, non distribués avec l'application : Google Chr
 L'usage de code tiers sans citation est un motif d'annulation de la note technique.
 
 *   **Fonction / Fichier :** `src/dev-emulator.js`, fonction `installEmulatorIfRequested` (lignes 29 à 43)
-    *   **Source du code original :** guide de démarrage d'IWER, https://meta-quest.github.io/immersive-web-emulation-runtime/getting-started.html
-    *   **Auteur :** Meta (licence MIT)
-    *   **Adaptation effectuée :** les deux lignes du guide (`new XRDevice(metaQuest3)` puis `installRuntime()`) sont encadrées par un chargement conditionnel (paramètre `?iwer` et absence d'AR native), un import dynamique depuis jsDelivr en version épinglée, et l'option `forceInstall`, nécessaire car Chrome sur PC expose déjà un `navigator.xr` sans AR.
+
+    * **Source du code original :** guide de démarrage d'IWER, https://meta-quest.github.io/immersive-web-emulation-runtime/getting-started.html
+
+    * **Auteur :** Meta (licence MIT)
+
+    * **Adaptation effectuée :** les deux lignes du guide (`new XRDevice(metaQuest3)` puis `installRuntime()`) sont encadrées par un chargement conditionnel (paramètre `?iwer` et absence d'AR native), un import dynamique depuis jsDelivr en version épinglée, et l'option `forceInstall`, nécessaire car Chrome sur PC expose déjà un `navigator.xr` sans AR.
 
 *   **Fonction / Fichier :** `index.html`, carte d'import
-    *   **Source du code original :** manuel de three.js, page « Installation », https://threejs.org/manual/#en/installation ; au sprint 3, les entrées `three/webgpu` et `three/tsl` des exemples WebGPU de three.js
-    *   **Auteur :** contributeurs de three.js (licence MIT)
-    *   **Adaptation effectuée :** les adresses du CDN sont remplacées par la copie locale (`src/vendor/three-r187/` depuis le sprint 3), et `three` pointe vers le build WebGPU.
+
+    * **Source du code original :** manuel de three.js, page « Installation », https://threejs.org/manual/#en/installation ; au sprint 3, les entrées `three/webgpu` et `three/tsl` des exemples WebGPU de three.js
+
+    * **Auteur :** contributeurs de three.js (licence MIT)
+
+    * **Adaptation effectuée :** les adresses du CDN sont remplacées par la copie locale (`src/vendor/three-r187/` depuis le sprint 3), et `three` pointe vers le build WebGPU.
 
 *   **Fonction / Fichier :** `src/webgpu.js`, constructeur de la classe `WebGpuOnlyRenderer` (sprint 3)
-    *   **Source du code original :** constructeur de `WebGPURenderer` de three.js r187 (`src/renderers/webgpu/WebGPURenderer.js` dans le dépôt de three.js ; même code dans `src/vendor/three-r187/build/three.webgpu.js`)
-    *   **Auteur :** contributeurs de three.js (licence MIT)
-    *   **Adaptation effectuée :** trois instructions reprises : création du backend `WebGPUBackend`, bibliothèque `StandardNodeLibrary` et drapeau `isWebGPURenderer`. La branche qui crée un backend WebGL de secours (`getFallback`) est retirée et remplacée par `getFallback: null`.
 
-En dehors de ces deux adaptations, aucun extrait de StackOverflow, de tutoriel ou de dépôt tiers n'a été copié dans le sprint 1. Les dimensions du terrain dans `src/pitch.js` reprennent les lois du jeu de l'IFAB (données, pas du code).
+    * **Source du code original :** constructeur de `WebGPURenderer` de three.js r187 (`src/renderers/webgpu/WebGPURenderer.js` dans le dépôt de three.js ; même code dans `src/vendor/three-r187/build/three.webgpu.js`)
+
+    * **Auteur :** contributeurs de three.js (licence MIT)
+
+    * **Adaptation effectuée :** trois instructions reprises : création du backend `WebGPUBackend`, bibliothèque `StandardNodeLibrary` et drapeau `isWebGPURenderer`. La branche qui crée un backend WebGL de secours (`getFallback`) est retirée et remplacée par `getFallback: null`.
+
+En dehors des adaptations recensées pour le sprint 1, aucun extrait de StackOverflow, de tutoriel ou de dépôt tiers n'a été copié dans le sprint 1. Les dimensions du terrain dans `src/pitch.js` reprennent les lois du jeu de l'IFAB (données, pas du code).
 
 Sprint 2 : aucun extrait copié. L'enchaînement de la session suit l'API de WebXR et celle de three.js r186 (`WebXRManager.setSession`), lue dans la copie locale de `src/vendor/three/` ; l'exemple `ARButton.js` de three.js n'a pas été utilisé.
 
 Sprint 3 : en dehors du constructeur de `WebGpuOnlyRenderer` ci-dessus, aucun extrait copié. Le hit test, le réticule et l'ancre (`src/ar-surface.js`, `src/reticle.js`) suivent les spécifications WebXR Hit Test et WebXR Anchors : source de hit test depuis l'espace `viewer`, matrice du réticule lue dans la pose du résultat. C'est le même enchaînement que dans l'exemple `webxr_ar_hittest` de three.js, mais sans reprise de son code ; l'échantillon `hit-test-anchors` n'a pas été utilisé. Le correctif de la cible de rendu XR (`matchXrTargetToViews`) et l'émulation (`src/dev-xr-emulation.js`) sont propres au projet, écrits après lecture du code de three.js r187 et d'IWER 2.7.0.
 
-Les formations de boardx, prévues pour le sprint 4, seront consignées ici au moment de leur intégration.
+Sprint 4 : les formations sont propres au projet ; aucun code ni aucune donnée de boardx n’a été repris, selon le journal du sprint.
 
 ---
 
@@ -106,113 +148,259 @@ Les formations de boardx, prévues pour le sprint 4, seront consignées ici au m
 
 L'utilisation d'IA est un outil de complétion. Elle doit être documentée et maîtrisée.
 
-Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle Claude Opus 5.5, du 5 au 14 novembre 2026.
+Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle déclaré dans le journal initial : Claude Opus 5.5, du 5 au 14 novembre 2026.
 
-### Répartition du travail
+**Bilel Khlif — Responsable du sprint 1, pilotage technique, intégration WebXR/WebGPU et validation.** Responsable du sprint 1, il assure la conduite technique documentée des sprints 1 à 4 : découpage des travaux, formalisation des contraintes, interaction avec l’assistant de développement, revue des livrables, essais sur appareils physiques et intégration sur GitHub. Son rôle couvre notamment les arbitrages entre rendu WebGPU de production et mode WebGL de test, ainsi que la traduction des exigences pédagogiques en critères de validation.
 
-Les livrables du sprint 1 ont été coproduits par Bilel Khlif et Claude :
+**Iyed Rachdi et Ghassen Dallekji — Contribution au cadrage collectif.** Avec Bilel Khlif, ils participent au cahier des charges de référence, qui définit les fonctionnalités, les contraintes d’architecture et les scénarios de démonstration. La répartition individuelle des autres travaux n’est pas détaillée dans le journal initial. Les essais collectifs sur téléphone prévus aux sprints 3 et 4 restent à mener.
 
-*   **Bilel Khlif**, responsable du sprint 1 : pilotage des sessions, consignes et décisions, retours sur les livrables, revue du code à travers son guide et validation finale ;
-*   **Claude** : génération du code, des tests et des documents, à partir du cahier des charges de l'équipe et des consignes de Bilel Khlif.
+**Claude Code — Assistance à l’implémentation.** Génération du code, des tests et de la documentation à partir du cahier des charges et des instructions de Bilel Khlif. Pour les sprints 2 et 3, aucune ligne de code n’a été écrite ou modifiée manuellement par l’équipe, selon le journal initial. La contribution humaine est donc distinguée de la production automatisée du code.
 
-Au sprint 2, le code a de même été généré par Claude, sur les consignes détaillées fournies par Bilel Khlif. Aucune ligne n'en a été écrite ou modifiée à la main par l'équipe : voir le détail par composant. Les tests sur appareils réels ont été faits par Bilel Khlif.
+**Note de traçabilité :** les prompts ci-dessous sont des reformulations techniques reconstituées à partir des consignes, du cahier des charges et des résultats documentés, et non des citations textuelles des échanges. Les choix techniques précis déduits de l’implémentation sont à confirmer par Bilel Khlif avant remise. Les résultats automatisés produits par l’assistant sont distingués des essais et validations effectués par les étudiants.
 
-Au sprint 3, le code a été généré par Claude, à partir des demandes de l'enseignant transmises par Bilel Khlif et du cahier des charges. Aucune ligne n'en a été écrite ou modifiée à la main par l'équipe. Le test sur téléphone reste à faire par l'équipe.
-
-Contributions de Bilel Khlif :
+**Contributions documentées de Bilel Khlif :**
 
 1.  **Pilotage du sprint 1** (5 au 9 novembre 2026) : périmètre fixé d'après le cahier des charges (§5.3), consignes données à l'assistant, publication sur le dépôt GitHub du projet.
+
 2.  **Veille** : une publication LinkedIn sur l'analyse vidéo de match, fournie comme point de départ, à l'origine de la partie « vision par ordinateur » du rapport d'état de l'art.
+
 3.  **Direction des présentations** : première version de la présentation refusée, jugée trop générique ; refonte demandée sur le modèle de trois présentations de référence qu'il a fournies (BlurUAV, Trust before you trade, GreenBench), avec des transitions soignées entre les diapositives.
+
 4.  **Format du rapport** : rapport d'état de l'art exigé en LaTeX, au format PDF.
+
 5.  **Nom du projet** : choix de « Football Simulator », appliqué au code, au rapport, à la présentation et à la documentation.
+
 6.  **Documentation** : refonte du README dans le style des livrables, avec captures et synthèse de l'état de l'art ; demande d'une documentation et d'une explication complètes du code, d'où le guide du code et les tests automatisés.
+
 7.  **Conformité** : mise en place de ce fichier selon le modèle de l'enseignant, puis relecture intégrale le 9 novembre 2026.
+
 8.  **Revue du code** : lecture et approbation du guide du code (`docs/guide-du-code.md`), qui détaille chaque fichier et chaque fonction, le 9 novembre 2026.
+
 9.  **Validation** : pull request #1 validée et fusionnée dans `main` le 9 novembre 2026.
+
 10. **Sprint 2** : consignes détaillées fournies à l'assistant pour les étapes 0 à 2, puis 3 à 6 (périmètre, contraintes techniques, tests attendus et exigences d'attribution), les 9 et 10 novembre 2026.
+
 11. **Tests sur appareils réels** : application testée le 12 novembre 2026 sur le site publié, sur deux téléphones Android avec Chrome (Samsung Galaxy S récent et TECNO POVA 6 Pro 5G), un iPhone 15 avec Safari et un PC ASUS TUF A15 avec Chrome.
+
 12. **Mise en ligne** : pull request #3 du sprint 2 validée et fusionnée dans `main`, puis publication sur GitHub Pages, le 12 novembre 2026.
+
 13. **Signalement d'un défaut** : AR qui ne se lançait plus après des problèmes de réseau, signalé le 12 novembre 2026 avec la demande de la rétablir ; à l'origine du correctif du réseau lent (`sw.js`).
+
 14. **Sprint 3** : transmission des demandes de l'enseignant, le 14 novembre 2026 : rendu WebGPU sans repli sur WebGL, application installable (PWA), explication de la boucle de rendu dans le README, et un nouveau sprint.
+
 15. **Tests sur appareils réels du sprint 3**, le 14 novembre 2026, sur le site publié :
-    *   PC ASUS TUF A15 avec Chrome : vue 3D en WebGPU ;
-    *   Samsung Galaxy S10e sous Android 9, avec Brave puis Chrome 138 : WebGPU bloqué, rapport `chrome://gpu` fourni ; essai du réglage `#enable-unsafe-webgpu` ; mise à jour d'Android vérifiée ;
-    *   iPhone sous iOS 18 : pas d'AR, comme prévu.
+
+    * PC ASUS TUF A15 avec Chrome : vue 3D en WebGPU ;
+
+    * Samsung Galaxy S10e sous Android 9, avec Brave puis Chrome 138 : WebGPU bloqué, rapport `chrome://gpu` fourni ; essai du réglage `#enable-unsafe-webgpu` ; mise à jour d'Android vérifiée ;
+
+    * iPhone sous iOS 18 : pas d'AR, comme prévu.
+
 16. **Mode test WebGL** : demande d'un moyen de tester l'AR sur son seul téléphone disponible, et décision que ce rendu WebGL serve uniquement aux tests, sans être un repli.
+
 17. **Test du mode test WebGL** sur le Galaxy S10e, le 14 novembre 2026, sur le site publié : tout fonctionne, AR comprise.
+
 18. **Sprint 4** : demande de réaliser le sprint 4 du cahier des charges, le 14 novembre 2026.
 
-### Détail par composant
+**Déclaration détaillée par composant**
 
 *   **Composant ou Shader concerné :** code du sprint 1 : `index.html`, `manifest.json`, `sw.js`, `src/*.js` et `src/styles.css` (hors `src/vendor/`), tests (`tests/`, `package.json`) et fichiers de configuration du dépôt (`.editorconfig`, `.gitattributes`, `.gitignore`)
-    *   **Prompt ou usage principal :** génération du code à partir du cahier des charges rédigé par l'équipe, sur consigne de Bilel Khlif de réaliser le sprint 1 et de le publier sur GitHub : périmètre du sprint (§5.3), patrons Strategy et Factory (§3.4), règles de code (§7.1). Les commits de la pull request #1 sont issus de ces sessions.
-    *   **Axe de vérification appliqué :**
-        *   `npm test` : 11 vérifications de bout en bout dans Chrome, que chacun peut rejouer : chargement sans erreur sur bureau (1280 × 800), sur mobile (390 × 844) et sous un sous-chemin comme sur GitHub Pages ; trois formations conformes au critère « 11 joueurs bien placés » du cahier (§4.3), avec les numéros 1 à 11, chaque joueur dans sa moitié et hors du rond central, et un écart minimal de 7,1 cm entre deux joueurs ; badge d'état de l'AR ; Service Worker et rechargement hors-ligne ; session `immersive-ar` émulée avec IWER. Résultat le 9 novembre 2026 : 11 réussies sur 11 ;
-        *   le test des formations a lui-même été contrôlé par une erreur volontaire (deux joueurs du 4-3-3 avec le même numéro) : il échoue comme attendu ;
-        *   ces vérifications ont révélé deux défauts, corrigés avant le commit : un cadrage de caméra qui coupait le terrain, et IWER qui refusait de s'installer sur Chrome PC ;
-        *   revue du code par Bilel Khlif à partir du guide du code (`docs/guide-du-code.md`), qui explique chaque fichier et chaque fonction avec les réponses aux questions probables du jury : guide lu et approuvé le 9 novembre 2026 ;
-        *   la pull request #1 a été validée par Bilel Khlif et fusionnée dans `main` le 9 novembre 2026 ;
-        *   le test sur un téléphone Android, prévu avec l'ouverture de la session AR (cahier §4.2), a été fait le 12 novembre 2026 : voir l'entrée du sprint 2 ci-dessous.
+
+    * **Prompt ou usage principal :** génération du code à partir du cahier des charges rédigé par l'équipe, sur consigne de Bilel Khlif de réaliser le sprint 1 et de le publier sur GitHub : périmètre du sprint (§5.3), patrons Strategy et Factory (§3.4), règles de code (§7.1). Les commits de la pull request #1 sont issus de ces sessions.
+
+        **Reformulation technique (non verbatim) :**
+
+        > Analyser le cahier des charges collectif (Iyed Rachdi, Bilel Khlif et Ghassen Dallekji) et réaliser le sprint 1 (§5.3) sur une branche dédiée. Avant l’implémentation, définir les frontières entre scène, rendu, état métier et interactions.
+
+        > Générer le terrain avec des primitives three.js et une texture Canvas conforme aux proportions IFAB. Maintenir un repère métrique cohérent pour les positions des joueurs. Appliquer Strategy aux formations et Factory à la création des objets 3D (§3.4). Isoler la caméra et OrbitControls pour préparer l’intégration immersive sans réécriture de la scène. Épingler les dépendances ; prendre en compte le sous-chemin GitHub Pages et le fonctionnement hors ligne.
+
+        > Définir les critères d’acceptation : absence d’erreurs au chargement, terrain entièrement visible, 11 joueurs uniques par formation, placement valide et tests sur différentes tailles d’écran. Vérifier le parcours XR émulé avec IWER. Documenter les modules et les arbitrages avant de proposer la pull request #1 à la validation.
+
+    * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a relu le guide du code et validé la PR #1. Vérifications techniques consignées dans le journal du sprint (tests et contrôles réalisés avec l’assistant) :
+
+        * `npm test` : 11 vérifications de bout en bout dans Chrome, que chacun peut rejouer : chargement sans erreur sur bureau (1280 × 800), sur mobile (390 × 844) et sous un sous-chemin comme sur GitHub Pages ; trois formations conformes au critère « 11 joueurs bien placés » du cahier (§4.3), avec les numéros 1 à 11, chaque joueur dans sa moitié et hors du rond central, et un écart minimal de 7,1 cm entre deux joueurs ; badge d'état de l'AR ; Service Worker et rechargement hors-ligne ; session `immersive-ar` émulée avec IWER. Résultat le 9 novembre 2026 : 11 réussies sur 11 ;
+
+        * le test des formations a lui-même été contrôlé par une erreur volontaire (deux joueurs du 4-3-3 avec le même numéro) : il échoue comme attendu ;
+
+        * ces vérifications ont révélé deux défauts, corrigés avant le commit : un cadrage de caméra qui coupait le terrain, et IWER qui refusait de s'installer sur Chrome PC ;
+
+        * revue du code par Bilel Khlif à partir du guide du code (`docs/guide-du-code.md`), qui explique chaque fichier et chaque fonction avec les réponses aux questions probables du jury : guide lu et approuvé le 9 novembre 2026 ;
+
+        * la pull request #1 a été validée par Bilel Khlif et fusionnée dans `main` le 9 novembre 2026 ;
+
+        * le test sur un téléphone Android, prévu avec l'ouverture de la session AR (cahier §4.2), a été fait le 12 novembre 2026 : voir l'entrée du sprint 2 ci-dessous.
 
 *   **Composant ou Shader concerné :** code du sprint 2, généré en deux sessions : étapes 0 à 2 le 9 novembre 2026 (bouton « Entrer en AR » dans `index.html` et `src/main.js`, activation de WebXR dans `src/scene.js`), puis étapes 3 à 6 les 9 et 10 novembre 2026 (`src/events.js`, `src/xr-session.js`, `src/ar-view.js`, `src/ar-placement.js`, `src/render-loop.js`, modifications de `src/main.js`, `src/scene.js`, `index.html`, `src/styles.css` et `sw.js`, tests unitaires de `tests/unit/`, parcours AR de `tests/run-tests.mjs` et `package.json`)
-    *   **Prompt ou usage principal :** consignes détaillées fournies par Bilel Khlif pour chaque groupe d'étapes (périmètre, contraintes techniques, tests attendus), et cahier des charges (§5.3, §3.4, §7.1). Aucune ligne de ce code n'a été écrite ou modifiée à la main par l'équipe : les commits de la branche `feature/sprint-2` sont tous issus de ces sessions.
-    *   **Axe de vérification appliqué :**
-        *   `npm test` : 28 tests unitaires, où WebXR et three.js sont remplacés par des doublures (détection, entrée réussie, session refusée, échec de l'espace de référence et de la couche de rendu, fin de session, notifications, restauration de la scène, contrôles d'orbite en pause, placement du terrain), puis 18 vérifications de bout en bout, dont 7 pour le parcours AR complet avec l'émulateur IWER. Résultat le 10 novembre 2026 : 46 réussies sur 46 ;
-        *   deux erreurs introduites volontairement (contrôles d'orbite actifs en AR, session laissée ouverte quand `local-floor` manque) ont fait échouer 3 tests, puis le code a été restauré ;
-        *   l'enchaînement de la session (`renderer.xr.setSession`, couche `XRWebGLLayer`, espace de référence) a été vérifié dans le code de three.js r186 de la copie locale ;
-        *   le fonctionnement est expliqué dans `docs/sprint-2.md`, avec les réponses aux questions probables du jury ;
-        *   tests sur appareils réels par Bilel Khlif, le 12 novembre 2026, sur le site publié : entrée en AR, terrain visible et sortie conformes sur deux téléphones Android avec Chrome (Samsung Galaxy S récent, TECNO POVA 6 Pro 5G) ; vue 3D conforme sur iPhone 15 avec Safari, sans AR comme prévu, et sur PC ASUS TUF A15 avec Chrome. Résultats et protocole dans `docs/sprint-2.md`.
+
+    * **Prompt ou usage principal :** génération assistée sur instructions détaillées de Bilel Khlif pour chaque groupe d’étapes (périmètre, contraintes techniques, tests attendus) et cahier des charges (§5.3, §3.4, §7.1). Les commits de `feature/sprint-2` sont issus de ces sessions.
+
+        **Reformulation technique (non verbatim) :**
+
+        > Intégrer WebXR en deux groupes d’étapes sur `feature/sprint-2`, en conservant l’architecture du sprint 1 et les exigences du cahier des charges.
+
+        > Détecter la prise en charge de `immersive-ar` avec `navigator.xr.isSessionSupported()`. Initier la session à partir d’une interaction explicite, sans utiliser `ARButton.js`. Isoler le cycle de vie XR dans un module indépendant : demande de session, attachement par `renderer.xr.setSession()`, espace de référence `local-floor`, initialisation de la couche de rendu et gestion de la fin de session.
+
+        > Suspendre OrbitControls pendant la session immersive ; conserver l’état de la scène et restaurer la vue 3D lors de la sortie. Centraliser les mises à jour dans la boucle de rendu et traiter les échecs asynchrones sans laisser de session active ni d’état incohérent.
+
+        > Couvrir les chemins nominaux et les cas d’erreur avec des doublures WebXR/three.js et des tests de bout en bout IWER. Distinguer la validation émulée de la validation sur appareil réel ; ne pas fusionner sans revue et résultats de tests.
+
+    * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a fourni les contraintes par étape, validé la PR #3 et effectué les essais physiques du 12 novembre. Vérifications automatisées avec l’assistant :
+
+        * `npm test` : 28 tests unitaires, où WebXR et three.js sont remplacés par des doublures (détection, entrée réussie, session refusée, échec de l'espace de référence et de la couche de rendu, fin de session, notifications, restauration de la scène, contrôles d'orbite en pause, placement du terrain), puis 18 vérifications de bout en bout, dont 7 pour le parcours AR complet avec l'émulateur IWER. Résultat le 10 novembre 2026 : 46 réussies sur 46 ;
+
+        * deux erreurs introduites volontairement (contrôles d'orbite actifs en AR, session laissée ouverte quand `local-floor` manque) ont fait échouer 3 tests, puis le code a été restauré ;
+
+        * l'enchaînement de la session (`renderer.xr.setSession`, couche `XRWebGLLayer`, espace de référence) a été vérifié dans le code de three.js r186 de la copie locale ;
+
+        * le fonctionnement est expliqué dans `docs/sprint-2.md`, avec les réponses aux questions probables du jury ;
+
+        * tests sur appareils réels par Bilel Khlif, le 12 novembre 2026, sur le site publié : entrée en AR, terrain visible et sortie conformes sur deux téléphones Android avec Chrome (Samsung Galaxy S récent, TECNO POVA 6 Pro 5G) ; vue 3D conforme sur iPhone 15 avec Safari, sans AR comme prévu, et sur PC ASUS TUF A15 avec Chrome. Résultats et protocole dans `docs/sprint-2.md`.
 
 *   **Composant ou Shader concerné :** correctif du réseau lent, le 12 novembre 2026 : délai d'attente du réseau dans `sw.js`, retard simulé dans `tests/serve.mjs` (`setLatency`) et test « Lancement sur réseau très lent » dans `tests/run-tests.mjs`
-    *   **Prompt ou usage principal :** demande de Bilel Khlif de rétablir l'AR, qui ne se lançait plus après des problèmes de réseau. Diagnostic, code et test générés par l'assistant.
-    *   **Axe de vérification appliqué :**
-        *   site publié contrôlé avant toute modification : les 28 fichiers de `APP_SHELL` répondent (code 200) dans la version de `main`, et les 7 vérifications du parcours AR avec IWER réussissent sur le site publié ; seul le test séparé de l'émulateur a dépassé son délai, le CDN d'IWER ayant tardé à répondre ;
-        *   le nouveau test fait échouer l'ancien `sw.js` (page toujours pas prête après 30 secondes) et réussit avec le correctif (page prête en 3,7 secondes, serveur retardé de 30 secondes) ;
-        *   `npm test` le 12 novembre 2026 : 28 tests unitaires réussis sur 28, puis 19 vérifications de bout en bout réussies sur 19 ;
-        *   explication dans `docs/sprint-2.md` (partie 12) et dans `docs/guide-du-code.md` ; confirmation sur téléphone à faire une fois le correctif publié.
+
+    * **Prompt ou usage principal :** demande de Bilel Khlif de rétablir l'AR, qui ne se lançait plus après des problèmes de réseau. Diagnostic, code et test générés par l'assistant.
+
+        **Reformulation technique (non verbatim) :**
+
+        > Analyser la régression que j’ai constatée sur le site publié : l’AR ne se lance plus après des difficultés de connexion. Ne pas modifier immédiatement le cycle XR ; isoler d’abord la cause dans le chargement des ressources, le Service Worker et la stratégie de cache.
+
+        > Reproduire la situation avec une latence réseau contrôlée. Borner le temps d’attente du réseau pour que l’application puisse démarrer depuis les ressources déjà disponibles en cache. Conserver le comportement hors ligne et les dépendances versionnées. Ajouter un test de non-régression capable d’échouer sur l’ancienne version et de réussir après correction. Documenter le diagnostic et les limites du correctif.
+
+    * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a constaté et signalé la régression sur le site publié. Reproduction et validation automatisées par l’assistant :
+
+        * site publié contrôlé avant toute modification : les 28 fichiers de `APP_SHELL` répondent (code 200) dans la version de `main`, et les 7 vérifications du parcours AR avec IWER réussissent sur le site publié ; seul le test séparé de l'émulateur a dépassé son délai, le CDN d'IWER ayant tardé à répondre ;
+
+        * le nouveau test fait échouer l'ancien `sw.js` (page toujours pas prête après 30 secondes) et réussit avec le correctif (page prête en 3,7 secondes, serveur retardé de 30 secondes) ;
+
+        * `npm test` le 12 novembre 2026 : 28 tests unitaires réussis sur 28, puis 19 vérifications de bout en bout réussies sur 19 ;
+
+        * explication dans `docs/sprint-2.md` (partie 12) et dans `docs/guide-du-code.md` ; confirmation sur téléphone à faire une fois le correctif publié.
 
 *   **Composant ou Shader concerné :** code du sprint 3, le 14 novembre 2026 : `src/webgpu.js`, `src/ar-surface.js`, `src/reticle.js`, `src/dev-xr-emulation.js` ; modifications de `src/main.js`, `src/scene.js`, `src/pitch.js`, `src/xr-session.js`, `src/xr-support.js`, `src/ar-view.js`, `src/ar-placement.js`, `src/render-loop.js`, `src/pwa.js`, `src/dev-emulator.js`, `src/styles.css`, `index.html`, `manifest.json` et `sw.js` ; copie de three.js r187 ; tests (`tests/unit/`, `tests/run-tests.mjs`, `package.json`)
-    *   **Prompt ou usage principal :** demandes de l'enseignant transmises par Bilel Khlif (WebGPU sans repli WebGL, PWA, boucle expliquée dans le README, nouveau sprint) et sprint 3 du cahier des charges (§5.3 : hit testing, réticule, pose par un tap ; §4.3 : terrain stable). Les commits de la branche `feature/sprint-3` sont tous issus de ces sessions.
-    *   **Axe de vérification appliqué :**
-        *   faisabilité vérifiée aux sources avant le code. Dans three.js r187, le chemin WebGPU de `XRManager` (`XRGPUBinding`, fonctionnalité `webgpu`) a été lu dans la copie locale. Chez Chrome, la fiche Chrome Platform Status de la liaison WebXR/WebGPU a été consultée (mise à jour du 26 octobre 2026, aucune version de livraison). Dans le code de Chromium : le réglage `webxr-webgpu-binding`, proposé sous Windows et Android, et sa prise en charge par le périphérique ARCore depuis octobre 2024 ;
-        *   `npm test` le 14 novembre 2026 : 67 tests unitaires réussis sur 67, puis 26 vérifications de bout en bout réussies sur 26. Elles comprennent un rendu WebGPU sans aucun contexte WebGL, un message sans repli quand WebGPU est retiré, et le parcours AR émulé complet : session WebGPU, réticule, pose et ancre du terrain, déplacement, sorties, messages d'échec, aucune erreur dans la console ;
-        *   trois erreurs introduites volontairement, puis retirées. Le retour au `WebGPURenderer` de three.js avec son repli WebGL fait échouer 1 test unitaire et 2 de bout en bout ; la suppression de l'alignement de la cible XR, 1 test unitaire et 1 de bout en bout ; l'absence d'ancre, 6 tests unitaires ;
-        *   un défaut de three.js r187 a été trouvé par ces tests : une cible de rendu XR à deux couches, qui provoque des erreurs WebGPU sur un appareil à une seule vue comme un téléphone. Il est contourné par l'API publique de three.js, et la copie de three.js reste identique au paquet npm ;
-        *   captures prises par script sur l'application réelle et contrôlées à l'œil ;
-        *   fonctionnement expliqué dans `docs/sprint-3.md` et dans la partie « La boucle de rendu » du README ;
-        *   test sur téléphone à faire par l'équipe, avec le réglage `webxr-webgpu-binding` de Chrome : protocole dans `docs/sprint-3.md` (partie 13).
+
+    * **Prompt ou usage principal :** demandes de l'enseignant transmises par Bilel Khlif (WebGPU sans repli WebGL, PWA, boucle expliquée dans le README, nouveau sprint) et sprint 3 du cahier des charges (§5.3 : hit testing, réticule, pose par un tap ; §4.3 : terrain stable). Les commits de la branche `feature/sprint-3` sont tous issus de ces sessions.
+
+        **Reformulation technique (non verbatim) :**
+
+        > Appliquer les exigences de l’enseignant : WebGPU sans repli WebGL en production, PWA installable, documentation de la boucle de rendu et sprint 3 du cahier des charges (hit test, réticule, pose et stabilité du terrain).
+
+        > Étudier le backend WebGPU de three.js r187 et le chemin XR avant de migrer. Vérifier la disponibilité de `XRGPUBinding` et de la fonctionnalité de session `webgpu`. Supprimer le fallback automatique de `WebGPURenderer` en isolant le backend WebGPU ; en cas d’incompatibilité, présenter un état d’erreur explicite. Maintenir le code fournisseur intact et privilégier ses API publiques pour les corrections. Vérifier la cohérence entre les vues XR et les couches de la cible de rendu. Utiliser les matériaux à nœuds et TSL lorsque nécessaire.
+
+        > Structurer le placement spatial en modules distincts : demander une source de hit test dans le repère `viewer`, lire la pose dans un repère de référence cohérent à chaque frame, appliquer sa matrice au réticule et masquer celui-ci sans intersection valide. À la sélection, placer le terrain sur la surface détectée ; créer une ancre si elle est disponible, et gérer les poses indisponibles et la libération des ressources à la fin de la session. Le plateau doit rester indépendant des déplacements de la caméra.
+
+        > Préserver la logique métier et la boucle de rendu centralisée. Mettre à jour le manifeste, les icônes et le Service Worker pour l’installation PWA. Tester explicitement l’absence de contexte WebGL en production et le parcours XR WebGPU émulé. Documenter séparément les limitations de compatibilité matérielle et les validations physiques encore nécessaires.
+
+    * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a vérifié la vue WebGPU sur PC, testé la compatibilité de ses téléphones et fourni le rapport GPU. Les vérifications suivantes sont documentées dans le journal de l’assistant :
+
+        * faisabilité vérifiée aux sources avant le code. Dans three.js r187, le chemin WebGPU de `XRManager` (`XRGPUBinding`, fonctionnalité `webgpu`) a été lu dans la copie locale. Chez Chrome, la fiche Chrome Platform Status de la liaison WebXR/WebGPU a été consultée (mise à jour du 26 octobre 2026, aucune version de livraison). Dans le code de Chromium : le réglage `webxr-webgpu-binding`, proposé sous Windows et Android, et sa prise en charge par le périphérique ARCore depuis octobre 2024 ;
+
+        * `npm test` le 14 novembre 2026 : 67 tests unitaires réussis sur 67, puis 26 vérifications de bout en bout réussies sur 26. Elles comprennent un rendu WebGPU sans aucun contexte WebGL, un message sans repli quand WebGPU est retiré, et le parcours AR émulé complet : session WebGPU, réticule, pose et ancre du terrain, déplacement, sorties, messages d'échec, aucune erreur dans la console ;
+
+        * trois erreurs introduites volontairement, puis retirées. Le retour au `WebGPURenderer` de three.js avec son repli WebGL fait échouer 1 test unitaire et 2 de bout en bout ; la suppression de l'alignement de la cible XR, 1 test unitaire et 1 de bout en bout ; l'absence d'ancre, 6 tests unitaires ;
+
+        * un défaut de three.js r187 a été trouvé par ces tests : une cible de rendu XR à deux couches, qui provoque des erreurs WebGPU sur un appareil à une seule vue comme un téléphone. Il est contourné par l'API publique de three.js, et la copie de three.js reste identique au paquet npm ;
+
+        * captures prises par script sur l'application réelle et contrôlées à l'œil ;
+
+        * fonctionnement expliqué dans `docs/sprint-3.md` et dans la partie « La boucle de rendu » du README ;
+
+        * test sur téléphone à faire par l'équipe, avec le réglage `webxr-webgpu-binding` de Chrome : protocole dans `docs/sprint-3.md` (partie 13).
 
 *   **Composant ou Shader concerné :** mode test WebGL, le 14 novembre 2026 : `src/webgl-test-mode.js` ; modifications de `src/main.js`, `src/scene.js`, `src/xr-session.js`, `src/xr-support.js`, `src/render-loop.js`, `src/dev-xr-emulation.js`, `src/styles.css` et `sw.js` ; tests (`tests/unit/`, `tests/run-tests.mjs`)
-    *   **Prompt ou usage principal :** demande de Bilel Khlif de pouvoir tester l'AR sur son seul téléphone disponible, un Galaxy S10e sous Android 9 où Chrome bloque WebGPU, avec la consigne que ce rendu WebGL soit réservé aux tests et ne soit pas un repli.
-    *   **Axe de vérification appliqué :**
-        *   le mode ne démarre qu'avec `?webgl` dans l'adresse. Aucun bouton n'y mène, et l'écran d'erreur sans WebGPU ne propose rien : un test de bout en bout vérifie l'absence de lien ou de bouton vers WebGL et de tout contexte WebGL ;
-        *   `npm test` le 14 novembre 2026 : 73 tests unitaires réussis sur 73, puis 37 vérifications de bout en bout réussies sur 37, dont le parcours AR émulé rejoué en mode test ;
-        *   un défaut propre à l'émulateur a été trouvé et contourné : IWER fournit un framebuffer nul, que le backend WebGL de three.js r187 refuse. Il est sans effet sur un vrai téléphone ;
-        *   test sur le Galaxy S10e par Bilel Khlif, le 14 novembre 2026, sur le site publié : tout fonctionne, AR comprise.
+
+    * **Prompt ou usage principal :** demande de Bilel Khlif de pouvoir tester l'AR sur son seul téléphone disponible, un Galaxy S10e sous Android 9 où Chrome bloque WebGPU, avec la consigne que ce rendu WebGL soit réservé aux tests et ne soit pas un repli.
+
+        **Reformulation technique (non verbatim) :**
+
+        > À partir du rapport `chrome://gpu` de mon Galaxy S10e sous Android 9, distinguer la disponibilité de WebGPU, les restrictions du navigateur et la prise en charge de la liaison WebXR/WebGPU. Je souhaite tester la logique spatiale sans confondre cette validation avec celle du backend WebGPU.
+
+        > Ajouter un chemin WebGL réservé aux tests, activé exclusivement par `?webgl`, sans repli automatique ni bouton proposé à l’utilisateur. Réutiliser autant que possible l’état, la scène et les interactions spatiales existants. Vérifier le comportement d’IWER et des couches de rendu en mode test. Ajouter un test prouvant que le chemin de production n’initialise jamais de contexte WebGL. Distinguer clairement les résultats obtenus en WebGL sur téléphone des résultats WebGPU émulés.
+
+    * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a imposé la séparation production/test et validé l’AR WebGL sur son Galaxy S10e. Contrôles automatisés avec l’assistant :
+
+        * le mode ne démarre qu'avec `?webgl` dans l'adresse. Aucun bouton n'y mène, et l'écran d'erreur sans WebGPU ne propose rien : un test de bout en bout vérifie l'absence de lien ou de bouton vers WebGL et de tout contexte WebGL ;
+
+        * `npm test` le 14 novembre 2026 : 73 tests unitaires réussis sur 73, puis 37 vérifications de bout en bout réussies sur 37, dont le parcours AR émulé rejoué en mode test ;
+
+        * un défaut propre à l'émulateur a été trouvé et contourné : IWER fournit un framebuffer nul, que le backend WebGL de three.js r187 refuse. Il est sans effet sur un vrai téléphone ;
+
+        * test sur le Galaxy S10e par Bilel Khlif, le 14 novembre 2026, sur le site publié : tout fonctionne, AR comprise.
 
 *   **Composant ou Shader concerné :** code du sprint 4, le 14 novembre 2026 : `src/tactics-board.js`, `src/formation-transition.js`, `src/formation-panel.js` ; modifications de `src/formations.js` (4-2-3-1), `src/team.js`, `src/render-loop.js`, `src/main.js`, `index.html`, `src/styles.css` et `sw.js` ; tests (`tests/unit/`, `tests/run-tests.mjs`)
-    *   **Prompt ou usage principal :** demande de Bilel Khlif de réaliser le sprint 4, à partir du cahier des charges : §5.3 (système de formations, deux équipes, ballon, boutons HTML), BF4, scénario de démonstration (§4.1, étape 5), patrons Strategy et Observer (§3.4). Les commits de la branche `feature/sprint-4` sont tous issus de ces sessions.
-    *   **Axe de vérification appliqué :**
-        *   `npm test` le 14 novembre 2026 : 94 tests unitaires réussis sur 94, puis 44 vérifications de bout en bout réussies sur 44. Elles couvrent les règles de placement des quatre formations, le changement de formation par les boutons pour les deux équipes au millimètre, la transition animée, le scénario de démonstration, la préférence « réduire les animations », et les formations en AR émulée sur le terrain posé, en WebGPU et en mode test WebGL ;
-        *   trois erreurs introduites volontairement, puis retirées. Sans avancée des déplacements dans la boucle de rendu : 1 test unitaire en échec. Avec les joueurs associés par leur rang au lieu de leur numéro : 1 test unitaire. Avec le panneau désabonné du tableau tactique : 2 vérifications de bout en bout ;
-        *   une erreur d'arrondi en fin de transition, révélée par un test unitaire, a été corrigée : la dernière image pose chaque joueur exactement sur sa place ;
-        *   affichage contrôlé à l'œil sur téléphone (390 et 360 px de large) et en AR émulée, sur des captures prises par script ;
-        *   aucun code ni aucune donnée de boardx n'a été repris : les formations sont propres au projet ;
-        *   fonctionnement expliqué dans `docs/sprint-4.md` ; test sur téléphone à faire par l'équipe.
+
+    * **Prompt ou usage principal :** demande de Bilel Khlif de réaliser le sprint 4, à partir du cahier des charges : §5.3 (système de formations, deux équipes, ballon, boutons HTML), BF4, scénario de démonstration (§4.1, étape 5), patrons Strategy et Observer (§3.4). Les commits de la branche `feature/sprint-4` sont tous issus de ces sessions.
+
+        **Reformulation technique (non verbatim) :**
+
+        > Réaliser le sprint 4 sur `feature/sprint-4` en suivant le cahier des charges collectif (§5.3, BF4, scénario §4.1 et patrons §3.4). Implémenter un moteur tactique indépendant du backend et de la position du terrain dans le monde réel.
+
+        > Représenter les positions dans le repère local du plateau, pas dans celui de la caméra. Gérer deux équipes, un ballon et quatre formations, dont le 4-2-3-1. Appliquer Strategy pour les positions et Observer pour synchroniser le panneau HTML avec l’état tactique. Conserver l’identité de chaque joueur par son numéro de maillot pendant les transitions.
+
+        > Interpoler les déplacements suivant le temps écoulé plutôt que le nombre d’images et intégrer leur mise à jour dans la boucle existante. Garantir la position finale exacte, respecter `prefers-reduced-motion` et conserver les interactions de placement AR. Aucun code ni donnée de boardx ne doit être importé.
+
+        > Vérifier les invariants géométriques des formations, l’indépendance des équipes, les transitions, le scénario de démonstration et la synchronisation de l’interface. Rejouer les tests en 3D, en AR WebGPU émulée et dans le mode WebGL de test ; préparer la validation sur téléphone par l’équipe.
+
+    * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a lancé le sprint à partir des critères collectifs définis avec Iyed Rachdi et Ghassen Dallekji. Les résultats ci-dessous sont automatisés ; la validation physique par l’équipe reste à réaliser :
+
+        * `npm test` le 14 novembre 2026 : 94 tests unitaires réussis sur 94, puis 44 vérifications de bout en bout réussies sur 44. Elles couvrent les règles de placement des quatre formations, le changement de formation par les boutons pour les deux équipes au millimètre, la transition animée, le scénario de démonstration, la préférence « réduire les animations », et les formations en AR émulée sur le terrain posé, en WebGPU et en mode test WebGL ;
+
+        * trois erreurs introduites volontairement, puis retirées. Sans avancée des déplacements dans la boucle de rendu : 1 test unitaire en échec. Avec les joueurs associés par leur rang au lieu de leur numéro : 1 test unitaire. Avec le panneau désabonné du tableau tactique : 2 vérifications de bout en bout ;
+
+        * une erreur d'arrondi en fin de transition, révélée par un test unitaire, a été corrigée : la dernière image pose chaque joueur exactement sur sa place ;
+
+        * affichage contrôlé à l'œil sur téléphone (390 et 360 px de large) et en AR émulée, sur des captures prises par script ;
+
+        * aucun code ni aucune donnée de boardx n'a été repris : les formations sont propres au projet ;
+
+        * fonctionnement expliqué dans `docs/sprint-4.md` ; test sur téléphone à faire par l'équipe.
 
 *   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles des sprints 2 à 4, et `assets/screenshots/`), figures du rapport (`docs/etat-de-l-art/figures/`)
-    *   **Prompt ou usage principal :** dessin des icônes en SVG d'après la couverture du cahier des charges, captures automatisées de l'application, mise en page de la bannière dans le style de la présentation d'état de l'art
-    *   **Axe de vérification appliqué :** contrôle visuel de chaque rendu ; les captures sont prises par script sur l'application réelle ; le motif de l'icône « maskable » tient dans la zone sûre d'Android (un cercle de 80 % de la largeur).
+
+    * **Prompt ou usage principal :** dessin des icônes en SVG d'après la couverture du cahier des charges, captures automatisées de l'application, mise en page de la bannière dans le style de la présentation d'état de l'art
+
+        **Reformulation technique (non verbatim) :**
+
+        > Créer les icônes SVG à partir de la couverture du cahier des charges de l’équipe ; exporter les PNG et la variante maskable dans sa zone sûre. Générer les captures depuis l’application exécutée réellement et utiliser l’identité visuelle de la présentation d’état de l’art pour la bannière. Ne pas importer de modèle ou de texture externe.
+
+    * **Axe de vérification appliqué par l’étudiant :** critères graphiques issus du cahier des charges collectif ; contrôles visuels consignés par l’assistant : les captures sont prises par script sur l'application réelle ; le motif de l'icône « maskable » tient dans la zone sûre d'Android (un cercle de 80 % de la largeur).
 
 *   **Composant ou Shader concerné :** documentation : `README.md`, `docs/architecture.md`, `docs/sprint-1.md`, `docs/sprint-2.md`, `docs/sprint-3.md`, `docs/sprint-4.md`, `docs/guide-du-code.md`, `docs/etat-de-l-art/README.md`, `src/vendor/three-r187/README.md` et ce fichier
-    *   **Prompt ou usage principal :** rédaction en français à partir du code et du cahier des charges. Le README a été refait à la demande de Bilel Khlif, dans le style du rapport et de la présentation d'état de l'art, avec des captures et la synthèse de la veille. Au sprint 3, ses parties « Rendu WebGPU », « La boucle de rendu » et « Application installable » répondent aux demandes de l'enseignant transmises par Bilel Khlif. Ce fichier suit le modèle fourni par l'enseignant.
-    *   **Axe de vérification appliqué :** dimensions, valeurs et résultats de tests repris du code source et des sorties de `npm test` ; renvois aux sections du cahier (§) contrôlés sur le cahier des charges ; ce fichier a été relu en entier par Bilel Khlif le 9 novembre 2026, avant l'ajout du sprint 2.
+
+    * **Prompt ou usage principal :** rédaction en français à partir du code et du cahier des charges. Le README a été refait à la demande de Bilel Khlif, dans le style du rapport et de la présentation d'état de l'art, avec des captures et la synthèse de la veille. Au sprint 3, ses parties « Rendu WebGPU », « La boucle de rendu » et « Application installable » répondent aux demandes de l'enseignant transmises par Bilel Khlif. Ce fichier suit le modèle fourni par l'enseignant.
+
+        **Reformulation technique (non verbatim) :**
+
+        > Produire une documentation technique en français fondée sur le code, le cahier des charges et les tests. Décrire les responsabilités de chaque module, les choix de conception et les conditions de fonctionnement WebXR/WebGPU avec leurs limites. Expliquer précisément la boucle de rendu, le traitement des frames XR, la gestion des repères, le chemin de rendu et la PWA. Consigner les dépendances versionnées, adaptations de code et usages de l’IA selon le modèle imposé ; fournir des commandes reproductibles, sans présenter les essais émulés comme des essais physiques.
+
+    * **Axe de vérification appliqué par l’étudiant :** relecture de Bilel Khlif et contrôle documentaire assisté : dimensions, valeurs et résultats de tests repris du code source et des sorties de `npm test` ; renvois aux sections du cahier (§) contrôlés sur le cahier des charges ; ce fichier a été relu en entier par Bilel Khlif le 9 novembre 2026, avant l'ajout du sprint 2.
 
 *   **Composant ou Shader concerné :** état de l'art : rapport LaTeX (`docs/etat-de-l-art/`) et présentation PowerPoint
-    *   **Prompt ou usage principal :** consigne de Bilel Khlif de lire le cahier des charges et de chercher des projets existants sur la même idée, pour s'appuyer dessus ; recherche web (dépôts, applications, articles, jeux de données) à partir de ce cahier et de la publication LinkedIn qu'il a fournie, puis rédaction du rapport et de la présentation.
-    *   **Axe de vérification appliqué :**
-        *   les faits du rapport proviennent de pages citées parmi ses 29 références, toutes consultées le 5 novembre 2026 ; la fiche de Sports Tactics Board a été corrigée après vérification de sa page ;
-        *   la première version de la présentation a été refusée par Bilel Khlif, jugée trop générique, puis refaite d'après les trois présentations de référence qu'il a fournies (BlurUAV, Trust before you trade, GreenBench) ;
-        *   le rapport a été demandé en LaTeX par Bilel Khlif, au format PDF ;
-        *   le projet a été renommé Football Simulator dans tous les documents, à la demande de Bilel Khlif.
+
+    * **Prompt ou usage principal :** consigne de Bilel Khlif de lire le cahier des charges et de chercher des projets existants sur la même idée, pour s'appuyer dessus ; recherche web (dépôts, applications, articles, jeux de données) à partir de ce cahier et de la publication LinkedIn qu'il a fournie, puis rédaction du rapport et de la présentation.
+
+        **Reformulation technique (non verbatim) :**
+
+        > Analyser le cahier des charges défini avec Iyed Rachdi et Ghassen Dallekji, puis étudier les applications, dépôts, travaux scientifiques et jeux de données pertinents pour la visualisation tactique, le football et la réalité augmentée. Exploiter aussi la publication LinkedIn sur l’analyse vidéo de match que j’ai fournie pour la partie vision par ordinateur. Comparer les approches et documenter les références. Produire un rapport LaTeX au format PDF et une présentation structurée ; réviser la présentation d’après les références visuelles fournies (BlurUAV, Trust before you trade, GreenBench).
+
+    * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a orienté la veille, rejeté la première présentation et fourni les références de refonte ; le contrôle bibliographique est documenté dans le journal initial.
+
+        * les faits du rapport proviennent de pages citées parmi ses 29 références, toutes consultées le 5 novembre 2026 ; la fiche de Sports Tactics Board a été corrigée après vérification de sa page ;
+
+        * la première version de la présentation a été refusée par Bilel Khlif, jugée trop générique, puis refaite d'après les trois présentations de référence qu'il a fournies (BlurUAV, Trust before you trade, GreenBench) ;
+
+        * le rapport a été demandé en LaTeX par Bilel Khlif, au format PDF ;
+
+        * le projet a été renommé Football Simulator dans tous les documents, à la demande de Bilel Khlif.
+
+**Synthèse des validations documentées**
+
+| Étape | Vérifications réussies | Contribution humaine documentée |
+|---|---:|---|
+| Sprint 1 | 11/11 | Cadrage, revue du guide, validation PR #1 |
+| Sprint 2 | 46/46 | Spécifications, essais multi-appareils, validation PR #3 |
+| Correctif réseau | 47/47 | Signalement du défaut en conditions réelles |
+| Sprint 3 | 93/93 | Transmission des exigences, essais de compatibilité GPU |
+| Mode test WebGL | 110/110 | Arbitrage production/test et validation AR sur Galaxy S10e |
+| Sprint 4 | 138/138 | Lancement du sprint à partir du cahier des charges collectif |
+
+Ces résultats sont ceux consignés dans le journal initial, non des tests rejoués pour cette révision. Les essais AR WebGPU natifs sur téléphone et la validation physique du sprint 4 restent à confirmer.
