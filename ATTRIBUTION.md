@@ -110,7 +110,7 @@ Outils utilisés hors du projet, non distribués avec l'application : Google Chr
 
 L'usage de code tiers sans citation est un motif d'annulation de la note technique.
 
-*   **Fonction / Fichier :** `src/dev-emulator.js`, fonction `installEmulatorIfRequested` (lignes 29 à 43)
+*   **Fonction / Fichier :** `src/dev-emulator.js`, fonction `installEmulatorIfRequested`
 
     * **Source du code original :** guide de démarrage d'IWER, https://meta-quest.github.io/immersive-web-emulation-runtime/getting-started.html
 
@@ -316,6 +316,14 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (mo
 
         * fonctionnement expliqué dans `docs/sprint-4.md` ; test sur téléphone à faire par l'équipe.
 
+*   **Composant ou Shader concerné :** documentation des fonctions, le 14 novembre 2026 : en-têtes `@responsable`, `@date` et `@role` dans `src/*.js` (hors `src/vendor/`), `sw.js` et `tests/`, renvoi à ATTRIBUTION.md en tête de chaque fichier, test `tests/unit/documentation.test.mjs` et `docs/convention-de-documentation.md`
+
+    * **Prompt ou usage principal :** demande de Bilel Khlif d'ajouter à chaque fonction un en-tête standard (responsable, date, rôle technique) d'après les contributions documentées et l'historique Git, sans répéter l'attribution de l'IA dans chaque fonction. En-têtes, test et documentation générés par l'assistant.
+
+        **Périmètre technique :** Datation de chaque fonction par le premier commit où sa déclaration apparaît (`git log -S`), rôle technique par module, contrôle automatique de la convention. Seuls des commentaires changent dans le code.
+
+    * **Axe de vérification appliqué par l'étudiant :** Bilel Khlif a défini le contenu des en-têtes et les contraintes (ATTRIBUTION.md et bibliothèques tierces inchangés, fonctionnement préservé). Vérifications automatisées par l'assistant : `npm test` le 14 novembre 2026, 97 tests unitaires et 44 vérifications de bout en bout réussis ; diff du code limité aux commentaires ; le nouveau test échoue quand une balise ou un renvoi manque.
+
 *   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles des sprints 2 à 4, et `assets/screenshots/`), figures du rapport (`docs/etat-de-l-art/figures/`)
 
     * **Prompt ou usage principal :** dessin des icônes en SVG d'après la couverture du cahier des charges, captures automatisées de l'application, mise en page de la bannière dans le style de la présentation d'état de l'art
@@ -358,5 +366,6 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (mo
 | Sprint 3 | 93/93 | Transmission des exigences, essais de compatibilité GPU |
 | Mode test WebGL | 110/110 | Arbitrage production/test et validation AR sur Galaxy S10e |
 | Sprint 4 | 138/138 | Lancement du sprint à partir du cahier des charges collectif |
+| Documentation des fonctions | 141/141 | Contenu des en-têtes et contraintes définis |
 
 **État de validation matérielle au 14 novembre 2026 :** rendu 3D WebGPU vérifié sur le PC ASUS TUF A15 ; parcours AR WebGPU vérifié en émulation ; AR sur Galaxy S10e vérifiée uniquement dans le mode de test WebGL. Aucune validation AR WebGPU native sur téléphone ni validation physique du sprint 4 n’est consignée à cette date. Les résultats automatisés ci-dessus proviennent du journal de développement.
