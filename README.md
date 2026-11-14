@@ -249,7 +249,7 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 ```bash
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
-npm run test:unit   # 94 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
+npm run test:unit   # 97 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
 npm run test:e2e    # 44 vérifications dans Chrome, sans interface
 ```
 
@@ -262,7 +262,9 @@ Les tests de bout en bout couvrent :
 - le parcours AR complet avec l'émulateur : session WebGPU, réticule, toucher et pose du terrain, ancre, déplacement, sorties, et messages d'échec ;
 - le mode test WebGL (`?webgl`) : seulement sur demande, jamais en repli, et le même parcours AR rejoué dans ce mode.
 
-Résultat le 14 novembre 2026 : 94 tests unitaires et 44 vérifications de bout en bout, tous réussis. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
+Les tests unitaires vérifient aussi la documentation du code : chaque fonction, classe et membre de classe porte un en-tête avec son responsable, sa date et son rôle, et chaque fichier renvoie à ATTRIBUTION.md ([convention](docs/convention-de-documentation.md)).
+
+Résultat le 14 novembre 2026 : 97 tests unitaires et 44 vérifications de bout en bout, tous réussis. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
 
 ## Arborescence
 
@@ -309,6 +311,7 @@ Résultat le 14 novembre 2026 : 94 tests unitaires et 44 vérifications de bout 
 └── docs/
     ├── guide-du-code.md   Explication du code, fichier par fichier
     ├── architecture.md    Modules, graphe de scène, repère et mise en cache
+    ├── convention-de-documentation.md  En-têtes des fonctions : responsable, date, rôle
     ├── sprint-1.md        Compte rendu du sprint 1
     ├── sprint-2.md        Compte rendu du sprint 2 : session AR
     ├── sprint-3.md        Compte rendu du sprint 3 : surface réelle, WebGPU, PWA
@@ -323,7 +326,7 @@ L'architecture est détaillée dans [docs/architecture.md](docs/architecture.md)
 
 Issues du cahier des charges (§7) :
 
-- un commentaire d'en-tête pour chaque fonction JavaScript et chaque bloc HTML ou CSS ;
+- un commentaire d'en-tête pour chaque fonction JavaScript et chaque bloc HTML ou CSS ; celui d'une fonction indique son responsable, sa date de création et son rôle technique ([convention](docs/convention-de-documentation.md), vérifiée par `npm test`) ;
 - des noms explicites : `pitchGroup`, `currentFormation`, `hitTestSource`, `selectedPlayer` ;
 - une branche par fonctionnalité, fusionnée dans `main` après relecture ;
 - des commits fréquents, et chaque push laisse l'application fonctionnelle ;
