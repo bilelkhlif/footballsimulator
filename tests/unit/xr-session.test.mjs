@@ -5,7 +5,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ArSession, AR_ERROR_REASONS } from '../../src/xr-session.js';
+import { ArSession, AR_ERROR_REASONS, RENDERING_APIS } from '../../src/xr-session.js';
 
 /** Fonctionnalités accordées par un téléphone Android avec la liaison WebXR/WebGPU. */
 const GRANTED_FEATURES = ['local-floor', 'webgpu', 'hit-test', 'anchors', 'viewer', 'local'];
@@ -38,9 +38,9 @@ function createFakeSession({ failReferenceSpace = false } = {}) {
 /**
  * Doublure du moteur de rendu : reproduit ce que fait renderer.xr dans three.js r187 avec WebGPU
  * (écoute de la fin de session, couche de projection, événements sessionstart et sessionend).
- * @param {{failSetSession?: boolean}} [options]
+ * @param {{failSetSession?: boolean, webgl?: boolean}} [options] webgl : backend WebGL (mode test)
  */
-function createFakeRenderer({ failSetSession = false } = {}) {
+function createFakeRenderer({ failSetSession = false, webgl = false } = {}) {
   const listeners = new Map();
   const xr = {
     calls: [],
@@ -57,8 +57,13 @@ function createFakeRenderer({ failSetSession = false } = {}) {
         this.dispatch('sessionend');
       });
       if (failSetSession) throw new Error('Création de la couche de projection WebGPU impossible');
-      // Comme three.js r187 avec XRGPUBinding : une couche de projection, dans renderState.layers.
-      session.renderState.layers = [{ textureWidth: 1080, textureHeight: 2340 }];
+      if (webgl) {
+        // Backend WebGL (mode test) : une couche XRWebGLLayer, couche de base de la session.
+        session.renderState.baseLayer = { framebufferWidth: 1080 };
+      } else {
+        // Comme three.js r187 avec XRGPUBinding : une couche de projection, dans renderState.layers.
+        session.renderState.layers = [{ textureWidth: 1080, textureHeight: 2340 }];
+      }
       this.isPresenting = true;
       this.dispatch('sessionstart');
     },
@@ -327,4 +332,38 @@ test('après une sortie, une nouvelle session peut être ouverte', async () => {
 
   assert.deepEqual(events.map((event) => event.type), ['sessionstart', 'sessionend', 'sessionstart']);
   assert.equal(arSession.isActive, true);
+});
+
+test('mode test WebGL : ni fonctionnalité webgpu ni XRGPUBinding exigées, session rendue par une couche WebGL', async () => {
+  const session = createFakeSession();
+  session.enabledFeatures = ['local-floor', 'hit-test', 'anchors', 'viewer', 'local'];
+  const xr = createFakeXr(session);
+  const arSession = new ArSession({
+    renderer: createFakeRenderer({ webgl: true }),
+    xr,
+    hasGpuBinding: () => false, // comme Chrome 138 sur Android 9 : pas de liaison WebXR/WebGPU
+    renderingApi: RENDERING_APIS.WEBGL,
+  });
+  const events = recordEvents(arSession);
+
+  assert.equal(await arSession.start(), session);
+
+  assert.deepEqual(xr.requests[0].init, {
+    requiredFeatures: ['local-floor'],
+    optionalFeatures: ['hit-test', 'anchors'],
+  });
+  assert.equal(events[0].type, 'sessionstart');
+  assert.equal(events[0].detail.rendering, RENDERING_APIS.WEBGL);
+  assert.equal(events[0].detail.layer, 'XRWebGLLayer');
+});
+
+test('par défaut, la session est rendue en WebGPU : le mode test WebGL n\'est jamais choisi seul', async () => {
+  const xr = createFakeXr(createFakeSession());
+  const arSession = new ArSession({ renderer: createFakeRenderer(), xr, hasGpuBinding: () => false });
+  const events = recordEvents(arSession);
+
+  // Sans XRGPUBinding, la session WebGPU échoue : elle ne bascule pas sur une couche WebGL.
+  assert.equal(await arSession.start(), null);
+  assert.equal(events[0].detail.reason, AR_ERROR_REASONS.WEBGPU_BINDING);
+  assert.equal(xr.requests.length, 0);
 });

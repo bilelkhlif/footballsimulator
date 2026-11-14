@@ -1,5 +1,5 @@
 /**
- * Tests de bout en bout des sprints 1 à 3, exécutés dans Chrome sans interface.
+ * Tests de bout en bout des sprints 1 à 3, et du mode test WebGL, exécutés dans Chrome sans interface.
  * Ils rejouent les vérifications consignées dans docs/sprint-1.md, docs/sprint-2.md et
  * docs/sprint-3.md.
  *
@@ -191,16 +191,55 @@ async function testWithoutWebGpu(browser, url) {
     const page = await context.newPage();
     await page.goto(url, { waitUntil: 'load' });
     await page.waitForSelector('#loader[data-state="error"]', { timeout: 20000 });
+    await page.waitForTimeout(500);
     const state = await page.evaluate(() => ({
       reason: document.getElementById('loader').dataset.reason,
       message: document.getElementById('loader').textContent,
       badge: document.getElementById('gpu-status').dataset.state,
       ready: document.body.classList.contains('is-ready'),
       contexts: [...new Set(window.__canvasContexts)],
+      // Pas un repli : l'écran d'erreur ne propose aucun passage vers WebGL.
+      webglOffer: Boolean(document.querySelector('#loader a, #loader button, a[href*="webgl"]')),
     }));
     const noWebGl = !state.contexts.some((type) => WEBGL_CONTEXTS.includes(type));
-    const ok = state.reason === 'no-api' && state.badge === 'unavailable' && !state.ready && noWebGl && state.message.includes('WebGPU');
-    record(name, ok ? 'ok' : 'échec', `${state.message} (contextes : ${state.contexts.join(', ') || 'aucun'})`);
+    const ok = state.reason === 'no-api' && state.badge === 'unavailable' && !state.ready && noWebGl && !state.webglOffer
+      && state.message.includes('WebGPU');
+    record(name, ok ? 'ok' : 'échec', `${state.message} (contextes : ${state.contexts.join(', ') || 'aucun'}, proposition de WebGL : ${state.webglOffer ? 'oui' : 'aucune'})`);
+  } catch (error) {
+    record(name, 'échec', error.message);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Vérifie le mode test WebGL : avec ?webgl seulement, la scène tourne sur le backend WebGL 2 de
+ * three.js, et le badge l'annonce comme un mode test. Ce n'est pas un repli : sans ce paramètre,
+ * l'application est en WebGPU (testWebGpuRendering), et sans WebGPU elle s'arrête (testWithoutWebGpu).
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ */
+async function testWebGlTestMode(browser, url) {
+  const name = 'Mode test WebGL, seulement avec ?webgl : badge « mode test »';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    await context.addInitScript(recordCanvasContexts);
+    const { page } = await openApp(context, `${url}?webgl&debug`);
+    await page.waitForTimeout(500);
+    const state = await page.evaluate(() => {
+      const app = window.__footballSimulator;
+      const badge = document.getElementById('gpu-status');
+      return {
+        mode: app.renderMode,
+        webgl: app.renderer.backend.isWebGLBackend === true,
+        fallback: app.renderer._getFallback,
+        badge: `${badge.dataset.state} « ${badge.textContent} »`,
+        contexts: [...new Set(window.__canvasContexts)],
+      };
+    });
+    const ok = state.mode === 'webgl-test' && state.webgl && state.fallback === null
+      && state.badge === 'webgl-test « Rendu WebGL (mode test) »' && state.contexts.includes('webgl2') && !state.contexts.includes('webgpu');
+    record(name, ok ? 'ok' : 'échec', `${state.badge}, contextes : ${state.contexts.join(', ')}`);
   } catch (error) {
     record(name, 'échec', error.message);
   } finally {
@@ -373,14 +412,17 @@ async function testEmulator(browser, url) {
  * messages d'échec (liaison WebXR/WebGPU absente, caméra refusée).
  * Les objets internes sont lus grâce au paramètre ?debug. Le parcours est ignoré si le CDN de
  * l'émulateur est injoignable ; une étape en échec fait ignorer les suivantes.
+ * Le même parcours est rejoué en mode test WebGL (?webgl), la voie des téléphones dont le
+ * navigateur bloque WebGPU, sauf l'étape propre à la liaison WebXR/WebGPU.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
+ * @param {{webglTest?: boolean}} [options] webglTest : parcours en mode test WebGL
  */
-async function testArSession(browser, url) {
-  const label = (step) => `Session AR avec IWER : ${step}`;
+async function testArSession(browser, url, { webglTest = false } = {}) {
+  const label = (step) => `${webglTest ? 'Mode test WebGL, AR avec IWER' : 'Session AR avec IWER'} : ${step}`;
   const context = await browser.newContext(DESKTOP);
   try {
-    const { page, errors } = await openApp(context, `${url}?iwer&debug`);
+    const { page, errors } = await openApp(context, `${url}?iwer&debug${webglTest ? '&webgl' : ''}`);
     await page.waitForFunction(() => document.getElementById('xr-status')?.dataset.state !== 'checking', null, { timeout: 30000 });
     if (await page.evaluate(() => document.getElementById('xr-status').dataset.state) !== 'emulated') {
       record(label('parcours complet'), 'ignoré', 'émulateur indisponible (réseau ?)');
@@ -483,7 +525,7 @@ async function testArSession(browser, url) {
     const sameAsInitial = (view) => JSON.stringify(view) === JSON.stringify(initialView);
 
     const steps = [
-      ['entrée par « Entrer en AR », session rendue en WebGPU', async () => {
+      [webglTest ? 'entrée par « Entrer en AR », session rendue par une couche WebGL' : 'entrée par « Entrer en AR », session rendue en WebGPU', async () => {
         await enterAr();
         const state = await page.evaluate(() => {
           const app = window.__footballSimulator;
@@ -492,15 +534,21 @@ async function testArSession(browser, url) {
           return {
             presenting: app.renderer.xr.isPresenting,
             webgpu: session.enabledFeatures.includes('webgpu') && app.renderer.backend.isWebGPUBackend,
+            webgl: !session.enabledFeatures.includes('webgpu') && app.renderer.backend.isWebGLBackend === true,
             layers: session.renderState.layers.length,
+            baseLayer: Boolean(session.renderState.baseLayer),
             space: Boolean(app.renderer.xr.getReferenceSpace()),
             tableHidden: !app.table.visible,
             transparent: app.scene.background === null,
             buttons: visible('exit-ar') && !visible('enter-ar') && !visible('reset-view'),
           };
         });
-        const ok = state.presenting && state.webgpu && state.layers === 1 && state.space && state.tableHidden && state.transparent && state.buttons;
-        return [ok, `WebGPU : ${state.webgpu}, couches de projection : ${state.layers}, table masquée : ${state.tableHidden}, fond transparent : ${state.transparent}`];
+        const rendering = webglTest ? state.webgl && state.baseLayer : state.webgpu && state.layers === 1;
+        const ok = state.presenting && rendering && state.space && state.tableHidden && state.transparent && state.buttons;
+        const detail = webglTest
+          ? `WebGL : ${state.webgl}, couche XRWebGLLayer : ${state.baseLayer}`
+          : `WebGPU : ${state.webgpu}, couches de projection : ${state.layers}`;
+        return [ok, `${detail}, table masquée : ${state.tableHidden}, fond transparent : ${state.transparent}`];
       }],
       ['réticule sur la table détectée', async () => {
         await waitForPlacementState('surface');
@@ -600,8 +648,10 @@ async function testArSession(browser, url) {
       }],
     ];
 
+    // La liaison WebXR/WebGPU ne concerne pas le mode test WebGL.
+    const modeSteps = webglTest ? steps.filter(([step]) => !step.startsWith('sans liaison WebXR/WebGPU')) : steps;
     let blocked = false;
-    for (const [step, run] of steps) {
+    for (const [step, run] of modeSteps) {
       if (blocked) {
         record(label(step), 'ignoré', 'étape précédente en échec');
         continue;
@@ -615,7 +665,7 @@ async function testArSession(browser, url) {
         blocked = true;
       }
     }
-    record(label('aucune erreur dans la console (WebGPU compris)'), errors.length ? 'échec' : 'ok', errors.slice(0, 3).join(' | '));
+    record(label(webglTest ? 'aucune erreur dans la console' : 'aucune erreur dans la console (WebGPU compris)'), errors.length ? 'échec' : 'ok', errors.slice(0, 3).join(' | '));
   } catch (error) {
     record(label('parcours complet'), 'échec', error.message);
   } finally {
@@ -637,6 +687,7 @@ async function main() {
     await testFormations(browser, root.url);
     await testWebGpuRendering(browser, root.url);
     await testWithoutWebGpu(browser, root.url);
+    await testWebGlTestMode(browser, root.url);
     await testManifest(browser, root.url);
     await testPwa(browser, root.url, 'racine');
     await testLoading(browser, subPath.url, 'sous-chemin, comme GitHub Pages', DESKTOP);
@@ -644,6 +695,7 @@ async function main() {
     await testSlowNetwork(browser, slow);
     await testEmulator(browser, root.url);
     await testArSession(browser, root.url);
+    await testArSession(browser, root.url, { webglTest: true });
   } finally {
     await browser.close();
     await root.close();

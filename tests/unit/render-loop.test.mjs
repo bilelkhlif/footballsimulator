@@ -30,6 +30,7 @@ function createXrTarget(depth = 2) {
 function createLoop({ presenting, viewCount = 1, target = null, placement = null }) {
   const log = [];
   const renderer = {
+    backend: { isWebGPUBackend: true },
     xr: { isPresenting: presenting, getCamera: () => ({ cameras: new Array(viewCount).fill({}) }) },
     getOutputRenderTarget: () => target,
     render: () => {
@@ -96,16 +97,25 @@ test('téléphone (une vue) : la cible XR à deux couches de three.js r187 passe
 });
 
 test('alignement de la cible XR : rien à faire pour un casque (deux vues) ni hors session', () => {
+  const backend = { isWebGPUBackend: true };
   const stereoTarget = createXrTarget(2);
-  const stereo = { getOutputRenderTarget: () => stereoTarget, xr: { getCamera: () => ({ cameras: [{}, {}] }) } };
+  const stereo = { backend, getOutputRenderTarget: () => stereoTarget, xr: { getCamera: () => ({ cameras: [{}, {}] }) } };
   assert.equal(matchXrTargetToViews(stereo), false);
   assert.deepEqual(stereoTarget.resizes, []);
 
-  const noTarget = { getOutputRenderTarget: () => null, xr: { getCamera: () => ({ cameras: [{}] }) } };
+  const noTarget = { backend, getOutputRenderTarget: () => null, xr: { getCamera: () => ({ cameras: [{}] }) } };
   assert.equal(matchXrTargetToViews(noTarget), false);
 
   const monoTarget = createXrTarget(2);
-  const noViewYet = { getOutputRenderTarget: () => monoTarget, xr: { getCamera: () => ({ cameras: [] }) } };
+  const noViewYet = { backend, getOutputRenderTarget: () => monoTarget, xr: { getCamera: () => ({ cameras: [] }) } };
   assert.equal(matchXrTargetToViews(noViewYet), false);
   assert.deepEqual(monoTarget.resizes, []);
+});
+
+test('mode test WebGL : la cible XR de three.js n\'est jamais modifiée', () => {
+  const target = createXrTarget(2);
+  const webgl = { backend: { isWebGLBackend: true }, getOutputRenderTarget: () => target, xr: { getCamera: () => ({ cameras: [{}] }) } };
+
+  assert.equal(matchXrTargetToViews(webgl), false);
+  assert.deepEqual(target.resizes, []);
 });
