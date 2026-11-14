@@ -1,10 +1,11 @@
 /**
- * Scène three.js de la vue 3D hors AR : moteur de rendu, caméra, lumières,
+ * Scène three.js de la vue 3D hors AR : moteur de rendu WebGPU, caméra, lumières,
  * contrôles d'orbite et groupe racine du terrain.
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BOARD_LENGTH, BOARD_THICKNESS, BOARD_WIDTH, SCENE_COLORS } from './config.js';
+import { createWebGpuRenderer } from './webgpu.js';
 
 /**
  * Part de l'écran que le plateau peut occuper lors du cadrage, en coordonnées
@@ -18,19 +19,18 @@ const BOARD_CORNERS = [-1, 1].flatMap((sx) => [-1, 1].flatMap((sz) => [0, -BOARD
 )));
 
 /**
- * Crée le moteur de rendu WebGL et insère son canvas dans le conteneur.
- * Le fond transparent (alpha) servira à superposer la scène à la caméra en AR,
- * et WebXR est activé pour les sessions AR immersives.
+ * Crée le moteur de rendu WebGPU et insère son canvas dans le conteneur.
+ * Le fond transparent (alpha) sert à superposer la scène à la caméra en AR. WebXR est activé
+ * avant l'initialisation : pendant une session AR immersive, three.js pilote lui-même la
+ * caméra (position du téléphone) et la boucle de rendu (cadence de la session).
  * @param {HTMLElement} container élément qui reçoit le canvas
- * @returns {THREE.WebGLRenderer}
+ * @returns {Promise<import('./webgpu.js').WebGpuOnlyRenderer>}
+ * @throws {import('./webgpu.js').WebGpuUnavailableError} si WebGPU est absent : aucun repli WebGL
  */
-function createRenderer(container) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+async function createRenderer(container) {
+  const renderer = await createWebGpuRenderer({ xrEnabled: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth, container.clientHeight);
-  // WebXR activé : pendant une session AR immersive, three.js pilote lui-même
-  // la caméra (position du téléphone) et la boucle de rendu (cadence de la session).
-  renderer.xr.enabled = true;
   container.appendChild(renderer.domElement);
   return renderer;
 }
@@ -123,16 +123,17 @@ function createControls(camera, canvas) {
 }
 
 /**
- * Crée le contexte de rendu de la vue 3D hors AR.
+ * Crée le contexte de rendu de la vue 3D hors AR. Asynchrone : WebGPU demande l'adaptateur
+ * et le périphérique graphique avant le premier rendu.
  * Tous les éléments du terrain doivent être ajoutés à `pitchGroup` : déplacer
  * ou ancrer ce groupe déplace l'ensemble du terrain (cahier, §3.2).
  * @param {HTMLElement} container élément qui reçoit le canvas
- * @returns {{renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera,
- *   controls: OrbitControls, pitchGroup: THREE.Group, table: THREE.Mesh, resetView: () => void,
- *   resize: () => void}}
+ * @returns {Promise<{renderer: import('./webgpu.js').WebGpuOnlyRenderer, scene: THREE.Scene,
+ *   camera: THREE.PerspectiveCamera, controls: OrbitControls, pitchGroup: THREE.Group,
+ *   table: THREE.Mesh, resetView: () => void, resize: () => void}>}
  */
-export function createSceneContext(container) {
-  const renderer = createRenderer(container);
+export async function createSceneContext(container) {
+  const renderer = await createRenderer(container);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(SCENE_COLORS.background);
 
