@@ -333,7 +333,7 @@ Le Service Worker réagit à trois événements :
 
 | Événement | Ce qu'il fait |
 | --- | --- |
-| `install` | Télécharge et met en cache les 33 fichiers de `APP_SHELL` (23 au sprint 1, 5 modules au sprint 2 ; au sprint 3, three.js r187 en 4 fichiers à la place des 3 de la r186, 3 nouveaux modules, puis le module du mode test WebGL), puis s'active aussitôt (`skipWaiting`) |
+| `install` | Télécharge et met en cache les 36 fichiers de `APP_SHELL` (23 au sprint 1, 5 modules au sprint 2 ; au sprint 3, three.js r187 en 4 fichiers à la place des 3 de la r186, 3 nouveaux modules, puis le module du mode test WebGL ; 3 modules au sprint 4), puis s'active aussitôt (`skipWaiting`) |
 | `activate` | Supprime les caches des versions précédentes et prend le contrôle des pages ouvertes (`clients.claim`) |
 | `fetch` | Répond aux requêtes GET vers l'application selon deux stratégies ; les autres requêtes (le CDN d'IWER, par exemple) passent sans cache |
 
@@ -375,7 +375,7 @@ Rend l'application installable : nom (« Football Simulator », et « Football S
 
 Le chef d'orchestre : il appelle les modules dans l'ordre du schéma de la partie 1. Depuis le sprint 3, le démarrage est asynchrone (`start()`, puis `await init()`), car WebGPU s'initialise avant le premier rendu. Quatre détails :
 
-- `currentFormation` retient la formation de chaque équipe ; c'est l'un des noms donnés en exemple par le cahier (§7.1), comme `pitchGroup`. Les boutons pour en changer arrivent au sprint 4.
+- `currentFormation` retenait la formation de chaque équipe ; c'est l'un des noms donnés en exemple par le cahier (§7.1), comme `pitchGroup`. Depuis le sprint 4, c'est le tableau tactique (`TacticsBoard`, `src/tactics-board.js`) qui la retient, et des boutons la changent : voir [sprint-4.md](sprint-4.md).
 - Le nom de chaque formation s'affiche dans les pastilles du bandeau supérieur.
 - `renderer.setAnimationLoop` remplace `requestAnimationFrame` : en session WebXR, c'est le casque ou le téléphone qui cadence les images, et seule cette méthode le permet. Quand la scène est prête, la classe `is-ready` est ajoutée à la page et l'écran de chargement s'efface.
 - Si WebGPU est indisponible, `init()` lève une `WebGpuUnavailableError` : `showStartupError` remplace alors l'écran de chargement par un message qui dépend de la cause (pas de WebGPU, aucun processeur graphique utilisable), au lieu d'une page vide. Il n'y a pas de repli WebGL. Aux sprints 1 et 2, le message portait sur WebGL.
@@ -400,10 +400,10 @@ Une copie de three.js r187 (version 0.187.0), sous licence MIT : le build WebGPU
 
 | Patron (cahier §3.4) | État | Où | Rôle |
 | --- | --- | --- | --- |
-| Strategy | En place | `formations.js` | Une classe par formation ; ajouter une formation revient à ajouter une classe |
+| Strategy | En place | `formations.js` | Une classe par formation ; ajouter une formation revient à ajouter une classe, comme le 4-2-3-1 du sprint 4, dont le bouton est apparu de lui-même |
 | Factory | En place | `players.js` | Créer un pion selon l'équipe : couleur, numéro, orientation |
 | Command | Sprint 5 | futur `commands.js` | Chaque action (déplacer, tracer une flèche, changer de formation) sera un objet avec `execute()` et `undo()` ; l'historique de ces objets donnera l'annulation |
-| Observer | En place depuis le sprint 2 | `events.js`, `xr-session.js`, `ar-surface.js` | La session AR prévient l'interface de son début, de sa fin et de ses échecs ; depuis le sprint 3, la pose du terrain prévient de ses états (visée, surface, posé) ; le même mécanisme servira pour le joueur sélectionné (sprint 5) |
+| Observer | En place depuis le sprint 2 | `events.js`, `xr-session.js`, `ar-surface.js`, `tactics-board.js` | La session AR prévient l'interface de son début, de sa fin et de ses échecs ; depuis le sprint 3, la pose du terrain prévient de ses états (visée, surface, posé) ; depuis le sprint 4, le tableau tactique prévient la scène et les boutons des changements de formation ; le même mécanisme servira pour le joueur sélectionné (sprint 5) |
 
 ---
 
@@ -425,7 +425,7 @@ Une copie de three.js r187 (version 0.187.0), sous licence MIT : le build WebGPU
 
 ## 6. Tests
 
-`npm test` lance d'abord les 73 tests unitaires (`npm run test:unit`, sans navigateur), puis rejoue dans Chrome, sans interface, les 37 vérifications de bout en bout (`npm run test:e2e`). Celles des sprints 1 et 3 hors AR sont décrites ici ; le parcours AR est décrit dans [sprint-3.md](sprint-3.md#12-tests). Prérequis : Node.js 18 ou plus, Google Chrome, un processeur graphique compatible WebGPU, et un premier `npm install`. Pour utiliser Microsoft Edge à la place de Chrome : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`).
+`npm test` lance d'abord les 94 tests unitaires (`npm run test:unit`, sans navigateur), puis rejoue dans Chrome, sans interface, les 44 vérifications de bout en bout (`npm run test:e2e`). Celles des sprints 1 et 3 hors AR sont décrites ici ; le parcours AR est décrit dans [sprint-3.md](sprint-3.md#12-tests), et les formations du sprint 4 dans [sprint-4.md](sprint-4.md#8-tests). Prérequis : Node.js 18 ou plus, Google Chrome, un processeur graphique compatible WebGPU, et un premier `npm install`. Pour utiliser Microsoft Edge à la place de Chrome : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`).
 
 | Test | Ce qu'il vérifie |
 | --- | --- |
@@ -464,7 +464,7 @@ Ce que les tests ne couvrent pas : le rendu visuel (contrôlé à l'œil sur les
 - Sans WebGPU, l'application affiche un message au lieu du terrain : sur iPhone, il faut iOS 26 (Safari 26) ; sur Android, Chrome bloque WebGPU avant Android 12 (Galaxy S10e sous Android 9, testé le 14 novembre 2026).
 - Pour tester malgré tout sur un tel téléphone, le mode test WebGL (`?webgl` dans l'adresse, `src/webgl-test-mode.js`) fait tourner la même scène en WebGL 2. Il est réservé aux tests : ce n'est pas un repli, l'application ne le choisit jamais d'elle-même. Voir [sprint-3.md](sprint-3.md#16-mode-test-webgl-webgl-réservé-aux-tests).
 - Le sprint 3 reste à tester sur téléphone.
-- Les formations ne se changent pas encore depuis l'interface (sprint 4).
+- Le ballon ne se déplace pas encore : ce sera au sprint 5, avec la sélection par raycasting (voir [sprint-4.md](sprint-4.md#7-deux-équipes-et-le-ballon)).
 - Safari sur iPhone ne prend pas en charge les sessions WebXR `immersive-ar` : sur iPhone, l'application reste en vue 3D (vérifié sur un iPhone 15).
 
 ---
@@ -530,3 +530,5 @@ Le sprint 2 est fait. Il suit les pistes laissées à la fin du sprint 1, avec d
 Tout est expliqué dans [sprint-2.md](sprint-2.md), qui se termine par les points d'entrée du sprint 3.
 
 Le sprint 3 est fait lui aussi : terrain posé sur la table (hit test, réticule, toucher, ancre), rendu WebGPU sans repli WebGL, PWA complétée. Voir [sprint-3.md](sprint-3.md), qui se termine par les points d'entrée du sprint 4.
+
+Le sprint 4 est fait : formation de chaque équipe choisie par des boutons, joueurs qui rejoignent leurs places (patrons Strategy et Observer). Voir [sprint-4.md](sprint-4.md), qui se termine par les points d'entrée du sprint 5.

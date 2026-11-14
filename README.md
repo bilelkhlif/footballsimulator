@@ -14,13 +14,14 @@
 
 - **Le besoin.** Les entraîneurs amateurs expliquent la tactique sur un tableau blanc : une vue de dessus en 2D, des déplacements difficiles à montrer, aucun partage à distance.
 - **Notre réponse.** Une PWA qui pose un mini-terrain 3D de 60 × 39 cm sur une vraie table, à travers la caméra d'un smartphone Android, depuis une URL ou un QR code.
-- **Où nous en sommes.** Les sprints 1 à 3 sont faits :
-  - terrain et 22 joueurs en 3D, formations ;
+- **Où nous en sommes.** Les sprints 1 à 4 sont faits :
+  - terrain et 22 joueurs en 3D ;
   - session AR immersive ;
   - terrain posé sur la table par hit test, réticule et toucher, puis ancré ;
+  - formation de chaque équipe choisie par des boutons (4-4-2, 4-3-3, 3-5-2, 4-2-3-1), les joueurs rejoignant leurs places ;
   - rendu **WebGPU sans repli WebGL** ;
   - application installable, utilisable hors-ligne.
-- **Testé.** Le sprint 2 a été testé le 12 novembre 2026 sur deux téléphones Android, un iPhone 15 et un PC. Le sprint 3 est testé sur PC (110 tests automatisés). Sur téléphone, le 14 novembre, le Galaxy S10e sous Android 9 refuse WebGPU ; le TECNO POVA 6 Pro reste à tester.
+- **Testé.** 138 tests automatisés sur PC. Sur téléphone : AR testée le 12 novembre 2026 sur deux téléphones Android. Le 14 novembre, le Galaxy S10e sous Android 9 refuse WebGPU, et tout fonctionne en mode test WebGL ; le TECNO POVA 6 Pro reste à tester en WebGPU.
 
 ## Aperçu
 
@@ -46,6 +47,17 @@
   </tr>
 </table>
 
+<table>
+  <tr>
+    <td width="72%"><img src="docs/images/sprint4-ar-formations.jpg" alt="AR émulée : terrain posé, Bleus en 4-4-2 et Rouges en 4-3-3, panneau des formations ouvert"></td>
+    <td width="28%"><img src="docs/images/sprint4-formations.jpg" alt="Sur téléphone : panneau des formations, Bleus en 4-2-3-1 et Rouges en 3-5-2"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Sprint 4 : la formation de chaque équipe se choisit par un bouton, ici en AR sur le terrain posé</sub></td>
+    <td align="center"><sub>Sur téléphone, une ligne de gros boutons par équipe</sub></td>
+  </tr>
+</table>
+
 ## Avancement
 
 | Sprint | Contenu | État |
@@ -53,11 +65,11 @@
 | S1 | Dépôt, structure PWA, scène three.js : terrain et joueurs visibles hors AR | Livré |
 | S2 | Session `immersive-ar`, espace de référence `local-floor` | Fait : AR testée sur deux téléphones Android, vue 3D sur iPhone et PC |
 | S3 | Hit testing, réticule, pose du terrain par un tap, ancre ; rendu WebGPU sans repli WebGL ; PWA complétée | Fait et testé sur PC ; test sur téléphone à faire |
-| S4 | Changement de formation (Strategy), deux équipes, ballon, boutons HTML | À faire |
+| S4 | Changement de formation (Strategy), deux équipes, ballon, boutons HTML | Fait et testé sur PC, en 3D et en AR émulée |
 | S5 | Sélection et déplacement des joueurs (raycasting), flèches, annulation (Command) | À faire |
 | S6 | Service Worker finalisé, optimisation mobile, tests, vidéo ; bonus : animation | À faire |
 
-Les comptes rendus sont dans [docs/sprint-1.md](docs/sprint-1.md), [docs/sprint-2.md](docs/sprint-2.md) et [docs/sprint-3.md](docs/sprint-3.md). Le code est expliqué fichier par fichier, avec les questions probables du jury, dans [docs/guide-du-code.md](docs/guide-du-code.md) et dans les comptes rendus des sprints 2 et 3.
+Les comptes rendus sont dans [docs/sprint-1.md](docs/sprint-1.md), [docs/sprint-2.md](docs/sprint-2.md), [docs/sprint-3.md](docs/sprint-3.md) et [docs/sprint-4.md](docs/sprint-4.md). Le code est expliqué fichier par fichier, avec les questions probables du jury, dans [docs/guide-du-code.md](docs/guide-du-code.md) et dans les comptes rendus des sprints 2 à 4.
 
 ## Rendu WebGPU
 
@@ -91,8 +103,9 @@ flowchart TD
   T -- "la session WebXR (en AR)" --> X["three.js lit la pose du téléphone et la texture de la vue"]
   X --> M["matchXrTargetToViews : une couche de rendu par vue"]
   M --> P["placement.update(frame) : hit test, réticule, toucher, ancre"]
-  A --> R["renderer.render(scene, camera)"]
-  P --> R
+  A --> AN["animator.update() : les joueurs rejoignent leur place après un changement de formation"]
+  P --> AN
+  AN --> R["renderer.render(scene, camera)"]
   R --> G["WebGPU : passes de rendu encodées, puis soumises au processeur graphique"]
   G --> S{"Destination"}
   S -- "hors AR" --> C["canvas de la page"]
@@ -102,7 +115,7 @@ flowchart TD
 Le code de la boucle tient en quelques lignes :
 
 ```js
-export function createRenderLoop({ renderer, scene, camera, controls, getArPlacement }) {
+export function createRenderLoop({ renderer, scene, camera, controls, animator = null, getArPlacement }) {
   return (time, frame) => {
     if (renderer.xr.isPresenting) {
       matchXrTargetToViews(renderer);   // une vue sur un téléphone, deux sur un casque
@@ -113,6 +126,7 @@ export function createRenderLoop({ renderer, scene, camera, controls, getArPlace
     } else {
       controls.update();                 // contrôles d'orbite, hors AR seulement
     }
+    animator?.update();                  // joueurs en route vers leur place (changement de formation)
     renderer.render(scene, camera);      // commandes WebGPU, soumises au processeur graphique
   };
 }
@@ -126,6 +140,7 @@ Une image en AR, pas à pas :
 | 2 | three.js | Pose du téléphone (`getViewerPose`), caméra XR, texture WebGPU de la vue (`getViewSubImage`) |
 | 3 | `render-loop.js` | La cible de rendu de three.js passe à une couche, car un téléphone n'a qu'une vue (correctif expliqué dans [sprint-3.md](docs/sprint-3.md#5-une-vue-ou-deux--la-cible-de-rendu-xr-de-threejs-r187)) |
 | 4 | `ar-surface.js` | Hit test : le réticule suit la surface visée ; après un toucher, le terrain y est posé et une ancre est créée ; ensuite, le terrain suit son ancre |
+| 4 bis | `formation-transition.js` | Après un changement de formation, chaque joueur avance d'un pas vers sa nouvelle place, sur le terrain posé |
 | 5 | three.js | `renderer.render` : une passe de rendu de la scène et une passe de conversion des couleurs, soumises par `device.queue.submit` |
 | 6 | Système | La couche de projection est superposée à l'image de la caméra et affichée |
 
@@ -186,7 +201,7 @@ Pour installer l'application :
 | IWER 2.7.0, émulateur WebXR (Meta) | MIT | Tests sur PC | S1, intégré |
 | Exemple `webxr_ar_hittest` (three.js) | MIT | BF1 à BF3 | S2–S3 |
 | Échantillon `hit-test-anchors` (Immersive Web) | MIT | Ancrage du terrain | S3 |
-| 13 formations de boardx | MIT | BF4 | S4 |
+| 13 formations de boardx | MIT | BF4 | Envisagées pour S4, finalement non reprises : formations propres au projet |
 | Format d'étapes et interpolation `easeInOutQuad` | Idée seulement | BF9 | S6 |
 | Extrait de match SkillCorner | MIT | BF9 (bonus) | S6 |
 
@@ -234,20 +249,20 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 ```bash
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
-npm run test:unit   # 73 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
-npm run test:e2e    # 37 vérifications dans Chrome, sans interface
+npm run test:unit   # 94 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
+npm run test:e2e    # 44 vérifications dans Chrome, sans interface
 ```
 
 Les tests de bout en bout couvrent :
 
 - le chargement sans erreur, sur bureau, sur mobile et sous un sous-chemin comme sur GitHub Pages ;
-- les trois formations ;
+- les formations : règles de placement, changement par les boutons pour les deux équipes, transition animée, scénario de démonstration, et en AR sur le terrain posé ;
 - le rendu WebGPU sans aucun contexte WebGL, et le message quand WebGPU manque ;
 - le manifeste, le Service Worker, le rechargement hors-ligne et le lancement sur un réseau très lent ;
 - le parcours AR complet avec l'émulateur : session WebGPU, réticule, toucher et pose du terrain, ancre, déplacement, sorties, et messages d'échec ;
 - le mode test WebGL (`?webgl`) : seulement sur demande, jamais en repli, et le même parcours AR rejoué dans ce mode.
 
-Résultat le 14 novembre 2026 : 73 tests unitaires et 37 vérifications de bout en bout, tous réussis. Trois erreurs introduites volontairement ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-3.md](docs/sprint-3.md#12-tests) et dans le [guide du code](docs/guide-du-code.md#6-tests).
+Résultat le 14 novembre 2026 : 94 tests unitaires et 44 vérifications de bout en bout, tous réussis. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
 
 ## Arborescence
 
@@ -264,9 +279,12 @@ Résultat le 14 novembre 2026 : 73 tests unitaires et 37 vérifications de bout 
 │   ├── config.js          Dimensions, échelle, équipes et couleurs
 │   ├── scene.js           Moteur de rendu, caméra, lumières, contrôles, pitchGroup
 │   ├── pitch.js           Terrain : plateau, gazon, lignes et buts
-│   ├── formations.js      Formations 4-4-2, 4-3-3 et 3-5-2 (Strategy)
+│   ├── formations.js      Formations 4-4-2, 4-3-3, 3-5-2 et 4-2-3-1 (Strategy)
+│   ├── tactics-board.js   Formation en place de chaque équipe (Observer, sprint 4)
+│   ├── formation-panel.js Boutons de formation, créés depuis les stratégies (sprint 4)
+│   ├── formation-transition.js  Joueurs qui rejoignent leurs places (sprint 4)
 │   ├── players.js         Fabrique de joueurs (Factory)
-│   ├── team.js            Placement d'une équipe selon sa formation
+│   ├── team.js            Placement d'une équipe, et changement de formation
 │   ├── ball.js            Ballon
 │   ├── xr-support.js      Détection de l'AR et badge d'état
 │   ├── xr-session.js      Session AR immersive rendue en WebGPU, reliée à three.js
@@ -294,6 +312,7 @@ Résultat le 14 novembre 2026 : 73 tests unitaires et 37 vérifications de bout 
     ├── sprint-1.md        Compte rendu du sprint 1
     ├── sprint-2.md        Compte rendu du sprint 2 : session AR
     ├── sprint-3.md        Compte rendu du sprint 3 : surface réelle, WebGPU, PWA
+    ├── sprint-4.md        Compte rendu du sprint 4 : formations et boutons
     ├── etat-de-l-art/     Rapport d'état de l'art (PDF et source LaTeX)
     └── images/            Captures et illustrations de ce README
 ```

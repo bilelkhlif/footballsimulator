@@ -7,7 +7,9 @@
  * y = 0 sur son flanc gauche et y = 1 sur son flanc droit.
  * Les joueurs sont placés dans leur moitié de terrain, comme au coup d'envoi.
  *
- * Ajouter une formation revient à écrire une sous-classe et à l'enregistrer dans FORMATIONS.
+ * Ajouter une formation revient à écrire une sous-classe et à l'enregistrer dans FORMATIONS :
+ * son bouton apparaît alors dans l'interface (src/formation-panel.js), et les tests la vérifient.
+ * Le 4-2-3-1, ajouté au sprint 4, en est l'exemple.
  */
 import { PITCH_LENGTH, PITCH_WIDTH } from './config.js';
 
@@ -172,9 +174,44 @@ export class Formation352 extends FormationStrategy {
   }
 }
 
-/** Formations disponibles, indexées par leur nom. */
+/** 4-2-3-1 (sprint 4) : deux milieux défensifs, trois milieux offensifs et un attaquant. */
+export class Formation4231 extends FormationStrategy {
+  /** @returns {string} */
+  get name() {
+    return '4-2-3-1';
+  }
+
+  /** @returns {Array<object>} */
+  get lines() {
+    return [
+      GOALKEEPER_LINE,
+      BACK_FOUR,
+      {
+        x: 0.27,
+        slots: [
+          { y: 0.38, number: 6, role: 'Milieu défensif' },
+          { y: 0.62, number: 8, role: 'Milieu défensif' },
+        ],
+      },
+      {
+        x: 0.37,
+        slots: [
+          { y: 0.15, number: 11, role: 'Milieu offensif gauche' },
+          { y: 0.5, number: 10, role: 'Meneur de jeu', x: 0.35 },
+          { y: 0.85, number: 7, role: 'Milieu offensif droit' },
+        ],
+      },
+      {
+        x: 0.41,
+        slots: [{ y: 0.5, number: 9, role: 'Avant-centre' }],
+      },
+    ];
+  }
+}
+
+/** Formations disponibles, indexées par leur nom, dans l'ordre des boutons de l'interface. */
 export const FORMATIONS = Object.freeze(Object.fromEntries(
-  [new Formation442(), new Formation433(), new Formation352()].map((formation) => [formation.name, formation]),
+  [new Formation442(), new Formation433(), new Formation352(), new Formation4231()].map((formation) => [formation.name, formation]),
 ));
 
 /**

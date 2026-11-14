@@ -15,9 +15,12 @@ Le rendu passe par **WebGPU**, avec three.js r187, **sans repli WebGL** : sans W
 | `src/webgl-test-mode.js` | Mode test WebGL, seulement avec `?webgl` dans l'adresse : réservé aux tests, ce n'est pas un repli | |
 | `src/scene.js` | Moteur de rendu, caméra, lumières, contrôles d'orbite, groupe racine `pitchGroup` | |
 | `src/pitch.js` | Plateau, gazon texturé (lignes tracées sur un canvas), buts | |
-| `src/formations.js` | Une classe par formation, qui calcule les 11 positions | Strategy |
+| `src/formations.js` | Une classe par formation (4-4-2, 4-3-3, 3-5-2, 4-2-3-1), qui calcule les 11 positions | Strategy |
+| `src/tactics-board.js` | Formation en place de chaque équipe ; émet `formationchange` (sprint 4) | Observer (sujet) |
+| `src/formation-panel.js` | Boutons de formation, créés depuis le registre des stratégies ; s'abonne au tableau tactique (sprint 4) | Observer |
+| `src/formation-transition.js` | Places cibles d'une formation et déplacement des joueurs, image par image (sprint 4) | |
 | `src/players.js` | Crée un pion selon l'équipe : couleur, numéro, orientation | Factory |
-| `src/team.js` | Place les 11 joueurs d'une équipe selon sa formation | |
+| `src/team.js` | Place les 11 joueurs d'une équipe selon sa formation, et applique une nouvelle formation (`applyFormation`) | |
 | `src/ball.js` | Ballon | |
 | `src/xr-support.js` | Détecte `immersive-ar` et met à jour le badge d'état | |
 | `src/xr-session.js` | Ouvre et ferme la session `immersive-ar` rendue en WebGPU (`webgpu`, `local-floor` ; `hit-test`, `anchors`), la relie à three.js et signale son cycle de vie | Observer (sujet) |
@@ -66,4 +69,4 @@ Chaque joueur est un `THREE.Group` qui contient un socle, une flèche d'orientat
 | `src/vendor/`, `assets/` | Cache d'abord | Elles ne changent pas d'une version à l'autre ; la version de three.js est dans le nom de son dossier (`three-r187`) |
 | Page, code, styles | Réseau d'abord, repli sur le cache, ou après 3 secondes sans réponse | Une mise à jour arrive dès que l'appareil est en ligne, sans bloquer sur un réseau lent |
 
-`APP_SHELL` compte 33 fichiers, et `CACHE_VERSION` vaut 2 depuis le passage à three.js r187. Tout nouveau fichier de l'application doit être ajouté à `APP_SHELL` dans `sw.js`. Incrémenter `CACHE_VERSION` quand une bibliothèque ou une ressource change. Les modules de l'émulateur chargés seulement avec `?iwer` restent hors du cache.
+`APP_SHELL` compte 36 fichiers, et `CACHE_VERSION` vaut 2 depuis le passage à three.js r187. Tout nouveau fichier de l'application doit être ajouté à `APP_SHELL` dans `sw.js`. Incrémenter `CACHE_VERSION` quand une bibliothèque ou une ressource change. Les modules de l'émulateur chargés seulement avec `?iwer` restent hors du cache.
