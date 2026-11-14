@@ -1,8 +1,10 @@
 /**
- * Tests de bout en bout des sprints 1 et 2, exécutés dans Chrome sans interface.
- * Ils rejouent les vérifications consignées dans docs/sprint-1.md et docs/sprint-2.md.
+ * Tests de bout en bout des sprints 1 à 3, exécutés dans Chrome sans interface.
+ * Ils rejouent les vérifications consignées dans docs/sprint-1.md, docs/sprint-2.md et
+ * docs/sprint-3.md.
  *
- * Prérequis : Node.js 18 ou plus, Google Chrome installé, puis « npm install ».
+ * Prérequis : Node.js 18 ou plus, Google Chrome installé, un processeur graphique compatible
+ * WebGPU (l'application n'a pas de repli WebGL), puis « npm install ».
  * Usage : npm run test:e2e, ou npm test pour lancer aussi les tests unitaires
  * (BROWSER_CHANNEL=msedge pour utiliser Microsoft Edge)
  */
@@ -12,8 +14,25 @@ import { startServer } from './serve.mjs';
 /** Navigateur utilisé : Chrome par défaut. */
 const CHANNEL = process.env.BROWSER_CHANNEL ?? 'chrome';
 
-/** Rendu WebGL logiciel, pour que les tests tournent même sans carte graphique. */
-const LAUNCH_ARGS = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
+/**
+ * Options de Chrome. Depuis le sprint 3, l'application rend en WebGPU, sur le vrai processeur
+ * graphique : le rendu logiciel SwiftShader des sprints 1 et 2 ne fournit pas d'adaptateur WebGPU.
+ * --enable-unsafe-webgpu active WebGPU là où Chrome ne l'active pas encore par défaut (Linux).
+ */
+const LAUNCH_ARGS = ['--enable-unsafe-webgpu'];
+
+/** Script injecté avant la page : enregistre chaque type de contexte demandé à un canvas. */
+function recordCanvasContexts() {
+  window.__canvasContexts = [];
+  const getContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function recordedGetContext(type, ...rest) {
+    window.__canvasContexts.push(type);
+    return getContext.call(this, type, ...rest);
+  };
+}
+
+/** Types de contexte WebGL : aucun ne doit apparaître dans l'application. */
+const WEBGL_CONTEXTS = ['webgl', 'webgl2', 'experimental-webgl'];
 
 const DESKTOP = { viewport: { width: 1280, height: 800 } };
 const MOBILE = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
@@ -122,6 +141,113 @@ async function testFormations(browser, url) {
 }
 
 /**
+ * Vérifie que la scène est rendue en WebGPU par three.js r187, sans aucun contexte WebGL.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ */
+async function testWebGpuRendering(browser, url) {
+  const name = 'Rendu WebGPU, sans aucun contexte WebGL';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    await context.addInitScript(recordCanvasContexts);
+    const { page } = await openApp(context, `${url}?debug`);
+    await page.waitForTimeout(500);
+    const state = await page.evaluate(() => {
+      const app = window.__footballSimulator;
+      const badge = document.getElementById('gpu-status');
+      return {
+        backend: app.renderer.backend.isWebGPUBackend === true,
+        fallback: app.renderer._getFallback,
+        engine: app.renderer.domElement.dataset.engine,
+        contexts: [...new Set(window.__canvasContexts)],
+        badge: `${badge.dataset.state} (${badge.dataset.adapter})`,
+      };
+    });
+    const noWebGl = !state.contexts.some((type) => WEBGL_CONTEXTS.includes(type));
+    const ok = state.backend && state.fallback === null && state.engine === 'three.js r187 webgpu'
+      && state.contexts.includes('webgpu') && noWebGl && state.badge.startsWith('webgpu');
+    record(name, ok ? 'ok' : 'échec', `${state.engine}, contextes : ${state.contexts.join(', ')}, badge : ${state.badge}`);
+  } catch (error) {
+    record(name, 'échec', error.message);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Simule un navigateur sans WebGPU : l'application doit afficher un message explicite, sans
+ * créer de contexte WebGL de secours.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ */
+async function testWithoutWebGpu(browser, url) {
+  const name = 'Sans WebGPU : message explicite, aucun repli WebGL';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    await context.addInitScript(recordCanvasContexts);
+    await context.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, 'gpu', { get: () => undefined, configurable: true });
+    });
+    const page = await context.newPage();
+    await page.goto(url, { waitUntil: 'load' });
+    await page.waitForSelector('#loader[data-state="error"]', { timeout: 20000 });
+    const state = await page.evaluate(() => ({
+      reason: document.getElementById('loader').dataset.reason,
+      message: document.getElementById('loader').textContent,
+      badge: document.getElementById('gpu-status').dataset.state,
+      ready: document.body.classList.contains('is-ready'),
+      contexts: [...new Set(window.__canvasContexts)],
+    }));
+    const noWebGl = !state.contexts.some((type) => WEBGL_CONTEXTS.includes(type));
+    const ok = state.reason === 'no-api' && state.badge === 'unavailable' && !state.ready && noWebGl && state.message.includes('WebGPU');
+    record(name, ok ? 'ok' : 'échec', `${state.message} (contextes : ${state.contexts.join(', ') || 'aucun'})`);
+  } catch (error) {
+    record(name, 'échec', error.message);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Vérifie le manifeste de l'application installable : champs exigés par Chrome pour proposer
+ * l'installation, et icônes accessibles.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ */
+async function testManifest(browser, url) {
+  const name = 'Manifeste : application installable';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const page = await context.newPage();
+    await page.goto(url, { waitUntil: 'load' });
+    const state = await page.evaluate(async () => {
+      const link = document.querySelector('link[rel="manifest"]');
+      const manifestUrl = new URL(link.getAttribute('href'), document.baseURI);
+      const manifest = await (await fetch(manifestUrl)).json();
+      const check = async (image) => {
+        const response = await fetch(new URL(image.src, manifestUrl));
+        return { ...image, ok: response.ok, contentType: response.headers.get('content-type') };
+      };
+      const icons = await Promise.all(manifest.icons.map(check));
+      const screenshots = await Promise.all((manifest.screenshots ?? []).map(check));
+      return { manifest, icons, screenshots };
+    });
+    const { manifest, icons, screenshots } = state;
+    const has = (size) => icons.some((icon) => icon.sizes === size && icon.ok && icon.contentType === 'image/png');
+    // Captures « wide » et « narrow » : Chrome les montre dans sa fenêtre d'installation.
+    const shot = (form) => screenshots.some((image) => image.form_factor === form && image.ok && image.contentType === 'image/jpeg');
+    const ok = Boolean(manifest.name && manifest.short_name && manifest.id) && manifest.start_url === './'
+      && manifest.display === 'standalone' && has('192x192') && has('512x512') && icons.some((icon) => icon.purpose === 'maskable')
+      && shot('wide') && shot('narrow');
+    record(name, ok ? 'ok' : 'échec', `${manifest.name}, ${manifest.display}, ${icons.length} icônes, ${screenshots.length} captures`);
+  } catch (error) {
+    record(name, 'échec', error.message);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Vérifie le badge d'état de l'AR, le Service Worker et le rechargement hors-ligne.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
@@ -192,13 +318,14 @@ async function testSlowNetwork(browser, server) {
 }
 
 /**
- * Vérifie l'émulateur IWER : avec ?iwer, une session immersive-ar doit s'ouvrir avec local-floor.
+ * Vérifie l'émulateur IWER : avec ?iwer, une session immersive-ar s'ouvre avec local-floor, et
+ * la fonctionnalité webgpu qu'exige le rendu WebGPU (sprint 3).
  * Le test est ignoré si le CDN de l'émulateur est injoignable (pas de réseau).
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
  */
 async function testEmulator(browser, url) {
-  const name = 'Émulateur IWER : session immersive-ar avec local-floor';
+  const name = 'Émulateur IWER : session immersive-ar avec local-floor et webgpu';
   const context = await browser.newContext(DESKTOP);
   try {
     const { page } = await openApp(context, `${url}?iwer`);
@@ -213,11 +340,14 @@ async function testEmulator(browser, url) {
       const button = document.createElement('button');
       button.id = 'test-session';
       button.textContent = 'test';
-      button.style.cssText = 'position:fixed;left:0;top:0;z-index:99;pointer-events:auto';
+      button.style.cssText = 'position:fixed;left:0;top:0;z-index:1001;pointer-events:auto';
       document.body.append(button);
       button.addEventListener('click', async () => {
         try {
-          const session = await navigator.xr.requestSession('immersive-ar', { requiredFeatures: ['local-floor'], optionalFeatures: ['anchors'] });
+          const session = await navigator.xr.requestSession('immersive-ar', {
+            requiredFeatures: ['local-floor', 'webgpu'],
+            optionalFeatures: ['hit-test', 'anchors'],
+          });
           window.testSession = { ok: true, features: [...(session.enabledFeatures ?? [])] };
           await session.end();
         } catch (error) {
@@ -227,7 +357,7 @@ async function testEmulator(browser, url) {
     });
     await page.click('#test-session');
     const session = await (await page.waitForFunction(() => window.testSession, null, { timeout: 15000 })).jsonValue();
-    const ok = session.ok && session.features.includes('local-floor');
+    const ok = session.ok && ['local-floor', 'webgpu', 'hit-test', 'anchors'].every((feature) => session.features.includes(feature));
     record(name, ok ? 'ok' : 'échec', session.ok ? `fonctionnalités : ${session.features.join(', ')}` : session.error);
   } catch (error) {
     record(name, 'échec', error.message);
@@ -237,9 +367,10 @@ async function testEmulator(browser, url) {
 }
 
 /**
- * Parcours AR complet avec l'émulateur IWER, par les boutons de l'application (sprint 2) :
- * entrée, terrain placé devant la vue, contrôles d'orbite en pause, sortie et restauration de
- * la vue 3D, nouvelle entrée puis sortie décidée par le système, et échec d'entrée signalé.
+ * Parcours AR complet avec l'émulateur IWER, par les boutons de l'application (sprints 2 et 3) :
+ * session rendue en WebGPU, réticule sur la table virtuelle, toucher pour poser le terrain, ancre,
+ * déplacement du terrain, regard hors de la table, contrôles d'orbite en pause, sorties, et
+ * messages d'échec (liaison WebXR/WebGPU absente, caméra refusée).
  * Les objets internes sont lus grâce au paramètre ?debug. Le parcours est ignoré si le CDN de
  * l'émulateur est injoignable ; une étape en échec fait ignorer les suivantes.
  * @param {import('playwright-core').Browser} browser
@@ -255,27 +386,77 @@ async function testArSession(browser, url) {
       record(label('parcours complet'), 'ignoré', 'émulateur indisponible (réseau ?)');
       return;
     }
+    const table = await page.evaluate(async () => (await import(new URL('src/dev-xr-emulation.js', document.baseURI).href)).VIRTUAL_TABLE);
 
-    /** Entre en AR par le bouton et attend que le terrain soit placé. */
+    /**
+     * Oriente le téléphone émulé : inclinaison vers le bas, puis rotation vers la gauche, en degrés.
+     * @param {number} pitchDown
+     * @param {number} yawLeft
+     */
+    const aim = (pitchDown, yawLeft = 0) => page.evaluate(([down, left]) => {
+      const hp = -(down * Math.PI) / 360;
+      const hy = (left * Math.PI) / 360;
+      // Quaternion du lacet multiplié par celui du tangage : q = qy × qp.
+      const [sp, cp, sy, cy] = [Math.sin(hp), Math.cos(hp), Math.sin(hy), Math.cos(hy)];
+      window.__footballSimulator.xrDevice.quaternion.set(cy * sp, sy * cp, -sy * sp, cy * cp);
+    }, [pitchDown, yawLeft]);
+
+    /** Attend un état de la pose du terrain (src/ar-surface.js). */
+    const waitForPlacementState = (state) => page.waitForFunction(
+      (expected) => window.__footballSimulator.placement?.state === expected, state, { timeout: 15000 },
+    );
+
+    /** Touche l'écran au centre, hors des boutons : l'émulateur en fait un select WebXR. */
+    const tapScreen = () => page.mouse.click(640, 380);
+
+    /** Entre en AR par le bouton, le téléphone émulé visant la table. */
     const enterAr = async () => {
+      await aim(35);
       await page.click('#enter-ar');
       await page.waitForFunction(() => document.body.dataset.xr === 'active', null, { timeout: 15000 });
-      await page.waitForFunction(() => !window.__footballSimulator.arView.needsPlacement, null, { timeout: 15000 });
+      await page.waitForFunction(() => Boolean(window.__footballSimulator.placement?.state), null, { timeout: 15000 });
     };
+
+    /** Pose du terrain et du réticule, dans l'espace local-floor. */
+    const readPlacement = () => page.evaluate(async () => {
+      const THREE = await import('three');
+      const { BOARD_LENGTH, BOARD_WIDTH } = await import(new URL('src/config.js', document.baseURI).href);
+      const app = window.__footballSimulator;
+      const reticle = app.scene.getObjectByName('reticle');
+      app.pitchGroup.updateWorldMatrix(true, false);
+      const corners = [-1, 1].flatMap((sx) => [-1, 1].map((sz) => {
+        const ndc = app.pitchGroup.localToWorld(new THREE.Vector3((sx * BOARD_LENGTH) / 2, 0, (sz * BOARD_WIDTH) / 2)).project(app.camera);
+        return Math.abs(ndc.x) <= 1 && Math.abs(ndc.y) <= 1 && ndc.z > -1 && ndc.z < 1;
+      }));
+      const round = (v) => Number(v.toFixed(3));
+      return {
+        state: app.placement?.state ?? null,
+        anchored: app.placement?.anchored ?? false,
+        pitchVisible: app.pitchGroup.visible,
+        pitch: app.pitchGroup.position.toArray().map(round),
+        rotationDegrees: round(THREE.MathUtils.radToDeg(app.pitchGroup.rotation.y)),
+        reticleVisible: reticle.visible,
+        reticle: new THREE.Vector3().setFromMatrixPosition(reticle.matrix).toArray().map(round),
+        inView: corners.filter(Boolean).length,
+        moveButton: !document.getElementById('move-pitch').hidden,
+        hint: document.getElementById('hint').textContent,
+      };
+    });
 
     /** État de la vue 3D, à comparer avant l'entrée et après la sortie. */
     const readView = () => page.evaluate(() => {
       const app = window.__footballSimulator;
-      const { position, rotation } = app.pitchGroup;
+      const { position, quaternion } = app.pitchGroup;
       const visible = (id) => !document.getElementById(id).hidden;
       return {
         presenting: app.renderer.xr.isPresenting,
         background: app.scene.background ? app.scene.background.getHexString() : null,
         tableVisible: app.table.visible,
-        pitchAtOrigin: position.length() === 0 && rotation.y === 0 && app.pitchGroup.visible,
+        pitchAtOrigin: position.length() === 0 && quaternion.w === 1 && app.pitchGroup.visible,
+        reticleHidden: !app.scene.getObjectByName('reticle').visible,
         controlsEnabled: app.controls.enabled,
         fov: app.camera.fov,
-        buttons: { enter: visible('enter-ar'), exit: visible('exit-ar'), reset: visible('reset-view') },
+        buttons: { enter: visible('enter-ar'), exit: visible('exit-ar'), reset: visible('reset-view'), move: visible('move-pitch') },
         enterDisabled: document.getElementById('enter-ar').disabled,
         hint: document.getElementById('hint').textContent,
       };
@@ -297,47 +478,74 @@ async function testArSession(browser, url) {
       return page.evaluate(() => ({ ...window.__loopCounts }));
     };
 
+    const near = (a, b, tolerance) => Math.abs(a - b) <= tolerance;
     const initialView = await readView();
     const sameAsInitial = (view) => JSON.stringify(view) === JSON.stringify(initialView);
 
     const steps = [
-      ['entrée par « Entrer en AR »', async () => {
+      ['entrée par « Entrer en AR », session rendue en WebGPU', async () => {
         await enterAr();
         const state = await page.evaluate(() => {
           const app = window.__footballSimulator;
-          const { baseLayer, layers } = app.renderer.xr.getSession().renderState;
+          const session = app.renderer.xr.getSession();
           const visible = (id) => !document.getElementById(id).hidden;
           return {
             presenting: app.renderer.xr.isPresenting,
-            layer: baseLayer ? 'XRWebGLLayer' : (layers?.length ? 'XRProjectionLayer' : 'aucune'),
+            webgpu: session.enabledFeatures.includes('webgpu') && app.renderer.backend.isWebGPUBackend,
+            layers: session.renderState.layers.length,
             space: Boolean(app.renderer.xr.getReferenceSpace()),
             tableHidden: !app.table.visible,
             transparent: app.scene.background === null,
             buttons: visible('exit-ar') && !visible('enter-ar') && !visible('reset-view'),
           };
         });
-        const ok = state.presenting && state.space && state.tableHidden && state.transparent && state.buttons && state.layer !== 'aucune';
-        return [ok, `couche ${state.layer}, table masquée : ${state.tableHidden}, fond transparent : ${state.transparent}`];
+        const ok = state.presenting && state.webgpu && state.layers === 1 && state.space && state.tableHidden && state.transparent && state.buttons;
+        return [ok, `WebGPU : ${state.webgpu}, couches de projection : ${state.layers}, table masquée : ${state.tableHidden}, fond transparent : ${state.transparent}`];
       }],
-      ['terrain placé devant la vue', async () => {
-        const placement = await page.evaluate(async () => {
-          const THREE = await import('three');
-          const { BOARD_LENGTH, BOARD_WIDTH } = await import(new URL('src/config.js', document.baseURI).href);
-          const app = window.__footballSimulator;
-          app.pitchGroup.updateWorldMatrix(true, false);
-          const corners = [-1, 1].flatMap((sx) => [-1, 1].map((sz) => {
-            const ndc = app.pitchGroup.localToWorld(new THREE.Vector3((sx * BOARD_LENGTH) / 2, 0, (sz * BOARD_WIDTH) / 2)).project(app.camera);
-            return Math.abs(ndc.x) <= 1 && Math.abs(ndc.y) <= 1 && ndc.z > -1 && ndc.z < 1;
-          }));
-          const distance = app.camera.getWorldPosition(new THREE.Vector3()).distanceTo(app.pitchGroup.getWorldPosition(new THREE.Vector3()));
-          return { inView: corners.filter(Boolean).length, distance, visible: app.pitchGroup.visible };
-        });
-        const ok = placement.visible && placement.inView === 4 && placement.distance > 0.8 && placement.distance < 1.3;
-        return [ok, `${placement.inView} coins sur 4 à l'écran, à ${placement.distance.toFixed(2)} m`];
+      ['réticule sur la table détectée', async () => {
+        await waitForPlacementState('surface');
+        const state = await readPlacement();
+        const onTable = near(state.reticle[1], table.height, 0.001) && near(state.reticle[2], table.centerZ, 0.05);
+        const ok = state.reticleVisible && onTable && !state.pitchVisible && state.hint.includes('Touchez');
+        return [ok, `réticule en (${state.reticle.join(' ; ')}), terrain masqué : ${!state.pitchVisible}`];
+      }],
+      ['toucher : terrain posé sur la table, puis ancré', async () => {
+        const reticle = (await readPlacement()).reticle;
+        await tapScreen();
+        await waitForPlacementState('placed');
+        await page.waitForFunction(() => window.__footballSimulator.placement.anchored, null, { timeout: 5000 });
+        const state = await readPlacement();
+        const onReticle = near(state.pitch[0], reticle[0], 0.002) && near(state.pitch[2], reticle[2], 0.002)
+          && near(state.pitch[1], table.height + 0.008, 0.002);
+        const ok = state.anchored && state.pitchVisible && onReticle && state.inView === 4 && !state.reticleVisible && state.moveButton;
+        return [ok, `terrain en (${state.pitch.join(' ; ')}), ancré : ${state.anchored}, ${state.inView} coins sur 4 à l'écran`];
       }],
       ['contrôles d\'orbite en pause', async () => {
         const counts = await countLoopCalls(1000);
         return [counts.updates === 0 && counts.renders > 0, `${counts.updates} mise(s) à jour des contrôles pour ${counts.renders} images`];
+      }],
+      ['« Déplacer le terrain », puis nouvelle pose face à l\'utilisateur', async () => {
+        await page.click('#move-pitch');
+        const lifted = await readPlacement();
+        await aim(35, 25); // regard tourné de 25° vers la gauche
+        await waitForPlacementState('surface');
+        await tapScreen();
+        await waitForPlacementState('placed');
+        await page.waitForFunction(() => window.__footballSimulator.placement.anchored, null, { timeout: 5000 });
+        const state = await readPlacement();
+        // Point visé à gauche : le terrain tourne de 25° pour présenter sa longueur à l'utilisateur.
+        const ok = !lifted.pitchVisible && !lifted.anchored && state.pitch[0] < -0.3 && near(state.rotationDegrees, 25, 1) && state.anchored;
+        return [ok, `retiré : ${!lifted.pitchVisible}, nouvelle pose (${state.pitch.join(' ; ')}), rotation ${state.rotationDegrees}°`];
+      }],
+      ['regard hors de la table : pas de réticule, et un toucher ne pose rien', async () => {
+        await page.click('#move-pitch');
+        await aim(0); // regard horizontal : le rayon ne rencontre aucune surface
+        await waitForPlacementState('searching');
+        await tapScreen();
+        await page.waitForTimeout(500);
+        const state = await readPlacement();
+        const ok = state.state === 'searching' && !state.reticleVisible && !state.pitchVisible && state.hint.includes('Visez');
+        return [ok, `état : ${state.state}, réticule visible : ${state.reticleVisible}, terrain visible : ${state.pitchVisible}`];
       }],
       ['sortie par « Quitter l\'AR » et vue 3D restaurée', async () => {
         await page.click('#exit-ar');
@@ -348,12 +556,36 @@ async function testArSession(browser, url) {
       }],
       ['nouvelle entrée, puis sortie par le système', async () => {
         await enterAr();
+        await waitForPlacementState('surface');
         await page.evaluate(() => window.__footballSimulator.renderer.xr.getSession().end());
         await page.waitForFunction(() => document.body.dataset.xr === 'inactive', null, { timeout: 15000 });
         const view = await readView();
         return [sameAsInitial(view), `vue identique au départ : ${sameAsInitial(view)}`];
       }],
-      ['échec d\'entrée signalé', async () => {
+      ['sans liaison WebXR/WebGPU : réglage de Chrome indiqué, aucune session', async () => {
+        await page.evaluate(() => {
+          window.__savedBinding = window.XRGPUBinding;
+          delete window.XRGPUBinding;
+          window.__sessionRequests = 0;
+          const requestSession = navigator.xr.requestSession.bind(navigator.xr);
+          navigator.xr.requestSession = (...args) => { window.__sessionRequests += 1; return requestSession(...args); };
+        });
+        await page.click('#enter-ar');
+        await page.waitForSelector('#ar-message:not([hidden])', { timeout: 15000 });
+        const state = await page.evaluate(() => ({
+          message: document.getElementById('ar-message').textContent,
+          copyButton: !document.getElementById('copy-flag').hidden,
+          requests: window.__sessionRequests,
+          xr: document.body.dataset.xr,
+        }));
+        await page.evaluate(() => {
+          window.XRGPUBinding = window.__savedBinding;
+          document.getElementById('ar-message').hidden = true;
+        });
+        const ok = state.message.includes('chrome://flags/#webxr-webgpu-binding') && state.copyButton && state.requests === 0 && state.xr === 'inactive';
+        return [ok, state.message];
+      }],
+      ['échec d\'entrée signalé (caméra refusée)', async () => {
         await page.evaluate(() => {
           navigator.xr.requestSession = () => Promise.reject(new DOMException('Refus simulé', 'NotAllowedError'));
         });
@@ -379,11 +611,11 @@ async function testArSession(browser, url) {
         record(label(step), ok ? 'ok' : 'échec', detail);
         blocked = !ok;
       } catch (error) {
-        record(label(step), 'échec', error.message);
+        record(label(step), 'échec', error.message.split('\n')[0]);
         blocked = true;
       }
     }
-    record(label('aucune erreur dans la console'), errors.length ? 'échec' : 'ok', errors.join(' | '));
+    record(label('aucune erreur dans la console (WebGPU compris)'), errors.length ? 'échec' : 'ok', errors.slice(0, 3).join(' | '));
   } catch (error) {
     record(label('parcours complet'), 'échec', error.message);
   } finally {
@@ -403,6 +635,9 @@ async function main() {
     await testLoading(browser, root.url, 'bureau, 1280 × 800', DESKTOP);
     await testLoading(browser, root.url, 'mobile, 390 × 844', MOBILE);
     await testFormations(browser, root.url);
+    await testWebGpuRendering(browser, root.url);
+    await testWithoutWebGpu(browser, root.url);
+    await testManifest(browser, root.url);
     await testPwa(browser, root.url, 'racine');
     await testLoading(browser, subPath.url, 'sous-chemin, comme GitHub Pages', DESKTOP);
     await testPwa(browser, subPath.url, 'sous-chemin');

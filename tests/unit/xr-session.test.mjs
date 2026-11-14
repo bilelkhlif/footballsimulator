@@ -1,14 +1,17 @@
 /**
  * Tests unitaires de src/xr-session.js, sans casque ni téléphone : le navigateur (navigator.xr),
  * la session WebXR et le gestionnaire XR de three.js sont remplacés par des doublures qui
- * reproduisent leur comportement documenté.
+ * reproduisent leur comportement documenté. Depuis le sprint 3, la session est rendue en WebGPU.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ArSession, AR_ERROR_REASONS } from '../../src/xr-session.js';
 
+/** Fonctionnalités accordées par un téléphone Android avec la liaison WebXR/WebGPU. */
+const GRANTED_FEATURES = ['local-floor', 'webgpu', 'hit-test', 'anchors', 'viewer', 'local'];
+
 /**
- * Doublure de XRSession : espace de référence, état de rendu et fin de session.
+ * Doublure de XRSession : espace de référence, état de rendu, fonctionnalités et fin de session.
  * @param {{failReferenceSpace?: boolean}} [options]
  */
 function createFakeSession({ failReferenceSpace = false } = {}) {
@@ -16,6 +19,7 @@ function createFakeSession({ failReferenceSpace = false } = {}) {
   return {
     ended: false,
     renderState: {},
+    enabledFeatures: GRANTED_FEATURES,
     addEventListener(type, listener) {
       if (type === 'end') endListeners.push(listener);
     },
@@ -32,8 +36,8 @@ function createFakeSession({ failReferenceSpace = false } = {}) {
 }
 
 /**
- * Doublure du moteur de rendu : reproduit ce que fait renderer.xr dans three.js r186
- * (écoute de la fin de session, couche de rendu, événements sessionstart et sessionend).
+ * Doublure du moteur de rendu : reproduit ce que fait renderer.xr dans three.js r187 avec WebGPU
+ * (écoute de la fin de session, couche de projection, événements sessionstart et sessionend).
  * @param {{failSetSession?: boolean}} [options]
  */
 function createFakeRenderer({ failSetSession = false } = {}) {
@@ -52,13 +56,14 @@ function createFakeRenderer({ failSetSession = false } = {}) {
         this.isPresenting = false;
         this.dispatch('sessionend');
       });
-      if (failSetSession) throw new Error('Création de la couche XRWebGLLayer impossible');
-      session.renderState.baseLayer = { framebufferWidth: 1280 };
+      if (failSetSession) throw new Error('Création de la couche de projection WebGPU impossible');
+      // Comme three.js r187 avec XRGPUBinding : une couche de projection, dans renderState.layers.
+      session.renderState.layers = [{ textureWidth: 1080, textureHeight: 2340 }];
       this.isPresenting = true;
       this.dispatch('sessionstart');
     },
     setReferenceSpace(space) {
-      this.calls.push(`setReferenceSpace(${space.type})`);
+      this.calls.push(`setReferenceSpace(${space?.type ?? null})`);
       this.referenceSpace = space;
     },
     addEventListener(type, listener) {
@@ -98,6 +103,14 @@ function createFakeXr(session, { supported = true, rejectWith = null } = {}) {
 }
 
 /**
+ * Crée une session AR dont le navigateur expose XRGPUBinding, sauf indication contraire.
+ * @param {object} options options d'ArSession
+ */
+function createArSession(options) {
+  return new ArSession({ hasGpuBinding: () => true, ...options });
+}
+
+/**
  * Enregistre les événements émis par une session AR, dans l'ordre.
  * @param {ArSession} arSession
  */
@@ -111,14 +124,14 @@ function recordEvents(arSession) {
 
 test('détection : sans WebXR, ou sans le mode immersive-ar, l\'AR est déclarée indisponible', async () => {
   const session = createFakeSession();
-  assert.equal(await new ArSession({ renderer: createFakeRenderer(), xr: null }).isSupported(), false);
-  assert.equal(await new ArSession({ renderer: createFakeRenderer(), xr: createFakeXr(session, { supported: false }) }).isSupported(), false);
-  assert.equal(await new ArSession({ renderer: createFakeRenderer(), xr: createFakeXr(session) }).isSupported(), true);
+  assert.equal(await createArSession({ renderer: createFakeRenderer(), xr: null }).isSupported(), false);
+  assert.equal(await createArSession({ renderer: createFakeRenderer(), xr: createFakeXr(session, { supported: false }) }).isSupported(), false);
+  assert.equal(await createArSession({ renderer: createFakeRenderer(), xr: createFakeXr(session) }).isSupported(), true);
 });
 
 test('sans navigator.xr, l\'entrée en AR signale « unavailable » sans rien demander', async () => {
   // xr non fourni : le module lit navigator.xr, absent sous Node comme dans un navigateur sans WebXR.
-  const arSession = new ArSession({ renderer: createFakeRenderer() });
+  const arSession = createArSession({ renderer: createFakeRenderer() });
   const events = recordEvents(arSession);
 
   assert.equal(await arSession.start(), null);
@@ -129,7 +142,7 @@ test('sans navigator.xr, l\'entrée en AR signale « unavailable » sans rien de
 
 test('sans le mode immersive-ar, l\'entrée en AR signale « unsupported » sans demander de session', async () => {
   const xr = createFakeXr(createFakeSession(), { supported: false });
-  const arSession = new ArSession({ renderer: createFakeRenderer(), xr });
+  const arSession = createArSession({ renderer: createFakeRenderer(), xr });
   const events = recordEvents(arSession);
 
   assert.equal(await arSession.start(), null);
@@ -137,24 +150,61 @@ test('sans le mode immersive-ar, l\'entrée en AR signale « unsupported » sans
   assert.equal(xr.requests.length, 0);
 });
 
-test('entrée réussie : session demandée, local-floor vérifié, puis session et espace confiés à three.js', async () => {
+test('sans XRGPUBinding, l\'entrée en AR signale « webgpu-binding » : pas de session, pas de repli WebGL', async () => {
+  const xr = createFakeXr(createFakeSession());
+  const renderer = createFakeRenderer();
+  const arSession = new ArSession({ renderer, xr, hasGpuBinding: () => false });
+  const events = recordEvents(arSession);
+
+  assert.equal(await arSession.start(), null);
+  assert.deepEqual(events.map((event) => event.type), ['sessionerror']);
+  assert.equal(events[0].detail.reason, AR_ERROR_REASONS.WEBGPU_BINDING);
+  assert.equal(xr.requests.length, 0, 'aucune session ne doit être demandée');
+  assert.deepEqual(renderer.xr.calls, []);
+});
+
+test('par défaut, la présence de XRGPUBinding est lue au moment de l\'entrée en AR', async () => {
+  const xr = createFakeXr(createFakeSession());
+  const arSession = new ArSession({ renderer: createFakeRenderer(), xr });
+  const events = recordEvents(arSession);
+
+  // Sous Node, XRGPUBinding n'existe pas : l'entrée échoue…
+  assert.equal(await arSession.start(), null);
+  assert.equal(events[0].detail.reason, AR_ERROR_REASONS.WEBGPU_BINDING);
+
+  // … puis réussit quand la liaison apparaît, comme quand l'émulateur l'ajoute après le chargement.
+  globalThis.XRGPUBinding = class XRGPUBinding {};
+  try {
+    assert.notEqual(await arSession.start(), null);
+  } finally {
+    delete globalThis.XRGPUBinding;
+  }
+});
+
+test('entrée réussie : session WebGPU demandée, local-floor vérifié, puis session et espace confiés à three.js', async () => {
   const session = createFakeSession();
   const renderer = createFakeRenderer();
   const xr = createFakeXr(session);
   const overlayRoot = { id: 'overlay' };
-  const arSession = new ArSession({ renderer, xr, overlayRoot });
+  const arSession = createArSession({ renderer, xr, overlayRoot });
   const events = recordEvents(arSession);
 
   assert.equal(await arSession.start(), session);
 
   assert.deepEqual(xr.requests, [{
     mode: 'immersive-ar',
-    init: { requiredFeatures: ['local-floor'], optionalFeatures: ['dom-overlay'], domOverlay: { root: overlayRoot } },
+    init: {
+      requiredFeatures: ['local-floor', 'webgpu'],
+      optionalFeatures: ['hit-test', 'anchors', 'dom-overlay'],
+      domOverlay: { root: overlayRoot },
+    },
   }]);
   assert.deepEqual(renderer.xr.calls, ['setReferenceSpaceType(local-floor)', 'setSession', 'setReferenceSpace(local-floor)']);
   assert.deepEqual(events.map((event) => event.type), ['sessionstart']);
   assert.equal(events[0].detail.session, session);
-  assert.equal(events[0].detail.layer, 'XRWebGLLayer');
+  assert.equal(events[0].detail.layer, 'XRProjectionLayer');
+  assert.equal(events[0].detail.rendering, 'webgpu');
+  assert.deepEqual(events[0].detail.features, GRANTED_FEATURES);
   assert.equal(events[0].detail.referenceSpace.type, 'local-floor');
   assert.equal(arSession.isActive, true);
   assert.equal(arSession.referenceSpace.type, 'local-floor');
@@ -162,14 +212,17 @@ test('entrée réussie : session demandée, local-floor vérifié, puis session 
 
 test('sans racine d\'interface, la session ne demande pas le DOM Overlay', async () => {
   const xr = createFakeXr(createFakeSession());
-  await new ArSession({ renderer: createFakeRenderer(), xr }).start();
-  assert.deepEqual(xr.requests[0].init, { requiredFeatures: ['local-floor'] });
+  await createArSession({ renderer: createFakeRenderer(), xr }).start();
+  assert.deepEqual(xr.requests[0].init, {
+    requiredFeatures: ['local-floor', 'webgpu'],
+    optionalFeatures: ['hit-test', 'anchors'],
+  });
 });
 
 test('un double clic ne lance qu\'une seule demande de session', async () => {
   const session = createFakeSession();
   const xr = createFakeXr(session);
-  const arSession = new ArSession({ renderer: createFakeRenderer(), xr });
+  const arSession = createArSession({ renderer: createFakeRenderer(), xr });
 
   const [first, second] = await Promise.all([arSession.start(), arSession.start()]);
 
@@ -181,7 +234,7 @@ test('un double clic ne lance qu\'une seule demande de session', async () => {
 test('session refusée par le navigateur : « rejected », sans toucher au rendu', async () => {
   const refusal = new DOMException('Accès à la caméra refusé', 'NotAllowedError');
   const renderer = createFakeRenderer();
-  const arSession = new ArSession({ renderer, xr: createFakeXr(createFakeSession(), { rejectWith: refusal }) });
+  const arSession = createArSession({ renderer, xr: createFakeXr(createFakeSession(), { rejectWith: refusal }) });
   const events = recordEvents(arSession);
 
   assert.equal(await arSession.start(), null);
@@ -196,7 +249,7 @@ test('session refusée par le navigateur : « rejected », sans toucher au rendu
 test('espace local-floor indisponible : « reference-space », et la session est refermée', async () => {
   const session = createFakeSession({ failReferenceSpace: true });
   const renderer = createFakeRenderer();
-  const arSession = new ArSession({ renderer, xr: createFakeXr(session) });
+  const arSession = createArSession({ renderer, xr: createFakeXr(session) });
   const events = recordEvents(arSession);
 
   assert.equal(await arSession.start(), null);
@@ -211,7 +264,7 @@ test('espace local-floor indisponible : « reference-space », et la session est
 test('échec de la couche de rendu : « layer », session refermée et aucun sessionend parasite', async () => {
   const session = createFakeSession();
   const renderer = createFakeRenderer({ failSetSession: true });
-  const arSession = new ArSession({ renderer, xr: createFakeXr(session) });
+  const arSession = createArSession({ renderer, xr: createFakeXr(session) });
   const events = recordEvents(arSession);
 
   assert.equal(await arSession.start(), null);
@@ -223,10 +276,10 @@ test('échec de la couche de rendu : « layer », session refermée et aucun ses
   assert.equal(arSession.isActive, false);
 });
 
-test('sortie par end() : sessionend émis une fois, après la restauration du rendu par three.js', async () => {
+test('sortie par end() : sessionend émis une fois, après la restauration du rendu, et espace retiré de three.js', async () => {
   const session = createFakeSession();
   const renderer = createFakeRenderer();
-  const arSession = new ArSession({ renderer, xr: createFakeXr(session) });
+  const arSession = createArSession({ renderer, xr: createFakeXr(session) });
   const events = recordEvents(arSession);
   let presentingWhenNotified = null;
   arSession.on('sessionend', () => { presentingWhenNotified = renderer.xr.isPresenting; });
@@ -241,11 +294,14 @@ test('sortie par end() : sessionend émis une fois, après la restauration du re
   assert.equal(arSession.isActive, false);
   assert.equal(arSession.referenceSpace, null);
   assert.equal(renderer.xr.listenerCount('sessionend'), 0, 'l\'observateur de three.js doit être retiré');
+  // three.js r187 garderait sinon l'espace d'une session terminée pour la suivante.
+  assert.equal(renderer.xr.calls.at(-1), 'setReferenceSpace(null)');
+  assert.equal(renderer.xr.referenceSpace, null);
 });
 
 test('sortie décidée par le système (bouton retour) : sessionend est émis de la même façon', async () => {
   const session = createFakeSession();
-  const arSession = new ArSession({ renderer: createFakeRenderer(), xr: createFakeXr(session) });
+  const arSession = createArSession({ renderer: createFakeRenderer(), xr: createFakeXr(session) });
   const events = recordEvents(arSession);
 
   await arSession.start();
@@ -262,7 +318,7 @@ test('après une sortie, une nouvelle session peut être ouverte', async () => {
     this.requests.push({ mode, init });
     return sessions[this.requests.length - 1];
   };
-  const arSession = new ArSession({ renderer: createFakeRenderer(), xr });
+  const arSession = createArSession({ renderer: createFakeRenderer(), xr });
   const events = recordEvents(arSession);
 
   await arSession.start();
