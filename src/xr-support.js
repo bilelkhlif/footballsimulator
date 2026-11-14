@@ -1,14 +1,15 @@
 /**
  * Détection de la réalité augmentée WebXR et affichage de son état dans l'interface.
- * La session immersive-ar elle-même est ouverte au sprint 2. Sans AR, l'application
+ * La session immersive-ar est ouverte par src/xr-session.js. Sans AR, l'application
  * reste utilisable en vue 3D (ajustement issu de l'état de l'art).
  */
 
 /** Textes du badge d'état, selon le résultat de la détection. */
 const STATUS_TEXT = Object.freeze({
   checking: 'Vérification de l’AR…',
-  supported: 'AR disponible',
+  supported: 'AR disponible (WebGPU)',
   emulated: 'AR émulée (IWER)',
+  'needs-flag': 'AR : réglage WebGPU à activer',
   unsupported: 'AR indisponible : vue 3D',
 });
 
@@ -31,7 +32,8 @@ export async function isImmersiveArSupported() {
 /**
  * Met à jour le badge d'état de l'AR.
  * @param {HTMLElement} statusElement
- * @param {'checking'|'supported'|'emulated'|'unsupported'} state
+ * @param {'checking'|'supported'|'emulated'|'needs-flag'|'unsupported'} state
+ *   needs-flag : AR présente, mais sans liaison WebXR/WebGPU (réglage de Chrome à activer)
  */
 export function showXrStatus(statusElement, state) {
   statusElement.dataset.state = state;

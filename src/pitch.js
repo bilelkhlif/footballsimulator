@@ -133,13 +133,13 @@ function drawPitchCanvas() {
 /**
  * Crée le gazon : un plan horizontal texturé avec les lignes du terrain.
  * Sa surface définit la hauteur y = 0 sur laquelle reposent joueurs et ballon.
- * @param {THREE.WebGLRenderer} renderer utilisé pour régler le filtrage anisotrope
+ * @param {{getMaxAnisotropy: () => number}} renderer moteur de rendu WebGPU, pour le filtrage anisotrope
  * @returns {THREE.Mesh}
  */
 function createGrass(renderer) {
   const texture = new THREE.CanvasTexture(drawPitchCanvas());
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  texture.anisotropy = renderer.getMaxAnisotropy();
 
   const grass = new THREE.Mesh(
     new THREE.PlaneGeometry(BOARD_LENGTH, BOARD_WIDTH),
@@ -209,7 +209,7 @@ function createGoal(side) {
 
 /**
  * Crée le terrain complet, à ajouter au groupe racine `pitchGroup`.
- * @param {THREE.WebGLRenderer} renderer
+ * @param {{getMaxAnisotropy: () => number}} renderer moteur de rendu WebGPU
  * @returns {THREE.Group}
  */
 export function createPitch(renderer) {

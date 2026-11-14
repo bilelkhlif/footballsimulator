@@ -1,9 +1,12 @@
 /**
- * Tests unitaires de src/ar-placement.js : position du terrain devant l'utilisateur.
+ * Tests unitaires de src/ar-placement.js : terrain devant l'utilisateur (sprint 2) et terrain
+ * posé sur une surface réelle (sprint 3).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computePitchPlacement, PLACEMENT_DISTANCE, PLACEMENT_DROP } from '../../src/ar-placement.js';
+import {
+  computePitchPlacement, computeSurfacePlacement, yawToQuaternion, PLACEMENT_DISTANCE, PLACEMENT_DROP, SURFACE_OFFSET,
+} from '../../src/ar-placement.js';
 
 /**
  * Quaternion d'une rotation d'angle donné autour d'un axe unitaire.
@@ -58,5 +61,35 @@ test('quelle que soit l\'orientation, le terrain est à 0,9 m à l\'horizontale 
     const { position } = computePitchPlacement({ position: VIEWER_POSITION, orientation: rotation(VERTICAL, angle) });
     const horizontalDistance = Math.hypot(position.x - VIEWER_POSITION.x, position.z - VIEWER_POSITION.z);
     assert.ok(Math.abs(horizontalDistance - PLACEMENT_DISTANCE) < 1e-9, `angle ${angle} : ${horizontalDistance} m`);
+  }
+});
+
+test('surface : le terrain est centré sur le point visé, son plateau posé sur la table', () => {
+  const placement = computeSurfacePlacement({ x: 0.1, y: 0.72, z: -0.9 }, { x: 0.1, y: 1.35, z: 0 });
+  // Point visé droit devant (-Z) : pas de rotation ; le gazon est à 8 mm au-dessus de la table.
+  assertPlacement(placement, { x: 0.1, y: 0.72 + SURFACE_OFFSET, z: -0.9 }, 0);
+  assert.equal(SURFACE_OFFSET, 0.008);
+});
+
+test("surface visée sur le côté : le terrain se tourne pour présenter sa longueur à l'utilisateur", () => {
+  // Point à gauche de l'utilisateur (-X) : même rotation que pour un regard tourné de 90° à gauche.
+  const placement = computeSurfacePlacement({ x: -0.8, y: 0.7, z: 0 }, { x: 0, y: 1.4, z: 0 });
+  const facingLeft = computePitchPlacement({ position: { x: 0, y: 1.4, z: 0 }, orientation: rotation(VERTICAL, Math.PI / 2) });
+  assertPlacement(placement, { x: -0.8, y: 0.7 + SURFACE_OFFSET, z: 0 }, facingLeft.rotationY);
+});
+
+test('surface juste sous le téléphone : direction -Z par défaut, sans valeur invalide', () => {
+  const placement = computeSurfacePlacement({ x: 0.2, y: 0.7, z: -0.1 }, { x: 0.2, y: 1.4, z: -0.1 });
+  assertPlacement(placement, { x: 0.2, y: 0.7 + SURFACE_OFFSET, z: -0.1 }, 0);
+});
+
+test("quaternion de l'ancre : rotation pure autour de l'axe vertical, unitaire", () => {
+  for (const angle of [0, 0.7, Math.PI / 2, -2.4]) {
+    const q = yawToQuaternion(angle);
+    const expected = rotation(VERTICAL, angle);
+    for (const axis of ['x', 'y', 'z', 'w']) {
+      assert.ok(Math.abs(q[axis] - expected[axis]) < 1e-12, `${axis} pour l'angle ${angle}`);
+    }
+    assert.ok(Math.abs(Math.hypot(q.x, q.y, q.z, q.w) - 1) < 1e-12);
   }
 });

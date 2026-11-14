@@ -1,87 +1,111 @@
 /**
- * Tests unitaires de src/render-loop.js : contrôles d'orbite hors AR seulement, et placement
- * du terrain au premier rendu de la session où la pose du téléphone est connue.
+ * Tests unitaires de src/render-loop.js : contrôles d'orbite hors AR seulement, pose du terrain
+ * mise à jour à chaque image de la session, et cible de rendu XR alignée sur le nombre de vues.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRenderLoop } from '../../src/render-loop.js';
+import { createRenderLoop, matchXrTargetToViews } from '../../src/render-loop.js';
 
 /**
- * Doublures du moteur de rendu, des contrôles et de la vue AR.
- * @param {{presenting: boolean}} options
+ * Doublure de la cible de rendu XR de three.js r187 : deux couches au départ, une par œil.
+ * @param {number} [depth]
  */
-function createLoop({ presenting }) {
-  const referenceSpace = { type: 'local-floor' };
-  const counts = { updates: 0, renders: 0 };
-  const placements = [];
-  const renderer = {
-    xr: { isPresenting: presenting, getReferenceSpace: () => referenceSpace },
-    render: () => { counts.renders += 1; },
-  };
-  const controls = { update: () => { counts.updates += 1; } };
-  const arView = {
-    needsPlacement: presenting,
-    placeInFront(transform) {
-      placements.push(transform);
-      this.needsPlacement = false;
-    },
-  };
-  const loop = createRenderLoop({ renderer, scene: {}, camera: {}, controls, arView });
-  return { loop, counts, placements, referenceSpace };
-}
-
-/**
- * Doublure d'XRFrame dont getViewerPose renvoie la pose donnée.
- * @param {object|null} pose
- */
-function createFrame(pose) {
-  const requestedSpaces = [];
+function createXrTarget(depth = 2) {
   return {
-    requestedSpaces,
-    getViewerPose(space) {
-      requestedSpaces.push(space);
-      return pose;
+    width: 1080,
+    height: 2340,
+    depth,
+    resizes: [],
+    setSize(width, height, newDepth) {
+      this.resizes.push([width, height, newDepth]);
+      this.depth = newDepth;
     },
   };
 }
 
-test('hors AR : les contrôles d\'orbite sont mis à jour à chaque image', () => {
-  const { loop, counts } = createLoop({ presenting: false });
+/**
+ * Doublures du moteur de rendu, des contrôles et de la pose du terrain.
+ * @param {{presenting: boolean, viewCount?: number, target?: object|null, placement?: object|null}} options
+ */
+function createLoop({ presenting, viewCount = 1, target = null, placement = null }) {
+  const log = [];
+  const renderer = {
+    xr: { isPresenting: presenting, getCamera: () => ({ cameras: new Array(viewCount).fill({}) }) },
+    getOutputRenderTarget: () => target,
+    render: () => {
+      log.push(`render(couches : ${target?.depth ?? '-'})`);
+    },
+  };
+  const controls = { update: () => log.push('controls.update') };
+  const loop = createRenderLoop({ renderer, scene: {}, camera: {}, controls, getArPlacement: () => placement });
+  return { loop, log, renderer };
+}
+
+/** Doublure de la pose du terrain (src/ar-surface.js) : enregistre les images reçues. */
+function createPlacement() {
+  return {
+    frames: [],
+    update(frame) {
+      this.frames.push(frame);
+    },
+  };
+}
+
+test('hors AR : les contrôles d\'orbite sont mis à jour à chaque image, puis la scène est rendue', () => {
+  const { loop, log } = createLoop({ presenting: false });
 
   loop(0);
   loop(16);
 
-  assert.deepEqual(counts, { updates: 2, renders: 2 });
+  assert.deepEqual(log, ['controls.update', 'render(couches : -)', 'controls.update', 'render(couches : -)']);
 });
 
-test('en AR : les contrôles d\'orbite ne touchent plus à la caméra, le rendu continue', () => {
-  const { loop, counts } = createLoop({ presenting: true });
-  const frame = createFrame({ transform: { id: 'pose' } });
+test('en AR : les contrôles d\'orbite ne touchent plus à la caméra, et la pose du terrain reçoit chaque image', () => {
+  const placement = createPlacement();
+  const { loop, log } = createLoop({ presenting: true, target: createXrTarget(1), placement });
+  const frames = [{ id: 1 }, { id: 2 }, { id: 3 }];
 
-  loop(0, frame);
-  loop(16, frame);
-  loop(33, frame);
+  frames.forEach((frame, i) => loop(i * 16, frame));
 
-  assert.deepEqual(counts, { updates: 0, renders: 3 });
+  assert.equal(log.includes('controls.update'), false);
+  assert.equal(log.filter((entry) => entry.startsWith('render')).length, 3);
+  assert.deepEqual(placement.frames, frames);
 });
 
-test('en AR : le terrain est placé une seule fois, d\'après la pose dans l\'espace local-floor', () => {
-  const { loop, placements, referenceSpace } = createLoop({ presenting: true });
-  const transform = { position: { x: 0, y: 1.6, z: 0 } };
-  const frame = createFrame({ transform });
+test('en AR, sans pose du terrain ou sans image WebXR : le rendu continue', () => {
+  const placement = createPlacement();
+  const withoutPlacement = createLoop({ presenting: true, target: createXrTarget(1), placement: null });
+  withoutPlacement.loop(0, { id: 1 });
+  assert.equal(withoutPlacement.log.at(-1), 'render(couches : 1)');
 
-  loop(0, frame);
-  loop(16, frame);
-
-  assert.deepEqual(placements, [transform]);
-  assert.deepEqual(frame.requestedSpaces, [referenceSpace]);
+  const withoutFrame = createLoop({ presenting: true, target: createXrTarget(1), placement });
+  withoutFrame.loop(0);
+  assert.deepEqual(placement.frames, []);
+  assert.equal(withoutFrame.log.at(-1), 'render(couches : 1)');
 });
 
-test('en AR, tant que le suivi n\'a pas de pose : pas de placement, mais le rendu continue', () => {
-  const { loop, counts, placements } = createLoop({ presenting: true });
+test('téléphone (une vue) : la cible XR à deux couches de three.js r187 passe à une couche avant le rendu', () => {
+  const target = createXrTarget(2);
+  const { loop, log } = createLoop({ presenting: true, viewCount: 1, target });
 
-  loop(0, createFrame(null));
+  loop(0, {});
+  loop(16, {});
 
-  assert.deepEqual(placements, []);
-  assert.equal(counts.renders, 1);
+  assert.deepEqual(target.resizes, [[1080, 2340, 1]], 'un seul redimensionnement, à la première image');
+  assert.deepEqual(log, ['render(couches : 1)', 'render(couches : 1)']);
+});
+
+test('alignement de la cible XR : rien à faire pour un casque (deux vues) ni hors session', () => {
+  const stereoTarget = createXrTarget(2);
+  const stereo = { getOutputRenderTarget: () => stereoTarget, xr: { getCamera: () => ({ cameras: [{}, {}] }) } };
+  assert.equal(matchXrTargetToViews(stereo), false);
+  assert.deepEqual(stereoTarget.resizes, []);
+
+  const noTarget = { getOutputRenderTarget: () => null, xr: { getCamera: () => ({ cameras: [{}] }) } };
+  assert.equal(matchXrTargetToViews(noTarget), false);
+
+  const monoTarget = createXrTarget(2);
+  const noViewYet = { getOutputRenderTarget: () => monoTarget, xr: { getCamera: () => ({ cameras: [] }) } };
+  assert.equal(matchXrTargetToViews(noViewYet), false);
+  assert.deepEqual(monoTarget.resizes, []);
 });
