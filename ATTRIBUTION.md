@@ -148,15 +148,15 @@ Sprint 4 : les formations sont propres au projet ; aucun code ni aucune donnée 
 
 L'utilisation d'IA est un outil de complétion. Elle doit être documentée et maîtrisée.
 
-Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle déclaré dans le journal initial : Claude Opus 5.5, du 5 au 14 novembre 2026.
+Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (modèle indiqué dans le journal de développement : Claude Opus 5.5), pour l’implémentation, les tests et la documentation ; **ChatGPT** pour la reformulation de ce fichier d’attribution.
 
 **Bilel Khlif — Responsable du sprint 1, pilotage technique, intégration WebXR/WebGPU et validation.** Responsable du sprint 1, il assure la conduite technique documentée des sprints 1 à 4 : découpage des travaux, formalisation des contraintes, interaction avec l’assistant de développement, revue des livrables, essais sur appareils physiques et intégration sur GitHub. Son rôle couvre notamment les arbitrages entre rendu WebGPU de production et mode WebGL de test, ainsi que la traduction des exigences pédagogiques en critères de validation.
 
 **Iyed Rachdi et Ghassen Dallekji — Contribution au cadrage collectif.** Avec Bilel Khlif, ils participent au cahier des charges de référence, qui définit les fonctionnalités, les contraintes d’architecture et les scénarios de démonstration. La répartition individuelle des autres travaux n’est pas détaillée dans le journal initial. Les essais collectifs sur téléphone prévus aux sprints 3 et 4 restent à mener.
 
-**Claude Code — Assistance à l’implémentation.** Génération du code, des tests et de la documentation à partir du cahier des charges et des instructions de Bilel Khlif. Pour les sprints 2 et 3, aucune ligne de code n’a été écrite ou modifiée manuellement par l’équipe, selon le journal initial. La contribution humaine est donc distinguée de la production automatisée du code.
+**Modalité de développement.** Le travail d’implémentation, notamment la génération du code des sprints 1 à 4, des tests et de la documentation, a été réalisé avec Claude Code à partir du cahier des charges collectif et sous le pilotage technique de Bilel Khlif. Les sprints 2 et 3 sont documentés comme intégralement générés par l’assistant. La contribution étudiante porte sur les spécifications, la direction des travaux, les arbitrages, la revue des livrables, les essais physiques et l’intégration.
 
-**Note de traçabilité :** les prompts ci-dessous sont des reformulations techniques reconstituées à partir des consignes, du cahier des charges et des résultats documentés, et non des citations textuelles des échanges. Les choix techniques précis déduits de l’implémentation sont à confirmer par Bilel Khlif avant remise. Les résultats automatisés produits par l’assistant sont distingués des essais et validations effectués par les étudiants.
+**Traçabilité :** le champ « Prompt ou usage principal » décrit les usages documentés et le périmètre technique de l’assistance pour chaque composant ; il ne reproduit pas un historique de conversation. Les essais physiques sont distingués des vérifications automatisées et émulées.
 
 **Contributions documentées de Bilel Khlif :**
 
@@ -206,15 +206,9 @@ Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle déclaré 
 
 *   **Composant ou Shader concerné :** code du sprint 1 : `index.html`, `manifest.json`, `sw.js`, `src/*.js` et `src/styles.css` (hors `src/vendor/`), tests (`tests/`, `package.json`) et fichiers de configuration du dépôt (`.editorconfig`, `.gitattributes`, `.gitignore`)
 
-    * **Prompt ou usage principal :** génération du code à partir du cahier des charges rédigé par l'équipe, sur consigne de Bilel Khlif de réaliser le sprint 1 et de le publier sur GitHub : périmètre du sprint (§5.3), patrons Strategy et Factory (§3.4), règles de code (§7.1). Les commits de la pull request #1 sont issus de ces sessions.
+    * **Prompt ou usage principal :** génération du code à partir du cahier des charges rédigé par l'équipe, sur consigne de Bilel Khlif de réaliser le sprint 1 et de le publier sur GitHub : périmètre du sprint (§5.3), patrons Strategy et Factory (§3.4), règles de code (§7.1).
 
-        **Reformulation technique (non verbatim) :**
-
-        > Analyser le cahier des charges collectif (Iyed Rachdi, Bilel Khlif et Ghassen Dallekji) et réaliser le sprint 1 (§5.3) sur une branche dédiée. Avant l’implémentation, définir les frontières entre scène, rendu, état métier et interactions.
-
-        > Générer le terrain avec des primitives three.js et une texture Canvas conforme aux proportions IFAB. Maintenir un repère métrique cohérent pour les positions des joueurs. Appliquer Strategy aux formations et Factory à la création des objets 3D (§3.4). Isoler la caméra et OrbitControls pour préparer l’intégration immersive sans réécriture de la scène. Épingler les dépendances ; prendre en compte le sous-chemin GitHub Pages et le fonctionnement hors ligne.
-
-        > Définir les critères d’acceptation : absence d’erreurs au chargement, terrain entièrement visible, 11 joueurs uniques par formation, placement valide et tests sur différentes tailles d’écran. Vérifier le parcours XR émulé avec IWER. Documenter les modules et les arbitrages avant de proposer la pull request #1 à la validation.
+        **Périmètre technique :** Architecture modulaire, séparation de la scène et de la logique métier, génération procédurale du terrain et des textures Canvas, formations Strategy, création des objets 3D par Factory, dépendances versionnées et préparation de l’intégration XR. Vérifications de géométrie, de cadrage, de chargement et de compatibilité avec IWER et GitHub Pages.
 
     * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a relu le guide du code et validé la PR #1. Vérifications techniques consignées dans le journal du sprint (tests et contrôles réalisés avec l’assistant) :
 
@@ -232,17 +226,9 @@ Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle déclaré 
 
 *   **Composant ou Shader concerné :** code du sprint 2, généré en deux sessions : étapes 0 à 2 le 9 novembre 2026 (bouton « Entrer en AR » dans `index.html` et `src/main.js`, activation de WebXR dans `src/scene.js`), puis étapes 3 à 6 les 9 et 10 novembre 2026 (`src/events.js`, `src/xr-session.js`, `src/ar-view.js`, `src/ar-placement.js`, `src/render-loop.js`, modifications de `src/main.js`, `src/scene.js`, `index.html`, `src/styles.css` et `sw.js`, tests unitaires de `tests/unit/`, parcours AR de `tests/run-tests.mjs` et `package.json`)
 
-    * **Prompt ou usage principal :** génération assistée sur instructions détaillées de Bilel Khlif pour chaque groupe d’étapes (périmètre, contraintes techniques, tests attendus) et cahier des charges (§5.3, §3.4, §7.1). Les commits de `feature/sprint-2` sont issus de ces sessions.
+    * **Prompt ou usage principal :** génération assistée sur instructions détaillées de Bilel Khlif pour chaque groupe d’étapes (périmètre, contraintes techniques, tests attendus) et cahier des charges (§5.3, §3.4, §7.1).
 
-        **Reformulation technique (non verbatim) :**
-
-        > Intégrer WebXR en deux groupes d’étapes sur `feature/sprint-2`, en conservant l’architecture du sprint 1 et les exigences du cahier des charges.
-
-        > Détecter la prise en charge de `immersive-ar` avec `navigator.xr.isSessionSupported()`. Initier la session à partir d’une interaction explicite, sans utiliser `ARButton.js`. Isoler le cycle de vie XR dans un module indépendant : demande de session, attachement par `renderer.xr.setSession()`, espace de référence `local-floor`, initialisation de la couche de rendu et gestion de la fin de session.
-
-        > Suspendre OrbitControls pendant la session immersive ; conserver l’état de la scène et restaurer la vue 3D lors de la sortie. Centraliser les mises à jour dans la boucle de rendu et traiter les échecs asynchrones sans laisser de session active ni d’état incohérent.
-
-        > Couvrir les chemins nominaux et les cas d’erreur avec des doublures WebXR/three.js et des tests de bout en bout IWER. Distinguer la validation émulée de la validation sur appareil réel ; ne pas fusionner sans revue et résultats de tests.
+        **Périmètre technique :** Cycle de vie de la session immersive : détection de capacité, ouverture et fermeture, espace de référence `local-floor`, gestion des contrôles de caméra, restauration de la scène et traitement des échecs d’initialisation. Intégration progressive et vérifications avec IWER et tests unitaires.
 
     * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a fourni les contraintes par étape, validé la PR #3 et effectué les essais physiques du 12 novembre. Vérifications automatisées avec l’assistant :
 
@@ -260,11 +246,7 @@ Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle déclaré 
 
     * **Prompt ou usage principal :** demande de Bilel Khlif de rétablir l'AR, qui ne se lançait plus après des problèmes de réseau. Diagnostic, code et test générés par l'assistant.
 
-        **Reformulation technique (non verbatim) :**
-
-        > Analyser la régression que j’ai constatée sur le site publié : l’AR ne se lance plus après des difficultés de connexion. Ne pas modifier immédiatement le cycle XR ; isoler d’abord la cause dans le chargement des ressources, le Service Worker et la stratégie de cache.
-
-        > Reproduire la situation avec une latence réseau contrôlée. Borner le temps d’attente du réseau pour que l’application puisse démarrer depuis les ressources déjà disponibles en cache. Conserver le comportement hors ligne et les dépendances versionnées. Ajouter un test de non-régression capable d’échouer sur l’ancienne version et de réussir après correction. Documenter le diagnostic et les limites du correctif.
+        **Périmètre technique :** Diagnostic de l’initialisation après un incident réseau, gestion du délai d’attente du Service Worker et reproduction du défaut par latence artificielle. Vérification de non-régression avant et après correction.
 
     * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a constaté et signalé la régression sur le site publié. Reproduction et validation automatisées par l’assistant :
 
@@ -278,17 +260,9 @@ Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle déclaré 
 
 *   **Composant ou Shader concerné :** code du sprint 3, le 14 novembre 2026 : `src/webgpu.js`, `src/ar-surface.js`, `src/reticle.js`, `src/dev-xr-emulation.js` ; modifications de `src/main.js`, `src/scene.js`, `src/pitch.js`, `src/xr-session.js`, `src/xr-support.js`, `src/ar-view.js`, `src/ar-placement.js`, `src/render-loop.js`, `src/pwa.js`, `src/dev-emulator.js`, `src/styles.css`, `index.html`, `manifest.json` et `sw.js` ; copie de three.js r187 ; tests (`tests/unit/`, `tests/run-tests.mjs`, `package.json`)
 
-    * **Prompt ou usage principal :** demandes de l'enseignant transmises par Bilel Khlif (WebGPU sans repli WebGL, PWA, boucle expliquée dans le README, nouveau sprint) et sprint 3 du cahier des charges (§5.3 : hit testing, réticule, pose par un tap ; §4.3 : terrain stable). Les commits de la branche `feature/sprint-3` sont tous issus de ces sessions.
+    * **Prompt ou usage principal :** demandes de l'enseignant transmises par Bilel Khlif (WebGPU sans repli WebGL, PWA, boucle expliquée dans le README, nouveau sprint) et sprint 3 du cahier des charges (§5.3 : hit testing, réticule, pose par un tap ; §4.3 : terrain stable).
 
-        **Reformulation technique (non verbatim) :**
-
-        > Appliquer les exigences de l’enseignant : WebGPU sans repli WebGL en production, PWA installable, documentation de la boucle de rendu et sprint 3 du cahier des charges (hit test, réticule, pose et stabilité du terrain).
-
-        > Étudier le backend WebGPU de three.js r187 et le chemin XR avant de migrer. Vérifier la disponibilité de `XRGPUBinding` et de la fonctionnalité de session `webgpu`. Supprimer le fallback automatique de `WebGPURenderer` en isolant le backend WebGPU ; en cas d’incompatibilité, présenter un état d’erreur explicite. Maintenir le code fournisseur intact et privilégier ses API publiques pour les corrections. Vérifier la cohérence entre les vues XR et les couches de la cible de rendu. Utiliser les matériaux à nœuds et TSL lorsque nécessaire.
-
-        > Structurer le placement spatial en modules distincts : demander une source de hit test dans le repère `viewer`, lire la pose dans un repère de référence cohérent à chaque frame, appliquer sa matrice au réticule et masquer celui-ci sans intersection valide. À la sélection, placer le terrain sur la surface détectée ; créer une ancre si elle est disponible, et gérer les poses indisponibles et la libération des ressources à la fin de la session. Le plateau doit rester indépendant des déplacements de la caméra.
-
-        > Préserver la logique métier et la boucle de rendu centralisée. Mettre à jour le manifeste, les icônes et le Service Worker pour l’installation PWA. Tester explicitement l’absence de contexte WebGL en production et le parcours XR WebGPU émulé. Documenter séparément les limitations de compatibilité matérielle et les validations physiques encore nécessaires.
+        **Périmètre technique :** Migration WebGPU sans repli automatique, étude du chemin XR via `XRGPUBinding`, compatibilité des cibles de rendu avec le nombre de vues, réticule TSL, hit test, placement et ancrage du terrain, PWA et documentation de la boucle de rendu. Contrôles du backend, de l’émulation et de la stabilité spatiale.
 
     * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a vérifié la vue WebGPU sur PC, testé la compatibilité de ses téléphones et fourni le rapport GPU. Les vérifications suivantes sont documentées dans le journal de l’assistant :
 
@@ -310,11 +284,7 @@ Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle déclaré 
 
     * **Prompt ou usage principal :** demande de Bilel Khlif de pouvoir tester l'AR sur son seul téléphone disponible, un Galaxy S10e sous Android 9 où Chrome bloque WebGPU, avec la consigne que ce rendu WebGL soit réservé aux tests et ne soit pas un repli.
 
-        **Reformulation technique (non verbatim) :**
-
-        > À partir du rapport `chrome://gpu` de mon Galaxy S10e sous Android 9, distinguer la disponibilité de WebGPU, les restrictions du navigateur et la prise en charge de la liaison WebXR/WebGPU. Je souhaite tester la logique spatiale sans confondre cette validation avec celle du backend WebGPU.
-
-        > Ajouter un chemin WebGL réservé aux tests, activé exclusivement par `?webgl`, sans repli automatique ni bouton proposé à l’utilisateur. Réutiliser autant que possible l’état, la scène et les interactions spatiales existants. Vérifier le comportement d’IWER et des couches de rendu en mode test. Ajouter un test prouvant que le chemin de production n’initialise jamais de contexte WebGL. Distinguer clairement les résultats obtenus en WebGL sur téléphone des résultats WebGPU émulés.
+        **Périmètre technique :** Isolement du chemin WebGL de test par `?webgl`, distinction des backends, réutilisation des interactions et vérification de l’absence de repli automatique en production.
 
     * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a imposé la séparation production/test et validé l’AR WebGL sur son Galaxy S10e. Contrôles automatisés avec l’assistant :
 
@@ -328,17 +298,9 @@ Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle déclaré 
 
 *   **Composant ou Shader concerné :** code du sprint 4, le 14 novembre 2026 : `src/tactics-board.js`, `src/formation-transition.js`, `src/formation-panel.js` ; modifications de `src/formations.js` (4-2-3-1), `src/team.js`, `src/render-loop.js`, `src/main.js`, `index.html`, `src/styles.css` et `sw.js` ; tests (`tests/unit/`, `tests/run-tests.mjs`)
 
-    * **Prompt ou usage principal :** demande de Bilel Khlif de réaliser le sprint 4, à partir du cahier des charges : §5.3 (système de formations, deux équipes, ballon, boutons HTML), BF4, scénario de démonstration (§4.1, étape 5), patrons Strategy et Observer (§3.4). Les commits de la branche `feature/sprint-4` sont tous issus de ces sessions.
+    * **Prompt ou usage principal :** demande de Bilel Khlif de réaliser le sprint 4, à partir du cahier des charges : §5.3 (système de formations, deux équipes, ballon, boutons HTML), BF4, scénario de démonstration (§4.1, étape 5), patrons Strategy et Observer (§3.4).
 
-        **Reformulation technique (non verbatim) :**
-
-        > Réaliser le sprint 4 sur `feature/sprint-4` en suivant le cahier des charges collectif (§5.3, BF4, scénario §4.1 et patrons §3.4). Implémenter un moteur tactique indépendant du backend et de la position du terrain dans le monde réel.
-
-        > Représenter les positions dans le repère local du plateau, pas dans celui de la caméra. Gérer deux équipes, un ballon et quatre formations, dont le 4-2-3-1. Appliquer Strategy pour les positions et Observer pour synchroniser le panneau HTML avec l’état tactique. Conserver l’identité de chaque joueur par son numéro de maillot pendant les transitions.
-
-        > Interpoler les déplacements suivant le temps écoulé plutôt que le nombre d’images et intégrer leur mise à jour dans la boucle existante. Garantir la position finale exacte, respecter `prefers-reduced-motion` et conserver les interactions de placement AR. Aucun code ni donnée de boardx ne doit être importé.
-
-        > Vérifier les invariants géométriques des formations, l’indépendance des équipes, les transitions, le scénario de démonstration et la synchronisation de l’interface. Rejouer les tests en 3D, en AR WebGPU émulée et dans le mode WebGL de test ; préparer la validation sur téléphone par l’équipe.
+        **Périmètre technique :** Système tactique : deux équipes, quatre formations, Strategy et Observer, transitions par numéro de maillot, interpolation dans le temps, placement final exact, mise à jour dans la boucle de rendu et préférence de réduction des animations.
 
     * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a lancé le sprint à partir des critères collectifs définis avec Iyed Rachdi et Ghassen Dallekji. Les résultats ci-dessous sont automatisés ; la validation physique par l’équipe reste à réaliser :
 
@@ -348,7 +310,7 @@ Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle déclaré 
 
         * une erreur d'arrondi en fin de transition, révélée par un test unitaire, a été corrigée : la dernière image pose chaque joueur exactement sur sa place ;
 
-        * affichage contrôlé à l'œil sur téléphone (390 et 360 px de large) et en AR émulée, sur des captures prises par script ;
+        * affichage mobile contrôlé visuellement sur captures automatisées (largeurs de viewport 390 et 360 px) et en AR émulée ;
 
         * aucun code ni aucune donnée de boardx n'a été repris : les formations sont propres au projet ;
 
@@ -358,9 +320,7 @@ Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle déclaré 
 
     * **Prompt ou usage principal :** dessin des icônes en SVG d'après la couverture du cahier des charges, captures automatisées de l'application, mise en page de la bannière dans le style de la présentation d'état de l'art
 
-        **Reformulation technique (non verbatim) :**
-
-        > Créer les icônes SVG à partir de la couverture du cahier des charges de l’équipe ; exporter les PNG et la variante maskable dans sa zone sûre. Générer les captures depuis l’application exécutée réellement et utiliser l’identité visuelle de la présentation d’état de l’art pour la bannière. Ne pas importer de modèle ou de texture externe.
+        **Périmètre technique :** Création des icônes SVG et PNG, variante maskable, captures automatisées et cohérence de l’identité visuelle ; absence d’asset 3D ou de texture externe.
 
     * **Axe de vérification appliqué par l’étudiant :** critères graphiques issus du cahier des charges collectif ; contrôles visuels consignés par l’assistant : les captures sont prises par script sur l'application réelle ; le motif de l'icône « maskable » tient dans la zone sûre d'Android (un cercle de 80 % de la largeur).
 
@@ -368,9 +328,7 @@ Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle déclaré 
 
     * **Prompt ou usage principal :** rédaction en français à partir du code et du cahier des charges. Le README a été refait à la demande de Bilel Khlif, dans le style du rapport et de la présentation d'état de l'art, avec des captures et la synthèse de la veille. Au sprint 3, ses parties « Rendu WebGPU », « La boucle de rendu » et « Application installable » répondent aux demandes de l'enseignant transmises par Bilel Khlif. Ce fichier suit le modèle fourni par l'enseignant.
 
-        **Reformulation technique (non verbatim) :**
-
-        > Produire une documentation technique en français fondée sur le code, le cahier des charges et les tests. Décrire les responsabilités de chaque module, les choix de conception et les conditions de fonctionnement WebXR/WebGPU avec leurs limites. Expliquer précisément la boucle de rendu, le traitement des frames XR, la gestion des repères, le chemin de rendu et la PWA. Consigner les dépendances versionnées, adaptations de code et usages de l’IA selon le modèle imposé ; fournir des commandes reproductibles, sans présenter les essais émulés comme des essais physiques.
+        **Périmètre technique :** Description de l’architecture, des responsabilités des modules, de la boucle de rendu, des limites matérielles, des tests reproductibles et des sources externes conformément au modèle d’attribution.
 
     * **Axe de vérification appliqué par l’étudiant :** relecture de Bilel Khlif et contrôle documentaire assisté : dimensions, valeurs et résultats de tests repris du code source et des sorties de `npm test` ; renvois aux sections du cahier (§) contrôlés sur le cahier des charges ; ce fichier a été relu en entier par Bilel Khlif le 9 novembre 2026, avant l'ajout du sprint 2.
 
@@ -378,9 +336,7 @@ Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle déclaré 
 
     * **Prompt ou usage principal :** consigne de Bilel Khlif de lire le cahier des charges et de chercher des projets existants sur la même idée, pour s'appuyer dessus ; recherche web (dépôts, applications, articles, jeux de données) à partir de ce cahier et de la publication LinkedIn qu'il a fournie, puis rédaction du rapport et de la présentation.
 
-        **Reformulation technique (non verbatim) :**
-
-        > Analyser le cahier des charges défini avec Iyed Rachdi et Ghassen Dallekji, puis étudier les applications, dépôts, travaux scientifiques et jeux de données pertinents pour la visualisation tactique, le football et la réalité augmentée. Exploiter aussi la publication LinkedIn sur l’analyse vidéo de match que j’ai fournie pour la partie vision par ordinateur. Comparer les approches et documenter les références. Produire un rapport LaTeX au format PDF et une présentation structurée ; réviser la présentation d’après les références visuelles fournies (BlurUAV, Trust before you trade, GreenBench).
+        **Périmètre technique :** Veille sur les applications tactiques, projets XR et travaux de vision par ordinateur ; rapport LaTeX et présentation révisée selon les références graphiques fournies par Bilel Khlif.
 
     * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a orienté la veille, rejeté la première présentation et fourni les références de refonte ; le contrôle bibliographique est documenté dans le journal initial.
 
@@ -403,4 +359,4 @@ Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle déclaré 
 | Mode test WebGL | 110/110 | Arbitrage production/test et validation AR sur Galaxy S10e |
 | Sprint 4 | 138/138 | Lancement du sprint à partir du cahier des charges collectif |
 
-Ces résultats sont ceux consignés dans le journal initial, non des tests rejoués pour cette révision. Les essais AR WebGPU natifs sur téléphone et la validation physique du sprint 4 restent à confirmer.
+**État de validation matérielle au 14 novembre 2026 :** rendu 3D WebGPU vérifié sur le PC ASUS TUF A15 ; parcours AR WebGPU vérifié en émulation ; AR sur Galaxy S10e vérifiée uniquement dans le mode de test WebGL. Aucune validation AR WebGPU native sur téléphone ni validation physique du sprint 4 n’est consignée à cette date. Les résultats automatisés ci-dessus proviennent du journal de développement.
