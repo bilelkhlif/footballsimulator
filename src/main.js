@@ -7,6 +7,8 @@
  * Mode test WebGL : réservé aux tests, avec ?webgl dans l'adresse ; ce n'est pas un repli.
  * Sprint 4 : choix de la formation de chaque équipe par des boutons ; les joueurs rejoignent leurs
  * nouvelles places (patrons Strategy et Observer).
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { createSceneContext } from './scene.js';
 import { createPitch } from './pitch.js';
@@ -68,6 +70,9 @@ const AR_HINT = 'Visez la table avec le téléphone.';
  * WebGL en mode test, pour que personne ne confonde les deux.
  * @param {import('three/webgpu').Renderer} renderer
  * @param {string} renderMode une valeur de RENDER_MODES
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Interface HTML — badge du moteur de rendu
  */
 function showRendererStatus(renderer, renderMode) {
   const badge = document.getElementById('gpu-status');
@@ -90,6 +95,9 @@ function showRendererStatus(renderer, renderMode) {
  * @param {string} renderMode une valeur de RENDER_MODES : WebGPU, sauf demande explicite
  * @returns {Promise<{sceneContext: Awaited<ReturnType<typeof createSceneContext>>,
  *   arView: ReturnType<typeof createArView>, arState: {placement: SurfacePlacement|null}}>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Orchestration — construction de la scène et lancement de la boucle de rendu
  */
 async function init(renderMode) {
   const container = document.getElementById('scene-container');
@@ -172,6 +180,9 @@ async function init(renderMode) {
 /**
  * Ouvre ou ferme le panneau des formations, et tient à jour l'état du bouton « Formations ».
  * @param {boolean} open
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Interface HTML — ouverture du panneau des formations
  */
 function setFormationPanelOpen(open) {
   document.getElementById('formation-panel').hidden = !open;
@@ -182,6 +193,9 @@ function setFormationPanelOpen(open) {
  * Affiche l'explication du réglage WebXR/WebGPU de Chrome, avec un bouton pour copier son adresse
  * (une page web ne peut pas ouvrir chrome://flags elle-même).
  * @param {string} text message à afficher
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Interface HTML — aide au réglage WebXR/WebGPU de Chrome
  */
 function showFlagHelp(text) {
   const message = document.getElementById('ar-message');
@@ -198,6 +212,9 @@ function showFlagHelp(text) {
  * @param {{placement: SurfacePlacement|null}} arState
  * @param {string} renderMode une valeur de RENDER_MODES
  * @returns {ArSession}
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Orchestration — branchement de la session AR sur la scène et l'interface
  */
 function setUpArSession(sceneContext, arView, arState, renderMode) {
   const overlay = document.getElementById('overlay');
@@ -313,6 +330,9 @@ function setUpArSession(sceneContext, arView, arState, renderMode) {
  * en mode test WebGL (?webgl), l'AR est rendue par une couche WebGL.
  * @param {boolean} emulated vrai si l'émulateur IWER est installé
  * @param {string} renderMode une valeur de RENDER_MODES
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Session WebXR — détection de la prise en charge au démarrage
  */
 async function detectAugmentedReality(emulated, renderMode) {
   const statusElement = document.getElementById('xr-status');
@@ -335,6 +355,9 @@ async function detectAugmentedReality(emulated, renderMode) {
  * Branche l'application installable : Service Worker, bouton d'installation, avis de nouvelle
  * version et badge hors-ligne. Appelé avant la scène : même sans WebGPU, l'application se met
  * en cache et s'installe.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role PWA — branchement de l'application installable
  */
 function setUpPwa() {
   registerServiceWorker();
@@ -351,6 +374,9 @@ function setUpPwa() {
  * dans window.__footballSimulator, pour la console du navigateur et les tests de bout en bout.
  * @param {object} objects
  * @returns {object|null} l'objet exposé, ou null sans ?debug
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Développement — objets exposés pour le débogage (?debug)
  */
 function exposeForDebugging(objects) {
   if (!new URLSearchParams(window.location.search).has('debug')) {
@@ -365,6 +391,9 @@ function exposeForDebugging(objects) {
  * absent ou inutilisable. Il n'y a pas de repli : l'écran ne propose pas WebGL.
  * @param {Error} error
  * @param {string} [renderMode] une valeur de RENDER_MODES
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Interface HTML — message d'erreur au démarrage
  */
 function showStartupError(error, renderMode = RENDER_MODES.WEBGPU) {
   console.error(error);
@@ -386,6 +415,9 @@ function showStartupError(error, renderMode = RENDER_MODES.WEBGPU) {
 
 /**
  * Démarrage : application installable, émulateur éventuel, scène WebGPU, puis réalité augmentée.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Orchestration — point d'entrée de l'application
  */
 async function start() {
   setUpPwa();

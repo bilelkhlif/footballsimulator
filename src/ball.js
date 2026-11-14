@@ -1,5 +1,7 @@
 /**
  * Ballon : une petite sphère blanche (cahier, §3.2).
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import * as THREE from 'three';
 import { BALL_RADIUS } from './config.js';
@@ -7,6 +9,9 @@ import { BALL_RADIUS } from './config.js';
 /**
  * Crée le ballon, posé sur le point central du terrain.
  * @returns {THREE.Mesh}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — ballon
  */
 export function createBall() {
   const ball = new THREE.Mesh(

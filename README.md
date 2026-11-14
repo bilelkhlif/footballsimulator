@@ -21,7 +21,7 @@
   - formation de chaque équipe choisie par des boutons (4-4-2, 4-3-3, 3-5-2, 4-2-3-1), les joueurs rejoignant leurs places ;
   - rendu **WebGPU sans repli WebGL** ;
   - application installable, utilisable hors-ligne.
-- **Testé.** 138 tests automatisés sur PC. Sur téléphone : AR testée le 12 novembre 2026 sur deux téléphones Android. Le 14 novembre, le Galaxy S10e sous Android 9 refuse WebGPU, et tout fonctionne en mode test WebGL ; le TECNO POVA 6 Pro reste à tester en WebGPU.
+- **Testé.** 141 tests automatisés sur PC. Sur téléphone : AR testée le 12 novembre 2026 sur deux téléphones Android. Le 14 novembre, l'AR rendue en WebGPU fonctionne sur le TECNO POVA 6 Pro 5G ; le Galaxy S10e sous Android 9 refuse WebGPU, et tout y fonctionne en mode test WebGL.
 
 ## Aperçu
 
@@ -64,7 +64,7 @@
 | --- | --- | --- |
 | S1 | Dépôt, structure PWA, scène three.js : terrain et joueurs visibles hors AR | Livré |
 | S2 | Session `immersive-ar`, espace de référence `local-floor` | Fait : AR testée sur deux téléphones Android, vue 3D sur iPhone et PC |
-| S3 | Hit testing, réticule, pose du terrain par un tap, ancre ; rendu WebGPU sans repli WebGL ; PWA complétée | Fait et testé sur PC ; test sur téléphone à faire |
+| S3 | Hit testing, réticule, pose du terrain par un tap, ancre ; rendu WebGPU sans repli WebGL ; PWA complétée | Fait et testé sur PC ; AR WebGPU testée sur le TECNO POVA 6 Pro 5G |
 | S4 | Changement de formation (Strategy), deux équipes, ballon, boutons HTML | Fait et testé sur PC, en 3D et en AR émulée |
 | S5 | Sélection et déplacement des joueurs (raycasting), flèches, annulation (Command) | À faire |
 | S6 | Service Worker finalisé, optimisation mobile, tests, vidéo ; bonus : animation | À faire |
@@ -249,7 +249,7 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 ```bash
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
-npm run test:unit   # 94 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
+npm run test:unit   # 97 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
 npm run test:e2e    # 44 vérifications dans Chrome, sans interface
 ```
 
@@ -262,7 +262,9 @@ Les tests de bout en bout couvrent :
 - le parcours AR complet avec l'émulateur : session WebGPU, réticule, toucher et pose du terrain, ancre, déplacement, sorties, et messages d'échec ;
 - le mode test WebGL (`?webgl`) : seulement sur demande, jamais en repli, et le même parcours AR rejoué dans ce mode.
 
-Résultat le 14 novembre 2026 : 94 tests unitaires et 44 vérifications de bout en bout, tous réussis. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
+Les tests unitaires vérifient aussi la documentation du code : chaque fonction, classe et membre de classe porte un en-tête avec son responsable, sa date et son rôle, et chaque fichier renvoie à ATTRIBUTION.md ([convention](docs/convention-de-documentation.md)).
+
+Résultat le 14 novembre 2026 : 97 tests unitaires et 44 vérifications de bout en bout, tous réussis. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
 
 ## Arborescence
 
@@ -309,6 +311,7 @@ Résultat le 14 novembre 2026 : 94 tests unitaires et 44 vérifications de bout 
 └── docs/
     ├── guide-du-code.md   Explication du code, fichier par fichier
     ├── architecture.md    Modules, graphe de scène, repère et mise en cache
+    ├── convention-de-documentation.md  En-têtes des fonctions : responsable, date, rôle
     ├── sprint-1.md        Compte rendu du sprint 1
     ├── sprint-2.md        Compte rendu du sprint 2 : session AR
     ├── sprint-3.md        Compte rendu du sprint 3 : surface réelle, WebGPU, PWA
@@ -323,7 +326,7 @@ L'architecture est détaillée dans [docs/architecture.md](docs/architecture.md)
 
 Issues du cahier des charges (§7) :
 
-- un commentaire d'en-tête pour chaque fonction JavaScript et chaque bloc HTML ou CSS ;
+- un commentaire d'en-tête pour chaque fonction JavaScript et chaque bloc HTML ou CSS ; celui d'une fonction indique son responsable, sa date de création et son rôle technique ([convention](docs/convention-de-documentation.md), vérifiée par `npm test`) ;
 - des noms explicites : `pitchGroup`, `currentFormation`, `hitTestSource`, `selectedPlayer` ;
 - une branche par fonctionnalité, fusionnée dans `main` après relecture ;
 - des commits fréquents, et chaque push laisse l'application fonctionnelle ;

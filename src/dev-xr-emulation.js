@@ -19,6 +19,8 @@
  *    casque (sans stéréo, la seconde vue a une largeur nulle) ; on ne garde que la première ;
  * 7. en mode test WebGL (?webgl) : un vrai framebuffer pour la couche WebGL de three.js, recopié
  *    dans le canvas à la fin de chaque image (voir provideLayerFramebuffer).
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 
 /** Table virtuelle de l'émulateur, dans l'espace local-floor, en mètres. */
@@ -44,6 +46,9 @@ const layerFramebuffers = new WeakMap();
  * @param {{x: number, y: number, z: number}} v
  * @param {{x: number, y: number, z: number, w: number}} q
  * @returns {{x: number, y: number, z: number}}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — hit test émulé (géométrie)
  */
 export function rotateByQuaternion(v, q) {
   const tx = 2 * (q.y * v.z - q.z * v.y);
@@ -62,6 +67,9 @@ export function rotateByQuaternion(v, q) {
  * @param {{x: number, y: number, z: number}} direction direction du rayon (regard du téléphone)
  * @param {typeof VIRTUAL_TABLE} [table]
  * @returns {{x: number, y: number, z: number}|null}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — hit test émulé (géométrie)
  */
 export function intersectVirtualTable(origin, direction, table = VIRTUAL_TABLE) {
   if (direction.y > -1e-6) {
@@ -84,6 +92,9 @@ export function intersectVirtualTable(origin, direction, table = VIRTUAL_TABLE) 
  * @param {ArrayLike<number>} m
  * @param {{x: number, y: number, z: number}} p
  * @returns {{x: number, y: number, z: number}}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — hit test émulé (géométrie)
  */
 function transformPoint(m, p) {
   return {
@@ -93,11 +104,19 @@ function transformPoint(m, p) {
   };
 }
 
-/** Source de hit test émulée, rendue par session.requestHitTestSource. */
+/**
+ * Source de hit test émulée, rendue par session.requestHitTestSource.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — hit test émulé
+ */
 class EmulatedHitTestSource {
   /**
    * @param {XRSpace} space espace d'origine du rayon (« viewer » dans l'application)
    * @param {XRReferenceSpace} floorSpace espace local-floor, où la table virtuelle est définie
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — hit test émulé
    */
   constructor(space, floorSpace) {
     this.space = space;
@@ -105,7 +124,12 @@ class EmulatedHitTestSource {
     this.cancelled = false;
   }
 
-  /** Arrête la source, comme XRHitTestSource.cancel. */
+  /**
+   * Arrête la source, comme XRHitTestSource.cancel.
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — hit test émulé
+   */
   cancel() {
     this.cancelled = true;
   }
@@ -114,6 +138,9 @@ class EmulatedHitTestSource {
    * Résultats pour une image : la table virtuelle si le regard la touche, sinon rien.
    * @param {XRFrame} frame
    * @returns {EmulatedHitTestResult[]}
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — hit test émulé
    */
   results(frame) {
     if (this.cancelled) {
@@ -129,12 +156,25 @@ class EmulatedHitTestSource {
   }
 }
 
-/** Résultat de hit test émulé : un point de la table virtuelle, normale vers le haut. */
+/**
+ * Résultat de hit test émulé : un point de la table virtuelle, normale vers le haut.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — hit test émulé
+ */
 class EmulatedHitTestResult {
   #frame;
   #source;
   #point;
 
+  /**
+   * @param {XRFrame} frame image où le hit test a eu lieu
+   * @param {EmulatedHitTestSource} source source qui a produit le résultat
+   * @param {{x: number, y: number, z: number}} point point touché, dans l'espace local-floor
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — hit test émulé
+   */
   constructor(frame, source, point) {
     this.#frame = frame;
     this.#source = source;
@@ -145,6 +185,9 @@ class EmulatedHitTestResult {
    * Pose du point dans l'espace demandé, comme XRHitTestResult.getPose.
    * @param {XRSpace} baseSpace
    * @returns {{transform: XRRigidTransform, emulatedPosition: boolean}|null}
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — hit test émulé
    */
   getPose(baseSpace) {
     const floorInBase = this.#frame.getPose(this.#source.floorSpace, baseSpace);
@@ -161,17 +204,28 @@ class EmulatedHitTestResult {
   /**
    * Les ancres de l'application sont créées par XRFrame.createAnchor, pas depuis le résultat.
    * @returns {Promise<never>}
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — hit test émulé
    */
   createAnchor() {
     return Promise.reject(new DOMException('Utiliser XRFrame.createAnchor avec l’émulateur.', 'NotSupportedError'));
   }
 }
 
-/** Couche de projection émulée : le canvas WebGPU de l'application, vue unique. */
+/**
+ * Couche de projection émulée : le canvas WebGPU de l'application, vue unique.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — liaison WebXR/WebGPU émulée
+ */
 class EmulatedProjectionLayer {
   /**
    * @param {HTMLCanvasElement} canvas
    * @param {{colorFormat?: GPUTextureFormat}} init
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — liaison WebXR/WebGPU émulée
    */
   constructor(canvas, init) {
     this.canvas = canvas;
@@ -182,20 +236,43 @@ class EmulatedProjectionLayer {
     this.fixedFoveation = 0;
   }
 
+  /**
+   * Largeur de la texture de la couche, en pixels : celle du canvas (XRProjectionLayer).
+   * @returns {number}
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — liaison WebXR/WebGPU émulée
+   */
   get textureWidth() {
     return this.canvas.width;
   }
 
+  /**
+   * Hauteur de la texture de la couche, en pixels : celle du canvas (XRProjectionLayer).
+   * @returns {number}
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — liaison WebXR/WebGPU émulée
+   */
   get textureHeight() {
     return this.canvas.height;
   }
 
+  /**
+   * Sans effet, comme XRProjectionLayer.destroy : le canvas reste à l'application.
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — liaison WebXR/WebGPU émulée
+   */
   destroy() {}
 }
 
 /**
  * Horloge d'images pour IWER : une couche WebGL vide, sur un canvas caché de 1 pixel.
  * @param {XRSession} session
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — horloge d'images de l'émulateur
  */
 function startFrameClock(session) {
   if (clockLayers.has(session)) {
@@ -215,13 +292,21 @@ function startFrameClock(session) {
   session.addEventListener('end', () => clockCanvas.remove(), { once: true });
 }
 
-/** XRGPUBinding émulé (spécification WebXR/WebGPU Binding), limité à une vue. */
+/**
+ * XRGPUBinding émulé (spécification WebXR/WebGPU Binding), limité à une vue.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — liaison WebXR/WebGPU émulée
+ */
 class EmulatedXRGPUBinding {
   #session;
 
   /**
    * @param {XRSession} session
    * @param {GPUDevice} device périphérique WebGPU de three.js
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — liaison WebXR/WebGPU émulée
    */
   constructor(session, device) {
     if (!session || !device) {
@@ -230,10 +315,24 @@ class EmulatedXRGPUBinding {
     this.#session = session;
   }
 
+  /**
+   * Facteur d'échelle natif des couches de projection : 1, la taille du canvas.
+   * @returns {number}
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — liaison WebXR/WebGPU émulée
+   */
   get nativeProjectionScaleFactor() {
     return 1;
   }
 
+  /**
+   * Format de couleur conseillé pour les couches : celui du canvas WebGPU du navigateur.
+   * @returns {GPUTextureFormat}
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — liaison WebXR/WebGPU émulée
+   */
   getPreferredColorFormat() {
     return navigator.gpu.getPreferredCanvasFormat();
   }
@@ -241,6 +340,9 @@ class EmulatedXRGPUBinding {
   /**
    * @param {{colorFormat?: GPUTextureFormat}} [init]
    * @returns {EmulatedProjectionLayer}
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — liaison WebXR/WebGPU émulée
    */
   createProjectionLayer(init = {}) {
     if (!targetCanvas) {
@@ -254,6 +356,9 @@ class EmulatedXRGPUBinding {
    * Texture où dessiner une vue : la texture courante du canvas, en entier.
    * @param {EmulatedProjectionLayer} layer
    * @returns {{colorTexture: GPUTexture, depthStencilTexture: null, viewport: object, getViewDescriptor: () => GPUTextureViewDescriptor}}
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Développement — liaison WebXR/WebGPU émulée
    */
   getViewSubImage(layer) {
     const colorTexture = layer.context.getCurrentTexture();
@@ -272,6 +377,9 @@ class EmulatedXRGPUBinding {
  * @param {object} object
  * @param {string} name
  * @returns {() => any}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — rendu émulé du mode test WebGL
  */
 function findGetter(object, name) {
   for (let proto = Object.getPrototypeOf(object); proto; proto = Object.getPrototypeOf(proto)) {
@@ -290,6 +398,9 @@ function findGetter(object, name) {
  * @param {number} width
  * @param {number} height
  * @returns {{framebuffer: WebGLFramebuffer, renderbuffers: WebGLRenderbuffer[], width: number, height: number}}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — rendu émulé du mode test WebGL
  */
 function createLayerFramebuffer(gl, width, height) {
   const previousFramebuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
@@ -315,6 +426,9 @@ function createLayerFramebuffer(gl, width, height) {
  * nul, et le backend WebGL de three.js r187 l'exige : il s'en sert de clé dans une WeakMap.
  * Chaque couche WebGL de l'application reçoit donc un vrai framebuffer ; copyLayerToCanvas le
  * recopie dans le canvas à la fin de chaque image. La couche-horloge garde son framebuffer nul.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — rendu émulé du mode test WebGL
  */
 function provideLayerFramebuffer() {
   const proto = globalThis.XRWebGLLayer.prototype;
@@ -346,6 +460,9 @@ function provideLayerFramebuffer() {
  * Indique si une couche est la couche-horloge d'une session.
  * @param {XRWebGLLayer} layer
  * @returns {boolean}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — rendu émulé du mode test WebGL
  */
 function isClockLayer(layer) {
   return clockSet.has(layer);
@@ -358,6 +475,9 @@ const clockSet = new WeakSet();
  * Recopie dans le canvas l'image que three.js a dessinée dans le framebuffer d'une couche WebGL,
  * en rétablissant ensuite les liaisons et le test de découpe (scissor) de three.js.
  * @param {XRWebGLLayer|null} layer couche de base de la session
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — rendu émulé du mode test WebGL
  */
 function copyLayerToCanvas(layer) {
   const target = layer && layerFramebuffers.get(layer);
@@ -386,6 +506,9 @@ function copyLayerToCanvas(layer) {
  * table virtuelle, et clic sur la scène changé en select.
  * @param {XRSession} session
  * @param {object} xrDevice appareil émulé par IWER
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — installation de l'émulation WebXR
  */
 function prepareSession(session, xrDevice) {
   // renderState.layers : IWER ignore les couches ; on garde celles que three.js déclare. La couche
@@ -445,6 +568,9 @@ function prepareSession(session, xrDevice) {
  * @param {object} options.xrDevice appareil émulé par IWER
  * @returns {{setCanvas: (canvas: HTMLCanvasElement) => void}} pour donner ensuite le canvas WebGPU
  *   de l'application, cible de la couche de projection émulée
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Développement — installation de l'émulation WebXR
  */
 export function installXrEmulationExtras({ xrDevice }) {
   // Une seule vue, comme l'écran d'un téléphone : la première vue couvre alors tout l'écran.

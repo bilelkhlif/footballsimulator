@@ -9,12 +9,17 @@
  * - Le badge « Hors-ligne » s'affiche quand le réseau est coupé.
  *
  * Le navigateur n'accepte un Service Worker qu'en HTTPS, ou sur localhost.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 
 /**
  * Enregistre le Service Worker situé à la racine de l'application.
  * Son emplacement fixe sa portée : il contrôle toutes les pages du dossier.
  * @returns {Promise<ServiceWorkerRegistration|null>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role PWA — enregistrement du Service Worker
  */
 export async function registerServiceWorker() {
   if (!('serviceWorker' in navigator) || !window.isSecureContext) {
@@ -33,6 +38,9 @@ export async function registerServiceWorker() {
  * À la toute première visite, le Service Worker prend aussi le contrôle (clients.claim) : ce n'est
  * pas une nouvelle version, et rien n'est signalé.
  * @param {() => void} onUpdate appelé une fois, quand une nouvelle version est active
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role PWA — avis de nouvelle version
  */
 export function watchForUpdates(onUpdate) {
   if (!('serviceWorker' in navigator)) {
@@ -51,6 +59,9 @@ export function watchForUpdates(onUpdate) {
 /**
  * Indique si l'application tourne déjà comme application installée (sans barre d'adresse).
  * @returns {boolean}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role PWA — installation de l'application
  */
 export function isInstalled() {
   return window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -59,6 +70,9 @@ export function isInstalled() {
 /**
  * Branche le bouton d'installation sur l'invite d'installation du navigateur.
  * @param {HTMLButtonElement} button bouton masqué au départ
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role PWA — installation de l'application
  */
 export function setUpInstallButton(button) {
   /** Invite d'installation mise de côté, en attendant le clic de l'utilisateur. */
@@ -97,8 +111,12 @@ export function setUpInstallButton(button) {
 /**
  * Affiche le badge « Hors-ligne » quand le réseau est coupé.
  * @param {HTMLElement} badge
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role PWA — état du réseau (badge hors-ligne)
  */
 export function watchNetworkStatus(badge) {
+  /** Montre le badge si le navigateur est hors ligne, le masque sinon. */
   const update = () => {
     badge.hidden = navigator.onLine;
   };

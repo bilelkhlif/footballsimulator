@@ -7,6 +7,8 @@
  * WebGPU (l'application n'a pas de repli WebGL), puis « npm install ».
  * Usage : npm run test:e2e, ou npm test pour lancer aussi les tests unitaires
  * (BROWSER_CHANNEL=msedge pour utiliser Microsoft Edge)
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { chromium } from 'playwright-core';
 import { startServer } from './serve.mjs';
@@ -21,7 +23,12 @@ const CHANNEL = process.env.BROWSER_CHANNEL ?? 'chrome';
  */
 const LAUNCH_ARGS = ['--enable-unsafe-webgpu'];
 
-/** Script injecté avant la page : enregistre chaque type de contexte demandé à un canvas. */
+/**
+ * Script injecté avant la page : enregistre chaque type de contexte demandé à un canvas.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests de bout en bout — outillage
+ */
 function recordCanvasContexts() {
   window.__canvasContexts = [];
   const getContext = HTMLCanvasElement.prototype.getContext;
@@ -45,6 +52,9 @@ const results = [];
  * @param {string} name
  * @param {'ok'|'échec'|'ignoré'} status
  * @param {string} [detail]
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Tests de bout en bout — outillage
  */
 function record(name, status, detail = '') {
   results.push({ name, status, detail });
@@ -55,6 +65,9 @@ function record(name, status, detail = '') {
  * @param {Promise<any>} promise
  * @param {number} ms
  * @returns {Promise<any>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Tests de bout en bout — outillage
  */
 function withTimeout(promise, ms) {
   return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error(`délai de ${ms} ms dépassé`)), ms))]);
@@ -65,6 +78,9 @@ function withTimeout(promise, ms) {
  * @param {import('playwright-core').BrowserContext} context
  * @param {string} url
  * @returns {Promise<{page: import('playwright-core').Page, errors: string[]}>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Tests de bout en bout — outillage
  */
 async function openApp(context, url) {
   const page = await context.newPage();
@@ -83,6 +99,9 @@ async function openApp(context, url) {
  * @param {string} url
  * @param {string} label
  * @param {object} contextOptions
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Tests de bout en bout — chargement de l'application
  */
 async function testLoading(browser, url, label, contextOptions) {
   const name = `Chargement sans erreur (${label})`;
@@ -103,6 +122,9 @@ async function testLoading(browser, url, label, contextOptions) {
  * 11 joueurs numérotés de 1 à 11, dans leur moitié, hors du rond central, sans chevauchement.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Tests de bout en bout — formations
  */
 async function testFormations(browser, url) {
   const name = 'Formations : 11 joueurs, numéros 1 à 11, placements valides';
@@ -144,6 +166,9 @@ async function testFormations(browser, url) {
  * Vérifie que la scène est rendue en WebGPU par three.js r187, sans aucun contexte WebGL.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests de bout en bout — rendu WebGPU
  */
 async function testWebGpuRendering(browser, url) {
   const name = 'Rendu WebGPU, sans aucun contexte WebGL';
@@ -179,6 +204,9 @@ async function testWebGpuRendering(browser, url) {
  * créer de contexte WebGL de secours.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests de bout en bout — rendu WebGPU (navigateur sans WebGPU)
  */
 async function testWithoutWebGpu(browser, url) {
   const name = 'Sans WebGPU : message explicite, aucun repli WebGL';
@@ -218,6 +246,9 @@ async function testWithoutWebGpu(browser, url) {
  * l'application est en WebGPU (testWebGpuRendering), et sans WebGPU elle s'arrête (testWithoutWebGpu).
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests de bout en bout — mode test WebGL
  */
 async function testWebGlTestMode(browser, url) {
   const name = 'Mode test WebGL, seulement avec ?webgl : badge « mode test »';
@@ -252,6 +283,9 @@ async function testWebGlTestMode(browser, url) {
  * l'installation, et icônes accessibles.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests de bout en bout — manifeste de la PWA
  */
 async function testManifest(browser, url) {
   const name = 'Manifeste : application installable';
@@ -272,6 +306,7 @@ async function testManifest(browser, url) {
       return { manifest, icons, screenshots };
     });
     const { manifest, icons, screenshots } = state;
+    /** Vrai si le manifeste déclare une icône PNG accessible, de la taille donnée. */
     const has = (size) => icons.some((icon) => icon.sizes === size && icon.ok && icon.contentType === 'image/png');
     // Captures « wide » et « narrow » : Chrome les montre dans sa fenêtre d'installation.
     const shot = (form) => screenshots.some((image) => image.form_factor === form && image.ok && image.contentType === 'image/jpeg');
@@ -292,6 +327,9 @@ async function testManifest(browser, url) {
  * @param {import('playwright-core').Page} page
  * @param {string} teamId 'blue' ou 'red'
  * @returns {Promise<{formation: string, worstCm: number, chip: string, pressed: string[], animating: boolean, roles: boolean}>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests de bout en bout — outillage des formations
  */
 function readTeamPlacement(page, teamId) {
   return page.evaluate(async (id) => {
@@ -323,6 +361,9 @@ function readTeamPlacement(page, teamId) {
 /**
  * Attend la fin des déplacements de joueurs.
  * @param {import('playwright-core').Page} page
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests de bout en bout — outillage des formations
  */
 function waitForFormationsSettled(page) {
   return page.waitForFunction(() => !window.__footballSimulator.animator.isAnimating, null, { timeout: 5000 });
@@ -333,6 +374,9 @@ function waitForFormationsSettled(page) {
  * @param {{formation: string, worstCm: number, chip: string, pressed: string[], roles: boolean}} state
  * @param {string} expected nom de la formation
  * @returns {boolean}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests de bout en bout — outillage des formations
  */
 function isInFormation(state, expected) {
   return state.formation === expected && state.worstCm < 0.01 && state.roles && state.chip === expected
@@ -344,11 +388,15 @@ function isInFormation(state, expected) {
  * (§4.1, étape 5), toutes les formations pour les deux équipes, et transition animée.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests de bout en bout — changement de formation
  */
 async function testFormationButtons(browser, url) {
   const context = await browser.newContext(MOBILE);
   try {
     const { page, errors } = await openApp(context, `${url}?debug`);
+    /** Clique sur le bouton d'une formation, pour une équipe. */
     const choose = (teamId, name) => page.click(`.formation-button[data-team="${teamId}"][data-formation="${name}"]`);
 
     // Le panneau s'ouvre et se ferme par le bouton « Formations ».
@@ -403,6 +451,9 @@ async function testFormationButtons(browser, url) {
  * Avec la préférence « réduire les animations », les joueurs vont directement à leur place.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests de bout en bout — changement de formation (animations réduites)
  */
 async function testReducedMotion(browser, url) {
   const name = 'Formations : sans animation si l\'utilisateur réduit les animations';
@@ -425,6 +476,9 @@ async function testReducedMotion(browser, url) {
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
  * @param {string} label
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Tests de bout en bout — PWA et hors-ligne
  */
 async function testPwa(browser, url, label) {
   const context = await browser.newContext(DESKTOP);
@@ -464,6 +518,9 @@ const SLOW_NETWORK_MAX_SECONDS = 10;
  * met 30 s à répondre. Le Service Worker sert alors le cache au bout de 3 s d'attente.
  * @param {import('playwright-core').Browser} browser
  * @param {{url: string, setLatency: (ms: number) => void}} server serveur réservé à ce test
+ * @responsable Bilel Khlif
+ * @date 2026-11-12
+ * @role Tests de bout en bout — PWA sur réseau lent
  */
 async function testSlowNetwork(browser, server) {
   const name = 'Lancement sur réseau très lent, depuis le cache';
@@ -496,6 +553,9 @@ async function testSlowNetwork(browser, server) {
  * Le test est ignoré si le CDN de l'émulateur est injoignable (pas de réseau).
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Tests de bout en bout — émulateur WebXR
  */
 async function testEmulator(browser, url) {
   const name = 'Émulateur IWER : session immersive-ar avec local-floor et webgpu';
@@ -551,8 +611,12 @@ async function testEmulator(browser, url) {
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
  * @param {{webglTest?: boolean}} [options] webglTest : parcours en mode test WebGL
+ * @responsable Bilel Khlif
+ * @date 2026-11-10
+ * @role Tests de bout en bout — parcours AR complet
  */
 async function testArSession(browser, url, { webglTest = false } = {}) {
+  /** Nom d'une étape du parcours dans le bilan, précédé du mode testé. */
   const label = (step) => `${webglTest ? 'Mode test WebGL, AR avec IWER' : 'Session AR avec IWER'} : ${step}`;
   const context = await browser.newContext(DESKTOP);
   try {
@@ -654,8 +718,10 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
       return page.evaluate(() => ({ ...window.__loopCounts }));
     };
 
+    /** Égalité de deux nombres, à une tolérance près. */
     const near = (a, b, tolerance) => Math.abs(a - b) <= tolerance;
     const initialView = await readView();
+    /** Vrai si la vue 3D est revenue exactement à son état d'avant l'entrée en AR. */
     const sameAsInitial = (view) => JSON.stringify(view) === JSON.stringify(initialView);
 
     const steps = [
@@ -827,6 +893,9 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
 
 /**
  * Lance tous les tests, affiche le bilan et renvoie un code de sortie non nul en cas d'échec.
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Tests de bout en bout — outillage
  */
 async function main() {
   const browser = await chromium.launch({ channel: CHANNEL, headless: true, args: LAUNCH_ARGS });

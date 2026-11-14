@@ -2,6 +2,8 @@
  * Tests unitaires de src/formations.js (patron Strategy) : chaque formation enregistrée respecte
  * le critère du cahier « 11 joueurs bien placés » (§4.3), et une nouvelle stratégie s'ajoute sans
  * toucher au reste du code.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

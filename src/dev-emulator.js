@@ -11,6 +11,8 @@
  *
  * Activation : ajouter ?iwer à l'adresse, par exemple http://localhost:8080/?iwer
  * Le module n'est jamais chargé sans ce paramètre, ni quand l'AR native existe déjà.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { isImmersiveArSupported } from './xr-support.js';
 
@@ -28,6 +30,10 @@ const EMULATOR_QUERY_PARAMETER = 'iwer';
  * donc forcée, ce qui ne remplace jamais un navigateur capable d'AR (vérifié juste avant).
  * @returns {Promise<{xrDevice: object, setCanvas: (canvas: HTMLCanvasElement) => void}|null>}
  *   l'appareil émulé, et de quoi lui donner le canvas WebGPU de l'application ; null sans émulation
+ * @see ATTRIBUTION.md, §3 : code adapté du guide de démarrage d'IWER (Meta, licence MIT)
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Développement — chargement de l'émulateur WebXR (IWER)
  */
 export async function installEmulatorIfRequested() {
   const requested = new URLSearchParams(window.location.search).has(EMULATOR_QUERY_PARAMETER);

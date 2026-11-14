@@ -1,6 +1,8 @@
 /**
  * Active la résolution « three » d'après la carte d'import de index.html (voir import-map-hooks.mjs).
  * Chargé avant les tests : node --import ./tests/unit/import-map.mjs --test
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import * as nodeModule from 'node:module';
 import { resolve } from './import-map-hooks.mjs';

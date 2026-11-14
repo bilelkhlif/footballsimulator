@@ -1,6 +1,8 @@
 /**
  * Tests unitaires de src/tactics-board.js : formation en place de chaque équipe, et événement
  * formationchange (patron Observer).
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,6 +12,9 @@ import { FORMATIONS } from '../../src/formations.js';
 /**
  * Crée un tableau tactique avec les formations du scénario de démonstration, et enregistre ses
  * événements.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/tactics-board.js) — montage du test
  */
 function createBoard() {
   const board = new TacticsBoard({ blue: '4-3-3', red: '4-4-2' });

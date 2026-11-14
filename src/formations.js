@@ -10,6 +10,8 @@
  * Ajouter une formation revient à écrire une sous-classe et à l'enregistrer dans FORMATIONS :
  * son bouton apparaît alors dans l'interface (src/formation-panel.js), et les tests la vérifient.
  * Le 4-2-3-1, ajouté au sprint 4, en est l'exemple.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { PITCH_LENGTH, PITCH_WIDTH } from './config.js';
 
@@ -33,11 +35,17 @@ const BACK_FOUR = Object.freeze({
 /**
  * Stratégie de base : une formation décrite ligne par ligne, du gardien à l'attaque.
  * Les sous-classes définissent `name` et `lines` ; `computePositions` est commun.
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Logique métier — patron Strategy : stratégie de base
  */
 export class FormationStrategy {
   /**
    * Nom affiché de la formation, par exemple « 4-4-2 ».
    * @returns {string}
+   * @responsable Bilel Khlif
+   * @date 2026-11-05
+   * @role Logique métier — patron Strategy : stratégie de base
    */
   get name() {
     throw new Error('FormationStrategy : la sous-classe doit définir name');
@@ -47,6 +55,9 @@ export class FormationStrategy {
    * Lignes de joueurs. Chaque ligne a une profondeur x commune, qu'un joueur
    * peut remplacer par sa propre valeur (milieu défensif plus bas, par exemple).
    * @returns {Array<{x: number, slots: Array<{y: number, number: number, role: string, x?: number}>}>}
+   * @responsable Bilel Khlif
+   * @date 2026-11-05
+   * @role Logique métier — patron Strategy : stratégie de base
    */
   get lines() {
     throw new Error('FormationStrategy : la sous-classe doit définir lines');
@@ -55,6 +66,9 @@ export class FormationStrategy {
   /**
    * Calcule les 11 positions normalisées de la formation.
    * @returns {Array<{x: number, y: number, number: number, role: string}>}
+   * @responsable Bilel Khlif
+   * @date 2026-11-05
+   * @role Logique métier — patron Strategy : stratégie de base
    */
   computePositions() {
     const positions = this.lines.flatMap((line) => line.slots.map((slot) => ({
@@ -70,14 +84,29 @@ export class FormationStrategy {
   }
 }
 
-/** 4-4-2 : deux lignes de quatre et deux attaquants. */
+/**
+ * 4-4-2 : deux lignes de quatre et deux attaquants.
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Logique métier — patron Strategy : formation concrète
+ */
 export class Formation442 extends FormationStrategy {
-  /** @returns {string} */
+  /**
+   * @returns {string}
+   * @responsable Bilel Khlif
+   * @date 2026-11-05
+   * @role Logique métier — patron Strategy : formation concrète
+   */
   get name() {
     return '4-4-2';
   }
 
-  /** @returns {Array<object>} */
+  /**
+   * @returns {Array<object>}
+   * @responsable Bilel Khlif
+   * @date 2026-11-05
+   * @role Logique métier — patron Strategy : formation concrète
+   */
   get lines() {
     return [
       GOALKEEPER_LINE,
@@ -102,14 +131,29 @@ export class Formation442 extends FormationStrategy {
   }
 }
 
-/** 4-3-3 : un milieu à trois et trois attaquants, dont deux ailiers. */
+/**
+ * 4-3-3 : un milieu à trois et trois attaquants, dont deux ailiers.
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Logique métier — patron Strategy : formation concrète
+ */
 export class Formation433 extends FormationStrategy {
-  /** @returns {string} */
+  /**
+   * @returns {string}
+   * @responsable Bilel Khlif
+   * @date 2026-11-05
+   * @role Logique métier — patron Strategy : formation concrète
+   */
   get name() {
     return '4-3-3';
   }
 
-  /** @returns {Array<object>} */
+  /**
+   * @returns {Array<object>}
+   * @responsable Bilel Khlif
+   * @date 2026-11-05
+   * @role Logique métier — patron Strategy : formation concrète
+   */
   get lines() {
     return [
       GOALKEEPER_LINE,
@@ -134,14 +178,29 @@ export class Formation433 extends FormationStrategy {
   }
 }
 
-/** 3-5-2 : trois défenseurs centraux, deux pistons et deux attaquants. */
+/**
+ * 3-5-2 : trois défenseurs centraux, deux pistons et deux attaquants.
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Logique métier — patron Strategy : formation concrète
+ */
 export class Formation352 extends FormationStrategy {
-  /** @returns {string} */
+  /**
+   * @returns {string}
+   * @responsable Bilel Khlif
+   * @date 2026-11-05
+   * @role Logique métier — patron Strategy : formation concrète
+   */
   get name() {
     return '3-5-2';
   }
 
-  /** @returns {Array<object>} */
+  /**
+   * @returns {Array<object>}
+   * @responsable Bilel Khlif
+   * @date 2026-11-05
+   * @role Logique métier — patron Strategy : formation concrète
+   */
   get lines() {
     return [
       GOALKEEPER_LINE,
@@ -174,14 +233,29 @@ export class Formation352 extends FormationStrategy {
   }
 }
 
-/** 4-2-3-1 (sprint 4) : deux milieux défensifs, trois milieux offensifs et un attaquant. */
+/**
+ * 4-2-3-1 (sprint 4) : deux milieux défensifs, trois milieux offensifs et un attaquant.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Logique métier — patron Strategy : formation concrète
+ */
 export class Formation4231 extends FormationStrategy {
-  /** @returns {string} */
+  /**
+   * @returns {string}
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Logique métier — patron Strategy : formation concrète
+   */
   get name() {
     return '4-2-3-1';
   }
 
-  /** @returns {Array<object>} */
+  /**
+   * @returns {Array<object>}
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Logique métier — patron Strategy : formation concrète
+   */
   get lines() {
     return [
       GOALKEEPER_LINE,
@@ -218,6 +292,9 @@ export const FORMATIONS = Object.freeze(Object.fromEntries(
  * Renvoie la stratégie correspondant à un nom de formation.
  * @param {string} name par exemple « 4-3-3 »
  * @returns {FormationStrategy}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Logique métier — patron Strategy : choix de la formation par son nom
  */
 export function getFormation(name) {
   const formation = FORMATIONS[name];
@@ -234,6 +311,9 @@ export function getFormation(name) {
  * @param {{x: number, y: number}} position position normalisée
  * @param {boolean} attacksPositiveX sens d'attaque de l'équipe
  * @returns {{x: number, z: number}}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Logique métier — conversion vers le repère du terrain
  */
 export function toPitchCoordinates(position, attacksPositiveX) {
   const direction = attacksPositiveX ? 1 : -1;

@@ -9,6 +9,8 @@
  *
  * Le code du backend WebGL de three.js reste présent dans three.webgpu.js, mais rien ne
  * l'instancie : les tests de bout en bout vérifient qu'aucun contexte WebGL n'est créé.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { Renderer, StandardNodeLibrary, WebGPUBackend } from 'three/webgpu';
 
@@ -19,12 +21,20 @@ export const WEBGPU_ERROR_REASONS = Object.freeze({
   WRONG_BACKEND: 'wrong-backend', // garde-fou : le moteur de rendu ne tourne pas sur WebGPU
 });
 
-/** Erreur de démarrage du rendu WebGPU, avec sa cause (une valeur de WEBGPU_ERROR_REASONS). */
+/**
+ * Erreur de démarrage du rendu WebGPU, avec sa cause (une valeur de WEBGPU_ERROR_REASONS).
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Rendu WebGPU — moteur sans repli WebGL
+ */
 export class WebGpuUnavailableError extends Error {
   /**
    * @param {string} reason une valeur de WEBGPU_ERROR_REASONS
    * @param {string} message
    * @param {{cause?: unknown}} [options]
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Rendu WebGPU — moteur sans repli WebGL
    */
   constructor(reason, message, options) {
     super(message, options);
@@ -36,10 +46,17 @@ export class WebGpuUnavailableError extends Error {
 /**
  * Moteur de rendu three.js limité au backend WebGPU.
  * C'est WebGPURenderer sans sa ligne de repli : même backend, même bibliothèque de nœuds.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Rendu WebGPU — moteur sans repli WebGL
  */
 export class WebGpuOnlyRenderer extends Renderer {
   /**
    * @param {object} [parameters] paramètres de Renderer et de WebGPUBackend (antialias, alpha…)
+   * @see ATTRIBUTION.md, §3 : code adapté du constructeur de WebGPURenderer (three.js r187, MIT)
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Rendu WebGPU — moteur sans repli WebGL
    */
   constructor(parameters = {}) {
     // getFallback: null : en cas d'échec de WebGPU, init() rejette au lieu de passer en WebGL.
@@ -55,6 +72,9 @@ export class WebGpuOnlyRenderer extends Renderer {
  * Indique si le navigateur expose l'API WebGPU. Comme WebXR, elle exige un contexte sécurisé.
  * @param {Navigator} [nav]
  * @returns {boolean}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Rendu WebGPU — moteur sans repli WebGL
  */
 export function hasWebGpuApi(nav = globalThis.navigator) {
   return Boolean(nav?.gpu);
@@ -64,6 +84,9 @@ export function hasWebGpuApi(nav = globalThis.navigator) {
  * Vérifie que le moteur de rendu tourne bien sur WebGPU (garde-fou contre tout repli).
  * @param {{backend?: {isWebGPUBackend?: boolean}}} renderer
  * @throws {WebGpuUnavailableError} si le backend n'est pas WebGPU
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Rendu WebGPU — moteur sans repli WebGL
  */
 export function assertWebGpuBackend(renderer) {
   if (renderer?.backend?.isWebGPUBackend !== true) {
@@ -76,6 +99,9 @@ export function assertWebGpuBackend(renderer) {
  * @param {{vendor?: string, architecture?: string, description?: string}|undefined} adapterInfo
  *   GPUAdapterInfo, lu sur device.adapterInfo
  * @returns {string} par exemple « nvidia ampere », ou « GPU » si le navigateur ne dit rien
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Rendu WebGPU — moteur sans repli WebGL
  */
 export function describeAdapter(adapterInfo) {
   const words = [adapterInfo?.vendor, adapterInfo?.architecture].filter(Boolean);
@@ -92,6 +118,9 @@ export function describeAdapter(adapterInfo) {
  *   demande alors un adaptateur compatible XR (option xrCompatible de requestAdapter)
  * @returns {Promise<WebGpuOnlyRenderer>}
  * @throws {WebGpuUnavailableError} si WebGPU est absent ou inutilisable
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Rendu WebGPU — moteur sans repli WebGL
  */
 export async function createWebGpuRenderer({ xrEnabled = true } = {}) {
   if (!hasWebGpuApi()) {

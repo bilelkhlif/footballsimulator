@@ -7,6 +7,8 @@
  *   du réticule, sa longueur face à l'utilisateur comme dans la vue « télévision » hors AR.
  * - Sprint 2, gardé en secours quand l'appareil n'a pas de hit test : le terrain est placé
  *   devant l'utilisateur et un peu plus bas, à peu près à hauteur de table.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { BOARD_THICKNESS } from './config.js';
 
@@ -28,6 +30,9 @@ export const SURFACE_OFFSET = BOARD_THICKNESS;
  * @param {number} x
  * @param {number} z
  * @returns {{x: number, z: number}}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Réalité augmentée — calcul de la pose du terrain
  */
 function horizontalDirection(x, z) {
   const length = Math.hypot(x, z);
@@ -42,6 +47,9 @@ function horizontalDirection(x, z) {
  * horizontale : l'utilisateur voit alors le terrain de côté, les Bleus attaquant vers sa droite.
  * @param {{x: number, z: number}} direction direction horizontale du regard, normalisée
  * @returns {number} angle en radians
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Réalité augmentée — calcul de la pose du terrain
  */
 function yawFacing(direction) {
   return Math.atan2(-direction.x, -direction.z);
@@ -53,6 +61,9 @@ function yawFacing(direction) {
  *   pose de la vue dans l'espace local-floor (un XRRigidTransform)
  * @returns {{position: {x: number, y: number, z: number}, rotationY: number}} position du centre
  *   du terrain et rotation autour de l'axe vertical, en radians
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Réalité augmentée — calcul de la pose du terrain
  */
 export function computePitchPlacement({ position, orientation }) {
   const { x, y, z, w } = orientation;
@@ -78,6 +89,9 @@ export function computePitchPlacement({ position, orientation }) {
  * @param {{x: number, y: number, z: number}} viewerPosition position du téléphone, même espace
  * @returns {{position: {x: number, y: number, z: number}, rotationY: number}} centre du gazon,
  *   juste au-dessus de la surface, et rotation autour de l'axe vertical, en radians
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Réalité augmentée — calcul de la pose du terrain
  */
 export function computeSurfacePlacement(surfacePoint, viewerPosition) {
   // Direction horizontale du téléphone vers le point visé : le terrain se présente de côté.
@@ -93,6 +107,9 @@ export function computeSurfacePlacement(surfacePoint, viewerPosition) {
  * Sert à créer l'ancre exactement à la pose du terrain.
  * @param {number} rotationY angle en radians
  * @returns {{x: number, y: number, z: number, w: number}}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Réalité augmentée — calcul de la pose du terrain
  */
 export function yawToQuaternion(rotationY) {
   return { x: 0, y: Math.sin(rotationY / 2), z: 0, w: Math.cos(rotationY / 2) };

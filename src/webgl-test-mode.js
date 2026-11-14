@@ -7,6 +7,8 @@
  * navigateur bloque WebGPU : par exemple un Galaxy S10e sous Android 9, où Chrome 138 refuse
  * WebGPU. Il ne démarre que si l'adresse contient ?webgl, comme ?iwer (émulateur) et ?debug :
  * aucun bouton de l'application n'y mène, et aucun code ne le choisit à la place de l'utilisateur.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { WebGPURenderer } from 'three/webgpu';
 
@@ -19,11 +21,19 @@ export const RENDER_MODES = Object.freeze({
   WEBGL_TEST: 'webgl-test', // tests seulement, avec ?webgl dans l'adresse
 });
 
-/** Erreur de démarrage du mode test : WebGL 2 est indisponible. */
+/**
+ * Erreur de démarrage du mode test : WebGL 2 est indisponible.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Rendu — mode test WebGL, réservé aux tests (pas un repli)
+ */
 export class WebGlTestModeUnavailableError extends Error {
   /**
    * @param {string} message
    * @param {{cause?: unknown}} [options]
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Rendu — mode test WebGL, réservé aux tests (pas un repli)
    */
   constructor(message, options) {
     super(message, options);
@@ -35,6 +45,9 @@ export class WebGlTestModeUnavailableError extends Error {
  * Lit le mode de rendu demandé dans l'adresse de la page : WebGPU, sauf ?webgl.
  * @param {string} [search] partie « ?… » de l'adresse
  * @returns {string} une valeur de RENDER_MODES
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Rendu — mode test WebGL, réservé aux tests (pas un repli)
  */
 export function getRequestedRenderMode(search = globalThis.location?.search ?? '') {
   return new URLSearchParams(search).has(WEBGL_TEST_PARAMETER) ? RENDER_MODES.WEBGL_TEST : RENDER_MODES.WEBGPU;
@@ -47,6 +60,9 @@ export function getRequestedRenderMode(search = globalThis.location?.search ?? '
  * @param {boolean} [options.xrEnabled=true] active WebXR (session AR par une couche WebGL)
  * @returns {Promise<import('three/webgpu').WebGPURenderer>}
  * @throws {WebGlTestModeUnavailableError} si WebGL 2 est indisponible
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Rendu — mode test WebGL, réservé aux tests (pas un repli)
  */
 export async function createWebGlTestRenderer({ xrEnabled = true } = {}) {
   const renderer = new WebGPURenderer({ antialias: true, alpha: true, forceWebGL: true });

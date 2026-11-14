@@ -4,6 +4,8 @@
  * Node.js n'a ni WebGPU ni document : c'est justement la situation d'un navigateur sans WebGPU.
  * Un canvas minimal suffit pour construire le moteur de rendu ; son initialisation doit alors
  * échouer, sans jamais basculer sur WebGL comme le ferait WebGPURenderer de three.js.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,7 +15,12 @@ import {
   WebGpuUnavailableError, WEBGPU_ERROR_REASONS,
 } from '../../src/webgpu.js';
 
-/** Canvas minimal, pour que three.js puisse construire un moteur de rendu sous Node.js. */
+/**
+ * Canvas minimal, pour que three.js puisse construire un moteur de rendu sous Node.js.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/webgpu.js) — doublure
+ */
 function createFakeCanvas() {
   return { style: {}, width: 300, height: 150, getContext: () => null, addEventListener() {}, removeEventListener() {}, setAttribute() {} };
 }

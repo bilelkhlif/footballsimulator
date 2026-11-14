@@ -4,6 +4,8 @@
  *
  * Usage : npm start, puis ouvrir http://127.0.0.1:8080 (variable PORT pour changer de port).
  * Les tests l'importent pour démarrer leurs propres serveurs sur des ports libres.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import http from 'node:http';
 import fs from 'node:fs';
@@ -33,6 +35,9 @@ const MIME_TYPES = {
  *   basePath : sous-chemin de l'application, par exemple « /footballsimulator/ ».
  * @returns {Promise<{url: string, close: () => Promise<void>, setLatency: (ms: number) => void}>}
  *   setLatency : retarde chaque réponse, pour simuler un réseau lent (0 : aucun retard).
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Tests — serveur statique local
  */
 export function startServer({ root = REPO_ROOT, port = 0, basePath = '/' } = {}) {
   let latencyMs = 0;

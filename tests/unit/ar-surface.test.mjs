@@ -2,6 +2,8 @@
  * Tests unitaires de src/ar-surface.js (sprint 3) : hit test, réticule, toucher pour poser,
  * ancre, déplacement du terrain, et secours sans hit test. La session et les images WebXR sont
  * remplacées par des doublures qui suivent la spécification (WebXR Hit Test, WebXR Anchors).
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,6 +17,9 @@ const HIT_POSE = { transform: { position: { x: 0.1, y: 0.72, z: -0.9 }, orientat
 /**
  * Doublure de XRSession : espaces de référence et source de hit test.
  * @param {{features?: string[], failHitTest?: boolean}} [options]
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/ar-surface.js) — doublure
  */
 function createFakeSession({ features = ['local-floor', 'webgpu', 'hit-test', 'anchors'], failHitTest = false } = {}) {
   return {
@@ -32,7 +37,12 @@ function createFakeSession({ features = ['local-floor', 'webgpu', 'hit-test', 'a
   };
 }
 
-/** Doublure de la vue AR : enregistre les appels. */
+/**
+ * Doublure de la vue AR : enregistre les appels.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/ar-surface.js) — doublure
+ */
 function createFakeView() {
   return {
     calls: [],
@@ -58,7 +68,12 @@ function createFakeView() {
   };
 }
 
-/** Doublure d'ancre WebXR. */
+/**
+ * Doublure d'ancre WebXR.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/ar-surface.js) — doublure
+ */
 function createFakeAnchor() {
   return { anchorSpace: { type: 'anchor' }, deleted: false, delete() { this.deleted = true; } };
 }
@@ -66,6 +81,9 @@ function createFakeAnchor() {
 /**
  * Doublure de XRFrame : résultats de hit test, pose du téléphone, ancres.
  * @param {{hit?: object|null, viewer?: object|null, anchorResult?: Promise<object>, tracked?: object[], anchorPose?: object}} [options]
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/ar-surface.js) — doublure
  */
 function createFakeFrame({ hit = null, viewer = VIEWER_POSE, anchorResult, tracked = [], anchorPose = null } = {}) {
   return {
@@ -90,6 +108,9 @@ function createFakeFrame({ hit = null, viewer = VIEWER_POSE, anchorResult, track
 /**
  * Crée la pose du terrain avec ses doublures, et enregistre ses changements d'état.
  * @param {object} [sessionOptions]
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/ar-surface.js) — montage du test
  */
 function createPlacement(sessionOptions) {
   const session = createFakeSession(sessionOptions);
@@ -105,7 +126,12 @@ function createPlacement(sessionOptions) {
   return { session, view, placement, states };
 }
 
-/** Laisse s'exécuter les promesses en attente (création d'ancre). */
+/**
+ * Laisse s'exécuter les promesses en attente (création d'ancre).
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/ar-surface.js) — outil de vérification
+ */
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
 test('démarrage : hit test demandé depuis l\'espace « viewer », état « searching »', async () => {

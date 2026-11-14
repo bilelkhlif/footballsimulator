@@ -17,6 +17,8 @@
  * Le module signale le cycle de vie par des événements (patron Observer) : sessionstart,
  * sessionend et sessionerror. Il ne connaît ni l'interface HTML ni les objets de la scène :
  * c'est main.js qui s'abonne et met à jour l'affichage.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { EventEmitter } from './events.js';
 
@@ -55,6 +57,9 @@ export const AR_ERROR_REASONS = Object.freeze({
  * Indique si le navigateur expose la liaison WebXR/WebGPU. Dans Chrome 157, elle est encore
  * derrière le réglage chrome://flags/#webxr-webgpu-binding, sur Android et sous Windows.
  * @returns {boolean}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Session WebXR — détection de la liaison WebXR/WebGPU
  */
 export function hasWebGpuXrBinding() {
   return typeof globalThis.XRGPUBinding === 'function';
@@ -64,6 +69,9 @@ export function hasWebGpuXrBinding() {
  * Termine une session sans propager d'erreur, si elle est déjà terminée par exemple.
  * @param {XRSession} session
  * @returns {Promise<void>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Session WebXR — cycle de vie de la session immersive-ar
  */
 async function endQuietly(session) {
   try {
@@ -78,6 +86,9 @@ async function endQuietly(session) {
  * de projection (XRProjectionLayer) créée par XRGPUBinding, listée dans renderState.layers.
  * @param {XRSession} session
  * @returns {'XRProjectionLayer'|'XRWebGLLayer'|null}
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Session WebXR — cycle de vie de la session immersive-ar
  */
 function describeLayer(session) {
   const { baseLayer, layers } = session.renderState ?? {};
@@ -97,6 +108,9 @@ function describeLayer(session) {
  * - sessionend : { session } quand elle se termine, par le bouton de l'application ou par le
  *   système (bouton retour du téléphone, par exemple), une fois le rendu de three.js restauré ;
  * - sessionerror : { reason, error } quand l'entrée en AR échoue ; aucune session ne reste ouverte.
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Session WebXR — cycle de vie de la session immersive-ar
  */
 export class ArSession extends EventEmitter {
   #renderer;
@@ -107,6 +121,14 @@ export class ArSession extends EventEmitter {
   #session = null;
   #referenceSpace = null;
   #pendingStart = null;
+
+  /**
+   * Écouteur de l'événement sessionend de renderer.xr : ajouté à l'ouverture de la session,
+   * retiré par #handleSessionEnd. Fonction fléchée, pour garder this et pouvoir la retirer.
+   * @responsable Bilel Khlif
+   * @date 2026-11-09
+   * @role Session WebXR — cycle de vie de la session immersive-ar
+   */
   #onRendererSessionEnd = () => this.#handleSessionEnd();
 
   /**
@@ -120,6 +142,9 @@ export class ArSession extends EventEmitter {
    * @param {HTMLElement} [options.overlayRoot] élément affiché par-dessus la vue AR (DOM Overlay)
    * @param {string} [options.renderingApi] une valeur de RENDERING_APIS : WebGPU par défaut ;
    *   WebGL en mode test, où la session n'exige ni la fonctionnalité webgpu ni XRGPUBinding
+   * @responsable Bilel Khlif
+   * @date 2026-11-09
+   * @role Session WebXR — cycle de vie de la session immersive-ar
    */
   constructor({ renderer, xr, hasGpuBinding = hasWebGpuXrBinding, overlayRoot = null, renderingApi = RENDERING_APIS.WEBGPU }) {
     super();
@@ -130,12 +155,22 @@ export class ArSession extends EventEmitter {
     this.#renderingApi = renderingApi;
   }
 
-  /** Vrai pendant une session AR. */
+  /**
+   * Vrai pendant une session AR.
+   * @responsable Bilel Khlif
+   * @date 2026-11-09
+   * @role Session WebXR — cycle de vie de la session immersive-ar
+   */
   get isActive() {
     return this.#session !== null;
   }
 
-  /** Espace de référence local-floor de la session en cours, ou null. */
+  /**
+   * Espace de référence local-floor de la session en cours, ou null.
+   * @responsable Bilel Khlif
+   * @date 2026-11-09
+   * @role Session WebXR — cycle de vie de la session immersive-ar
+   */
   get referenceSpace() {
     return this.#referenceSpace;
   }
@@ -143,6 +178,9 @@ export class ArSession extends EventEmitter {
   /**
    * Indique si le navigateur peut ouvrir une session immersive-ar.
    * @returns {Promise<boolean>}
+   * @responsable Bilel Khlif
+   * @date 2026-11-09
+   * @role Session WebXR — cycle de vie de la session immersive-ar
    */
   async isSupported() {
     const xr = this.#getXr();
@@ -160,6 +198,9 @@ export class ArSession extends EventEmitter {
    * Entre en AR. Doit être appelé depuis une action de l'utilisateur (un clic) : le navigateur
    * refuse sinon la session. Un double clic ne lance qu'une seule demande.
    * @returns {Promise<XRSession|null>} la session, ou null en cas d'échec (voir sessionerror)
+   * @responsable Bilel Khlif
+   * @date 2026-11-09
+   * @role Session WebXR — cycle de vie de la session immersive-ar
    */
   start() {
     if (this.#session) {
@@ -176,6 +217,9 @@ export class ArSession extends EventEmitter {
   /**
    * Quitte l'AR. L'événement sessionend suit, comme pour une sortie décidée par le système.
    * @returns {Promise<void>}
+   * @responsable Bilel Khlif
+   * @date 2026-11-09
+   * @role Session WebXR — cycle de vie de la session immersive-ar
    */
   async end() {
     if (this.#session) {
@@ -186,6 +230,9 @@ export class ArSession extends EventEmitter {
   /**
    * Ouvre la session, étape par étape ; à la moindre erreur, la session est refermée.
    * @returns {Promise<XRSession|null>}
+   * @responsable Bilel Khlif
+   * @date 2026-11-09
+   * @role Session WebXR — cycle de vie de la session immersive-ar
    */
   async #open() {
     const xr = this.#getXr();
@@ -246,6 +293,9 @@ export class ArSession extends EventEmitter {
    * WebGL) ; hit test, ancres et DOM Overlay facultatifs, car l'application reste utilisable
    * sans eux.
    * @returns {XRSessionInit}
+   * @responsable Bilel Khlif
+   * @date 2026-11-09
+   * @role Session WebXR — cycle de vie de la session immersive-ar
    */
   #sessionInit() {
     const requiredFeatures = this.#renderingApi === RENDERING_APIS.WEBGPU
@@ -267,6 +317,9 @@ export class ArSession extends EventEmitter {
    * @param {string} reason une valeur de AR_ERROR_REASONS
    * @param {Error} error
    * @returns {null}
+   * @responsable Bilel Khlif
+   * @date 2026-11-09
+   * @role Session WebXR — cycle de vie de la session immersive-ar
    */
   #fail(reason, error) {
     this.emit('sessionerror', { reason, error });
@@ -276,6 +329,9 @@ export class ArSession extends EventEmitter {
   /**
    * Fin de session : three.js vient de restaurer son rendu (événement sessionend de renderer.xr),
    * l'application peut maintenant restaurer la vue 3D.
+   * @responsable Bilel Khlif
+   * @date 2026-11-09
+   * @role Session WebXR — cycle de vie de la session immersive-ar
    */
   #handleSessionEnd() {
     const session = this.#session;

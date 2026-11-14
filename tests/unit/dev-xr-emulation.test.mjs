@@ -1,6 +1,8 @@
 /**
  * Tests unitaires des calculs de src/dev-xr-emulation.js : la table virtuelle de l'émulateur,
  * qui remplace la vraie table pour le hit test sur PC.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,7 +10,12 @@ import { intersectVirtualTable, rotateByQuaternion, START_POSE, VIRTUAL_TABLE } 
 
 const FORWARD = { x: 0, y: 0, z: -1 };
 
-/** Quaternion de la pose de départ : rotation autour de X, vers le bas. */
+/**
+ * Quaternion de la pose de départ : rotation autour de X, vers le bas.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/dev-xr-emulation.js) — outil de vérification
+ */
 function startOrientation() {
   const halfAngle = -(START_POSE.pitchDownDegrees * Math.PI) / 360;
   return { x: Math.sin(halfAngle), y: 0, z: 0, w: Math.cos(halfAngle) };
@@ -18,6 +25,9 @@ function startOrientation() {
  * Compare deux points à 1e-9 près.
  * @param {{x: number, y: number, z: number}} actual
  * @param {{x: number, y: number, z: number}} expected
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/dev-xr-emulation.js) — outil de vérification
  */
 function assertPoint(actual, expected) {
   for (const axis of ['x', 'y', 'z']) {

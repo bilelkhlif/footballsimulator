@@ -1,5 +1,7 @@
 /**
  * Tests unitaires de src/events.js : le patron Observer utilisé par la session AR.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

@@ -5,6 +5,8 @@
  * ajoute son bouton, sans toucher à l'interface. Un clic demande le changement au tableau tactique ;
  * le panneau ne se met à jour qu'à l'événement formationchange (patron Observer). Il affiche donc
  * toujours la formation réellement en place, quelle que soit l'origine du changement.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { FORMATIONS } from './formations.js';
 
@@ -17,6 +19,9 @@ import { FORMATIONS } from './formations.js';
  * @param {Record<string, HTMLElement>} [options.chips] pastille de chaque équipe dans le bandeau
  *   supérieur, qui affiche sa formation
  * @returns {{buttons: HTMLButtonElement[]}}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Interface HTML — panneau des formations (observateur)
  */
 export function createFormationPanel({ root, board, teams, chips = {} }) {
   const buttons = [];
