@@ -437,9 +437,10 @@ Après chaque essai, le fichier a été restauré, et `npm test` est de nouveau 
 | Samsung Galaxy S10e | Mise à jour d'Android | Le téléphone ne propose aucune mise à jour |
 | iPhone, iOS 18 | Safari | Pas d'AR, comme prévu : Safari sur iPhone ne propose pas de session WebXR `immersive-ar` |
 | Samsung Galaxy S10e, Android 9 | Chrome 138, mode test WebGL (`?webgl`, partie 16) | Tout fonctionne, AR comprise, selon Bilel Khlif |
-| TECNO POVA 6 Pro | | Pas disponible le 14 novembre ; à tester |
 
-Conséquence : sans repli WebGL, le Galaxy S10e ne peut pas afficher l'application. C'était le seul téléphone disponible ce jour-là ; le mode test WebGL de la partie 16 a été ajouté pour pouvoir tester l'AR dessus.
+Conséquence : sans repli WebGL, le Galaxy S10e ne peut pas afficher l'application. C'était alors le seul téléphone disponible ; le mode test WebGL de la partie 16 a été ajouté pour pouvoir tester l'AR dessus.
+
+**TECNO POVA 6 Pro 5G**, plus tard le même jour : test physique réussi de l'AR rendue en WebGPU, selon Bilel Khlif.
 
 ---
 

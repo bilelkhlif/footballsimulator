@@ -463,7 +463,7 @@ Ce que les tests ne couvrent pas : le rendu visuel (contrôlé à l'œil sur les
 - En AR, la liaison WebXR/WebGPU est encore derrière un réglage de Chrome (`chrome://flags/#webxr-webgpu-binding`). Sans repli WebGL, l'AR demande ce réglage sur le téléphone (sprint 3).
 - Sans WebGPU, l'application affiche un message au lieu du terrain : sur iPhone, il faut iOS 26 (Safari 26) ; sur Android, Chrome bloque WebGPU avant Android 12 (Galaxy S10e sous Android 9, testé le 14 novembre 2026).
 - Pour tester malgré tout sur un tel téléphone, le mode test WebGL (`?webgl` dans l'adresse, `src/webgl-test-mode.js`) fait tourner la même scène en WebGL 2. Il est réservé aux tests : ce n'est pas un repli, l'application ne le choisit jamais d'elle-même. Voir [sprint-3.md](sprint-3.md#16-mode-test-webgl-webgl-réservé-aux-tests).
-- Le sprint 3 reste à tester sur téléphone.
+- L'AR rendue en WebGPU (sprint 3) a été testée avec succès sur un téléphone, le TECNO POVA 6 Pro 5G, le 14 novembre 2026 : voir [sprint-3.md](sprint-3.md#13-test-sur-téléphone).
 - Le ballon ne se déplace pas encore : ce sera au sprint 5, avec la sélection par raycasting (voir [sprint-4.md](sprint-4.md#7-deux-équipes-et-le-ballon)).
 - Safari sur iPhone ne prend pas en charge les sessions WebXR `immersive-ar` : sur iPhone, l'application reste en vue 3D (vérifié sur un iPhone 15).
 

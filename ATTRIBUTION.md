@@ -202,6 +202,8 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (mo
 
 18. **Sprint 4** : demande de réaliser le sprint 4 du cahier des charges, le 14 novembre 2026.
 
+19. **Test de l'AR rendue en WebGPU sur téléphone** : test physique réussi sur le TECNO POVA 6 Pro 5G, rapporté le 14 novembre 2026.
+
 **Déclaration détaillée par composant**
 
 *   **Composant ou Shader concerné :** code du sprint 1 : `index.html`, `manifest.json`, `sw.js`, `src/*.js` et `src/styles.css` (hors `src/vendor/`), tests (`tests/`, `package.json`) et fichiers de configuration du dépôt (`.editorconfig`, `.gitattributes`, `.gitignore`)
@@ -278,7 +280,7 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (mo
 
         * fonctionnement expliqué dans `docs/sprint-3.md` et dans la partie « La boucle de rendu » du README ;
 
-        * test sur téléphone à faire par l'équipe, avec le réglage `webxr-webgpu-binding` de Chrome : protocole dans `docs/sprint-3.md` (partie 13).
+        * test physique de l'AR rendue en WebGPU réussi sur le TECNO POVA 6 Pro 5G, rapporté par Bilel Khlif le 14 novembre 2026 ; protocole et résultats dans `docs/sprint-3.md` (partie 13).
 
 *   **Composant ou Shader concerné :** mode test WebGL, le 14 novembre 2026 : `src/webgl-test-mode.js` ; modifications de `src/main.js`, `src/scene.js`, `src/xr-session.js`, `src/xr-support.js`, `src/render-loop.js`, `src/dev-xr-emulation.js`, `src/styles.css` et `sw.js` ; tests (`tests/unit/`, `tests/run-tests.mjs`)
 
@@ -363,9 +365,9 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (mo
 | Sprint 1 | 11/11 | Cadrage, revue du guide, validation PR #1 |
 | Sprint 2 | 46/46 | Spécifications, essais multi-appareils, validation PR #3 |
 | Correctif réseau | 47/47 | Signalement du défaut en conditions réelles |
-| Sprint 3 | 93/93 | Transmission des exigences, essais de compatibilité GPU |
+| Sprint 3 | 93/93 | Transmission des exigences, essais de compatibilité GPU, AR WebGPU réussie sur TECNO POVA 6 Pro 5G |
 | Mode test WebGL | 110/110 | Arbitrage production/test et validation AR sur Galaxy S10e |
 | Sprint 4 | 138/138 | Lancement du sprint à partir du cahier des charges collectif |
 | Documentation des fonctions | 141/141 | Contenu des en-têtes et contraintes définis |
 
-**État de validation matérielle au 14 novembre 2026 :** rendu 3D WebGPU vérifié sur le PC ASUS TUF A15 ; parcours AR WebGPU vérifié en émulation ; AR sur Galaxy S10e vérifiée uniquement dans le mode de test WebGL. Aucune validation AR WebGPU native sur téléphone ni validation physique du sprint 4 n’est consignée à cette date. Les résultats automatisés ci-dessus proviennent du journal de développement.
+**État de validation matérielle au 14 novembre 2026 :** rendu 3D WebGPU vérifié sur le PC ASUS TUF A15 ; parcours AR WebGPU vérifié en émulation ; AR rendue en WebGPU vérifiée sur un téléphone, le TECNO POVA 6 Pro 5G (essai physique réussi) ; AR sur Galaxy S10e vérifiée uniquement dans le mode de test WebGL. Aucune validation physique du sprint 4 n’est consignée à cette date. Les résultats automatisés ci-dessus proviennent du journal de développement.

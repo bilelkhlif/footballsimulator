@@ -21,7 +21,7 @@
   - formation de chaque équipe choisie par des boutons (4-4-2, 4-3-3, 3-5-2, 4-2-3-1), les joueurs rejoignant leurs places ;
   - rendu **WebGPU sans repli WebGL** ;
   - application installable, utilisable hors-ligne.
-- **Testé.** 138 tests automatisés sur PC. Sur téléphone : AR testée le 12 novembre 2026 sur deux téléphones Android. Le 14 novembre, le Galaxy S10e sous Android 9 refuse WebGPU, et tout fonctionne en mode test WebGL ; le TECNO POVA 6 Pro reste à tester en WebGPU.
+- **Testé.** 141 tests automatisés sur PC. Sur téléphone : AR testée le 12 novembre 2026 sur deux téléphones Android. Le 14 novembre, l'AR rendue en WebGPU fonctionne sur le TECNO POVA 6 Pro 5G ; le Galaxy S10e sous Android 9 refuse WebGPU, et tout y fonctionne en mode test WebGL.
 
 ## Aperçu
 
@@ -64,7 +64,7 @@
 | --- | --- | --- |
 | S1 | Dépôt, structure PWA, scène three.js : terrain et joueurs visibles hors AR | Livré |
 | S2 | Session `immersive-ar`, espace de référence `local-floor` | Fait : AR testée sur deux téléphones Android, vue 3D sur iPhone et PC |
-| S3 | Hit testing, réticule, pose du terrain par un tap, ancre ; rendu WebGPU sans repli WebGL ; PWA complétée | Fait et testé sur PC ; test sur téléphone à faire |
+| S3 | Hit testing, réticule, pose du terrain par un tap, ancre ; rendu WebGPU sans repli WebGL ; PWA complétée | Fait et testé sur PC ; AR WebGPU testée sur le TECNO POVA 6 Pro 5G |
 | S4 | Changement de formation (Strategy), deux équipes, ballon, boutons HTML | Fait et testé sur PC, en 3D et en AR émulée |
 | S5 | Sélection et déplacement des joueurs (raycasting), flèches, annulation (Command) | À faire |
 | S6 | Service Worker finalisé, optimisation mobile, tests, vidéo ; bonus : animation | À faire |
