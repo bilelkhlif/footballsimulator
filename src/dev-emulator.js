@@ -3,10 +3,11 @@
  *
  * L'Immersive Web Emulator prévu au cahier est archivé depuis le 1er octobre 2026 ;
  * on utilise son moteur, IWER (Meta, licence MIT). IWER remplace navigator.xr par un
- * casque Meta Quest 3 simulé. Vérifié au sprint 1 :
- * - une session immersive-ar s'ouvre, avec local-floor et les ancres (suffisant au sprint 2) ;
- * - le hit test exige en plus le module d'environnement synthétique @iwer/sem (sprint 3) ;
- * - le DOM Overlay n'est pas émulé : l'interface HTML se teste dans la vue 3D.
+ * casque Meta Quest 3 simulé, en vue unique comme un téléphone. Vérifié aux sprints 1 à 3 :
+ * - une session immersive-ar s'ouvre, avec local-floor et les ancres ;
+ * - IWER n'émule ni la liaison WebXR/WebGPU (XRGPUBinding) ni le hit test sans son module
+ *   d'environnement synthétique : src/dev-xr-emulation.js les ajoute (sprint 3) ;
+ * - le DOM Overlay n'est pas émulé : l'interface HTML reste au-dessus grâce à styles.css.
  *
  * Activation : ajouter ?iwer à l'adresse, par exemple http://localhost:8080/?iwer
  * Le module n'est jamais chargé sans ce paramètre, ni quand l'AR native existe déjà.
@@ -21,23 +22,32 @@ const EMULATOR_QUERY_PARAMETER = 'iwer';
 
 /**
  * Installe l'émulateur IWER si l'adresse le demande et que l'AR native est absente.
- * Doit être appelé avant toute autre utilisation de navigator.xr.
+ * Doit être appelé avant toute autre utilisation de navigator.xr, et avant la création du moteur
+ * de rendu (voir src/dev-xr-emulation.js).
  * Chrome sur PC expose déjà un navigator.xr natif, mais sans AR : l'installation est
  * donc forcée, ce qui ne remplace jamais un navigateur capable d'AR (vérifié juste avant).
- * @returns {Promise<boolean>} vrai si l'émulateur a été installé
+ * @returns {Promise<{xrDevice: object, setCanvas: (canvas: HTMLCanvasElement) => void}|null>}
+ *   l'appareil émulé, et de quoi lui donner le canvas WebGPU de l'application ; null sans émulation
  */
 export async function installEmulatorIfRequested() {
   const requested = new URLSearchParams(window.location.search).has(EMULATOR_QUERY_PARAMETER);
   if (!requested || await isImmersiveArSupported()) {
-    return false;
+    return null;
   }
   try {
     const { XRDevice, metaQuest3 } = await import(IWER_MODULE_URL);
-    const xrDevice = new XRDevice(metaQuest3);
+    const { installXrEmulationExtras } = await import('./dev-xr-emulation.js');
+    // L'appareil émulé annonce la fonctionnalité webgpu : IWER accepte alors la session
+    // demandée par src/xr-session.js, et dev-xr-emulation.js fournit XRGPUBinding.
+    const xrDevice = new XRDevice({
+      ...metaQuest3,
+      supportedFeatures: [...metaQuest3.supportedFeatures, 'webgpu'],
+    });
     xrDevice.installRuntime({ forceInstall: true });
-    return true;
+    const { setCanvas } = installXrEmulationExtras({ xrDevice });
+    return { xrDevice, setCanvas };
   } catch (error) {
     console.warn('Émulateur IWER indisponible :', error);
-    return false;
+    return null;
   }
 }
