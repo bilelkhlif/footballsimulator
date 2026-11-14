@@ -4,6 +4,8 @@ Ce guide explique tout le code du sprint 1, fichier par fichier, pour que chaque
 
 Le sprint 2 (session AR) a son propre document, [sprint-2.md](sprint-2.md), qui explique ses cinq nouveaux modules ; ce guide signale ce que le sprint 2 a changé dans le code du sprint 1.
 
+Le sprint 3 a lui aussi son document, [sprint-3.md](sprint-3.md). Il explique le rendu **WebGPU sans repli WebGL** (`src/webgpu.js`), la pose du terrain sur une surface réelle (`src/ar-surface.js`, `src/reticle.js`), la boucle de rendu et l'émulation sur PC (`src/dev-xr-emulation.js`). Ce guide signale ce que le sprint 3 a changé dans le code des sprints 1 et 2 : le moteur de rendu, la copie de three.js (r187), un démarrage asynchrone et la PWA.
+
 **Sommaire**
 
 1. [Ce qui se passe au chargement](#1-ce-qui-se-passe-au-chargement)
@@ -24,16 +26,19 @@ Le navigateur charge `index.html`, qui déclare une carte d'import puis lance `s
 
 ```mermaid
 flowchart TD
-  A["index.html"] --> B["Carte d'import : three pointe vers src/vendor/three"]
-  B --> C["src/main.js : init()"]
-  C --> D["createSceneContext() : rendu, caméra, lumières, contrôles, pitchGroup"]
+  A["index.html"] --> B["Carte d'import : three pointe vers src/vendor/three-r187 (build WebGPU)"]
+  B --> C["src/main.js : start()"]
+  C --> P["setUpPwa() : Service Worker, bouton d'installation, avis de nouvelle version, badge hors-ligne"]
+  P --> EM["installEmulatorIfRequested() : IWER, seulement avec ?iwer (avant le moteur de rendu)"]
+  EM --> I0["init() : asynchrone"]
+  I0 --> D["createSceneContext() : moteur WebGPU (await), caméra, lumières, contrôles, pitchGroup"]
   D --> E["createPitch() : plateau, gazon, lignes, buts"]
   E --> F["createTeam() pour chaque équipe : formation (Strategy) et pions (Factory)"]
-  F --> G["createBall() : ballon au point central"]
+  F --> G["createBall() et createReticle()"]
   G --> H["setAnimationLoop() : la scène est redessinée à chaque image, l'écran de chargement s'efface"]
-  H --> H2["setUpArSession() : boutons et observateurs de la session AR (sprint 2)"]
-  H2 --> I["detectAugmentedReality() : badge d'état de l'AR, en arrière-plan"]
-  I --> J["registerServiceWorker() : mise en cache hors-ligne"]
+  H --> H2["setUpArSession() : boutons, toucher et observateurs de la session AR"]
+  H2 --> I["detectAugmentedReality() : badge d'état de l'AR"]
+  D -. "WebGPU absent" .-> X["showStartupError() : message à la place du terrain, sans repli WebGL"]
 ```
 
 Les modules dépendent les uns des autres ainsi (une flèche signifie « importe ») :
@@ -53,10 +58,16 @@ flowchart LR
   main --> session["xr-session.js (sprint 2)"]
   main --> arview["ar-view.js (sprint 2)"]
   main --> loop["render-loop.js (sprint 2)"]
+  main --> surface["ar-surface.js (sprint 3)"]
+  main --> reticle["reticle.js (sprint 3)"]
+  scene --> webgpu["webgpu.js (sprint 3)"]
   session --> events["events.js (sprint 2)"]
+  surface --> events
+  surface --> placement
   arview --> placement["ar-placement.js (sprint 2)"]
   team --> formations
   emu --> xr
+  emu -. "avec ?iwer" .-> extras["dev-xr-emulation.js (sprint 3)"]
   scene --> config
   pitch --> config
   players --> config
@@ -65,7 +76,7 @@ flowchart LR
   pwa -. enregistre .-> sw["sw.js"]
 ```
 
-Les modules qui créent des objets 3D (`scene`, `pitch`, `players`, `team`, `ball`) importent aussi three.js, non représenté ici.
+Les modules qui créent des objets 3D (`scene`, `pitch`, `players`, `team`, `ball`, `reticle`, `webgpu`) importent aussi three.js, non représenté ici.
 
 ---
 
@@ -77,7 +88,7 @@ Les modules qui créent des objets 3D (`scene`, `pitch`, `players`, `team`, `bal
 | --- | --- | --- |
 | Scène (`THREE.Scene`) | `scene.js` | Contient tout ce qui est affiché |
 | Caméra (`PerspectiveCamera`) | `scene.js` | Le point de vue ; en AR, c'est le téléphone qui la pilotera (sprint 2) |
-| Moteur de rendu (`WebGLRenderer`) | `scene.js` | Dessine la scène dans un canvas, à chaque image |
+| Moteur de rendu (`WebGpuOnlyRenderer` depuis le sprint 3, `WebGLRenderer` avant) | `webgpu.js`, `scene.js` | Dessine la scène dans un canvas, à chaque image, en WebGPU |
 | Maillage (`Mesh`) = géométrie + matériau | `pitch.js`, `players.js`, `ball.js` | Un objet visible : sa forme, et l'apparence de sa surface |
 | Groupe (`Group`) et graphe de scène | `pitchGroup` | Déplacer un parent déplace tous ses enfants |
 | Boucle de rendu (`setAnimationLoop`) | `main.js` | Redessine la scène à chaque image ; en WebXR, c'est la session qui la cadence |
@@ -122,6 +133,7 @@ WebXR est l'API du navigateur qui donne accès à la réalité augmentée. Le sp
 | --- | --- | --- |
 | Session `immersive-ar` | Le navigateur affiche l'image de la caméra et dessine la scène par-dessus | S2 |
 | Couche de rendu (`XRWebGLLayer`) | Relie le canvas WebGL à la session ; three.js la crée lui-même | S2 |
+| Liaison WebXR/WebGPU (`XRGPUBinding`) et couche de projection | Remplacent `XRWebGLLayer` : la session est rendue en WebGPU (fonctionnalité `webgpu`) | S3 |
 | Espace de référence `local-floor` | Un repère dont l'origine est au sol, là où se trouve l'utilisateur | S2 |
 | DOM Overlay | Afficher nos boutons HTML par-dessus la vue AR | S2 |
 | Hit test | Trouver la surface réelle (la table) sous un rayon partant de l'écran | S3 |
@@ -139,20 +151,22 @@ Une application web progressive repose sur deux fichiers : le **manifeste** (`ma
 
 ### [`index.html`](../index.html)
 
-La page déclare une **carte d'import** : elle permet d'écrire `import * as THREE from 'three'` dans nos modules, alors que three.js est copié dans `src/vendor/three/`.
+La page déclare une **carte d'import** : elle permet d'écrire `import * as THREE from 'three'` dans nos modules, alors que three.js est copié dans `src/vendor/three-r187/`. Depuis le sprint 3, `three` pointe vers le build WebGPU ; le build WebGL (`three.module.js`) n'est plus livré.
 
 ```html
 <script type="importmap">
   { "imports": {
-      "three": "./src/vendor/three/build/three.module.js",
-      "three/addons/": "./src/vendor/three/examples/jsm/" } }
+      "three": "./src/vendor/three-r187/build/three.webgpu.js",
+      "three/webgpu": "./src/vendor/three-r187/build/three.webgpu.js",
+      "three/tsl": "./src/vendor/three-r187/build/three.tsl.js",
+      "three/addons/": "./src/vendor/three-r187/examples/jsm/" } }
 </script>
 ```
 
 Le reste de la page :
 
 - la zone de rendu (`#scene-container`), où three.js insère son canvas ;
-- l'interface superposée (`#overlay`), racine du DOM Overlay en AR : le nom de l'application, le badge d'état de l'AR (`#xr-status`), les pastilles des formations et le bouton « Recentrer » (`#reset-view`) ; depuis le sprint 2, aussi « Entrer en AR », « Quitter l'AR » et un message d'échec (`#ar-message`) ;
+- l'interface superposée (`#overlay`), racine du DOM Overlay en AR : le nom de l'application, le badge d'état de l'AR (`#xr-status`), les pastilles des formations et le bouton « Recentrer » (`#reset-view`) ; depuis le sprint 2, aussi « Entrer en AR », « Quitter l'AR » et un message d'échec (`#ar-message`) ; depuis le sprint 3, le badge du rendu (`#gpu-status`), le badge hors-ligne, l'avis de nouvelle version et les boutons « Déplacer le terrain », « Installer l'application » et « Copier l'adresse du réglage » ;
 - l'écran de chargement (`#loader`) ;
 - un message pour les navigateurs sans JavaScript.
 
@@ -181,12 +195,12 @@ Toutes les constantes partagées, au même endroit :
 
 Crée tout ce qui entoure le terrain. Ses fonctions :
 
-- **`createRenderer`** : un `WebGLRenderer` avec anticrénelage et fond transparent (`alpha: true`). Le fond transparent servira en AR, où l'image de la caméra doit apparaître derrière la scène. La densité de pixels est plafonnée à 2 pour ménager les téléphones.
+- **`createRenderer`** : depuis le sprint 3, un moteur de rendu WebGPU sans repli WebGL, créé par `createWebGpuRenderer` (`src/webgpu.js`, expliqué dans [sprint-3.md](sprint-3.md#3-rendu-webgpu-sans-repli-webgl)), avec anticrénelage et fond transparent (`alpha: true`). La fonction est asynchrone : WebGPU demande l'adaptateur et le périphérique graphique avant le premier rendu. Le fond transparent sert en AR, où l'image de la caméra doit apparaître derrière la scène. La densité de pixels est plafonnée à 2 pour ménager les téléphones. Aux sprints 1 et 2, c'était un `WebGLRenderer`.
 - **`addLights`** : une seule lumière directionnelle (intensité 1,6), qui donne le relief, et une lumière d'ambiance hémisphérique (ciel blanc, sol vert sombre, intensité 2,2), très peu coûteuse. Aucune ombre portée : c'est le calcul le plus lourd sur mobile. Le cahier conseille « une seule lumière » (§6.3) : si la mesure de fluidité du sprint 6 le demande, la lumière hémisphérique pourra être retirée.
 - **`createTable`** : un disque sombre sous le terrain, nommé `table`. Il n'existe que hors AR : en AR, la vraie table le remplace.
 - **`createControls`** : `OrbitControls` pour tourner, zoomer et déplacer la vue. L'amortissement rend les gestes fluides, la distance est bornée entre 15 cm et 3 m, et l'angle vertical est limité à 82° pour ne jamais passer sous la table.
 - **`frameWholePitch`** : le **cadrage automatique**, détaillé ci-dessous.
-- **`createSceneContext`** : assemble le tout, crée la caméra (plan proche à 1 cm, plan lointain à 20 m, adaptés à une maquette de 60 cm) et le groupe `pitchGroup`, et gère le redimensionnement de la fenêtre. Depuis le sprint 2, il renvoie aussi `table` et `resize`, qui ne fait rien pendant une session AR, et `createRenderer` active WebXR (`renderer.xr.enabled = true`).
+- **`createSceneContext`** : assemble le tout, crée la caméra (plan proche à 1 cm, plan lointain à 20 m, adaptés à une maquette de 60 cm) et le groupe `pitchGroup`, et gère le redimensionnement de la fenêtre. Depuis le sprint 2, il renvoie aussi `table` et `resize`, qui ne fait rien pendant une session AR. WebXR est activé (`renderer.xr.enabled = true`) ; depuis le sprint 3, avant l'initialisation de WebGPU, pour obtenir un adaptateur compatible XR. Depuis le sprint 3 aussi, `createSceneContext` est asynchrone.
 
 **Le cadrage automatique.** Le terrain doit tenir à l'écran, en paysage comme en portrait. Plutôt qu'une formule approchée, la fonction mesure :
 
@@ -205,7 +219,7 @@ Construit le terrain. Les lignes ne viennent pas d'une image : elles sont **dess
 
 - **`drawPitchCanvas`** : crée un canvas de 1808 × 1216 pixels, soit 16 pixels par mètre réel. L'astuce : `ctx.scale(16, 16)` permet ensuite de dessiner directement en mètres réels, avec les mesures des lois du jeu de l'IFAB. On peint d'abord le gazon, puis une bande de tonte sur deux (14 bandes de 7,5 m), puis les lignes et les arcs de coin.
 - **`drawPenaltyEnd`** : surface de réparation (16,5 × 40,32 m), surface de but (5,5 × 18,32 m), point de penalty à 11 m et arc de cercle. L'arc ne doit apparaître qu'en dehors de la surface : son demi-angle vaut arccos((16,5 − 11) / 9,15) ≈ 53°.
-- **`createGrass`** : un `PlaneGeometry` couché à plat (rotation de −90° autour de X) qui reçoit la texture. Le filtrage anisotrope garde les lignes nettes quand on regarde le terrain en biais, et `SRGBColorSpace` respecte les couleurs du canvas.
+- **`createGrass`** : un `PlaneGeometry` couché à plat (rotation de −90° autour de X) qui reçoit la texture. Le filtrage anisotrope garde les lignes nettes quand on regarde le terrain en biais, et `SRGBColorSpace` respecte les couleurs du canvas. Depuis le sprint 3, le niveau maximal se lit avec `renderer.getMaxAnisotropy()`, car `renderer.capabilities` n'existe qu'en WebGL.
 - **`createBoard`** : une boîte de 8 mm d'épaisseur sous le gazon, abaissée de 0,3 mm. Sans ce décalage, le dessus de la boîte et le gazon seraient exactement au même niveau et clignoteraient (« z-fighting »).
 - **`createGoal`** : deux poteaux, une barre transversale et un filet translucide. Le filet est une boîte dont deux faces sont invisibles : la bouche du but et le sol. Les faces d'une `BoxGeometry` sont rangées dans l'ordre +x, −x, +y, −y, +z, −z, d'où le tableau de six matériaux. La même fonction construit les deux buts ; celui de droite est tourné de 180°. La largeur du but suit l'échelle (4,2 cm), sa hauteur est exagérée (2 cm) pour rester visible.
 
@@ -276,7 +290,7 @@ Trois points à savoir expliquer :
 
 - **Ressources partagées.** Une seule fabrique sert les deux équipes : les géométries sont créées une fois et partagées par les 22 joueurs, il n'existe qu'un matériau par équipe, et un matériau de numéro par équipe et par numéro (22 au total). Cela économise la mémoire et le travail de la carte graphique, une contrainte du cahier (§6.1).
 - **Les numéros** sont dessinés sur un petit canvas de 128 × 128 pixels (disque blanc, contour et chiffre à la couleur de l'équipe), puis affichés par un `Sprite`.
-- **La zone de sélection invisible reste touchable.** Son matériau a `visible: false` : elle n'est pas dessinée, mais le `Raycaster` de three.js la détecte quand même. Dans three.js r186, `Mesh.raycast` ne vérifie que l'existence du matériau, pas sa visibilité (`src/vendor/three/build/three.core.js`). Au sprint 5, il suffira de viser la liste des hitbox ; `hit.object.parent` sera le joueur, et son `userData` (équipe, numéro, poste) dira lequel a été touché.
+- **La zone de sélection invisible reste touchable.** Son matériau a `visible: false` : elle n'est pas dessinée, mais le `Raycaster` de three.js la détecte quand même. Dans three.js r186, et toujours dans la r187 du sprint 3, `Mesh.raycast` ne vérifie que l'existence du matériau, pas sa visibilité (`src/vendor/three-r187/build/three.core.js`, vérifié le 14 novembre 2026). Au sprint 5, il suffira de viser la liste des hitbox ; `hit.object.parent` sera le joueur, et son `userData` (équipe, numéro, poste) dira lequel a été touché.
 
 Les Rouges sont tournés de 180° (`rotation.y = Math.PI`) pour que leur flèche pointe vers le but des Bleus.
 
@@ -293,7 +307,7 @@ Une sphère blanche de 4,2 mm de rayon, posée sur le point central (`y = BALL_R
 ### [`src/xr-support.js`](../src/xr-support.js)
 
 - **`isImmersiveArSupported`** répond à la question « ce navigateur peut-il ouvrir une session AR ? » en trois vérifications : contexte sécurisé (HTTPS ou localhost), présence de `navigator.xr`, puis `navigator.xr.isSessionSupported('immersive-ar')`. Toute erreur vaut « non ».
-- **`showXrStatus`** met à jour le badge : vérification, AR disponible, AR émulée ou AR indisponible. Sans AR, l'application reste utilisable en vue 3D, comme proposé par l'état de l'art.
+- **`showXrStatus`** met à jour le badge : vérification, AR disponible, AR émulée ou AR indisponible. Depuis le sprint 3, aussi « AR : réglage WebGPU à activer », quand l'AR existe mais sans la liaison WebXR/WebGPU (`XRGPUBinding`). Sans AR, l'application reste utilisable en vue 3D, comme proposé par l'état de l'art.
 
 ### [`src/dev-emulator.js`](../src/dev-emulator.js)
 
@@ -303,16 +317,23 @@ Permet de tester l'AR sur PC, sans téléphone, avec **IWER** (Meta, licence MIT
 - Il importe IWER 2.7.0 depuis jsDelivr, en version épinglée, puis installe un casque Meta Quest 3 simulé.
 - L'option `forceInstall` est nécessaire : Chrome sur PC expose déjà un `navigator.xr`, mais sans AR, et IWER refuse sinon de le remplacer. Ce comportement a été découvert pendant les tests.
 - Limites vérifiées : la session `immersive-ar` s'ouvre avec `local-floor` et les ancres, mais le hit test demande en plus le module `@iwer/sem`, et le DOM Overlay n'est pas émulé.
+- Depuis le sprint 3, l'appareil émulé annonce la fonctionnalité `webgpu`, et `src/dev-xr-emulation.js` complète IWER : liaison WebXR/WebGPU, table virtuelle pour le hit test, clic changé en toucher, une seule vue. L'émulateur s'installe avant le moteur de rendu, qui vérifie la présence de `XRGPUBinding` à sa création. Voir [sprint-3.md](sprint-3.md#11-émulation-sur-pc).
 
 ### [`src/pwa.js`](../src/pwa.js) et [`sw.js`](../sw.js)
 
 `registerServiceWorker` enregistre `sw.js`, seulement en contexte sécurisé. Le fichier `sw.js` est à la racine du dépôt parce que **l'emplacement d'un Service Worker fixe sa portée** : à la racine, il contrôle toutes les pages de l'application.
 
+Depuis le sprint 3, `pwa.js` gère aussi :
+
+- `setUpInstallButton` : bouton « Installer l'application », branché sur l'invite du navigateur (`beforeinstallprompt`), qui ne sert qu'une fois ; masqué si l'application est déjà installée ;
+- `watchForUpdates` : avis « Nouvelle version installée » quand un nouveau Service Worker prend le contrôle (`controllerchange`), mais pas à la première visite ;
+- `watchNetworkStatus` : badge « Hors-ligne », selon les événements `online` et `offline`.
+
 Le Service Worker réagit à trois événements :
 
 | Événement | Ce qu'il fait |
 | --- | --- |
-| `install` | Télécharge et met en cache les 28 fichiers de `APP_SHELL` (23 au sprint 1, et les 5 modules du sprint 2), puis s'active aussitôt (`skipWaiting`) |
+| `install` | Télécharge et met en cache les 32 fichiers de `APP_SHELL` (23 au sprint 1, 5 modules au sprint 2 ; au sprint 3, three.js r187 en 4 fichiers à la place des 3 de la r186, et 3 nouveaux modules), puis s'active aussitôt (`skipWaiting`) |
 | `activate` | Supprime les caches des versions précédentes et prend le contrôle des pages ouvertes (`clients.claim`) |
 | `fetch` | Répond aux requêtes GET vers l'application selon deux stratégies ; les autres requêtes (le CDN d'IWER, par exemple) passent sans cache |
 
@@ -334,11 +355,11 @@ Pourquoi deux stratégies : three.js et les icônes ne changent pas d'une versio
 
 Pourquoi un délai de 3 secondes (ajouté le 12 novembre 2026, voir [sprint-2.md](sprint-2.md#12-test-sur-android)) : une connexion coupée échoue vite, mais une connexion très lente peut faire attendre le navigateur plus d'une minute par fichier, et la page restait alors sur « Chargement du terrain… ». Désormais, si le cache possède le fichier, le réseau a 3 secondes (`NETWORK_TIMEOUT_MS`) ; au-delà, le cache répond, et il répond directement pendant les 15 secondes suivantes (`SLOW_NETWORK_WINDOW_MS`), pour que toute la page vienne de la même version sans nouvelle attente. Le téléchargement continue en arrière-plan (`event.waitUntil`) et met le cache à jour pour le lancement suivant. Les fonctions : `fetchAndCache` télécharge et met en cache, `findInCache` cherche la copie, `withTimeout` limite l'attente, `networkFirst` choisit la réponse.
 
-Deux règles à respecter : **tout nouveau fichier de l'application doit être ajouté à `APP_SHELL`**, et il faut incrémenter `CACHE_VERSION` quand une bibliothèque ou une icône change.
+Deux règles à respecter : **tout nouveau fichier de l'application doit être ajouté à `APP_SHELL`**, et il faut incrémenter `CACHE_VERSION` quand une bibliothèque ou une icône change. Au sprint 3, `CACHE_VERSION` est passé à 2 avec three.js r187, et la version de three.js est dans le nom de son dossier : un ancien cache ne peut pas servir un fichier de la r186 à côté d'un fichier de la r187.
 
 ### [`manifest.json`](../manifest.json)
 
-Rend l'application installable : nom (« Football Simulator », et « Football Sim » sous l'icône, où la place est limitée), page de départ et portée relatives (`./`, pour fonctionner sous le sous-chemin de GitHub Pages), affichage sans barre d'adresse comme une application installée (`display: standalone`) et icônes. L'icône « maskable » garde son motif dans la zone sûre (un cercle de 80 % de la largeur), parce qu'Android la découpe en cercle ou en carré arrondi.
+Rend l'application installable : nom (« Football Simulator », et « Football Sim » sous l'icône, où la place est limitée), page de départ et portée relatives (`./`, pour fonctionner sous le sous-chemin de GitHub Pages), affichage sans barre d'adresse comme une application installée (`display: standalone`) et icônes. L'icône « maskable » garde son motif dans la zone sûre (un cercle de 80 % de la largeur), parce qu'Android la découpe en cercle ou en carré arrondi. Depuis le sprint 3 : un identifiant stable (`id`) et deux captures (`assets/screenshots/`, formats `wide` et `narrow`), que Chrome montre dans sa fenêtre d'installation.
 
 ### [`src/styles.css`](../src/styles.css)
 
@@ -348,28 +369,29 @@ Rend l'application installable : nom (« Football Simulator », et « Football S
 - Les boutons font au moins 48 px de haut, pour un usage d'une seule main (cahier §2.3).
 - `prefers-reduced-motion` supprime le fondu de l'écran de chargement pour les utilisateurs qui le demandent.
 - Depuis le sprint 2, les boutons sont regroupés dans `.actions`, alignés à droite, et pendant une session AR (`body[data-xr="active"]`) l'interface passe au-dessus du conteneur plein écran de l'émulateur IWER.
+- Depuis le sprint 3 : la règle `[hidden] { display: none !important; }`, sans laquelle les badges en `display: flex` resteraient visibles malgré l'attribut `hidden` ; les états du badge du rendu ; l'avis de nouvelle version ; et, en AR, le masquage des boutons d'installation et de copie.
 
 ### [`src/main.js`](../src/main.js)
 
-Le chef d'orchestre : il appelle les modules dans l'ordre du schéma de la partie 1. Quatre détails :
+Le chef d'orchestre : il appelle les modules dans l'ordre du schéma de la partie 1. Depuis le sprint 3, le démarrage est asynchrone (`start()`, puis `await init()`), car WebGPU s'initialise avant le premier rendu. Quatre détails :
 
 - `currentFormation` retient la formation de chaque équipe ; c'est l'un des noms donnés en exemple par le cahier (§7.1), comme `pitchGroup`. Les boutons pour en changer arrivent au sprint 4.
 - Le nom de chaque formation s'affiche dans les pastilles du bandeau supérieur.
 - `renderer.setAnimationLoop` remplace `requestAnimationFrame` : en session WebXR, c'est le casque ou le téléphone qui cadence les images, et seule cette méthode le permet. Quand la scène est prête, la classe `is-ready` est ajoutée à la page et l'écran de chargement s'efface.
-- Si WebGL est indisponible, `init()` lève une erreur : `showStartupError` remplace alors l'écran de chargement par un message clair au lieu d'une page vide.
+- Si WebGPU est indisponible, `init()` lève une `WebGpuUnavailableError` : `showStartupError` remplace alors l'écran de chargement par un message qui dépend de la cause (pas de WebGPU, aucun processeur graphique utilisable), au lieu d'une page vide. Il n'y a pas de repli WebGL. Aux sprints 1 et 2, le message portait sur WebGL.
 
-Depuis le sprint 2, la boucle de rendu elle-même est dans `render-loop.js`, et `setUpArSession()` branche les boutons de l'AR et les observateurs de la session : voir [sprint-2.md](sprint-2.md).
+Depuis le sprint 2, la boucle de rendu elle-même est dans `render-loop.js`, et `setUpArSession()` branche les boutons de l'AR et les observateurs de la session : voir [sprint-2.md](sprint-2.md). Depuis le sprint 3, `setUpArSession()` crée aussi la pose du terrain (`SurfacePlacement`) à chaque session, écoute le toucher (`select`) et ses états (`statechange`), et `setUpPwa()` branche la PWA : voir [sprint-3.md](sprint-3.md).
 
-### [`src/vendor/three/`](../src/vendor/three/)
+### [`src/vendor/three-r187/`](../src/vendor/three-r187/)
 
-Une copie de three.js r186 (version 0.186.1), sous licence MIT. Son `README.md` explique comment la mettre à jour ou y ajouter un module.
+Une copie de three.js r187 (version 0.187.0), sous licence MIT : le build WebGPU (`three.webgpu.js`, `three.core.js`, `three.tsl.js`) et `OrbitControls.js`. Son `README.md` explique comment la mettre à jour, et donne les empreintes des fichiers, identiques au paquet npm. Aux sprints 1 et 2, c'était la r186, dans `src/vendor/three/`.
 
 ### Fichiers du dépôt
 
 - **`.editorconfig`** : règles communes à tous les éditeurs : UTF-8, fins de ligne LF, indentation de 2 espaces, ligne vide finale.
 - **`.gitattributes`** : force les fins de ligne LF dans le dépôt, même sous Windows, et ne convertit jamais les images ni les PDF.
 - **`.gitignore`** : exclut `node_modules/`, les fichiers système, ceux des éditeurs, les journaux et les fichiers intermédiaires de LaTeX.
-- **`package.json`** : déclare `"type": "module"` (les fichiers `.js` sont des modules, y compris pour Node.js dans les tests), les commandes `npm start`, `npm test`, `npm run test:unit` et `npm run test:e2e`, et une seule dépendance de développement, `playwright-core` 1.64.1, en version épinglée. L'application elle-même n'a aucune dépendance npm.
+- **`package.json`** : version 0.3.0 ; déclare `"type": "module"` (les fichiers `.js` sont des modules, y compris pour Node.js dans les tests), les commandes `npm start`, `npm test`, `npm run test:unit` et `npm run test:e2e`, et une seule dépendance de développement, `playwright-core` 1.64.1, en version épinglée. L'application elle-même n'a aucune dépendance npm. Depuis le sprint 3, `test:unit` charge `tests/unit/import-map.mjs`, qui applique à Node.js la carte d'import de `index.html`.
 - **`tests/`** : les tests de bout en bout, décrits dans la partie 6, et depuis le sprint 2 les tests unitaires (`tests/unit/`).
 
 ---
@@ -381,13 +403,14 @@ Une copie de three.js r186 (version 0.186.1), sous licence MIT. Son `README.md` 
 | Strategy | En place | `formations.js` | Une classe par formation ; ajouter une formation revient à ajouter une classe |
 | Factory | En place | `players.js` | Créer un pion selon l'équipe : couleur, numéro, orientation |
 | Command | Sprint 5 | futur `commands.js` | Chaque action (déplacer, tracer une flèche, changer de formation) sera un objet avec `execute()` et `undo()` ; l'historique de ces objets donnera l'annulation |
-| Observer | En place depuis le sprint 2 | `events.js`, `xr-session.js` | La session AR prévient l'interface de son début, de sa fin et de ses échecs ; le même mécanisme servira pour le terrain posé (sprint 3) et le joueur sélectionné (sprint 5) |
+| Observer | En place depuis le sprint 2 | `events.js`, `xr-session.js`, `ar-surface.js` | La session AR prévient l'interface de son début, de sa fin et de ses échecs ; depuis le sprint 3, la pose du terrain prévient de ses états (visée, surface, posé) ; le même mécanisme servira pour le joueur sélectionné (sprint 5) |
 
 ---
 
 ## 5. Choix techniques et leurs raisons
 
 - **three.js plutôt qu'A-Frame ou Babylon.js** : le projet doit prouver la maîtrise de la chaîne WebXR / three.js / PWA (cahier §1.1), et three.js laisse visibles dans notre code la session WebXR, le hit test et le raycasting. Le comparatif complet est dans l'état de l'art.
+- **WebGPU sans repli WebGL (sprint 3)**, à la demande de l'enseignant : moteur de rendu construit avec le seul backend WebGPU, message explicite sinon. En AR, la session est rendue en WebGPU par la liaison WebXR/WebGPU, encore derrière un réglage de Chrome. Le détail est dans [sprint-3.md](sprint-3.md).
 - **three.js copié dans le dépôt plutôt que chargé depuis un CDN** : une seule origine HTTPS, un fonctionnement hors-ligne garanti par le Service Worker, aucune dépendance à la disponibilité d'un CDN, et une version figée (le modèle d'attribution du module proscrit les versions « latest »).
 - **Aucune étape de compilation** : des modules JavaScript natifs et une carte d'import suffisent ; le dépôt se sert tel quel sur GitHub Pages.
 - **Lignes dessinées sur un canvas** plutôt qu'une image : mesures exactes et modifiables dans le code, aucun fichier image à charger, netteté réglable.
@@ -402,7 +425,7 @@ Une copie de three.js r186 (version 0.186.1), sous licence MIT. Son `README.md` 
 
 ## 6. Tests
 
-`npm test` lance d'abord les 28 tests unitaires du sprint 2 (`npm run test:unit`, sans navigateur), puis rejoue dans Chrome, sans interface, les vérifications de bout en bout (`npm run test:e2e`) : les 11 du sprint 1 et celle du réseau lent, décrites ici, et les 7 du parcours AR, décrites dans [sprint-2.md](sprint-2.md). Prérequis : Node.js 18 ou plus, Google Chrome, et un premier `npm install`. Pour utiliser Microsoft Edge à la place de Chrome : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`).
+`npm test` lance d'abord les 67 tests unitaires (`npm run test:unit`, sans navigateur), puis rejoue dans Chrome, sans interface, les 26 vérifications de bout en bout (`npm run test:e2e`). Celles des sprints 1 et 3 hors AR sont décrites ici ; le parcours AR est décrit dans [sprint-3.md](sprint-3.md#12-tests). Prérequis : Node.js 18 ou plus, Google Chrome, un processeur graphique compatible WebGPU, et un premier `npm install`. Pour utiliser Microsoft Edge à la place de Chrome : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`).
 
 | Test | Ce qu'il vérifie |
 | --- | --- |
@@ -411,21 +434,24 @@ Une copie de three.js r186 (version 0.186.1), sous licence MIT. Son `README.md` 
 | Badge d'état de l'AR | Le badge quitte l'état « vérification » et affiche un résultat |
 | Service Worker et hors-ligne | Le Service Worker s'active, puis la page se recharge réseau coupé |
 | Réseau très lent (ajouté le 12 novembre 2026) | L'application étant en cache, la page est prête en 10 secondes au plus quand le serveur met 30 secondes à répondre (3,7 secondes mesurées) |
-| Émulateur IWER | Avec `?iwer`, une session `immersive-ar` s'ouvre avec `local-floor` ; ignoré si le réseau manque |
+| Rendu WebGPU (sprint 3) | three.js r187 rend en WebGPU, sans fonction de repli, et seuls des contextes `2d` et `webgpu` sont créés : aucun contexte WebGL |
+| Sans WebGPU (sprint 3) | `navigator.gpu` retiré : message explicite, badge « WebGPU indisponible », aucun contexte WebGL |
+| Manifeste (sprint 3) | Champs exigés pour l'installation, icônes 192 et 512 px, icône « maskable », captures `wide` et `narrow` accessibles |
+| Émulateur IWER | Avec `?iwer`, une session `immersive-ar` s'ouvre avec `local-floor`, `webgpu`, `hit-test` et `anchors` ; ignoré si le réseau manque |
 
 Le test des formations reprend le critère d'acceptation du cahier « 11 joueurs bien placés » (§4.3). Le 9 novembre 2026, les 11 vérifications ont réussi. Pour s'assurer que ce test détecte vraiment une erreur, le même numéro a été donné volontairement à deux joueurs du 4-3-3 : le test a échoué avec le message « 4-3-3 : numéros 1,2,3,4,5,6,7,8,10,10,11 », puis le fichier a été restauré.
 
 **Comment ils fonctionnent.**
 
 - [`tests/serve.mjs`](../tests/serve.mjs) est un petit serveur statique en Node.js, sans dépendance. Il sert le dépôt avec les bons types MIME (les modules JavaScript exigent `text/javascript`), peut le servir sous un sous-chemin comme GitHub Pages, et refuse tout chemin qui sort du dépôt. `npm start` l'utilise aussi, sur `http://127.0.0.1:8080`.
-- [`tests/run-tests.mjs`](../tests/run-tests.mjs) pilote le Chrome installé sur la machine avec `playwright-core` (aucun navigateur n'est téléchargé), en rendu WebGL logiciel (SwiftShader) pour fonctionner même sans carte graphique. Chaque test ouvre l'application et relève les erreurs de console, de script et les réponses HTTP en échec.
+- [`tests/run-tests.mjs`](../tests/run-tests.mjs) pilote le Chrome installé sur la machine avec `playwright-core` (aucun navigateur n'est téléchargé). Aux sprints 1 et 2, il utilisait un rendu WebGL logiciel (SwiftShader), utilisable sans carte graphique. Depuis le sprint 3, il utilise le vrai processeur graphique, car SwiftShader ne fournit pas d'adaptateur WebGPU. Chaque test ouvre l'application et relève les erreurs de console, de script et les réponses HTTP en échec.
 - Le test des formations importe les vrais modules `formations.js` et `config.js` dans la page : il vérifie le code de l'application, pas une copie.
 - Le test hors-ligne recharge d'abord la page, pour qu'elle soit contrôlée par le Service Worker, puis coupe le réseau et la recharge encore.
 - Le test du réseau lent utilise un serveur à part, dont `setLatency` retarde chaque réponse de 30 secondes, puis il mesure le temps de rechargement. Avec l'ancien `sw.js`, sans délai d'attente, il échoue : la page n'est pas prête après 30 secondes.
 - `requestSession` exige une action de l'utilisateur : le test de l'émulateur ajoute un bouton à la page et clique dessus.
 - Le bilan s'affiche avec ✓, ✗ ou –, et la commande se termine en erreur si un test échoue.
 
-Ce que les tests ne couvrent pas : le rendu visuel (contrôlé à l'œil sur les captures), un vrai téléphone et la fluidité.
+Ce que les tests ne couvrent pas : le rendu visuel (contrôlé à l'œil sur les captures), un vrai téléphone (détection des surfaces par ARCore, image de la caméra) et la fluidité.
 
 ---
 
@@ -433,7 +459,10 @@ Ce que les tests ne couvrent pas : le rendu visuel (contrôlé à l'œil sur les
 
 - Depuis le sprint 2, la session AR est en place. Elle a été testée le 12 novembre 2026 sur deux téléphones Android avec Chrome, et la vue 3D sur un iPhone 15 et un PC : voir [sprint-2.md](sprint-2.md).
 - La fluidité de 30 images par seconde reste à mesurer sur un téléphone de milieu de gamme (sprint 6).
-- Le hit test ne peut pas encore être émulé sur PC : il faudra intégrer `@iwer/sem` ou tester sur téléphone (décision du sprint 3).
+- Le hit test est émulé sur PC par une table virtuelle (sprint 3) ; la détection de vraies surfaces par ARCore se vérifie sur téléphone.
+- En AR, la liaison WebXR/WebGPU est encore derrière un réglage de Chrome (`chrome://flags/#webxr-webgpu-binding`). Sans repli WebGL, l'AR demande ce réglage sur le téléphone (sprint 3).
+- Sans WebGPU, l'application affiche un message au lieu du terrain : sur iPhone, il faut iOS 26 (Safari 26).
+- Le sprint 3 reste à tester sur téléphone.
 - Les formations ne se changent pas encore depuis l'interface (sprint 4).
 - Safari sur iPhone ne prend pas en charge les sessions WebXR `immersive-ar` : sur iPhone, l'application reste en vue 3D (vérifié sur un iPhone 15).
 
@@ -476,20 +505,20 @@ En WebXR, c'est la session qui cadence les images, et c'est la méthode prévue 
 **Que se passe-t-il sans réseau ?**
 Après une première visite, le Service Worker sert l'application depuis son cache. Les tests le vérifient en coupant le réseau.
 
-**Et sans WebGL ?**
-La scène ne peut pas démarrer : un message clair remplace l'écran de chargement, au lieu d'une page vide.
+**Et sans WebGPU ?**
+La scène ne démarre pas : un message clair remplace l'écran de chargement, au lieu d'une page vide, et il n'y a volontairement aucun repli sur WebGL (sprint 3). Aux sprints 1 et 2, le même mécanisme s'appliquait à WebGL.
 
 **Pourquoi avoir copié three.js dans le dépôt ?**
 Pour une seule origine HTTPS, un fonctionnement hors-ligne garanti et une version figée, sans dépendre d'un CDN.
 
 **Comment testez-vous l'AR sans téléphone ?**
-Avec l'émulateur IWER, activé par `?iwer` : depuis le sprint 2, « Entrer en AR » y ouvre une vraie session, et les tests de bout en bout parcourent l'entrée, le placement du terrain et la sortie. IWER n'émule ni l'image de la caméra, ni le hit test sans module supplémentaire, ni le DOM Overlay : pour ces points, le téléphone reste nécessaire.
+Avec l'émulateur IWER, activé par `?iwer` : « Entrer en AR » y ouvre une vraie session, et les tests de bout en bout parcourent l'entrée, la pose du terrain et la sortie. Depuis le sprint 3, notre module `dev-xr-emulation.js` ajoute la liaison WebXR/WebGPU et une table virtuelle pour le hit test. IWER n'émule ni l'image de la caméra, ni le DOM Overlay : pour ces points, le téléphone reste nécessaire.
 
 **Pourquoi « Football Simulator », alors que le cahier exclut la simulation de match (§2.5) ?**
 C'est un simulateur de tactique : l'entraîneur place et déplace les joueurs lui-même. Il n'y a ni intelligence artificielle des joueurs, ni simulation de match.
 
 **Avez-vous utilisé l'IA ?**
-Oui, et tout est déclaré dans `ATTRIBUTION.md` : le code, la documentation et l'état de l'art des sprints 1 et 2 ont été produits avec Claude Code, à partir de notre cahier des charges et de nos consignes. Le code est vérifié par des tests que chacun peut rejouer (`npm test`) et expliqué dans ce guide et dans `sprint-2.md`.
+Oui, et tout est déclaré dans `ATTRIBUTION.md` : le code, la documentation et l'état de l'art des sprints 1 à 3 ont été produits avec Claude Code, à partir de notre cahier des charges, de nos consignes et des demandes de l'enseignant. Le code est vérifié par des tests que chacun peut rejouer (`npm test`) et expliqué dans ce guide, dans `sprint-2.md` et dans `sprint-3.md`.
 
 ---
 
@@ -498,3 +527,5 @@ Oui, et tout est déclaré dans `ATTRIBUTION.md` : le code, la documentation et 
 Le sprint 2 est fait. Il suit les pistes laissées à la fin du sprint 1, avec deux écarts : la session est ouverte par notre module `src/xr-session.js` plutôt que par `ARButton.js`, et elle ne demande pas encore `hit-test` ni `anchors`, qui arrivent avec leur code au sprint 3.
 
 Tout est expliqué dans [sprint-2.md](sprint-2.md), qui se termine par les points d'entrée du sprint 3.
+
+Le sprint 3 est fait lui aussi : terrain posé sur la table (hit test, réticule, toucher, ancre), rendu WebGPU sans repli WebGL, PWA complétée. Voir [sprint-3.md](sprint-3.md), qui se termine par les points d'entrée du sprint 4.

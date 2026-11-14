@@ -2,6 +2,8 @@
 
 Réalisé le 9 et le 10 novembre 2026 sur la branche `feature/sprint-2`, sous la conduite de Bilel Khlif. Le code est généré avec Claude, sur des consignes détaillées fournies par Bilel Khlif : voir [ATTRIBUTION.md](../ATTRIBUTION.md).
 
+> **Depuis le sprint 3** (14 novembre 2026), la session est rendue en WebGPU par la liaison WebXR/WebGPU (`XRGPUBinding`), et non plus par une `XRWebGLLayer`. three.js passe en r187, et le terrain est posé sur la table par hit test. Ce compte rendu décrit le sprint 2 tel qu'il a été livré ; les changements sont expliqués dans [sprint-3.md](sprint-3.md).
+
 **Sommaire**
 
 1. [Objectifs](#1-objectifs)
@@ -390,3 +392,5 @@ Avec des doublures de WebXR dans les tests unitaires, et avec l'émulateur IWER 
 - Ancrer le terrain (`hitTestResult.createAnchor()`), pour qu'il ne dérive pas (cahier §4.3 : stable pendant 1 minute).
 - Avec le DOM Overlay, un toucher sur un bouton déclenche aussi `select` : appeler `preventDefault()` sur l'événement `beforexrselect` des boutons.
 - IWER n'émule le hit test qu'avec `@iwer/sem` : décider entre l'intégrer et tester sur téléphone, après le premier essai sur Android.
+
+Réalisé au sprint 3, avec trois écarts. L'ancre est créée par `frame.createAnchor`, à la pose exacte du terrain, plutôt que par `hitTestResult.createAnchor`. Le hit test est émulé sur PC par une table virtuelle plutôt qu'avec `@iwer/sem`. Et la session est rendue en WebGPU, à la demande de l'enseignant. Voir [sprint-3.md](sprint-3.md).

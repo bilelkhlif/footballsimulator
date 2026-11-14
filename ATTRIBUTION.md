@@ -25,14 +25,20 @@ Aucun modèle 3D, aucune texture et aucune police n'est importé d'une source ex
     *   **Licence :** aucune licence choisie à ce jour
     *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
 
+*   **Asset :** Réticule de visée de l'AR (anneau doré pulsant)
+    *   **Source originale :** créé pour le projet au sprint 3, `src/reticle.js` (`RingGeometry` de three.js, matériau écrit en TSL)
+    *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : code généré par Claude (section 4) sur les demandes transmises par Bilel Khlif
+    *   **Licence :** aucune licence choisie à ce jour
+    *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
+
 *   **Asset :** Icônes de l'application (`assets/icons/icon.svg`, `icon-maskable.svg` et les PNG dérivés)
     *   **Source originale :** dessinées pour le projet en SVG, d'après l'illustration de couverture du cahier des charges ; PNG produits avec la bibliothèque sharp
     *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : dessin par Claude (section 4), dans le sprint piloté par Bilel Khlif
     *   **Licence :** aucune licence choisie à ce jour
     *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
 
-*   **Asset :** Bannière, captures et diapositives de `docs/images/`, figures de `docs/etat-de-l-art/figures/`
-    *   **Source originale :** captures de l'application elle-même ; diapositives exportées de la présentation d'état de l'art du projet
+*   **Asset :** Bannière, captures et diapositives de `docs/images/`, captures du manifeste (`assets/screenshots/`), figures de `docs/etat-de-l-art/figures/`
+    *   **Source originale :** captures de l'application elle-même, prises par script dans Chrome ; diapositives exportées de la présentation d'état de l'art du projet
     *   **Auteur / Créateur :** Bilel Khlif et Claude, co-auteurs : refonte du README et des présentations orientée par Bilel Khlif ; captures automatisées et mise en page par Claude (section 4)
     *   **Licence :** aucune licence choisie à ce jour
     *   **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
@@ -43,20 +49,20 @@ Aucun modèle 3D, aucune texture et aucune police n'est importé d'une source ex
 
 Rappel : L'usage des versions "latest" depuis les CDN est proscrit.
 
-*   **Bibliothèque :** three.js
-    *   **Version fixée :** r186 (npm `three@0.186.1`), copie locale dans `src/vendor/three/build/`
-    *   **Lien CDN de référence :** https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js
-    *   **Rôle dans le projet :** moteur de rendu 3D (WebGL) : scène, caméra, géométries, matériaux ; session WebXR à partir du sprint 2
+*   **Bibliothèque :** three.js, build WebGPU
+    *   **Version fixée :** r187 (npm `three@0.187.0`, publiée le 30 octobre 2026), copie locale dans `src/vendor/three-r187/build/` : `three.webgpu.js`, `three.core.js` et `three.tsl.js`, identiques au paquet npm (empreintes SHA-256 dans `src/vendor/three-r187/README.md`)
+    *   **Lien CDN de référence :** https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.webgpu.js
+    *   **Rôle dans le projet :** moteur de rendu 3D en WebGPU depuis le sprint 3 (sans repli WebGL), matériaux à nœuds et TSL, session WebXR rendue en WebGPU par `XRGPUBinding`. Aux sprints 1 et 2 : r186 (`three@0.186.1`), en WebGL, retirée du dépôt au sprint 3
 
 *   **Bibliothèque :** OrbitControls (module complémentaire de three.js)
-    *   **Version fixée :** r186 (npm `three@0.186.1`), copie locale dans `src/vendor/three/examples/jsm/controls/`
-    *   **Lien CDN de référence :** https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/controls/OrbitControls.js
+    *   **Version fixée :** r187 (npm `three@0.187.0`), copie locale dans `src/vendor/three-r187/examples/jsm/controls/`
+    *   **Lien CDN de référence :** https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/controls/OrbitControls.js
     *   **Rôle dans le projet :** rotation, zoom et déplacement de la vue 3D hors AR
 
 *   **Bibliothèque :** IWER, Immersive Web Emulation Runtime (Meta, licence MIT)
     *   **Version fixée :** 2.7.0 (la 2.8.0, publiée la veille du sprint 1, n'a pas été retenue)
     *   **Lien CDN de référence :** https://cdn.jsdelivr.net/npm/iwer@2.7.0/build/iwer.module.js
-    *   **Rôle dans le projet :** émulation WebXR sur PC, chargée seulement avec le paramètre d'adresse `?iwer`, en développement
+    *   **Rôle dans le projet :** émulation WebXR sur PC, chargée seulement avec le paramètre d'adresse `?iwer`, en développement ; complétée au sprint 3 par notre module `src/dev-xr-emulation.js` (liaison WebXR/WebGPU et hit test émulés)
 
 *   **Bibliothèque :** playwright-core (Microsoft, licence Apache 2.0)
     *   **Version fixée :** 1.64.1 (`package.json` et `package-lock.json`)
@@ -76,16 +82,23 @@ L'usage de code tiers sans citation est un motif d'annulation de la note techniq
     *   **Auteur :** Meta (licence MIT)
     *   **Adaptation effectuée :** les deux lignes du guide (`new XRDevice(metaQuest3)` puis `installRuntime()`) sont encadrées par un chargement conditionnel (paramètre `?iwer` et absence d'AR native), un import dynamique depuis jsDelivr en version épinglée, et l'option `forceInstall`, nécessaire car Chrome sur PC expose déjà un `navigator.xr` sans AR.
 
-*   **Fonction / Fichier :** `index.html`, carte d'import (lignes 20 à 27)
-    *   **Source du code original :** manuel de three.js, page « Installation », https://threejs.org/manual/#en/installation
+*   **Fonction / Fichier :** `index.html`, carte d'import
+    *   **Source du code original :** manuel de three.js, page « Installation », https://threejs.org/manual/#en/installation ; au sprint 3, les entrées `three/webgpu` et `three/tsl` des exemples WebGPU de three.js
     *   **Auteur :** contributeurs de three.js (licence MIT)
-    *   **Adaptation effectuée :** les adresses du CDN sont remplacées par la copie locale de `src/vendor/three/`.
+    *   **Adaptation effectuée :** les adresses du CDN sont remplacées par la copie locale (`src/vendor/three-r187/` depuis le sprint 3), et `three` pointe vers le build WebGPU.
+
+*   **Fonction / Fichier :** `src/webgpu.js`, constructeur de la classe `WebGpuOnlyRenderer` (sprint 3)
+    *   **Source du code original :** constructeur de `WebGPURenderer` de three.js r187 (`src/renderers/webgpu/WebGPURenderer.js` dans le dépôt de three.js ; même code dans `src/vendor/three-r187/build/three.webgpu.js`)
+    *   **Auteur :** contributeurs de three.js (licence MIT)
+    *   **Adaptation effectuée :** trois instructions reprises : création du backend `WebGPUBackend`, bibliothèque `StandardNodeLibrary` et drapeau `isWebGPURenderer`. La branche qui crée un backend WebGL de secours (`getFallback`) est retirée et remplacée par `getFallback: null`.
 
 En dehors de ces deux adaptations, aucun extrait de StackOverflow, de tutoriel ou de dépôt tiers n'a été copié dans le sprint 1. Les dimensions du terrain dans `src/pitch.js` reprennent les lois du jeu de l'IFAB (données, pas du code).
 
 Sprint 2 : aucun extrait copié. L'enchaînement de la session suit l'API de WebXR et celle de three.js r186 (`WebXRManager.setSession`), lue dans la copie locale de `src/vendor/three/` ; l'exemple `ARButton.js` de three.js n'a pas été utilisé.
 
-Les briques prévues pour les sprints suivants (exemple `webxr_ar_hittest` de three.js, échantillon `hit-test-anchors` du W3C Immersive Web, formations de boardx) seront consignées ici au moment de leur intégration.
+Sprint 3 : en dehors du constructeur de `WebGpuOnlyRenderer` ci-dessus, aucun extrait copié. Le hit test, le réticule et l'ancre (`src/ar-surface.js`, `src/reticle.js`) suivent les spécifications WebXR Hit Test et WebXR Anchors : source de hit test depuis l'espace `viewer`, matrice du réticule lue dans la pose du résultat. C'est le même enchaînement que dans l'exemple `webxr_ar_hittest` de three.js, mais sans reprise de son code ; l'échantillon `hit-test-anchors` n'a pas été utilisé. Le correctif de la cible de rendu XR (`matchXrTargetToViews`) et l'émulation (`src/dev-xr-emulation.js`) sont propres au projet, écrits après lecture du code de three.js r187 et d'IWER 2.7.0.
+
+Les formations de boardx, prévues pour le sprint 4, seront consignées ici au moment de leur intégration.
 
 ---
 
@@ -93,7 +106,7 @@ Les briques prévues pour les sprints suivants (exemple `webxr_ar_hittest` de th
 
 L'utilisation d'IA est un outil de complétion. Elle doit être documentée et maîtrisée.
 
-Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle Claude Opus 5.5, du 5 au 12 novembre 2026.
+Assistant utilisé : **Claude** (Anthropic), via Claude Code, modèle Claude Opus 5.5, du 5 au 14 novembre 2026.
 
 ### Répartition du travail
 
@@ -103,6 +116,8 @@ Les livrables du sprint 1 ont été coproduits par Bilel Khlif et Claude :
 *   **Claude** : génération du code, des tests et des documents, à partir du cahier des charges de l'équipe et des consignes de Bilel Khlif.
 
 Au sprint 2, le code a de même été généré par Claude, sur les consignes détaillées fournies par Bilel Khlif. Aucune ligne n'en a été écrite ou modifiée à la main par l'équipe : voir le détail par composant. Les tests sur appareils réels ont été faits par Bilel Khlif.
+
+Au sprint 3, le code a été généré par Claude, à partir des demandes de l'enseignant transmises par Bilel Khlif et du cahier des charges. Aucune ligne n'en a été écrite ou modifiée à la main par l'équipe. Le test sur téléphone reste à faire par l'équipe.
 
 Contributions de Bilel Khlif :
 
@@ -119,6 +134,7 @@ Contributions de Bilel Khlif :
 11. **Tests sur appareils réels** : application testée le 12 novembre 2026 sur le site publié, sur deux téléphones Android avec Chrome (Samsung Galaxy S récent et TECNO POVA 6 Pro 5G), un iPhone 15 avec Safari et un PC ASUS TUF A15 avec Chrome.
 12. **Mise en ligne** : pull request #3 du sprint 2 validée et fusionnée dans `main`, puis publication sur GitHub Pages, le 12 novembre 2026.
 13. **Signalement d'un défaut** : AR qui ne se lançait plus après des problèmes de réseau, signalé le 12 novembre 2026 avec la demande de la rétablir ; à l'origine du correctif du réseau lent (`sw.js`).
+14. **Sprint 3** : transmission des demandes de l'enseignant, le 14 novembre 2026 : rendu WebGPU sans repli sur WebGL, application installable (PWA), explication de la boucle de rendu dans le README, et un nouveau sprint.
 
 ### Détail par composant
 
@@ -149,12 +165,23 @@ Contributions de Bilel Khlif :
         *   `npm test` le 12 novembre 2026 : 28 tests unitaires réussis sur 28, puis 19 vérifications de bout en bout réussies sur 19 ;
         *   explication dans `docs/sprint-2.md` (partie 12) et dans `docs/guide-du-code.md` ; confirmation sur téléphone à faire une fois le correctif publié.
 
-*   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles du sprint 2), figures du rapport (`docs/etat-de-l-art/figures/`)
+*   **Composant ou Shader concerné :** code du sprint 3, le 14 novembre 2026 : `src/webgpu.js`, `src/ar-surface.js`, `src/reticle.js`, `src/dev-xr-emulation.js` ; modifications de `src/main.js`, `src/scene.js`, `src/pitch.js`, `src/xr-session.js`, `src/xr-support.js`, `src/ar-view.js`, `src/ar-placement.js`, `src/render-loop.js`, `src/pwa.js`, `src/dev-emulator.js`, `src/styles.css`, `index.html`, `manifest.json` et `sw.js` ; copie de three.js r187 ; tests (`tests/unit/`, `tests/run-tests.mjs`, `package.json`)
+    *   **Prompt ou usage principal :** demandes de l'enseignant transmises par Bilel Khlif (WebGPU sans repli WebGL, PWA, boucle expliquée dans le README, nouveau sprint) et sprint 3 du cahier des charges (§5.3 : hit testing, réticule, pose par un tap ; §4.3 : terrain stable). Les commits de la branche `feature/sprint-3` sont tous issus de ces sessions.
+    *   **Axe de vérification appliqué :**
+        *   faisabilité vérifiée aux sources avant le code. Dans three.js r187, le chemin WebGPU de `XRManager` (`XRGPUBinding`, fonctionnalité `webgpu`) a été lu dans la copie locale. Chez Chrome, la fiche Chrome Platform Status de la liaison WebXR/WebGPU a été consultée (mise à jour du 26 octobre 2026, aucune version de livraison). Dans le code de Chromium : le réglage `webxr-webgpu-binding`, proposé sous Windows et Android, et sa prise en charge par le périphérique ARCore depuis octobre 2024 ;
+        *   `npm test` le 14 novembre 2026 : 67 tests unitaires réussis sur 67, puis 26 vérifications de bout en bout réussies sur 26. Elles comprennent un rendu WebGPU sans aucun contexte WebGL, un message sans repli quand WebGPU est retiré, et le parcours AR émulé complet : session WebGPU, réticule, pose et ancre du terrain, déplacement, sorties, messages d'échec, aucune erreur dans la console ;
+        *   trois erreurs introduites volontairement, puis retirées. Le retour au `WebGPURenderer` de three.js avec son repli WebGL fait échouer 1 test unitaire et 2 de bout en bout ; la suppression de l'alignement de la cible XR, 1 test unitaire et 1 de bout en bout ; l'absence d'ancre, 6 tests unitaires ;
+        *   un défaut de three.js r187 a été trouvé par ces tests : une cible de rendu XR à deux couches, qui provoque des erreurs WebGPU sur un appareil à une seule vue comme un téléphone. Il est contourné par l'API publique de three.js, et la copie de three.js reste identique au paquet npm ;
+        *   captures prises par script sur l'application réelle et contrôlées à l'œil ;
+        *   fonctionnement expliqué dans `docs/sprint-3.md` et dans la partie « La boucle de rendu » du README ;
+        *   test sur téléphone à faire par l'équipe, avec le réglage `webxr-webgpu-binding` de Chrome : protocole dans `docs/sprint-3.md` (partie 13).
+
+*   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles des sprints 2 et 3, et `assets/screenshots/`), figures du rapport (`docs/etat-de-l-art/figures/`)
     *   **Prompt ou usage principal :** dessin des icônes en SVG d'après la couverture du cahier des charges, captures automatisées de l'application, mise en page de la bannière dans le style de la présentation d'état de l'art
     *   **Axe de vérification appliqué :** contrôle visuel de chaque rendu ; les captures sont prises par script sur l'application réelle ; le motif de l'icône « maskable » tient dans la zone sûre d'Android (un cercle de 80 % de la largeur).
 
-*   **Composant ou Shader concerné :** documentation : `README.md`, `docs/architecture.md`, `docs/sprint-1.md`, `docs/sprint-2.md`, `docs/guide-du-code.md`, `docs/etat-de-l-art/README.md`, `src/vendor/three/README.md` et ce fichier
-    *   **Prompt ou usage principal :** rédaction en français à partir du code et du cahier des charges. Le README a été refait à la demande de Bilel Khlif, dans le style du rapport et de la présentation d'état de l'art, avec des captures et la synthèse de la veille ; ce fichier suit le modèle fourni par l'enseignant.
+*   **Composant ou Shader concerné :** documentation : `README.md`, `docs/architecture.md`, `docs/sprint-1.md`, `docs/sprint-2.md`, `docs/sprint-3.md`, `docs/guide-du-code.md`, `docs/etat-de-l-art/README.md`, `src/vendor/three-r187/README.md` et ce fichier
+    *   **Prompt ou usage principal :** rédaction en français à partir du code et du cahier des charges. Le README a été refait à la demande de Bilel Khlif, dans le style du rapport et de la présentation d'état de l'art, avec des captures et la synthèse de la veille. Au sprint 3, ses parties « Rendu WebGPU », « La boucle de rendu » et « Application installable » répondent aux demandes de l'enseignant transmises par Bilel Khlif. Ce fichier suit le modèle fourni par l'enseignant.
     *   **Axe de vérification appliqué :** dimensions, valeurs et résultats de tests repris du code source et des sorties de `npm test` ; renvois aux sections du cahier (§) contrôlés sur le cahier des charges ; ce fichier a été relu en entier par Bilel Khlif le 9 novembre 2026, avant l'ajout du sprint 2.
 
 *   **Composant ou Shader concerné :** état de l'art : rapport LaTeX (`docs/etat-de-l-art/`) et présentation PowerPoint
