@@ -1,5 +1,5 @@
 /**
- * Tests de bout en bout des sprints 1 à 3, et du mode test WebGL, exécutés dans Chrome sans interface.
+ * Tests de bout en bout des sprints 1 à 4, et du mode test WebGL, exécutés dans Chrome sans interface.
  * Ils rejouent les vérifications consignées dans docs/sprint-1.md, docs/sprint-2.md et
  * docs/sprint-3.md.
  *
@@ -287,6 +287,140 @@ async function testManifest(browser, url) {
 }
 
 /**
+ * Lit la formation en place d'une équipe et l'écart, en centimètres, entre ses joueurs et les
+ * places de cette formation (src/formation-transition.js). Page ouverte avec ?debug.
+ * @param {import('playwright-core').Page} page
+ * @param {string} teamId 'blue' ou 'red'
+ * @returns {Promise<{formation: string, worstCm: number, chip: string, pressed: string[], animating: boolean, roles: boolean}>}
+ */
+function readTeamPlacement(page, teamId) {
+  return page.evaluate(async (id) => {
+    const base = new URL('.', document.baseURI).href;
+    const { computeTeamTargets } = await import(`${base}src/formation-transition.js`);
+    const { TEAMS } = await import(`${base}src/config.js`);
+    const app = window.__footballSimulator;
+    const formation = app.board.getFormation(id);
+    const targets = computeTeamTargets(formation, TEAMS[id].attacksPositiveX);
+    const group = app.pitchGroup.getObjectByName(`team-${id}`);
+    let worst = 0;
+    let roles = true;
+    for (const player of group.children) {
+      const target = targets.get(player.userData.number);
+      worst = Math.max(worst, Math.hypot(player.position.x - target.x, player.position.z - target.z));
+      roles = roles && player.userData.role === target.role;
+    }
+    return {
+      formation: formation.name,
+      worstCm: Number((worst * 100).toFixed(2)),
+      chip: document.getElementById(`formation-${id}`).textContent,
+      pressed: [...document.querySelectorAll(`.formation-button[data-team="${id}"][aria-pressed="true"]`)].map((b) => b.textContent),
+      animating: app.animator.isAnimating,
+      roles,
+    };
+  }, teamId);
+}
+
+/**
+ * Attend la fin des déplacements de joueurs.
+ * @param {import('playwright-core').Page} page
+ */
+function waitForFormationsSettled(page) {
+  return page.waitForFunction(() => !window.__footballSimulator.animator.isAnimating, null, { timeout: 5000 });
+}
+
+/**
+ * Vérifie qu'une équipe est entièrement en place dans la formation attendue, interface comprise.
+ * @param {{formation: string, worstCm: number, chip: string, pressed: string[], roles: boolean}} state
+ * @param {string} expected nom de la formation
+ * @returns {boolean}
+ */
+function isInFormation(state, expected) {
+  return state.formation === expected && state.worstCm < 0.01 && state.roles && state.chip === expected
+    && state.pressed.length === 1 && state.pressed[0] === expected;
+}
+
+/**
+ * Changement de formation par les boutons (sprint 4, BF4) : scénario de démonstration du cahier
+ * (§4.1, étape 5), toutes les formations pour les deux équipes, et transition animée.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ */
+async function testFormationButtons(browser, url) {
+  const context = await browser.newContext(MOBILE);
+  try {
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    const choose = (teamId, name) => page.click(`.formation-button[data-team="${teamId}"][data-formation="${name}"]`);
+
+    // Le panneau s'ouvre et se ferme par le bouton « Formations ».
+    const closedAtStart = await page.evaluate(() => document.getElementById('formation-panel').hidden);
+    await page.click('#formations-toggle');
+    const opened = await page.evaluate(() => !document.getElementById('formation-panel').hidden
+      && document.getElementById('formations-toggle').getAttribute('aria-expanded') === 'true');
+    const buttonCount = await page.locator('.formation-button').count();
+    record('Formations : panneau ouvert par « Formations », 4 boutons par équipe', closedAtStart && opened && buttonCount === 8 ? 'ok' : 'échec',
+      `fermé au départ : ${closedAtStart}, ouvert : ${opened}, ${buttonCount} boutons`);
+
+    // Transition animée : à mi-parcours, les joueurs sont en route.
+    await choose('blue', '4-2-3-1');
+    await page.waitForTimeout(250);
+    const midway = await readTeamPlacement(page, 'blue');
+    await waitForFormationsSettled(page);
+    const settled = await readTeamPlacement(page, 'blue');
+    record('Formations : transition animée vers la nouvelle formation', midway.animating && midway.worstCm > 0.5 && isInFormation(settled, '4-2-3-1') ? 'ok' : 'échec',
+      `à 0,25 s : joueur le plus loin à ${midway.worstCm} cm de sa place ; à la fin : ${settled.worstCm} cm`);
+
+    // Toutes les formations, pour les deux équipes.
+    const failures = [];
+    for (const teamId of ['blue', 'red']) {
+      for (const name of ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1']) {
+        await choose(teamId, name);
+        await waitForFormationsSettled(page);
+        const state = await readTeamPlacement(page, teamId);
+        if (!isInFormation(state, name)) {
+          failures.push(`${teamId} ${name} : ${JSON.stringify(state)}`);
+        }
+      }
+    }
+    record('Formations : chaque formation s\'applique aux deux équipes (11 joueurs à leur place)', failures.length ? 'échec' : 'ok',
+      failures.length ? failures.join(' | ') : '8 changements, pastilles et boutons à jour');
+
+    // Scénario de démonstration : 4-3-3 pour les Bleus, 4-4-2 pour les Rouges.
+    await choose('blue', '4-3-3');
+    await choose('red', '4-4-2');
+    await waitForFormationsSettled(page);
+    const blue = await readTeamPlacement(page, 'blue');
+    const red = await readTeamPlacement(page, 'red');
+    record('Formations : scénario de démonstration (Bleus 4-3-3, Rouges 4-4-2)', isInFormation(blue, '4-3-3') && isInFormation(red, '4-4-2') && !errors.length ? 'ok' : 'échec',
+      `Bleus ${blue.chip}, Rouges ${red.chip}${errors.length ? `, erreurs : ${errors.join(' | ')}` : ''}`);
+  } catch (error) {
+    record('Formations : changement par les boutons', 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Avec la préférence « réduire les animations », les joueurs vont directement à leur place.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ */
+async function testReducedMotion(browser, url) {
+  const name = 'Formations : sans animation si l\'utilisateur réduit les animations';
+  const context = await browser.newContext({ ...DESKTOP, reducedMotion: 'reduce' });
+  try {
+    const { page } = await openApp(context, `${url}?debug`);
+    await page.click('#formations-toggle');
+    await page.click('.formation-button[data-team="red"][data-formation="3-5-2"]');
+    const state = await readTeamPlacement(page, 'red');
+    record(name, !state.animating && isInFormation(state, '3-5-2') ? 'ok' : 'échec', `écart juste après le clic : ${state.worstCm} cm`);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Vérifie le badge d'état de l'AR, le Service Worker et le rechargement hors-ligne.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
@@ -554,8 +688,9 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         await waitForPlacementState('surface');
         const state = await readPlacement();
         const onTable = near(state.reticle[1], table.height, 0.001) && near(state.reticle[2], table.centerZ, 0.05);
-        const ok = state.reticleVisible && onTable && !state.pitchVisible && state.hint.includes('Touchez');
-        return [ok, `réticule en (${state.reticle.join(' ; ')}), terrain masqué : ${!state.pitchVisible}`];
+        const toggleHidden = await page.evaluate(() => document.getElementById('formations-toggle').hidden);
+        const ok = state.reticleVisible && onTable && !state.pitchVisible && state.hint.includes('Touchez') && toggleHidden;
+        return [ok, `réticule en (${state.reticle.join(' ; ')}), terrain masqué : ${!state.pitchVisible}, bouton « Formations » caché : ${toggleHidden}`];
       }],
       ['toucher : terrain posé sur la table, puis ancré', async () => {
         const reticle = (await readPlacement()).reticle;
@@ -571,6 +706,23 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
       ['contrôles d\'orbite en pause', async () => {
         const counts = await countLoopCalls(1000);
         return [counts.updates === 0 && counts.renders > 0, `${counts.updates} mise(s) à jour des contrôles pour ${counts.renders} images`];
+      }],
+      ['formations sur le terrain posé : joueurs replacés, terrain toujours posé', async () => {
+        const toggleVisible = await page.evaluate(() => !document.getElementById('formations-toggle').hidden);
+        await page.click('#formations-toggle');
+        await page.click('.formation-button[data-team="blue"][data-formation="4-2-3-1"]');
+        await page.click('.formation-button[data-team="red"][data-formation="3-5-2"]');
+        await waitForFormationsSettled(page);
+        const blue = await readTeamPlacement(page, 'blue');
+        const red = await readTeamPlacement(page, 'red');
+        const stillPlaced = await page.evaluate(() => window.__footballSimulator.placement.state === 'placed');
+        // Retour au scénario de démonstration, panneau fermé, pour les étapes suivantes.
+        await page.click('.formation-button[data-team="blue"][data-formation="4-3-3"]');
+        await page.click('.formation-button[data-team="red"][data-formation="4-4-2"]');
+        await waitForFormationsSettled(page);
+        await page.click('#formations-toggle');
+        const ok = toggleVisible && stillPlaced && isInFormation(blue, '4-2-3-1') && isInFormation(red, '3-5-2');
+        return [ok, `bouton visible : ${toggleVisible}, Bleus ${blue.chip} (${blue.worstCm} cm), Rouges ${red.chip} (${red.worstCm} cm), terrain toujours posé : ${stillPlaced}`];
       }],
       ['« Déplacer le terrain », puis nouvelle pose face à l\'utilisateur', async () => {
         await page.click('#move-pitch');
@@ -685,6 +837,8 @@ async function main() {
     await testLoading(browser, root.url, 'bureau, 1280 × 800', DESKTOP);
     await testLoading(browser, root.url, 'mobile, 390 × 844', MOBILE);
     await testFormations(browser, root.url);
+    await testFormationButtons(browser, root.url);
+    await testReducedMotion(browser, root.url);
     await testWebGpuRendering(browser, root.url);
     await testWithoutWebGpu(browser, root.url);
     await testWebGlTestMode(browser, root.url);

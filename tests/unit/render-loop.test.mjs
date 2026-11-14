@@ -119,3 +119,22 @@ test('mode test WebGL : la cible XR de three.js n\'est jamais modifiée', () => 
   assert.equal(matchXrTargetToViews(webgl), false);
   assert.deepEqual(target.resizes, []);
 });
+
+test('les déplacements de joueurs avancent à chaque image, en 3D comme en AR, avant le rendu', () => {
+  for (const presenting of [false, true]) {
+    const log = [];
+    const renderer = {
+      backend: { isWebGPUBackend: true },
+      xr: { isPresenting: presenting, getCamera: () => ({ cameras: [{}] }) },
+      getOutputRenderTarget: () => null,
+      render: () => log.push('render'),
+    };
+    const animator = { update: () => log.push('animator.update') };
+    const loop = createRenderLoop({ renderer, scene: {}, camera: {}, controls: { update() {} }, animator, getArPlacement: () => null });
+
+    loop(0, {});
+    loop(16, {});
+
+    assert.deepEqual(log, ['animator.update', 'render', 'animator.update', 'render'], presenting ? 'en AR' : 'hors AR');
+  }
+});
