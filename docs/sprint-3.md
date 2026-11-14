@@ -436,6 +436,7 @@ Après chaque essai, le fichier a été restauré, et `npm test` est de nouveau 
 | Samsung Galaxy S10e, Android 9 | Chrome 138, avec le réglage `#enable-unsafe-webgpu` | Rendu dégradé : gazon, lignes et numéros absents, panneaux HTML remplacés par des rectangles blancs ou noirs. C'est la raison du blocage de Chrome |
 | Samsung Galaxy S10e | Mise à jour d'Android | Le téléphone ne propose aucune mise à jour |
 | iPhone, iOS 18 | Safari | Pas d'AR, comme prévu : Safari sur iPhone ne propose pas de session WebXR `immersive-ar` |
+| Samsung Galaxy S10e, Android 9 | Chrome 138, mode test WebGL (`?webgl`, partie 16) | Tout fonctionne, AR comprise, selon Bilel Khlif |
 | TECNO POVA 6 Pro | | Pas disponible le 14 novembre ; à tester |
 
 Conséquence : sans repli WebGL, le Galaxy S10e ne peut pas afficher l'application. C'était le seul téléphone disponible ce jour-là ; le mode test WebGL de la partie 16 a été ajouté pour pouvoir tester l'AR dessus.
@@ -517,11 +518,13 @@ Ajouté le 14 novembre 2026, après la fusion du sprint 3, à la demande de Bile
 
 **Tests.** `npm test` : 73 tests unitaires et 37 vérifications de bout en bout, tous réussis le 14 novembre 2026. La pose du terrain en mode test a été vérifiée à l'image : le terrain s'affiche, rendu par WebGL, avec le badge doré.
 
-**Sur le Galaxy S10e** : ouvrir `https://bilelkhlif.github.io/footballsimulator/?webgl` dans Chrome, une fois ce mode fusionné dans `main`, puis « Entrer en AR » ; ARCore doit être installé. Résultat à consigner ici.
+**Sur le Galaxy S10e** : ouvrir `https://bilelkhlif.github.io/footballsimulator/?webgl` dans Chrome, puis « Entrer en AR » ; ARCore doit être installé. **Résultat le 14 novembre 2026**, sur le site publié : Bilel Khlif rapporte que tout fonctionne, AR comprise.
 
 ---
 
 ## 17. Pour le sprint 4
+
+Réalisé : voir [sprint-4.md](sprint-4.md).
 
 - Boutons HTML pour changer la formation de chaque équipe (patron Strategy déjà en place) : un clic remplace les positions des 11 joueurs, avec une transition.
 - Le Observer de `SurfacePlacement` permet d'afficher ces boutons seulement une fois le terrain posé (état `placed`).
