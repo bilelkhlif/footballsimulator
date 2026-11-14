@@ -245,6 +245,85 @@ body[data-xr="active"] #copy-flag {
   color: var(--color-ink);
 }
 
+/* ---- Panneau des formations (sprint 4) : une ligne de boutons par équipe ---- */
+.formation-panel {
+  flex: 1 1 100%;
+  max-width: 36rem; /* sur grand écran, les boutons gardent une largeur raisonnable */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-border);
+  border-radius: var(--radius);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* Une ligne par équipe : le nom, puis un bouton par formation, qui se partagent la largeur. */
+.formation-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-columns: 5.4rem; /* même largeur pour les deux équipes : les boutons s'alignent */
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.formation-row--blue {
+  --team-color: var(--color-blue);
+}
+
+.formation-row--red {
+  --team-color: var(--color-red);
+}
+
+.formation-row__team {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.formation-row__team::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--team-color);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85);
+}
+
+/* Bouton de formation : grande cible tactile ; la formation en place prend la couleur de l'équipe. */
+.formation-button {
+  min-width: 0;
+  min-height: var(--tap-size);
+  padding: 0 6px;
+  white-space: nowrap;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-ink);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.formation-button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.formation-button[aria-pressed="true"] {
+  background: var(--team-color);
+  border-color: transparent;
+}
+
+.formation-button:focus-visible {
+  outline: 3px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
 /* ---- Groupe de boutons du bandeau inférieur, aligné à droite même sur deux lignes ---- */
 .actions {
   display: flex;
@@ -330,6 +409,27 @@ body.is-ready .loader {
   padding: 12px 16px;
   background: var(--color-panel);
   border-radius: var(--radius);
+}
+
+/* ---- Petits écrans (téléphone en portrait) : boutons de formation un peu plus compacts ---- */
+@media (max-width: 400px) {
+  .formation-panel {
+    padding: 8px;
+  }
+
+  .formation-row {
+    grid-template-columns: 4.6rem;
+  }
+
+  .formation-row__team {
+    gap: 6px;
+    font-size: 0.85rem;
+  }
+
+  .formation-button {
+    padding: 0 2px;
+    font-size: 0.85rem;
+  }
 }
 
 /* ---- Préférence système : pas d'animation ---- */

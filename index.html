@@ -52,9 +52,10 @@
       </ul>
     </header>
 
-    <!-- Bandeau inférieur : aide aux gestes, messages et actions.
+    <!-- Bandeau inférieur : aide aux gestes, messages, formations et actions.
          « Entrer en AR » n'apparaît que si l'AR est disponible ; pendant une session,
-         « Déplacer le terrain » et « Quitter l'AR » remplacent les autres boutons. -->
+         « Déplacer le terrain » et « Quitter l'AR » remplacent les autres boutons, et
+         « Formations » n'apparaît qu'une fois le terrain posé. -->
     <footer class="bottombar">
       <p id="hint" class="hint">Glissez pour tourner, pincez pour zoomer.</p>
       <p id="ar-message" class="notice" role="alert" hidden></p>
@@ -62,7 +63,11 @@
         Nouvelle version installée.
         <button id="reload-app" class="button button--small" type="button">Recharger</button>
       </p>
+      <!-- Panneau des formations (sprint 4) : une ligne de boutons par équipe, créée par
+           src/formation-panel.js à partir des formations enregistrées. -->
+      <div id="formation-panel" class="formation-panel" hidden></div>
       <div class="actions">
+        <button id="formations-toggle" class="button button--secondary" type="button" aria-expanded="false" aria-controls="formation-panel">Formations</button>
         <button id="copy-flag" class="button button--secondary" type="button" hidden>Copier l’adresse du réglage</button>
         <button id="install-app" class="button button--secondary" type="button" hidden>Installer l’application</button>
         <button id="reset-view" class="button" type="button">Recentrer</button>

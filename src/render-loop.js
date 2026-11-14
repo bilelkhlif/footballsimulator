@@ -8,9 +8,9 @@
  *   active (XRFrame) : three.js place la caméra selon la pose du téléphone, et la pose du
  *   terrain (hit test, réticule, ancre) est mise à jour. Les contrôles d'orbite ne doivent
  *   alors plus toucher à la caméra.
- * Dans les deux cas, l'image se termine par renderer.render : three.js encode les commandes
- * WebGPU et les soumet au processeur graphique, vers le canvas ou vers la couche de projection
- * de la session.
+ * Dans les deux cas, les déplacements de joueurs en cours (changement de formation, sprint 4)
+ * avancent, puis l'image se termine par renderer.render : three.js encode les commandes WebGPU et
+ * les soumet au processeur graphique, vers le canvas ou vers la couche de projection de la session.
  */
 
 /**
@@ -48,11 +48,12 @@ export function matchXrTargetToViews(renderer) {
  * @param {import('three').Scene} context.scene
  * @param {import('three').Camera} context.camera
  * @param {{update: () => void}} context.controls contrôles d'orbite
+ * @param {{update: () => void}} [context.animator] déplacements de joueurs (src/formation-transition.js)
  * @param {() => ({update: (frame: XRFrame) => void}|null)} context.getArPlacement renvoie la pose
  *   du terrain de la session en cours (src/ar-surface.js), ou null hors session
  * @returns {(time: number, frame?: XRFrame) => void}
  */
-export function createRenderLoop({ renderer, scene, camera, controls, getArPlacement }) {
+export function createRenderLoop({ renderer, scene, camera, controls, animator = null, getArPlacement }) {
   return (time, frame) => {
     if (renderer.xr.isPresenting) {
       matchXrTargetToViews(renderer);
@@ -64,6 +65,7 @@ export function createRenderLoop({ renderer, scene, camera, controls, getArPlace
     } else {
       controls.update();
     }
+    animator?.update();
     renderer.render(scene, camera);
   };
 }

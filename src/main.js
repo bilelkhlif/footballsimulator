@@ -5,14 +5,18 @@
  * Sprint 3 : rendu WebGPU sans repli WebGL ; terrain posé sur une surface réelle (hit test,
  * réticule, toucher, ancre) ; application installable, avec avis de nouvelle version.
  * Mode test WebGL : réservé aux tests, avec ?webgl dans l'adresse ; ce n'est pas un repli.
+ * Sprint 4 : choix de la formation de chaque équipe par des boutons ; les joueurs rejoignent leurs
+ * nouvelles places (patrons Strategy et Observer).
  */
 import { createSceneContext } from './scene.js';
 import { createPitch } from './pitch.js';
 import { PlayerFactory } from './players.js';
-import { createTeam } from './team.js';
+import { applyFormation, createTeam } from './team.js';
 import { createBall } from './ball.js';
-import { getFormation } from './formations.js';
 import { DEFAULT_FORMATIONS, TEAMS } from './config.js';
+import { TacticsBoard } from './tactics-board.js';
+import { FormationAnimator, TRANSITION_DURATION_MS } from './formation-transition.js';
+import { createFormationPanel } from './formation-panel.js';
 import { installEmulatorIfRequested } from './dev-emulator.js';
 import { isImmersiveArSupported, showXrStatus } from './xr-support.js';
 import { registerServiceWorker, setUpInstallButton, watchForUpdates, watchNetworkStatus } from './pwa.js';
@@ -95,17 +99,35 @@ async function init(renderMode) {
 
   pitchGroup.add(createPitch(renderer));
 
-  // Formation courante de chaque équipe ; les boutons pour la changer arrivent au sprint 4.
-  const currentFormation = {
-    blue: getFormation(DEFAULT_FORMATIONS.blue),
-    red: getFormation(DEFAULT_FORMATIONS.red),
-  };
+  // Tableau tactique : la formation en place de chaque équipe (sprint 4).
+  const board = new TacticsBoard(DEFAULT_FORMATIONS);
+  // Déplacement des joueurs lors d'un changement de formation ; direct si l'utilisateur demande
+  // moins d'animations.
+  const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  const animator = new FormationAnimator({ duration: reduceMotion ? 0 : TRANSITION_DURATION_MS });
+
   const playerFactory = new PlayerFactory();
+  const teamGroups = {};
   for (const team of Object.values(TEAMS)) {
-    pitchGroup.add(createTeam(team, currentFormation[team.id], playerFactory));
-    document.getElementById(`formation-${team.id}`).textContent = currentFormation[team.id].name;
+    teamGroups[team.id] = createTeam(team, board.getFormation(team.id), playerFactory);
+    pitchGroup.add(teamGroups[team.id]);
   }
   pitchGroup.add(createBall());
+
+  // Observateurs du tableau tactique (patron Observer) : la scène déplace les joueurs, et le
+  // panneau des formations marque la formation en place et l'écrit dans les pastilles.
+  board.on('formationchange', ({ teamId, formation }) => {
+    applyFormation(teamGroups[teamId], TEAMS[teamId], formation, animator);
+  });
+  createFormationPanel({
+    root: document.getElementById('formation-panel'),
+    board,
+    teams: Object.values(TEAMS),
+    chips: Object.fromEntries(Object.keys(TEAMS).map((id) => [id, document.getElementById(`formation-${id}`)])),
+  });
+  document.getElementById('formations-toggle').addEventListener('click', () => {
+    setFormationPanelOpen(document.getElementById('formation-panel').hidden);
+  });
 
   // Réticule du hit test : en dehors du terrain, car il se déplace avant la pose.
   const reticle = createReticle();
@@ -140,10 +162,20 @@ async function init(renderMode) {
     scene,
     camera,
     controls,
+    animator,
     getArPlacement: () => arState.placement,
   }));
   document.body.classList.add('is-ready');
-  return { sceneContext, arView, arState };
+  return { sceneContext, arView, arState, board, animator };
+}
+
+/**
+ * Ouvre ou ferme le panneau des formations, et tient à jour l'état du bouton « Formations ».
+ * @param {boolean} open
+ */
+function setFormationPanelOpen(open) {
+  document.getElementById('formation-panel').hidden = !open;
+  document.getElementById('formations-toggle').setAttribute('aria-expanded', String(open));
 }
 
 /**
@@ -172,6 +204,7 @@ function setUpArSession(sceneContext, arView, arState, renderMode) {
   const enterButton = document.getElementById('enter-ar');
   const exitButton = document.getElementById('exit-ar');
   const moveButton = document.getElementById('move-pitch');
+  const formationsToggle = document.getElementById('formations-toggle');
   const resetButton = document.getElementById('reset-view');
   const hint = document.getElementById('hint');
   const message = document.getElementById('ar-message');
@@ -195,6 +228,12 @@ function setUpArSession(sceneContext, arView, arState, renderMode) {
       document.body.dataset.placement = state;
       hint.textContent = PLACEMENT_HINTS[state];
       moveButton.hidden = state !== 'placed';
+      // Les formations se choisissent sur le terrain posé, pas pendant la visée.
+      const pitchShown = state === 'placed' || state === 'in-front';
+      formationsToggle.hidden = !pitchShown;
+      if (!pitchShown) {
+        setFormationPanelOpen(false);
+      }
     });
     arState.placement = placement;
     placement.start();
@@ -203,6 +242,8 @@ function setUpArSession(sceneContext, arView, arState, renderMode) {
     document.body.dataset.xr = 'active';
     enterButton.hidden = true;
     resetButton.hidden = true;
+    formationsToggle.hidden = true;
+    setFormationPanelOpen(false);
     exitButton.hidden = false;
     hint.textContent = AR_HINT;
   });
@@ -218,6 +259,7 @@ function setUpArSession(sceneContext, arView, arState, renderMode) {
     exitButton.hidden = true;
     moveButton.hidden = true;
     resetButton.hidden = false;
+    formationsToggle.hidden = false;
     enterButton.hidden = false;
     enterButton.disabled = false;
     hint.textContent = defaultHint;
@@ -359,7 +401,7 @@ async function start() {
     showStartupError(error, renderMode);
     return;
   }
-  const { sceneContext, arView, arState } = context;
+  const { sceneContext, arView, arState, board, animator } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
   const arSession = setUpArSession(sceneContext, arView, arState, renderMode);
   exposeForDebugging({
@@ -367,6 +409,8 @@ async function start() {
     renderMode,
     arView,
     arSession,
+    board,
+    animator,
     xrDevice: emulator?.xrDevice ?? null,
     get placement() {
       return arState.placement;
