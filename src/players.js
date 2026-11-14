@@ -4,6 +4,8 @@
  *
  * Géométries et matériaux sont partagés entre les 22 joueurs pour limiter la
  * mémoire et le coût de rendu sur mobile (cahier, §6.1).
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import * as THREE from 'three';
 import { PLAYER_SIZE } from './config.js';
@@ -16,6 +18,9 @@ const LABEL_TEXTURE_SIZE = 128;
  * @param {{cssColor: string}} team
  * @param {number} number numéro du maillot
  * @returns {THREE.CanvasTexture}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — joueurs (patron Factory)
  */
 function createLabelTexture(team, number) {
   const canvas = document.createElement('canvas');
@@ -48,6 +53,9 @@ function createLabelTexture(team, number) {
  * La géométrie pointe vers +X, l'axe « avant » du joueur.
  * @param {number} radius rayon du pion
  * @returns {THREE.BufferGeometry}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — joueurs (patron Factory)
  */
 function createDirectionMarkerGeometry(radius) {
   const shape = new THREE.Shape();
@@ -61,10 +69,18 @@ function createDirectionMarkerGeometry(radius) {
   return geometry;
 }
 
-/** Fabrique des pions joueurs. */
+/**
+ * Fabrique des pions joueurs.
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — joueurs (patron Factory)
+ */
 export class PlayerFactory {
   /**
    * Prépare les géométries partagées et les caches de matériaux.
+   * @responsable Bilel Khlif
+   * @date 2026-11-05
+   * @role Scène 3D — joueurs (patron Factory)
    */
   constructor() {
     const { radius, height, hitboxRadius } = PLAYER_SIZE;
@@ -91,6 +107,9 @@ export class PlayerFactory {
    * Renvoie le matériau du corps d'un joueur, partagé par toute l'équipe.
    * @param {{id: string, color: number}} team
    * @returns {THREE.MeshStandardMaterial}
+   * @responsable Bilel Khlif
+   * @date 2026-11-05
+   * @role Scène 3D — joueurs (patron Factory)
    */
   getBodyMaterial(team) {
     if (!this.bodyMaterials.has(team.id)) {
@@ -104,6 +123,9 @@ export class PlayerFactory {
    * @param {{id: string, cssColor: string}} team
    * @param {number} number
    * @returns {THREE.SpriteMaterial}
+   * @responsable Bilel Khlif
+   * @date 2026-11-05
+   * @role Scène 3D — joueurs (patron Factory)
    */
   getLabelMaterial(team, number) {
     const key = `${team.id}-${number}`;
@@ -118,6 +140,9 @@ export class PlayerFactory {
    * Son numéro est un sprite, toujours tourné vers la caméra, donc lisible sous tous les angles.
    * @param {{team: object, number: number, role: string}} options
    * @returns {THREE.Group} groupe du joueur ; `userData` décrit l'équipe, le numéro et le poste
+   * @responsable Bilel Khlif
+   * @date 2026-11-05
+   * @role Scène 3D — joueurs (patron Factory)
    */
   createPlayer({ team, number, role }) {
     const player = new THREE.Group();

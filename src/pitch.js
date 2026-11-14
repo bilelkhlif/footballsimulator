@@ -2,6 +2,8 @@
  * Modèle 3D du terrain : plateau, gazon texturé et buts.
  * Les lignes sont tracées sur un canvas 2D selon les mesures des lois du jeu
  * (IFAB), puis appliquées comme texture sur un PlaneGeometry (cahier, §3.2).
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import * as THREE from 'three';
 import {
@@ -39,6 +41,9 @@ const GOAL_SIZE = Object.freeze({
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} x abscisse en mètres
  * @param {number} y ordonnée en mètres
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — terrain (géométrie et texture Canvas)
  */
 function drawSpot(ctx, x, y) {
   ctx.beginPath();
@@ -50,6 +55,9 @@ function drawSpot(ctx, x, y) {
  * Trace les surfaces de réparation et de but, le point et l'arc de penalty d'un côté.
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} side -1 pour le but de gauche, +1 pour celui de droite
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — terrain (géométrie et texture Canvas)
  */
 function drawPenaltyEnd(ctx, side) {
   const { length, width } = REAL_PITCH;
@@ -78,6 +86,9 @@ function drawPenaltyEnd(ctx, side) {
  * Dessine le gazon rayé et toutes les lignes du terrain sur un canvas 2D.
  * Le dessin se fait en mètres réels grâce à un changement d'échelle du contexte.
  * @returns {HTMLCanvasElement}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — terrain (géométrie et texture Canvas)
  */
 function drawPitchCanvas() {
   const { length, width } = REAL_PITCH;
@@ -135,6 +146,9 @@ function drawPitchCanvas() {
  * Sa surface définit la hauteur y = 0 sur laquelle reposent joueurs et ballon.
  * @param {{getMaxAnisotropy: () => number}} renderer moteur de rendu WebGPU, pour le filtrage anisotrope
  * @returns {THREE.Mesh}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — terrain (géométrie et texture Canvas)
  */
 function createGrass(renderer) {
   const texture = new THREE.CanvasTexture(drawPitchCanvas());
@@ -153,6 +167,9 @@ function createGrass(renderer) {
 /**
  * Crée le plateau qui donne de l'épaisseur au terrain, comme un tableau posé sur la table.
  * @returns {THREE.Mesh}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — terrain (géométrie et texture Canvas)
  */
 function createBoard() {
   const board = new THREE.Mesh(
@@ -170,6 +187,9 @@ function createBoard() {
  * tourné et placé à l'extrémité du terrain.
  * @param {number} side -1 pour le but de gauche, +1 pour celui de droite
  * @returns {THREE.Group}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — terrain (géométrie et texture Canvas)
  */
 function createGoal(side) {
   const goal = new THREE.Group();
@@ -211,6 +231,9 @@ function createGoal(side) {
  * Crée le terrain complet, à ajouter au groupe racine `pitchGroup`.
  * @param {{getMaxAnisotropy: () => number}} renderer moteur de rendu WebGPU
  * @returns {THREE.Group}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — terrain (géométrie et texture Canvas)
  */
 export function createPitch(renderer) {
   const pitch = new THREE.Group();

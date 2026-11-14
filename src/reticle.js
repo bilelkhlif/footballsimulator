@@ -4,6 +4,8 @@
  * Son matériau est écrit en TSL (Three Shading Language) : three.js traduit ces nœuds en WGSL,
  * le langage de shaders de WebGPU. L'opacité de l'anneau suit une sinusoïde du temps, calculée
  * sur le processeur graphique : le réticule pulse sans aucun code JavaScript par image.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { DoubleSide, Mesh, MeshBasicNodeMaterial, RingGeometry } from 'three/webgpu';
 import { color, oscSine, time } from 'three/tsl';
@@ -21,6 +23,9 @@ const PULSE_FREQUENCY = 0.8;
  * Crée le réticule, masqué tant qu'aucune surface n'est visée.
  * Sa matrice est écrite directement depuis la pose du hit test (matrixAutoUpdate désactivé).
  * @returns {Mesh}
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Réalité augmentée — réticule (matériau TSL)
  */
 export function createReticle() {
   // L'anneau est couché dans le plan horizontal XZ : l'axe Y de la pose du hit test est la

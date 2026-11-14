@@ -7,6 +7,8 @@
  *
  * setFormation renvoie la formation précédente : au sprint 5, l'annulation (patron Command) n'aura
  * qu'à la rétablir.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { EventEmitter } from './events.js';
 import { getFormation } from './formations.js';
@@ -16,6 +18,9 @@ import { getFormation } from './formations.js';
  *
  * Événement :
  * - formationchange : { teamId, formation, previous } quand la formation d'une équipe change.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Logique métier — tableau tactique (sujet du patron Observer)
  */
 export class TacticsBoard extends EventEmitter {
   /** @type {Map<string, import('./formations.js').FormationStrategy>} */
@@ -24,6 +29,9 @@ export class TacticsBoard extends EventEmitter {
   /**
    * @param {Record<string, string>} initialFormations nom de la formation de départ de chaque
    *   équipe, par exemple { blue: '4-3-3', red: '4-4-2' }
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Logique métier — tableau tactique (sujet du patron Observer)
    */
   constructor(initialFormations) {
     super();
@@ -32,7 +40,12 @@ export class TacticsBoard extends EventEmitter {
     }
   }
 
-  /** Identifiants des équipes, dans l'ordre de départ. */
+  /**
+   * Identifiants des équipes, dans l'ordre de départ.
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Logique métier — tableau tactique (sujet du patron Observer)
+   */
   get teamIds() {
     return [...this.#formations.keys()];
   }
@@ -41,6 +54,9 @@ export class TacticsBoard extends EventEmitter {
    * Formation en place d'une équipe.
    * @param {string} teamId
    * @returns {import('./formations.js').FormationStrategy}
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Logique métier — tableau tactique (sujet du patron Observer)
    */
   getFormation(teamId) {
     const formation = this.#formations.get(teamId);
@@ -56,6 +72,9 @@ export class TacticsBoard extends EventEmitter {
    * @param {string} teamId
    * @param {string} name nom d'une formation de FORMATIONS, par exemple « 4-4-2 »
    * @returns {import('./formations.js').FormationStrategy} la formation précédente
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Logique métier — tableau tactique (sujet du patron Observer)
    */
   setFormation(teamId, name) {
     const previous = this.getFormation(teamId);

@@ -16,6 +16,8 @@
  * - surface : une surface est visée, un toucher y pose le terrain ;
  * - placed : terrain posé (anchored indique s'il est ancré) ;
  * - in-front : pas de hit test, terrain placé devant l'utilisateur.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { EventEmitter } from './events.js';
 import { computeSurfacePlacement, yawToQuaternion } from './ar-placement.js';
@@ -31,6 +33,9 @@ export const PLACEMENT_STATES = Object.freeze({
 /**
  * Supprime une ancre sans propager d'erreur (session déjà terminée, par exemple).
  * @param {XRAnchor|null} anchor
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Réalité augmentée — hit test, pose et ancrage du terrain
  */
 function deleteQuietly(anchor) {
   try {
@@ -43,6 +48,9 @@ function deleteQuietly(anchor) {
 /**
  * Pose du terrain pour une session AR. Une instance par session : main.js la crée à l'événement
  * sessionstart et l'arrête à sessionend.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Réalité augmentée — hit test, pose et ancrage du terrain
  */
 export class SurfacePlacement extends EventEmitter {
   #session;
@@ -63,6 +71,9 @@ export class SurfacePlacement extends EventEmitter {
    * @param {ReturnType<typeof import('./ar-view.js').createArView>} options.view vue AR de la scène
    * @param {(position: object, orientation: object) => XRRigidTransform} [options.createRigidTransform]
    *   fabrique de poses WebXR ; par défaut new XRRigidTransform, remplacée dans les tests
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
    */
   constructor({ session, referenceSpace, view, createRigidTransform = (position, orientation) => new XRRigidTransform(position, orientation) }) {
     super();
@@ -72,12 +83,22 @@ export class SurfacePlacement extends EventEmitter {
     this.#createRigidTransform = createRigidTransform;
   }
 
-  /** État courant : une valeur de PLACEMENT_STATES, ou null avant start(). */
+  /**
+   * État courant : une valeur de PLACEMENT_STATES, ou null avant start().
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
+   */
   get state() {
     return this.#state;
   }
 
-  /** Vrai quand le terrain posé suit une ancre WebXR. */
+  /**
+   * Vrai quand le terrain posé suit une ancre WebXR.
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
+   */
   get anchored() {
     return this.#anchor !== null;
   }
@@ -86,6 +107,9 @@ export class SurfacePlacement extends EventEmitter {
    * Démarre le hit test depuis le centre de l'écran. Sans hit test, passe en placement devant
    * l'utilisateur.
    * @returns {Promise<void>}
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
    */
   async start() {
     const features = this.#session.enabledFeatures;
@@ -113,6 +137,9 @@ export class SurfacePlacement extends EventEmitter {
    * Demande la pose du terrain au prochain rendu (toucher sur l'écran). Sans effet si aucune
    * surface n'est visée : le toucher ne pose rien dans le vide.
    * @returns {boolean} vrai si la demande est prise en compte
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
    */
   requestPlacement() {
     if (this.#state !== PLACEMENT_STATES.SURFACE) {
@@ -124,6 +151,9 @@ export class SurfacePlacement extends EventEmitter {
 
   /**
    * Retire le terrain pour le poser ailleurs : l'ancre est supprimée, le réticule revient.
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
    */
   startOver() {
     if (this.#state !== PLACEMENT_STATES.PLACED) {
@@ -137,6 +167,9 @@ export class SurfacePlacement extends EventEmitter {
   /**
    * Travail d'une image de la session, appelé par la boucle de rendu avec le XRFrame actif.
    * @param {XRFrame} frame
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
    */
   update(frame) {
     switch (this.#state) {
@@ -157,6 +190,9 @@ export class SurfacePlacement extends EventEmitter {
 
   /**
    * Arrête le hit test et supprime l'ancre, à la fin de la session.
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
    */
   stop() {
     this.#stopped = true;
@@ -172,6 +208,9 @@ export class SurfacePlacement extends EventEmitter {
   /**
    * Sans hit test : place le terrain devant l'utilisateur dès que sa pose est connue.
    * @param {XRFrame} frame
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
    */
   #placeInFrontOnce(frame) {
     if (!this.#view.needsPlacement) {
@@ -188,6 +227,9 @@ export class SurfacePlacement extends EventEmitter {
    * Avec hit test : déplace le réticule sur la surface visée, et pose le terrain si l'utilisateur
    * vient de toucher l'écran.
    * @param {XRFrame} frame
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
    */
   #aim(frame) {
     if (!this.#hitTestSource) {
@@ -218,6 +260,9 @@ export class SurfacePlacement extends EventEmitter {
    * c'est pourquoi le toucher ne pose pas le terrain tout de suite, mais à l'image suivante.
    * @param {XRFrame} frame
    * @param {{position: {x: number, y: number, z: number}, rotationY: number}} placement
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
    */
   #createAnchor(frame, placement) {
     if (typeof frame.createAnchor !== 'function') {
@@ -244,6 +289,9 @@ export class SurfacePlacement extends EventEmitter {
   /**
    * Terrain posé : suit la pose de son ancre, tant que le système la suit.
    * @param {XRFrame} frame
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
    */
   #followAnchor(frame) {
     const anchor = this.#anchor;
@@ -258,6 +306,9 @@ export class SurfacePlacement extends EventEmitter {
 
   /**
    * Supprime l'ancre en cours, et invalide celle qui serait encore en création.
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
    */
   #releaseAnchor() {
     this.#anchorGeneration += 1;
@@ -268,6 +319,9 @@ export class SurfacePlacement extends EventEmitter {
   /**
    * Change d'état et prévient les observateurs, seulement si l'état change.
    * @param {string} state une valeur de PLACEMENT_STATES
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
    */
   #setState(state) {
     if (state === this.#state) {
@@ -279,6 +333,9 @@ export class SurfacePlacement extends EventEmitter {
 
   /**
    * Prévient les observateurs de l'état courant.
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — hit test, pose et ancrage du terrain
    */
   #emitState() {
     this.emit('statechange', { state: this.#state, anchored: this.anchored });

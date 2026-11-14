@@ -8,6 +8,8 @@
  *
  * Ce module ne parle pas à WebXR : il reçoit des poses (position et orientation) et les applique
  * aux objets three.js. C'est src/ar-surface.js qui lit le hit test et les ancres.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { computePitchPlacement } from './ar-placement.js';
 
@@ -20,6 +22,9 @@ import { computePitchPlacement } from './ar-placement.js';
  * @param {{enabled: boolean}} context.controls contrôles d'orbite de la vue 3D
  * @param {import('three').Object3D} [context.reticle] réticule de visée (sprint 3)
  * @param {() => void} [context.onExit] appelé après la restauration, pour recadrer la vue 3D
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Réalité augmentée — scène pendant la session
  */
 export function createArView({ scene, table, pitchGroup, controls, reticle = null, onExit = () => {} }) {
   let isActive = false;

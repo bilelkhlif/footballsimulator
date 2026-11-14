@@ -5,6 +5,8 @@
  * la carte d'import de la page. Node.js ne la lit pas : ce crochet de résolution la relit et
  * renvoie les mêmes fichiers de src/vendor/three-r187/. Les tests chargent ainsi exactement le
  * code que charge le navigateur, sans copie de three.js dans node_modules.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { readFileSync } from 'node:fs';
 
@@ -14,6 +16,9 @@ const ROOT = new URL('../../', import.meta.url);
 /**
  * Lit la carte d'import de index.html.
  * @returns {Record<string, string>} spécificateur ou préfixe → chemin relatif à la racine
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires — résolution de la carte d'import sous Node.js
  */
 function readImportMap() {
   const html = readFileSync(new URL('index.html', ROOT), 'utf8');
@@ -31,6 +36,9 @@ const IMPORTS = readImportMap();
  * @param {string} specifier
  * @param {object} context
  * @param {Function} nextResolve
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires — résolution de la carte d'import sous Node.js
  */
 export function resolve(specifier, context, nextResolve) {
   if (Object.hasOwn(IMPORTS, specifier)) {

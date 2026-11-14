@@ -2,6 +2,8 @@
  * Tests unitaires de src/xr-session.js, sans casque ni téléphone : le navigateur (navigator.xr),
  * la session WebXR et le gestionnaire XR de three.js sont remplacés par des doublures qui
  * reproduisent leur comportement documenté. Depuis le sprint 3, la session est rendue en WebGPU.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,6 +15,9 @@ const GRANTED_FEATURES = ['local-floor', 'webgpu', 'hit-test', 'anchors', 'viewe
 /**
  * Doublure de XRSession : espace de référence, état de rendu, fonctionnalités et fin de session.
  * @param {{failReferenceSpace?: boolean}} [options]
+ * @responsable Bilel Khlif
+ * @date 2026-11-10
+ * @role Tests unitaires (src/xr-session.js) — doublure
  */
 function createFakeSession({ failReferenceSpace = false } = {}) {
   const endListeners = [];
@@ -39,6 +44,9 @@ function createFakeSession({ failReferenceSpace = false } = {}) {
  * Doublure du moteur de rendu : reproduit ce que fait renderer.xr dans three.js r187 avec WebGPU
  * (écoute de la fin de session, couche de projection, événements sessionstart et sessionend).
  * @param {{failSetSession?: boolean, webgl?: boolean}} [options] webgl : backend WebGL (mode test)
+ * @responsable Bilel Khlif
+ * @date 2026-11-10
+ * @role Tests unitaires (src/xr-session.js) — doublure
  */
 function createFakeRenderer({ failSetSession = false, webgl = false } = {}) {
   const listeners = new Map();
@@ -92,6 +100,9 @@ function createFakeRenderer({ failSetSession = false, webgl = false } = {}) {
  * Doublure de navigator.xr.
  * @param {object} session session renvoyée par requestSession
  * @param {{supported?: boolean, rejectWith?: Error}} [options]
+ * @responsable Bilel Khlif
+ * @date 2026-11-10
+ * @role Tests unitaires (src/xr-session.js) — doublure
  */
 function createFakeXr(session, { supported = true, rejectWith = null } = {}) {
   return {
@@ -110,6 +121,9 @@ function createFakeXr(session, { supported = true, rejectWith = null } = {}) {
 /**
  * Crée une session AR dont le navigateur expose XRGPUBinding, sauf indication contraire.
  * @param {object} options options d'ArSession
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/xr-session.js) — montage du test
  */
 function createArSession(options) {
   return new ArSession({ hasGpuBinding: () => true, ...options });
@@ -118,6 +132,9 @@ function createArSession(options) {
 /**
  * Enregistre les événements émis par une session AR, dans l'ordre.
  * @param {ArSession} arSession
+ * @responsable Bilel Khlif
+ * @date 2026-11-10
+ * @role Tests unitaires (src/xr-session.js) — outil de vérification
  */
 function recordEvents(arSession) {
   const events = [];

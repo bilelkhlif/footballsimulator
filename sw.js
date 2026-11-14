@@ -12,6 +12,8 @@
  * CACHE_VERSION quand une bibliothèque ou une ressource change.
  * Les modules de l'émulateur (src/dev-emulator.js est importé par main.js, mais
  * src/dev-xr-emulation.js et IWER ne sont chargés qu'avec ?iwer) restent hors du cache.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 const CACHE_VERSION = 2; // 2 : three.js r187 (WebGPU) remplace la r186, sprint 3
 const CACHE_PREFIX = 'football-simulator-';
@@ -81,6 +83,9 @@ let slowNetworkUntil = 0;
  * Télécharge et met en cache les fichiers de l'application, puis active
  * immédiatement la nouvelle version du Service Worker.
  * @returns {Promise<void>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role PWA — Service Worker : installation et mise à jour du cache
  */
 async function precacheAppShell() {
   const cache = await caches.open(CACHE_NAME);
@@ -91,6 +96,9 @@ async function precacheAppShell() {
 /**
  * Supprime les caches des versions précédentes et prend le contrôle des pages ouvertes.
  * @returns {Promise<void>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role PWA — Service Worker : installation et mise à jour du cache
  */
 async function removeOutdatedCaches() {
   const cacheNames = await caches.keys();
@@ -105,6 +113,9 @@ async function removeOutdatedCaches() {
  * @param {Request} request
  * @param {Response} response
  * @returns {Promise<void>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role PWA — Service Worker : stratégies de cache et hors-ligne
  */
 async function storeInCache(request, response) {
   if (response.ok) {
@@ -117,6 +128,9 @@ async function storeInCache(request, response) {
  * Stratégie « cache d'abord » : répond depuis le cache, sinon télécharge et met en cache.
  * @param {Request} request
  * @returns {Promise<Response>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role PWA — Service Worker : stratégies de cache et hors-ligne
  */
 async function cacheFirst(request) {
   const cached = await caches.match(request);
@@ -132,6 +146,9 @@ async function cacheFirst(request) {
  * Télécharge un fichier et met à jour sa copie dans le cache.
  * @param {Request} request
  * @returns {Promise<Response>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-12
+ * @role PWA — Service Worker : stratégies de cache et hors-ligne
  */
 async function fetchAndCache(request) {
   const response = await fetch(request);
@@ -144,6 +161,9 @@ async function fetchAndCache(request) {
  * (« ?iwer », « ?debug ») sont ignorés, et la page d'accueil sert de repli.
  * @param {Request} request
  * @returns {Promise<Response|undefined>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-12
+ * @role PWA — Service Worker : stratégies de cache et hors-ligne
  */
 async function findInCache(request) {
   const isNavigation = request.mode === 'navigate';
@@ -159,6 +179,9 @@ async function findInCache(request) {
  * @param {Promise<any>} promise
  * @param {number} ms
  * @returns {Promise<any>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-12
+ * @role PWA — Service Worker : stratégies de cache et hors-ligne
  */
 function withTimeout(promise, ms) {
   let timer;
@@ -177,6 +200,9 @@ function withTimeout(promise, ms) {
  * @param {Request} request
  * @param {Promise<Response>} network téléchargement déjà lancé par fetchAndCache
  * @returns {Promise<Response>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role PWA — Service Worker : stratégies de cache et hors-ligne
  */
 async function networkFirst(request, network) {
   const cached = await findInCache(request);
@@ -196,6 +222,9 @@ async function networkFirst(request, network) {
 
 /**
  * Installation : met en cache tous les fichiers de l'application.
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role PWA — Service Worker : installation et mise à jour du cache
  */
 self.addEventListener('install', (event) => {
   event.waitUntil(precacheAppShell());
@@ -203,6 +232,9 @@ self.addEventListener('install', (event) => {
 
 /**
  * Activation : nettoie les anciens caches.
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role PWA — Service Worker : installation et mise à jour du cache
  */
 self.addEventListener('activate', (event) => {
   event.waitUntil(removeOutdatedCaches());
@@ -211,6 +243,9 @@ self.addEventListener('activate', (event) => {
 /**
  * Requêtes : seules les requêtes GET vers l'application elle-même passent par le cache.
  * Le CDN de l'émulateur IWER, utilisé seulement en développement, est ignoré.
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role PWA — Service Worker : interception des requêtes
  */
 self.addEventListener('fetch', (event) => {
   const { request } = event;

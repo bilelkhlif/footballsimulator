@@ -1,6 +1,8 @@
 /**
  * Tests unitaires de src/render-loop.js : contrôles d'orbite hors AR seulement, pose du terrain
  * mise à jour à chaque image de la session, et cible de rendu XR alignée sur le nombre de vues.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,6 +11,9 @@ import { createRenderLoop, matchXrTargetToViews } from '../../src/render-loop.js
 /**
  * Doublure de la cible de rendu XR de three.js r187 : deux couches au départ, une par œil.
  * @param {number} [depth]
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/render-loop.js) — doublure
  */
 function createXrTarget(depth = 2) {
   return {
@@ -26,6 +31,9 @@ function createXrTarget(depth = 2) {
 /**
  * Doublures du moteur de rendu, des contrôles et de la pose du terrain.
  * @param {{presenting: boolean, viewCount?: number, target?: object|null, placement?: object|null}} options
+ * @responsable Bilel Khlif
+ * @date 2026-11-10
+ * @role Tests unitaires (src/render-loop.js) — doublure
  */
 function createLoop({ presenting, viewCount = 1, target = null, placement = null }) {
   const log = [];
@@ -42,7 +50,12 @@ function createLoop({ presenting, viewCount = 1, target = null, placement = null
   return { loop, log, renderer };
 }
 
-/** Doublure de la pose du terrain (src/ar-surface.js) : enregistre les images reçues. */
+/**
+ * Doublure de la pose du terrain (src/ar-surface.js) : enregistre les images reçues.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/render-loop.js) — doublure
+ */
 function createPlacement() {
   return {
     frames: [],

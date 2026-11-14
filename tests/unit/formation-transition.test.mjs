@@ -1,6 +1,8 @@
 /**
  * Tests unitaires de src/formation-transition.js et de applyFormation (src/team.js) : places
  * cibles, courbe d'animation, déplacements image par image, et joueurs three.js réels replacés.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,13 +14,23 @@ import { applyFormation } from '../../src/team.js';
 import { FORMATIONS, toPitchCoordinates } from '../../src/formations.js';
 import { TEAMS } from '../../src/config.js';
 
-/** Horloge manuelle, pour faire avancer le temps sans attendre. */
+/**
+ * Horloge manuelle, pour faire avancer le temps sans attendre.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/formation-transition.js) — doublure
+ */
 function createClock() {
   let now = 0;
   return { now: () => now, advance: (ms) => { now += ms; } };
 }
 
-/** Un objet qui a une position, comme un joueur three.js. */
+/**
+ * Un objet qui a une position, comme un joueur three.js.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/formation-transition.js) — doublure
+ */
 function createObject(x = 0, z = 0) {
   return { position: { x, y: 0, z } };
 }

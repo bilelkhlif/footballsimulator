@@ -2,6 +2,8 @@
  * Tests unitaires de src/pwa.js (sprint 3) : bouton d'installation, avis de nouvelle version et
  * badge hors-ligne. window, navigator et les boutons sont remplacés par des doublures fondées sur
  * EventTarget, qui existe sous Node.js comme dans le navigateur.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -11,6 +13,9 @@ import { setUpInstallButton, watchForUpdates, watchNetworkStatus } from '../../s
  * Remplace une variable globale (window, navigator) pour la durée d'un test.
  * @param {string} name
  * @param {object} value
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/pwa.js) — outil de vérification
  */
 function setGlobal(name, value) {
   Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
@@ -19,6 +24,9 @@ function setGlobal(name, value) {
 /**
  * Doublure de window : événements, et mode d'affichage (application installée ou non).
  * @param {{standalone?: boolean}} [options]
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/pwa.js) — doublure
  */
 function createFakeWindow({ standalone = false } = {}) {
   const fakeWindow = new EventTarget();
@@ -26,7 +34,12 @@ function createFakeWindow({ standalone = false } = {}) {
   return fakeWindow;
 }
 
-/** Doublure de bouton : événements et attribut hidden. */
+/**
+ * Doublure de bouton : événements et attribut hidden.
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/pwa.js) — doublure
+ */
 function createFakeButton() {
   const button = new EventTarget();
   button.hidden = true;
@@ -36,6 +49,9 @@ function createFakeButton() {
 /**
  * Événement beforeinstallprompt, avec l'invite d'installation du navigateur.
  * @param {'accepted'|'dismissed'} outcome choix de l'utilisateur
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Tests unitaires (src/pwa.js) — doublure
  */
 function createInstallPrompt(outcome = 'accepted') {
   const event = new Event('beforeinstallprompt', { cancelable: true });

@@ -1,6 +1,8 @@
 /**
  * Scène three.js de la vue 3D hors AR : moteur de rendu WebGPU, caméra, lumières,
  * contrôles d'orbite et groupe racine du terrain.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -29,6 +31,9 @@ const BOARD_CORNERS = [-1, 1].flatMap((sx) => [-1, 1].flatMap((sz) => [0, -BOARD
  * @param {string} renderMode une valeur de RENDER_MODES
  * @returns {Promise<import('three/webgpu').Renderer>}
  * @throws {import('./webgpu.js').WebGpuUnavailableError} si WebGPU est absent : aucun repli WebGL
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Rendu — choix du moteur (WebGPU, ou mode test WebGL sur demande)
  */
 async function createRenderer(container, renderMode) {
   const renderer = renderMode === RENDER_MODES.WEBGL_TEST
@@ -44,6 +49,9 @@ async function createRenderer(container, renderMode) {
  * Ajoute l'éclairage : une lumière d'ambiance et une lumière directionnelle,
  * sans ombres portées, pour rester fluide sur mobile (cahier, §6.3).
  * @param {THREE.Scene} scene
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — éclairage
  */
 function addLights(scene) {
   const ambientLight = new THREE.HemisphereLight(0xffffff, 0x2b3a30, 2.2);
@@ -56,6 +64,9 @@ function addLights(scene) {
  * Crée la table sur laquelle repose le terrain. Elle n'existe que hors AR :
  * en réalité augmentée, la vraie table la remplace.
  * @returns {THREE.Mesh}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — table de la vue hors AR
  */
 function createTable() {
   const table = new THREE.Mesh(
@@ -72,6 +83,9 @@ function createTable() {
  * Indique si tous les coins du plateau sont visibles depuis la position actuelle de la caméra.
  * @param {THREE.PerspectiveCamera} camera
  * @returns {boolean}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — cadrage de la caméra
  */
 function boardFitsInView(camera) {
   const projected = new THREE.Vector3();
@@ -88,6 +102,9 @@ function boardFitsInView(camera) {
  * La caméra recule jusqu'à ce que les coins projetés du plateau tiennent dans le cadre.
  * @param {THREE.PerspectiveCamera} camera
  * @param {OrbitControls} controls
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — cadrage de la caméra
  */
 function frameWholePitch(camera, controls) {
   const isPortrait = camera.aspect < 1;
@@ -116,6 +133,9 @@ function frameWholePitch(camera, controls) {
  * @param {THREE.PerspectiveCamera} camera
  * @param {HTMLCanvasElement} canvas
  * @returns {OrbitControls}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — contrôles d'orbite
  */
 function createControls(camera, canvas) {
   const controls = new OrbitControls(camera, canvas);
@@ -137,6 +157,9 @@ function createControls(camera, canvas) {
  * @returns {Promise<{renderer: import('three/webgpu').Renderer, scene: THREE.Scene,
  *   camera: THREE.PerspectiveCamera, controls: OrbitControls, pitchGroup: THREE.Group,
  *   table: THREE.Mesh, resetView: () => void, resize: () => void}>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — contexte de rendu de la vue hors AR
  */
 export async function createSceneContext(container, { renderMode = RENDER_MODES.WEBGPU } = {}) {
   const renderer = await createRenderer(container, renderMode);
@@ -154,6 +177,7 @@ export async function createSceneContext(container, { renderMode = RENDER_MODES.
   pitchGroup.name = 'pitchGroup';
   scene.add(pitchGroup);
 
+  /** Recadre la caméra sur le terrain entier : au démarrage et par le bouton « Recentrer ». */
   const resetView = () => frameWholePitch(camera, controls);
   resetView();
 

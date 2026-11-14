@@ -4,6 +4,8 @@
  * Toutes les longueurs de la scène sont en mètres. Le terrain miniature mesure
  * environ 60 × 39 cm (cahier des charges, §1.4) : il pourra être posé tel quel
  * sur une table réelle lors des sprints AR.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 
 /** Dimensions réglementaires d'un terrain, en mètres réels. */

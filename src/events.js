@@ -4,6 +4,11 @@
  * Un sujet garde, pour chaque type d'événement, la liste de ses observateurs et les
  * prévient quand l'événement se produit. Le sujet ne connaît pas ses observateurs :
  * la session AR, par exemple, ignore tout de l'interface qui réagit à ses événements.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Architecture — patron Observer (émetteur d'événements)
  */
 export class EventEmitter {
   /** Observateurs abonnés, par type d'événement. */
@@ -14,6 +19,9 @@ export class EventEmitter {
    * @param {string} type nom de l'événement, par exemple « sessionstart »
    * @param {(detail: any) => void} listener fonction appelée avec le détail de l'événement
    * @returns {() => void} fonction qui désabonne l'observateur
+   * @responsable Bilel Khlif
+   * @date 2026-11-09
+   * @role Architecture — patron Observer (émetteur d'événements)
    */
   on(type, listener) {
     if (!this.#listeners.has(type)) {
@@ -27,6 +35,9 @@ export class EventEmitter {
    * Désabonne un observateur.
    * @param {string} type
    * @param {(detail: any) => void} listener
+   * @responsable Bilel Khlif
+   * @date 2026-11-09
+   * @role Architecture — patron Observer (émetteur d'événements)
    */
   off(type, listener) {
     this.#listeners.get(type)?.delete(listener);
@@ -37,6 +48,9 @@ export class EventEmitter {
    * les suivants d'être prévenus : l'erreur est signalée dans la console.
    * @param {string} type
    * @param {any} [detail] informations transmises aux observateurs
+   * @responsable Bilel Khlif
+   * @date 2026-11-09
+   * @role Architecture — patron Observer (émetteur d'événements)
    */
   emit(type, detail) {
     for (const listener of [...(this.#listeners.get(type) ?? [])]) {

@@ -11,6 +11,8 @@
  * Dans les deux cas, les déplacements de joueurs en cours (changement de formation, sprint 4)
  * avancent, puis l'image se termine par renderer.render : three.js encode les commandes WebGPU et
  * les soumet au processeur graphique, vers le canvas ou vers la couche de projection de la session.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 
 /**
@@ -26,6 +28,9 @@
  *   height: number, depth: number, setSize: (width: number, height: number, depth: number) => void}|null),
  *   xr: {getCamera: () => {cameras: unknown[]}}}} renderer
  * @returns {boolean} vrai si la cible a été redimensionnée
+ * @responsable Bilel Khlif
+ * @date 2026-11-14
+ * @role Boucle de rendu — cible de rendu XR en WebGPU
  */
 export function matchXrTargetToViews(renderer) {
   if (renderer.backend?.isWebGPUBackend !== true) {
@@ -52,6 +57,9 @@ export function matchXrTargetToViews(renderer) {
  * @param {() => ({update: (frame: XRFrame) => void}|null)} context.getArPlacement renvoie la pose
  *   du terrain de la session en cours (src/ar-surface.js), ou null hors session
  * @returns {(time: number, frame?: XRFrame) => void}
+ * @responsable Bilel Khlif
+ * @date 2026-11-09
+ * @role Boucle de rendu — travail de chaque image
  */
 export function createRenderLoop({ renderer, scene, camera, controls, animator = null, getArPlacement }) {
   return (time, frame) => {
