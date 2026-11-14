@@ -10,8 +10,10 @@
  *
  * Tout nouveau fichier de l'application doit être ajouté à APP_SHELL. Incrémenter
  * CACHE_VERSION quand une bibliothèque ou une ressource change.
+ * Les modules de l'émulateur (src/dev-emulator.js est importé par main.js, mais
+ * src/dev-xr-emulation.js et IWER ne sont chargés qu'avec ?iwer) restent hors du cache.
  */
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2; // 2 : three.js r187 (WebGPU) remplace la r186, sprint 3
 const CACHE_PREFIX = 'football-simulator-';
 const CACHE_NAME = `${CACHE_PREFIX}v${CACHE_VERSION}`;
 
@@ -37,9 +39,13 @@ const APP_SHELL = [
   './src/ar-placement.js',
   './src/ar-view.js',
   './src/render-loop.js',
-  './src/vendor/three/build/three.module.js',
-  './src/vendor/three/build/three.core.js',
-  './src/vendor/three/examples/jsm/controls/OrbitControls.js',
+  './src/webgpu.js',
+  './src/reticle.js',
+  './src/ar-surface.js',
+  './src/vendor/three-r187/build/three.webgpu.js',
+  './src/vendor/three-r187/build/three.core.js',
+  './src/vendor/three-r187/build/three.tsl.js',
+  './src/vendor/three-r187/examples/jsm/controls/OrbitControls.js',
   './assets/icons/icon.svg',
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png',

@@ -16,12 +16,15 @@
   <!-- Feuille de style principale -->
   <link rel="stylesheet" href="src/styles.css">
 
-  <!-- Carte d'import : « three » pointe vers la copie locale, servie depuis la même origine -->
+  <!-- Carte d'import : three.js r187, version WebGPU, copiée dans le dépôt et servie depuis la même origine.
+       « three » pointe vers le build WebGPU : le build WebGL (three.module.js) n'est pas livré. -->
   <script type="importmap">
     {
       "imports": {
-        "three": "./src/vendor/three/build/three.module.js",
-        "three/addons/": "./src/vendor/three/examples/jsm/"
+        "three": "./src/vendor/three-r187/build/three.webgpu.js",
+        "three/webgpu": "./src/vendor/three-r187/build/three.webgpu.js",
+        "three/tsl": "./src/vendor/three-r187/build/three.tsl.js",
+        "three/addons/": "./src/vendor/three-r187/examples/jsm/"
       }
     }
   </script>
@@ -30,16 +33,18 @@
   <script type="module" src="src/main.js"></script>
 </head>
 <body>
-  <!-- Zone de rendu 3D : le canvas three.js y est inséré -->
+  <!-- Zone de rendu 3D : le canvas WebGPU de three.js y est inséré -->
   <main id="scene-container" aria-label="Terrain de football en 3D"></main>
 
-  <!-- Interface superposée ; elle servira de racine au DOM Overlay en AR (sprint 2) -->
+  <!-- Interface superposée ; c'est la racine du DOM Overlay en AR -->
   <div id="overlay">
-    <!-- Bandeau supérieur : nom de l'application, état de l'AR et formations en place -->
+    <!-- Bandeau supérieur : nom de l'application, état de l'AR, du rendu et du réseau, formations -->
     <header class="topbar">
       <div class="topbar__group">
         <h1 class="brand">Football Simulator</h1>
         <span id="xr-status" class="status" data-state="checking" role="status">Vérification de l’AR…</span>
+        <span id="gpu-status" class="status" data-state="checking">Démarrage de WebGPU…</span>
+        <span id="network-status" class="status" data-state="offline" hidden>Hors-ligne</span>
       </div>
       <ul class="teams" aria-label="Formations en place">
         <li class="team-chip team-chip--blue">Bleus <strong id="formation-blue" data-formation></strong></li>
@@ -47,21 +52,28 @@
       </ul>
     </header>
 
-    <!-- Bandeau inférieur : aide aux gestes, message d'échec de l'AR et actions.
+    <!-- Bandeau inférieur : aide aux gestes, messages et actions.
          « Entrer en AR » n'apparaît que si l'AR est disponible ; pendant une session,
-         « Quitter l'AR » remplace « Recentrer » et « Entrer en AR ». -->
+         « Déplacer le terrain » et « Quitter l'AR » remplacent les autres boutons. -->
     <footer class="bottombar">
       <p id="hint" class="hint">Glissez pour tourner, pincez pour zoomer.</p>
       <p id="ar-message" class="notice" role="alert" hidden></p>
+      <p id="update-notice" class="notice notice--info" role="status" hidden>
+        Nouvelle version installée.
+        <button id="reload-app" class="button button--small" type="button">Recharger</button>
+      </p>
       <div class="actions">
+        <button id="copy-flag" class="button button--secondary" type="button" hidden>Copier l’adresse du réglage</button>
+        <button id="install-app" class="button button--secondary" type="button" hidden>Installer l’application</button>
         <button id="reset-view" class="button" type="button">Recentrer</button>
         <button id="enter-ar" class="button" type="button" hidden>Entrer en AR</button>
+        <button id="move-pitch" class="button button--secondary" type="button" hidden>Déplacer le terrain</button>
         <button id="exit-ar" class="button button--secondary" type="button" hidden>Quitter l’AR</button>
       </div>
     </footer>
   </div>
 
-  <!-- Écran de chargement, masqué dès que la scène est prête -->
+  <!-- Écran de chargement, masqué dès que la scène est prête ; message d'erreur si WebGPU manque -->
   <div id="loader" class="loader" role="status">Chargement du terrain…</div>
 
   <!-- Message affiché si JavaScript est désactivé -->

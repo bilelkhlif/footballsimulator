@@ -1,7 +1,8 @@
 {
+  "id": "./",
   "name": "Football Simulator",
   "short_name": "Football Sim",
-  "description": "Tableau tactique de football en réalité augmentée.",
+  "description": "Tableau tactique de football en réalité augmentée, rendu en WebGPU.",
   "lang": "fr",
   "dir": "ltr",
   "start_url": "./",
@@ -15,5 +16,9 @@
     { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "assets/screenshots/vue-3d-large.jpg", "sizes": "1280x800", "type": "image/jpeg", "form_factor": "wide", "label": "Vue 3D du terrain, Bleus en 4-3-3 et Rouges en 4-4-2" },
+    { "src": "assets/screenshots/vue-3d-mobile.jpg", "sizes": "780x1688", "type": "image/jpeg", "form_factor": "narrow", "label": "Vue 3D sur téléphone, en portrait" }
   ]
 }

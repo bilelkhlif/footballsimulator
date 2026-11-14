@@ -26,6 +26,11 @@
   box-sizing: border-box;
 }
 
+/* L'attribut hidden l'emporte sur les display: flex des badges et des avis. */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
@@ -78,6 +83,12 @@ body {
    dans un conteneur plein écran de z-index 999 : sans ce réglage, il cacherait les boutons. */
 body[data-xr="active"] #overlay {
   z-index: 1000;
+}
+
+/* En AR, seuls « Déplacer le terrain » et « Quitter l'AR » restent dans le bandeau. */
+body[data-xr="active"] #install-app,
+body[data-xr="active"] #copy-flag {
+  display: none;
 }
 
 /* ---- Panneau translucide commun aux éléments de l'interface ---- */
@@ -142,8 +153,19 @@ body[data-xr="active"] #overlay {
   color: #9ed3ae;
 }
 
-.status[data-state="emulated"] {
+.status[data-state="emulated"],
+.status[data-state="needs-flag"] {
   color: var(--color-gold);
+}
+
+/* ---- Badge du rendu : WebGPU actif, ou indisponible (pas de repli WebGL) ---- */
+.status[data-state="webgpu"] {
+  color: #9ed3ae;
+}
+
+.status[data-state="unavailable"],
+.status[data-state="offline"] {
+  color: #ffb4a8;
 }
 
 /* ---- Pastilles des équipes : couleur et formation en place ---- */
@@ -204,6 +226,16 @@ body[data-xr="active"] #overlay {
 .notice {
   font-size: 0.9rem;
   color: #ffb4a8;
+  overflow-wrap: anywhere; /* l'adresse chrome://flags ne déborde pas sur un petit écran */
+}
+
+/* ---- Avis d'information : nouvelle version de l'application ---- */
+.notice--info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-ink);
 }
 
 /* ---- Groupe de boutons du bandeau inférieur, aligné à droite même sur deux lignes ---- */
@@ -239,6 +271,12 @@ body[data-xr="active"] #overlay {
 .button:disabled {
   opacity: 0.6;
   cursor: progress;
+}
+
+/* ---- Petit bouton, à l'intérieur d'un avis ---- */
+.button--small {
+  min-height: 40px;
+  padding: 0 14px;
 }
 
 /* ---- Bouton secondaire : panneau translucide, pour quitter l'AR ---- */
