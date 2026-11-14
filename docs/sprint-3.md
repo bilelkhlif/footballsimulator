@@ -19,7 +19,8 @@ Réalisé le 14 novembre 2026 sur la branche `feature/sprint-3`. Bilel Khlif a t
 13. [Test sur téléphone](#13-test-sur-téléphone)
 14. [Captures](#14-captures)
 15. [Écarts, décisions et questions probables du jury](#15-écarts-décisions-et-questions-probables-du-jury)
-16. [Pour le sprint 4](#16-pour-le-sprint-4)
+16. [Mode test WebGL (?webgl), réservé aux tests](#16-mode-test-webgl-webgl-réservé-aux-tests)
+17. [Pour le sprint 4](#17-pour-le-sprint-4)
 
 ---
 
@@ -425,7 +426,19 @@ Après chaque essai, le fichier a été restauré, et `npm test` est de nouveau 
 | iPhone avec une version plus ancienne | Message « Football Simulator a besoin de WebGPU… » |
 | Menu ⋮ → « Installer l'application » | Icône sur l'écran d'accueil ; lancement sans barre d'adresse |
 
-Résultats sur téléphone : pas encore obtenus à la date de ce compte rendu.
+**Résultats du 14 novembre 2026**, sur le site publié, rapportés par Bilel Khlif :
+
+| Appareil | Navigateur | Résultat |
+| --- | --- | --- |
+| PC ASUS TUF A15 | Chrome, réglage « WebXR/WebGPU Binding » activé | Vue 3D en WebGPU, bouton « Installer l'application » ; « AR indisponible », normal sur un PC |
+| Samsung Galaxy S10e (SM-G970F), Android 9 | Brave | Message « WebGPU est présent, mais aucun processeur graphique compatible n'a été trouvé sur cet appareil » |
+| Samsung Galaxy S10e, Android 9 | Chrome 138.0.7204.179 | Même message. Le rapport `chrome://gpu` l'explique : Vulkan désactivé, seul le backend OpenGL ES de WebGPU (mode compatibilité) existe, et Chrome le bloque (« Blocklisted : Limited support / testing currently available on Android \| OpenGLES not fully supported on Android ») |
+| Samsung Galaxy S10e, Android 9 | Chrome 138, avec le réglage `#enable-unsafe-webgpu` | Rendu dégradé : gazon, lignes et numéros absents, panneaux HTML remplacés par des rectangles blancs ou noirs. C'est la raison du blocage de Chrome |
+| Samsung Galaxy S10e | Mise à jour d'Android | Le téléphone ne propose aucune mise à jour |
+| iPhone, iOS 18 | Safari | Pas d'AR, comme prévu : Safari sur iPhone ne propose pas de session WebXR `immersive-ar` |
+| TECNO POVA 6 Pro | | Pas disponible le 14 novembre ; à tester |
+
+Conséquence : sans repli WebGL, le Galaxy S10e ne peut pas afficher l'application. C'était le seul téléphone disponible ce jour-là ; le mode test WebGL de la partie 16 a été ajouté pour pouvoir tester l'AR dessus.
 
 ---
 
@@ -480,7 +493,35 @@ Un manifeste avec identifiant et captures, un bouton d'installation et un avis d
 
 ---
 
-## 16. Pour le sprint 4
+## 16. Mode test WebGL (?webgl), réservé aux tests
+
+Ajouté le 14 novembre 2026, après la fusion du sprint 3, à la demande de Bilel Khlif : son seul téléphone disponible, un Galaxy S10e sous Android 9, ne peut pas faire tourner WebGPU (partie 13).
+
+**Ce que c'est.** Avec `?webgl` dans l'adresse, par exemple `https://bilelkhlif.github.io/footballsimulator/?webgl`, la même scène tourne sur le backend WebGL 2 de three.js : `WebGPURenderer` avec l'option `forceWebGL`, sans fonction de repli lui non plus (`src/webgl-test-mode.js`). Le badge du rendu affiche « Rendu WebGL (mode test) », en doré, pour qu'on ne le confonde pas avec le badge vert « Rendu WebGPU ». En AR, la session est rendue par une couche `XRWebGLLayer` : elle n'exige ni la fonctionnalité `webgpu` ni `XRGPUBinding`, donc ni le réglage de Chrome. Le hit test, le réticule (TSL, traduit cette fois en GLSL), le toucher et l'ancre sont les mêmes.
+
+**Ce que ce n'est pas : un repli.**
+
+- L'application ne passe jamais en WebGL d'elle-même. Sans `?webgl`, le rendu est WebGPU, et sans WebGPU l'application s'arrête avec un message.
+- L'écran d'erreur ne propose pas WebGL, et aucun bouton de l'application ne mène au mode test : il s'utilise comme `?iwer` (émulateur) et `?debug`, des outils de test.
+- WebGPU reste le rendu de l'application, celui que mesurent les tests par défaut.
+
+**Les preuves, dans les tests.**
+
+- « Rendu WebGPU, sans aucun contexte WebGL » : sans paramètre, seuls des contextes `2d` et `webgpu` sont créés.
+- « Sans WebGPU : message explicite, aucun repli WebGL » vérifie aussi que l'écran d'erreur ne contient ni lien ni bouton vers WebGL.
+- « Mode test WebGL, seulement avec ?webgl » : badge « Rendu WebGL (mode test) », backend WebGL 2, aucune fonction de repli.
+- Tests unitaires : le mode par défaut est WebGPU, seul le paramètre exact `webgl` active le mode test, et une session AR WebGPU sans `XRGPUBinding` échoue au lieu de passer sur une couche WebGL.
+- Le parcours AR complet est rejoué en mode test avec l'émulateur : entrée sur une couche WebGL, réticule, pose et ancre du terrain, déplacement, sorties.
+
+**Émulation.** IWER dessine une couche WebGL dans le framebuffer par défaut du canvas : `XRWebGLLayer.framebuffer` y vaut `null`. Un vrai navigateur fournit un framebuffer opaque non nul, et le backend WebGL de three.js r187 l'exige, car il s'en sert de clé dans une `WeakMap`. Le premier essai échouait donc à chaque image (« Invalid value used as weak map key »), et la sortie de l'AR ne se faisait plus. `src/dev-xr-emulation.js` donne à chaque couche WebGL un vrai framebuffer, recopié dans le canvas à la fin de chaque image (`blitFramebuffer`). Ce problème ne concerne que l'émulateur : sur un téléphone, Chrome fournit son propre framebuffer.
+
+**Tests.** `npm test` : 73 tests unitaires et 37 vérifications de bout en bout, tous réussis le 14 novembre 2026. La pose du terrain en mode test a été vérifiée à l'image : le terrain s'affiche, rendu par WebGL, avec le badge doré.
+
+**Sur le Galaxy S10e** : ouvrir `https://bilelkhlif.github.io/footballsimulator/?webgl` dans Chrome, une fois ce mode fusionné dans `main`, puis « Entrer en AR » ; ARCore doit être installé. Résultat à consigner ici.
+
+---
+
+## 17. Pour le sprint 4
 
 - Boutons HTML pour changer la formation de chaque équipe (patron Strategy déjà en place) : un clic remplace les positions des 11 joueurs, avec une transition.
 - Le Observer de `SurfacePlacement` permet d'afficher ces boutons seulement une fois le terrain posé (état `placed`).

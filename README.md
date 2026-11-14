@@ -20,7 +20,7 @@
   - terrain posé sur la table par hit test, réticule et toucher, puis ancré ;
   - rendu **WebGPU sans repli WebGL** ;
   - application installable, utilisable hors-ligne.
-- **Testé.** Le sprint 2 a été testé le 12 novembre 2026 sur deux téléphones Android, un iPhone 15 et un PC. Le sprint 3 est testé sur PC (93 tests automatisés) ; son test sur téléphone est à faire.
+- **Testé.** Le sprint 2 a été testé le 12 novembre 2026 sur deux téléphones Android, un iPhone 15 et un PC. Le sprint 3 est testé sur PC (110 tests automatisés). Sur téléphone, le 14 novembre, le Galaxy S10e sous Android 9 refuse WebGPU ; le TECNO POVA 6 Pro reste à tester.
 
 ## Aperçu
 
@@ -68,6 +68,7 @@ L'application dessine sa scène avec **WebGPU**, l'API graphique moderne du web,
 - Les matériaux de la scène sont traduits en WGSL, le langage de shaders de WebGPU. Le réticule de l'AR est écrit en TSL : il pulse grâce à un calcul fait sur le processeur graphique.
 - En AR, la session est rendue en WebGPU elle aussi, par la liaison WebXR/WebGPU (`XRGPUBinding`). Chrome la propose encore derrière un réglage. Sur Android : `chrome://flags/#webxr-webgpu-binding` → « Enabled ». Sans ce réglage, l'application l'explique et propose de copier l'adresse.
 - Preuves automatiques : un test vérifie qu'aucun contexte WebGL n'est créé, un autre retire WebGPU et vérifie le message.
+- **Mode test WebGL (`?webgl` dans l'adresse), réservé aux tests.** Il fait tourner la même scène en WebGL 2, pour tester l'application, AR comprise, sur un téléphone dont le navigateur bloque WebGPU, comme le Galaxy S10e sous Android 9. **Ce n'est pas un repli.** L'application ne passe jamais en WebGL d'elle-même, l'écran d'erreur ne le propose pas, et le badge affiche « Rendu WebGL (mode test) ». Détails dans [docs/sprint-3.md](docs/sprint-3.md#16-mode-test-webgl-webgl-réservé-aux-tests).
 
 | Où | Vue 3D | AR |
 | --- | --- | --- |
@@ -135,7 +136,7 @@ Deux règles en découlent. Rien de WebXR ne s'utilise hors de la boucle : c'est
 | Élément | Rôle |
 | --- | --- |
 | `manifest.json` | Nom, icônes (dont une « maskable » pour Android), affichage sans barre d'adresse, identifiant stable et deux captures pour la fenêtre d'installation |
-| `sw.js` | Service Worker : met en cache les 32 fichiers de l'application, pour un lancement hors-ligne après une première visite |
+| `sw.js` | Service Worker : met en cache les 33 fichiers de l'application, pour un lancement hors-ligne après une première visite |
 | Bouton « Installer l'application » | Apparaît quand le navigateur propose l'installation ; disparaît une fois l'application installée |
 | Avis « Nouvelle version installée » | Propose de recharger quand une nouvelle version du Service Worker prend le relais |
 | Badge « Hors-ligne » | S'affiche quand le réseau est coupé |
@@ -222,6 +223,8 @@ Il faut un téléphone compatible ARCore, avec les Services Google Play pour la 
    - ou par **redirection de port USB** : brancher le téléphone, ouvrir `chrome://inspect/#devices` sur le PC et rediriger le port du serveur local. Sur le téléphone, `http://localhost:<port>` est alors un contexte sécurisé.
 3. **Entrer en AR**, viser une table, toucher l'écran quand le cercle doré apparaît.
 
+Sur un téléphone dont Chrome bloque WebGPU (Android 11 ou plus ancien), l'application affiche un message. Pour tester quand même, ajouter `?webgl` à l'adresse : c'est le mode test WebGL, réservé aux tests, sans le réglage de l'étape 1.
+
 Le protocole de test complet est dans [docs/sprint-3.md](docs/sprint-3.md#13-test-sur-téléphone).
 
 ## Tests
@@ -231,8 +234,8 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 ```bash
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
-npm run test:unit   # 67 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
-npm run test:e2e    # 26 vérifications dans Chrome, sans interface
+npm run test:unit   # 73 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
+npm run test:e2e    # 37 vérifications dans Chrome, sans interface
 ```
 
 Les tests de bout en bout couvrent :
@@ -241,9 +244,10 @@ Les tests de bout en bout couvrent :
 - les trois formations ;
 - le rendu WebGPU sans aucun contexte WebGL, et le message quand WebGPU manque ;
 - le manifeste, le Service Worker, le rechargement hors-ligne et le lancement sur un réseau très lent ;
-- le parcours AR complet avec l'émulateur : session WebGPU, réticule, toucher et pose du terrain, ancre, déplacement, sorties, et messages d'échec.
+- le parcours AR complet avec l'émulateur : session WebGPU, réticule, toucher et pose du terrain, ancre, déplacement, sorties, et messages d'échec ;
+- le mode test WebGL (`?webgl`) : seulement sur demande, jamais en repli, et le même parcours AR rejoué dans ce mode.
 
-Résultat le 14 novembre 2026 : 67 tests unitaires et 26 vérifications de bout en bout, tous réussis. Trois erreurs introduites volontairement ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-3.md](docs/sprint-3.md#12-tests) et dans le [guide du code](docs/guide-du-code.md#6-tests).
+Résultat le 14 novembre 2026 : 73 tests unitaires et 37 vérifications de bout en bout, tous réussis. Trois erreurs introduites volontairement ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-3.md](docs/sprint-3.md#12-tests) et dans le [guide du code](docs/guide-du-code.md#6-tests).
 
 ## Arborescence
 
@@ -256,6 +260,7 @@ Résultat le 14 novembre 2026 : 67 tests unitaires et 26 vérifications de bout 
 ├── src/
 │   ├── main.js            Point d'entrée : assemble la scène, l'AR et la PWA
 │   ├── webgpu.js          Moteur de rendu WebGPU, sans repli WebGL (sprint 3)
+│   ├── webgl-test-mode.js Mode test WebGL, avec ?webgl seulement : pas un repli
 │   ├── config.js          Dimensions, échelle, équipes et couleurs
 │   ├── scene.js           Moteur de rendu, caméra, lumières, contrôles, pitchGroup
 │   ├── pitch.js           Terrain : plateau, gazon, lignes et buts

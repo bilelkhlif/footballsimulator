@@ -12,6 +12,7 @@ Le rendu passe par **WebGPU**, avec three.js r187, **sans repli WebGL** : sans W
 | --- | --- | --- |
 | `src/main.js` | Assemble la scène, les équipes, l'AR et la PWA, puis lance la boucle de rendu | |
 | `src/webgpu.js` | Moteur de rendu WebGPU sans repli WebGL (`WebGpuOnlyRenderer`), causes d'échec | |
+| `src/webgl-test-mode.js` | Mode test WebGL, seulement avec `?webgl` dans l'adresse : réservé aux tests, ce n'est pas un repli | |
 | `src/scene.js` | Moteur de rendu, caméra, lumières, contrôles d'orbite, groupe racine `pitchGroup` | |
 | `src/pitch.js` | Plateau, gazon texturé (lignes tracées sur un canvas), buts | |
 | `src/formations.js` | Une classe par formation, qui calcule les 11 positions | Strategy |
@@ -65,4 +66,4 @@ Chaque joueur est un `THREE.Group` qui contient un socle, une flèche d'orientat
 | `src/vendor/`, `assets/` | Cache d'abord | Elles ne changent pas d'une version à l'autre ; la version de three.js est dans le nom de son dossier (`three-r187`) |
 | Page, code, styles | Réseau d'abord, repli sur le cache, ou après 3 secondes sans réponse | Une mise à jour arrive dès que l'appareil est en ligne, sans bloquer sur un réseau lent |
 
-`APP_SHELL` compte 32 fichiers, et `CACHE_VERSION` vaut 2 depuis le passage à three.js r187. Tout nouveau fichier de l'application doit être ajouté à `APP_SHELL` dans `sw.js`. Incrémenter `CACHE_VERSION` quand une bibliothèque ou une ressource change. Les modules de l'émulateur chargés seulement avec `?iwer` restent hors du cache.
+`APP_SHELL` compte 33 fichiers, et `CACHE_VERSION` vaut 2 depuis le passage à three.js r187. Tout nouveau fichier de l'application doit être ajouté à `APP_SHELL` dans `sw.js`. Incrémenter `CACHE_VERSION` quand une bibliothèque ou une ressource change. Les modules de l'émulateur chargés seulement avec `?iwer` restent hors du cache.

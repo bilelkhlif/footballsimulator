@@ -333,7 +333,7 @@ Le Service Worker réagit à trois événements :
 
 | Événement | Ce qu'il fait |
 | --- | --- |
-| `install` | Télécharge et met en cache les 32 fichiers de `APP_SHELL` (23 au sprint 1, 5 modules au sprint 2 ; au sprint 3, three.js r187 en 4 fichiers à la place des 3 de la r186, et 3 nouveaux modules), puis s'active aussitôt (`skipWaiting`) |
+| `install` | Télécharge et met en cache les 33 fichiers de `APP_SHELL` (23 au sprint 1, 5 modules au sprint 2 ; au sprint 3, three.js r187 en 4 fichiers à la place des 3 de la r186, 3 nouveaux modules, puis le module du mode test WebGL), puis s'active aussitôt (`skipWaiting`) |
 | `activate` | Supprime les caches des versions précédentes et prend le contrôle des pages ouvertes (`clients.claim`) |
 | `fetch` | Répond aux requêtes GET vers l'application selon deux stratégies ; les autres requêtes (le CDN d'IWER, par exemple) passent sans cache |
 
@@ -425,7 +425,7 @@ Une copie de three.js r187 (version 0.187.0), sous licence MIT : le build WebGPU
 
 ## 6. Tests
 
-`npm test` lance d'abord les 67 tests unitaires (`npm run test:unit`, sans navigateur), puis rejoue dans Chrome, sans interface, les 26 vérifications de bout en bout (`npm run test:e2e`). Celles des sprints 1 et 3 hors AR sont décrites ici ; le parcours AR est décrit dans [sprint-3.md](sprint-3.md#12-tests). Prérequis : Node.js 18 ou plus, Google Chrome, un processeur graphique compatible WebGPU, et un premier `npm install`. Pour utiliser Microsoft Edge à la place de Chrome : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`).
+`npm test` lance d'abord les 73 tests unitaires (`npm run test:unit`, sans navigateur), puis rejoue dans Chrome, sans interface, les 37 vérifications de bout en bout (`npm run test:e2e`). Celles des sprints 1 et 3 hors AR sont décrites ici ; le parcours AR est décrit dans [sprint-3.md](sprint-3.md#12-tests). Prérequis : Node.js 18 ou plus, Google Chrome, un processeur graphique compatible WebGPU, et un premier `npm install`. Pour utiliser Microsoft Edge à la place de Chrome : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`).
 
 | Test | Ce qu'il vérifie |
 | --- | --- |
@@ -461,7 +461,8 @@ Ce que les tests ne couvrent pas : le rendu visuel (contrôlé à l'œil sur les
 - La fluidité de 30 images par seconde reste à mesurer sur un téléphone de milieu de gamme (sprint 6).
 - Le hit test est émulé sur PC par une table virtuelle (sprint 3) ; la détection de vraies surfaces par ARCore se vérifie sur téléphone.
 - En AR, la liaison WebXR/WebGPU est encore derrière un réglage de Chrome (`chrome://flags/#webxr-webgpu-binding`). Sans repli WebGL, l'AR demande ce réglage sur le téléphone (sprint 3).
-- Sans WebGPU, l'application affiche un message au lieu du terrain : sur iPhone, il faut iOS 26 (Safari 26).
+- Sans WebGPU, l'application affiche un message au lieu du terrain : sur iPhone, il faut iOS 26 (Safari 26) ; sur Android, Chrome bloque WebGPU avant Android 12 (Galaxy S10e sous Android 9, testé le 14 novembre 2026).
+- Pour tester malgré tout sur un tel téléphone, le mode test WebGL (`?webgl` dans l'adresse, `src/webgl-test-mode.js`) fait tourner la même scène en WebGL 2. Il est réservé aux tests : ce n'est pas un repli, l'application ne le choisit jamais d'elle-même. Voir [sprint-3.md](sprint-3.md#16-mode-test-webgl-webgl-réservé-aux-tests).
 - Le sprint 3 reste à tester sur téléphone.
 - Les formations ne se changent pas encore depuis l'interface (sprint 4).
 - Safari sur iPhone ne prend pas en charge les sessions WebXR `immersive-ar` : sur iPhone, l'application reste en vue 3D (vérifié sur un iPhone 15).
