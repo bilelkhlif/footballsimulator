@@ -14,14 +14,15 @@
 
 - **Le besoin.** Les entraîneurs amateurs expliquent la tactique sur un tableau blanc : une vue de dessus en 2D, des déplacements difficiles à montrer, aucun partage à distance.
 - **Notre réponse.** Une PWA qui pose un mini-terrain 3D de 60 × 39 cm sur une vraie table, à travers la caméra d'un smartphone Android, depuis une URL ou un QR code.
-- **Où nous en sommes.** Les sprints 1 à 4 sont faits :
+- **Où nous en sommes.** Les sprints 1 à 5 sont faits :
   - terrain et 22 joueurs en 3D ;
   - session AR immersive ;
   - terrain posé sur la table par hit test, réticule et toucher, puis ancré ;
   - formation de chaque équipe choisie par des boutons (4-4-2, 4-3-3, 3-5-2, 4-2-3-1), les joueurs rejoignant leurs places ;
+  - joueurs et ballon sélectionnés puis déplacés par raycasting, à la souris, au doigt et en AR ; flèches de passe et de course ; annuler, rétablir et réinitialiser (patron Command) ;
   - rendu **WebGPU sans repli WebGL** ;
   - application installable, utilisable hors-ligne.
-- **Testé.** 141 tests automatisés sur PC. Sur téléphone : AR testée le 12 novembre 2026 sur deux téléphones Android. Le 14 novembre, l'AR rendue en WebGPU fonctionne sur le TECNO POVA 6 Pro 5G ; le Galaxy S10e sous Android 9 refuse WebGPU, et tout y fonctionne en mode test WebGL.
+- **Testé.** 232 tests automatisés sur PC. Sur téléphone : AR testée le 12 novembre 2026 sur deux téléphones Android. Le 14 novembre, l'AR rendue en WebGPU fonctionne sur le TECNO POVA 6 Pro 5G ; le Galaxy S10e sous Android 9 refuse WebGPU, et tout y fonctionne en mode test WebGL. Le sprint 5 reste à tester sur téléphone : protocole dans [docs/sprint-5.md](docs/sprint-5.md#11-protocole-de-validation-sur-téléphone).
 
 ## Aperçu
 
@@ -58,6 +59,11 @@
   </tr>
 </table>
 
+<p align="center">
+  <img src="docs/images/sprint5-tactique.jpg" alt="Vue 3D : passe dorée du n° 6 au n° 11 des Bleus, course en tirets blancs, n° 9 sélectionné avec un anneau doré, barre d'outils Déplacer, Passe, Course, Annuler, Rétablir, Réinitialiser" width="100%"><br>
+  <sub>Sprint 5 : une passe (flèche dorée), une course (tirets blancs) et le n° 9 sélectionné ; la barre d'outils réunit les modes et l'historique</sub>
+</p>
+
 ## Avancement
 
 | Sprint | Contenu | État |
@@ -66,7 +72,7 @@
 | S2 | Session `immersive-ar`, espace de référence `local-floor` | Fait : AR testée sur deux téléphones Android, vue 3D sur iPhone et PC |
 | S3 | Hit testing, réticule, pose du terrain par un tap, ancre ; rendu WebGPU sans repli WebGL ; PWA complétée | Fait et testé sur PC ; AR WebGPU testée sur le TECNO POVA 6 Pro 5G |
 | S4 | Changement de formation (Strategy), deux équipes, ballon, boutons HTML | Fait et testé sur PC, en 3D et en AR émulée |
-| S5 | Sélection et déplacement des joueurs (raycasting), flèches, annulation (Command) | À faire |
+| S5 | Sélection et déplacement des joueurs (raycasting), flèches, annulation (Command) | Fait et testé sur PC, en 3D et en AR émulée ; test sur téléphone à faire ([protocole](docs/sprint-5.md#11-protocole-de-validation-sur-téléphone)) |
 | S6 | Service Worker finalisé, optimisation mobile, tests, vidéo ; bonus : animation | À faire |
 
 Les comptes rendus sont dans [docs/sprint-1.md](docs/sprint-1.md), [docs/sprint-2.md](docs/sprint-2.md), [docs/sprint-3.md](docs/sprint-3.md) et [docs/sprint-4.md](docs/sprint-4.md). Le code est expliqué fichier par fichier, avec les questions probables du jury, dans [docs/guide-du-code.md](docs/guide-du-code.md) et dans les comptes rendus des sprints 2 à 4.
@@ -103,9 +109,10 @@ flowchart TD
   T -- "la session WebXR (en AR)" --> X["three.js lit la pose du téléphone et la texture de la vue"]
   X --> M["matchXrTargetToViews : une couche de rendu par vue"]
   M --> P["placement.update(frame) : hit test, réticule, toucher, ancre"]
-  A --> AN["animator.update() : les joueurs rejoignent leur place après un changement de formation"]
+  A --> AN["animator.update() : joueurs et ballon rejoignent leur place (formation, déplacement à la main)"]
   P --> AN
-  AN --> R["renderer.render(scene, camera)"]
+  AN --> TK["tâches de l'image : aperçu d'une flèche guidé par la source d'entrée, anneau de sélection, mesure des images"]
+  TK --> R["renderer.render(scene, camera)"]
   R --> G["WebGPU : passes de rendu encodées, puis soumises au processeur graphique"]
   G --> S{"Destination"}
   S -- "hors AR" --> C["canvas de la page"]
@@ -115,7 +122,7 @@ flowchart TD
 Le code de la boucle tient en quelques lignes :
 
 ```js
-export function createRenderLoop({ renderer, scene, camera, controls, animator = null, getArPlacement }) {
+export function createRenderLoop({ renderer, scene, camera, controls, animator = null, getArPlacement, tasks = [] }) {
   return (time, frame) => {
     if (renderer.xr.isPresenting) {
       matchXrTargetToViews(renderer);   // une vue sur un téléphone, deux sur un casque
@@ -126,8 +133,14 @@ export function createRenderLoop({ renderer, scene, camera, controls, animator =
     } else {
       controls.update();                 // contrôles d'orbite, hors AR seulement
     }
-    animator?.update();                  // joueurs en route vers leur place (changement de formation)
+    animator?.update();                  // joueurs et ballon en route vers leur place
+    for (let index = 0; index < tasks.length; index += 1) {
+      tasks[index].update(time, frame);  // aperçu de flèche, anneau de sélection, mesure (sprint 5)
+    }
     renderer.render(scene, camera);      // commandes WebGPU, soumises au processeur graphique
+    for (let index = 0; index < tasks.length; index += 1) {
+      tasks[index].afterRender?.(time);  // statistiques de l'image dessinée (mode diagnostic)
+    }
   };
 }
 ```
@@ -140,11 +153,30 @@ Une image en AR, pas à pas :
 | 2 | three.js | Pose du téléphone (`getViewerPose`), caméra XR, texture WebGPU de la vue (`getViewSubImage`) |
 | 3 | `render-loop.js` | La cible de rendu de three.js passe à une couche, car un téléphone n'a qu'une vue (correctif expliqué dans [sprint-3.md](docs/sprint-3.md#5-une-vue-ou-deux--la-cible-de-rendu-xr-de-threejs-r187)) |
 | 4 | `ar-surface.js` | Hit test : le réticule suit la surface visée ; après un toucher, le terrain y est posé et une ancre est créée ; ensuite, le terrain suit son ancre |
-| 4 bis | `formation-transition.js` | Après un changement de formation, chaque joueur avance d'un pas vers sa nouvelle place, sur le terrain posé |
+| 4 bis | `formation-transition.js` | Après un changement de formation ou un déplacement à la main, chaque joueur avance d'un pas vers sa nouvelle place, sur le terrain posé |
+| 4 ter | `xr-input.js`, `tactical-view.js` | Pendant le tracé d'une flèche, l'aperçu suit le rayon de la source d'entrée (`targetRaySpace`) ; l'anneau suit le joueur sélectionné |
 | 5 | three.js | `renderer.render` : une passe de rendu de la scène et une passe de conversion des couleurs, soumises par `device.queue.submit` |
 | 6 | Système | La couche de projection est superposée à l'image de la caméra et affichée |
 
-Deux règles en découlent. Rien de WebXR ne s'utilise hors de la boucle : c'est pourquoi un toucher pose le terrain à l'image suivante. Et les contrôles d'orbite se taisent en AR, sinon ils écraseraient la pose de la caméra : un test le vérifie à chaque `npm test`. Le détail est dans [docs/sprint-3.md](docs/sprint-3.md#6-la-boucle-de-rendu).
+Deux règles en découlent. Rien de WebXR ne s'utilise hors de la boucle : c'est pourquoi un toucher pose le terrain à l'image suivante. Seule exception, l'événement `select` d'un toucher porte sa propre image WebXR, valable pendant l'événement : c'est là que le rayon du toucher est lu (sprint 5). Et les contrôles d'orbite se taisent en AR, sinon ils écraseraient la pose de la caméra : un test le vérifie à chaque `npm test`. Le détail est dans [docs/sprint-3.md](docs/sprint-3.md#6-la-boucle-de-rendu) et [docs/sprint-5.md](docs/sprint-5.md#7-intégration-dans-la-boucle-de-rendu).
+
+## Interaction tactique (sprint 5)
+
+La barre d'outils, sous le terrain, réunit trois modes et l'historique :
+
+| Bouton | Geste | Résultat |
+| --- | --- | --- |
+| Déplacer | Toucher un joueur ou le ballon, puis une place du terrain | L'objet sélectionné (anneau doré) y glisse ; toucher à nouveau l'objet annule la sélection |
+| Passe | Toucher le départ, puis l'arrivée | Flèche pleine, dorée : le trajet du ballon |
+| Course | Toucher le départ, puis l'arrivée | Flèche en tirets, blanche : le déplacement d'un joueur |
+| Annuler, Rétablir | — | Défait ou refait la dernière action, formations comprises |
+| Réinitialiser | — | Formations de départ, joueurs à leurs places, ballon au centre, sans flèche ; « Annuler » le rétablit |
+
+Un même calcul sert partout. Le toucher devient un **rayon** : depuis la caméra et à travers le point touché hors AR, depuis le `targetRaySpace` de la source d'entrée WebXR en AR. Ce rayon est confronté aux zones de sélection des joueurs, puis au plan du gazon. Le point trouvé est ramené dans le repère du terrain : le résultat ne dépend ni de la place ni de l'orientation de l'ancre. Chaque action est une **commande** annulable (patron Command), et la scène suit le tableau tactique (patron Observer). Une place hors du terrain est refusée, avec un message dans le bandeau d'aide.
+
+**Mode diagnostic** : ajouter `?diagnostics` à l'adresse affiche les images par seconde, la durée d'une image, le moteur de rendu, l'état de la session XR, les appels de dessin et les triangles, aussi en AR. Il sert à vérifier l'objectif du cahier, au moins 30 images par seconde sur un téléphone de milieu de gamme.
+
+Mathématiques, machine à états, patron Command, tests et protocole sur téléphone : [docs/sprint-5.md](docs/sprint-5.md).
 
 ## Application installable (PWA)
 
@@ -249,8 +281,8 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 ```bash
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
-npm run test:unit   # 97 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
-npm run test:e2e    # 44 vérifications dans Chrome, sans interface
+npm run test:unit   # 165 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
+npm run test:e2e    # 67 vérifications dans Chrome, sans interface
 ```
 
 Les tests de bout en bout couvrent :
@@ -260,11 +292,12 @@ Les tests de bout en bout couvrent :
 - le rendu WebGPU sans aucun contexte WebGL, et le message quand WebGPU manque ;
 - le manifeste, le Service Worker, le rechargement hors-ligne et le lancement sur un réseau très lent ;
 - le parcours AR complet avec l'émulateur : session WebGPU, réticule, toucher et pose du terrain, ancre, déplacement, sorties, et messages d'échec ;
-- le mode test WebGL (`?webgl`) : seulement sur demande, jamais en repli, et le même parcours AR rejoué dans ce mode.
+- le mode test WebGL (`?webgl`) : seulement sur demande, jamais en repli, et le même parcours AR rejoué dans ce mode ;
+- l'interaction tactique (sprint 5) : sélection et déplacement d'un joueur et du ballon au millimètre, en vue 3D, au doigt sur un téléphone de 360 px et en AR sur un terrain tourné de 25° ; flèches avec aperçu ; annuler, rétablir et réinitialiser ; toucher refusé hors du terrain ; toucher sur la barre d'outils arrêté avant la scène ; mode diagnostic.
 
 Les tests unitaires vérifient aussi la documentation du code : chaque fonction, classe et membre de classe porte un en-tête avec son responsable, sa date et son rôle, et chaque fichier renvoie à ATTRIBUTION.md ([convention](docs/convention-de-documentation.md)).
 
-Résultat le 14 novembre 2026 : 97 tests unitaires et 44 vérifications de bout en bout, tous réussis. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
+Résultat le 15 novembre 2026 : 165 tests unitaires et 67 vérifications de bout en bout, tous réussis. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-5.md](docs/sprint-5.md#10-tests), [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
 
 ## Arborescence
 
@@ -299,6 +332,15 @@ Résultat le 14 novembre 2026 : 97 tests unitaires et 44 vérifications de bout 
 │   ├── dev-emulator.js    Émulateur IWER, en développement seulement
 │   ├── dev-xr-emulation.js  Liaison WebGPU et hit test émulés, avec ?iwer seulement
 │   ├── pwa.js             Service Worker, installation, nouvelle version, hors-ligne
+│   ├── raycasting.js      Rayons (caméra, WebXR), zones de sélection, plan du terrain (sprint 5)
+│   ├── tactical-interaction.js  Machine à états : sélection, déplacement, flèches
+│   ├── commands.js        Commandes annulables et historique (Command)
+│   ├── tactical-view.js   La scène suit le tableau tactique (Observer)
+│   ├── tactical-arrows.js Flèches de passe et de course en 3D, et leur aperçu
+│   ├── tactical-toolbar.js  Barre d'outils et bandeau d'aide
+│   ├── pointer-input.js   Souris et doigt hors AR
+│   ├── xr-input.js        Touchers en AR (targetRaySpace)
+│   ├── diagnostics.js     Mode diagnostic (?diagnostics) : images par seconde, rendu
 │   ├── styles.css         Styles de l'interface
 │   └── vendor/three-r187/ three.js r187, build WebGPU (licence MIT)
 ├── tests/
@@ -316,6 +358,7 @@ Résultat le 14 novembre 2026 : 97 tests unitaires et 44 vérifications de bout 
     ├── sprint-2.md        Compte rendu du sprint 2 : session AR
     ├── sprint-3.md        Compte rendu du sprint 3 : surface réelle, WebGPU, PWA
     ├── sprint-4.md        Compte rendu du sprint 4 : formations et boutons
+    ├── sprint-5.md        Compte rendu du sprint 5 : raycasting, flèches, Command
     ├── etat-de-l-art/     Rapport d'état de l'art (PDF et source LaTeX)
     └── images/            Captures et illustrations de ce README
 ```

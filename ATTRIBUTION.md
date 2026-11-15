@@ -142,6 +142,8 @@ Sprint 3 : en dehors du constructeur de `WebGpuOnlyRenderer` ci-dessus, aucun ex
 
 Sprint 4 : les formations sont propres au projet ; aucun code ni aucune donnée de boardx n’a été repris, selon le journal du sprint.
 
+Sprint 5 : aucun extrait copié. Le raycasting passe par l'API de three.js r187 (`Raycaster.setFromCamera`, `intersectObjects`, `Ray.intersectPlane`) et par celle de WebXR (`XRFrame.getPose` sur le `targetRaySpace` d'une source d'entrée). Les formules employées, l'intersection d'un rayon et d'un plan et le quaternion de la plus petite rotation entre deux directions, sont des résultats mathématiques classiques, écrits pour le projet. Le toucher émulé passe par l'API publique d'IWER (position et orientation d'une manette, `updateButtonValue`).
+
 ---
 
 ## 4. Déclaration de l'usage des Assistants IA (Copilot, ChatGPT, Claude)
@@ -203,6 +205,8 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (mo
 18. **Sprint 4** : demande de réaliser le sprint 4 du cahier des charges, le 14 novembre 2026.
 
 19. **Test de l'AR rendue en WebGPU sur téléphone** : test physique réussi sur le TECNO POVA 6 Pro 5G, rapporté le 14 novembre 2026.
+
+20. **Sprint 5** : demande de réaliser le sprint 5 du cahier des charges, le 15 novembre 2026, avec des consignes détaillées : architecture, raycasting en AR depuis le `targetRaySpace`, patron Command, performance, tests de régression, protocole sur téléphone, documentation, et aucune fusion avant son approbation.
 
 **Déclaration détaillée par composant**
 
@@ -326,7 +330,25 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (mo
 
     * **Axe de vérification appliqué par l'étudiant :** Bilel Khlif a défini le contenu des en-têtes et les contraintes (ATTRIBUTION.md et bibliothèques tierces inchangés, fonctionnement préservé). Vérifications automatisées par l'assistant : `npm test` le 14 novembre 2026, 97 tests unitaires et 44 vérifications de bout en bout réussis ; diff du code limité aux commentaires ; le nouveau test échoue quand une balise ou un renvoi manque.
 
-*   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles des sprints 2 à 4, et `assets/screenshots/`), figures du rapport (`docs/etat-de-l-art/figures/`)
+*   **Composant ou Shader concerné :** code du sprint 5, le 15 novembre 2026 : `src/raycasting.js`, `src/tactical-interaction.js`, `src/commands.js`, `src/tactical-view.js`, `src/tactical-arrows.js`, `src/tactical-toolbar.js`, `src/pointer-input.js`, `src/xr-input.js`, `src/diagnostics.js` ; modifications de `src/tactics-board.js`, `src/formation-transition.js`, `src/team.js`, `src/ball.js`, `src/config.js`, `src/formation-panel.js`, `src/ar-surface.js`, `src/render-loop.js`, `src/dev-xr-emulation.js`, `src/main.js`, `index.html`, `src/styles.css` et `sw.js` ; tests (`tests/unit/`, `tests/run-tests.mjs`)
+
+    * **Prompt ou usage principal :** demande de Bilel Khlif de réaliser le sprint 5 du cahier des charges (§5.3 : sélection et déplacement par raycasting, flèches tactiques, Undo par le patron Command ; BF5 à BF8 ; scénario §4.1, étapes 6 et 7), avec des consignes détaillées : rayon WebXR depuis le `targetRaySpace`, repère du terrain ancré, séparation de la pose du terrain et de l'interaction, mode diagnostic, tests de régression, protocole sur téléphone et documentation. Code, tests et documentation générés par l'assistant.
+
+        **Périmètre technique :** Raycasting commun à la souris, au doigt et à l'AR ; intersection avec le plan du terrain ancré et passage au repère du terrain ; machine à états de l'interaction ; patron Command (cinq commandes et un historique) sur un état tactique séparé du rendu ; flèches 3D dans le repère du terrain et libération de leurs ressources ; protection du DOM Overlay ; mode diagnostic des performances, sans allocation dans la boucle de rendu en dehors du tracé d'une flèche.
+
+    * **Axe de vérification appliqué par l'étudiant :** Bilel Khlif a fixé les exigences du sprint et réservé la fusion à son approbation. Les vérifications suivantes sont automatisées, faites par l'assistant ; aucune validation physique du sprint 5 n'est consignée à cette date :
+
+        * `npm test` le 15 novembre 2026 : 165 tests unitaires réussis sur 165, puis 67 vérifications de bout en bout réussies sur 67. Elles couvrent la sélection et le déplacement d'un joueur et du ballon, au millimètre, en vue 3D, au doigt sur un écran de 360 px, et en AR émulée sur un terrain tourné de 25°, en WebGPU et en mode test WebGL ; les flèches avec aperçu ; annuler, rétablir et réinitialiser ; le refus hors du terrain ; la protection de la barre d'outils en AR ; le mode diagnostic ;
+
+        * douze erreurs introduites volontairement, puis retirées, toutes détectées ; l'une ne l'a été qu'après le renforcement d'un test unitaire ;
+
+        * deux défauts trouvés par les tests de bout en bout et corrigés avant livraison : en AR, l'aperçu d'une flèche suivait la première manette de la liste au lieu de celle qui avait posé le départ ; le mode diagnostic lisait des statistiques de rendu que three.js remet à zéro au début de chaque image ;
+
+        * dans l'émulateur, un clic devient le rayon d'un toucher de téléphone, que l'application lit dans le `targetRaySpace` ;
+
+        * fonctionnement, mathématiques et protocole sur téléphone dans `docs/sprint-5.md` ; tests sur téléphone à faire par l'équipe.
+
+*   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles des sprints 2 à 5, et `assets/screenshots/`), figures du rapport (`docs/etat-de-l-art/figures/`)
 
     * **Prompt ou usage principal :** dessin des icônes en SVG d'après la couverture du cahier des charges, captures automatisées de l'application, mise en page de la bannière dans le style de la présentation d'état de l'art
 
@@ -334,7 +356,7 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (mo
 
     * **Axe de vérification appliqué par l’étudiant :** critères graphiques issus du cahier des charges collectif ; contrôles visuels consignés par l’assistant : les captures sont prises par script sur l'application réelle ; le motif de l'icône « maskable » tient dans la zone sûre d'Android (un cercle de 80 % de la largeur).
 
-*   **Composant ou Shader concerné :** documentation : `README.md`, `docs/architecture.md`, `docs/sprint-1.md`, `docs/sprint-2.md`, `docs/sprint-3.md`, `docs/sprint-4.md`, `docs/guide-du-code.md`, `docs/etat-de-l-art/README.md`, `src/vendor/three-r187/README.md` et ce fichier
+*   **Composant ou Shader concerné :** documentation : `README.md`, `docs/architecture.md`, `docs/sprint-1.md`, `docs/sprint-2.md`, `docs/sprint-3.md`, `docs/sprint-4.md`, `docs/sprint-5.md`, `docs/guide-du-code.md`, `docs/etat-de-l-art/README.md`, `src/vendor/three-r187/README.md` et ce fichier
 
     * **Prompt ou usage principal :** rédaction en français à partir du code et du cahier des charges. Le README a été refait à la demande de Bilel Khlif, dans le style du rapport et de la présentation d'état de l'art, avec des captures et la synthèse de la veille. Au sprint 3, ses parties « Rendu WebGPU », « La boucle de rendu » et « Application installable » répondent aux demandes de l'enseignant transmises par Bilel Khlif. Ce fichier suit le modèle fourni par l'enseignant.
 
@@ -369,5 +391,6 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (mo
 | Mode test WebGL | 110/110 | Arbitrage production/test et validation AR sur Galaxy S10e |
 | Sprint 4 | 138/138 | Lancement du sprint à partir du cahier des charges collectif |
 | Documentation des fonctions | 141/141 | Contenu des en-têtes et contraintes définis |
+| Sprint 5 | 232/232 | Exigences détaillées du sprint ; fusion réservée à son approbation |
 
-**État de validation matérielle au 14 novembre 2026 :** rendu 3D WebGPU vérifié sur le PC ASUS TUF A15 ; parcours AR WebGPU vérifié en émulation ; AR rendue en WebGPU vérifiée sur un téléphone, le TECNO POVA 6 Pro 5G (essai physique réussi) ; AR sur Galaxy S10e vérifiée uniquement dans le mode de test WebGL. Aucune validation physique du sprint 4 n’est consignée à cette date. Les résultats automatisés ci-dessus proviennent du journal de développement.
+**État de validation matérielle au 15 novembre 2026 :** rendu 3D WebGPU vérifié sur le PC ASUS TUF A15 ; parcours AR WebGPU vérifié en émulation, interaction tactique du sprint 5 comprise ; AR rendue en WebGPU vérifiée sur un téléphone, le TECNO POVA 6 Pro 5G (essai physique réussi) ; AR sur Galaxy S10e vérifiée uniquement dans le mode de test WebGL. Aucune validation physique des sprints 4 et 5 n’est consignée à cette date. Les résultats automatisés ci-dessus proviennent du journal de développement.
