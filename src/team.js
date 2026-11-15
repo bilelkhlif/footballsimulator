@@ -44,13 +44,35 @@ export function createTeam(team, formation, playerFactory) {
  * @role Scène 3D — équipes et application des formations
  */
 export function applyFormation(teamGroup, team, formation, animator) {
+  const targets = assignFormationRoles(teamGroup, team, formation);
+  for (const player of teamGroup.children) {
+    const target = targets.get(player.userData.number);
+    if (target) {
+      animator.moveTo(player, target);
+    }
+  }
+}
+
+/**
+ * Donne à chaque joueur, reconnu par son numéro, le poste de ce numéro dans une formation, sans le
+ * déplacer. Depuis le sprint 5, les places viennent du tableau tactique (src/tactical-view.js) : un
+ * joueur déplacé à la main garde sa place, mais prend le poste de la formation.
+ * @param {THREE.Group} teamGroup groupe créé par createTeam
+ * @param {{attacksPositiveX: boolean}} team description de l'équipe (config.TEAMS)
+ * @param {import('./formations.js').FormationStrategy} formation
+ * @returns {Map<number, {x: number, z: number, role: string}>} places et postes de la formation
+ * @responsable Bilel Khlif
+ * @date 2026-11-15
+ * @role Scène 3D — équipes et application des formations
+ */
+export function assignFormationRoles(teamGroup, team, formation) {
   const targets = computeTeamTargets(formation, team.attacksPositiveX);
   for (const player of teamGroup.children) {
     const target = targets.get(player.userData.number);
     if (target) {
       player.userData.role = target.role;
-      animator.moveTo(player, target);
     }
   }
   teamGroup.userData.formation = formation.name;
+  return targets;
 }

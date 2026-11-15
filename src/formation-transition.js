@@ -83,15 +83,19 @@ export class FormationAnimator {
   /**
    * Déplace un objet (un joueur) vers une place du terrain, sans changer sa hauteur. Un
    * déplacement déjà en cours repart de la position actuelle : un nouveau choix de formation
-   * pendant une transition ne fait pas sauter les joueurs.
+   * pendant une transition ne fait pas sauter les joueurs. Depuis le sprint 5, c'est aussi ce qui
+   * règle le conflit entre une transition et un déplacement à la main : le dernier déplacement
+   * demandé remplace celui en cours, pour cet objet seulement.
    * @param {{position: {x: number, z: number}}} object
    * @param {{x: number, z: number}} target
+   * @param {{duration?: number}} [options] durée de ce déplacement, en millisecondes ; par défaut
+   *   celle de l'animateur (0 : sans animation)
    * @responsable Bilel Khlif
    * @date 2026-11-14
    * @role Scène 3D — animation des changements de formation
    */
-  moveTo(object, target) {
-    if (this.#duration <= 0) {
+  moveTo(object, target, { duration = this.#duration } = {}) {
+    if (duration <= 0) {
       object.position.x = target.x;
       object.position.z = target.z;
       this.#moves.delete(object);
@@ -101,8 +105,20 @@ export class FormationAnimator {
       from: { x: object.position.x, z: object.position.z },
       to: { x: target.x, z: target.z },
       start: this.#now(),
-      duration: this.#duration,
+      duration,
     });
+  }
+
+  /**
+   * Indique si un objet est en cours de déplacement.
+   * @param {object} object
+   * @returns {boolean}
+   * @responsable Bilel Khlif
+   * @date 2026-11-15
+   * @role Scène 3D — animation des changements de formation
+   */
+  isMoving(object) {
+    return this.#moves.has(object);
   }
 
   /**

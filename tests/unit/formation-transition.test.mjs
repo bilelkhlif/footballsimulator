@@ -132,3 +132,22 @@ test('applyFormation : chaque joueur three.js, reconnu par son numéro, prend so
   }
   assert.equal(teamGroup.userData.formation, '3-5-2');
 });
+
+test('sprint 5 : durée propre à un déplacement (0,35 s à la main), sans changer celle des formations', () => {
+  const clock = createClock();
+  const animator = new FormationAnimator({ now: clock.now });
+  const manual = createObject(0, 0);
+  const formation = createObject(0, 0);
+
+  animator.moveTo(manual, { x: 0.1, z: 0 }, { duration: 350 });
+  animator.moveTo(formation, { x: 0.1, z: 0 });
+  clock.advance(350);
+  animator.update();
+
+  assert.equal(manual.position.x, 0.1, 'arrivé au bout de 0,35 s');
+  assert.ok(formation.position.x < 0.1, 'la transition de formation dure toujours 0,7 s');
+  assert.equal(animator.isMoving(manual), false);
+  assert.equal(animator.isMoving(formation), true);
+  animator.moveTo(manual, { x: 0.2, z: 0 }, { duration: 0 });
+  assert.equal(manual.position.x, 0.2, 'durée nulle : place immédiate');
+});
