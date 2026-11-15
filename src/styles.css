@@ -230,6 +230,21 @@ body[data-xr="active"] #copy-flag {
   color: var(--color-muted);
 }
 
+/* ---- Retour d'un geste tactique (sprint 5) : action faite ou refusée ---- */
+.hint[data-feedback="info"],
+.hint[data-feedback="success"] {
+  color: var(--color-ink);
+}
+
+.hint[data-feedback="success"] {
+  border-color: rgba(227, 168, 26, 0.65);
+}
+
+.hint[data-feedback="invalid"] {
+  color: #ffb4a8;
+  border-color: rgba(255, 140, 120, 0.6);
+}
+
 /* ---- Message d'échec de l'entrée en AR ---- */
 .notice {
   font-size: 0.9rem;
@@ -259,6 +274,7 @@ body[data-xr="active"] #copy-flag {
   border-radius: var(--radius);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
+  pointer-events: auto; /* un toucher entre deux boutons n'atteint pas le terrain (sprint 5) */
 }
 
 /* Une ligne par équipe : le nom, puis un bouton par formation, qui se partagent la largeur. */
@@ -323,6 +339,108 @@ body[data-xr="active"] #copy-flag {
 .formation-button:focus-visible {
   outline: 3px solid var(--color-gold);
   outline-offset: 2px;
+}
+
+/* ---- Barre d'outils tactique (sprint 5) : le mode, puis l'historique ----
+   Deux groupes de trois boutons, côte à côte sur grand écran, l'un sous l'autre sur un téléphone.
+   Elle capte les touchers : un toucher entre deux boutons n'atteint pas le terrain. */
+.toolbar {
+  flex: 1 1 100%;
+  max-width: 36rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-border);
+  border-radius: var(--radius);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+.toolbar__group {
+  flex: 1 1 15rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+/* Outil : grande cible tactile ; le mode actif prend sa couleur (vert, or des passes, blanc des courses). */
+.tool {
+  min-width: 0;
+  min-height: var(--tap-size);
+  padding: 0 4px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-ink);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.tool:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.tool[aria-pressed="true"] {
+  background: var(--color-green);
+  border-color: transparent;
+}
+
+.tool--pass[aria-pressed="true"] {
+  background: #a87a12;
+}
+
+.tool--run[aria-pressed="true"] {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.tool:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.tool:focus-visible {
+  outline: 3px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+/* ---- Mode diagnostic (?diagnostics) : sous le bandeau supérieur, laisse passer les touchers ---- */
+.diagnostics {
+  align-self: flex-start;
+  margin-bottom: auto;
+  padding: 8px 12px;
+  font: 600 0.78rem/1.35 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  background: rgba(0, 0, 0, 0.62);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+.diagnostics dl {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 14px;
+  margin: 0;
+}
+
+.diagnostics dl > div {
+  display: contents;
+}
+
+.diagnostics dt {
+  color: var(--color-muted);
+}
+
+.diagnostics dd {
+  margin: 0;
+  text-align: right;
 }
 
 /* ---- Groupe de boutons du bandeau inférieur, aligné à droite même sur deux lignes ---- */
@@ -429,6 +547,14 @@ body.is-ready .loader {
 
   .formation-button {
     padding: 0 2px;
+    font-size: 0.85rem;
+  }
+
+  .toolbar {
+    padding: 6px;
+  }
+
+  .tool {
     font-size: 0.85rem;
   }
 }

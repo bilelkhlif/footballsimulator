@@ -1,12 +1,16 @@
 /**
  * Tests unitaires des calculs de src/dev-xr-emulation.js : la table virtuelle de l'émulateur,
- * qui remplace la vraie table pour le hit test sur PC.
+ * qui remplace la vraie table pour le hit test sur PC. Depuis le sprint 5 : le rayon d'un clic, qui
+ * part de la vue et passe par le point cliqué, comme le toucher d'un téléphone.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { intersectVirtualTable, rotateByQuaternion, START_POSE, VIRTUAL_TABLE } from '../../src/dev-xr-emulation.js';
+import * as THREE from 'three';
+import {
+  intersectVirtualTable, quaternionFromForward, rayDirectionThroughPixel, rotateByQuaternion, START_POSE, VIRTUAL_TABLE,
+} from '../../src/dev-xr-emulation.js';
 
 const FORWARD = { x: 0, y: 0, z: -1 };
 
@@ -61,4 +65,32 @@ test('rayon qui passe à côté de la table : pas de surface', () => {
   // Regard vers la droite, au-delà du bord de la table (0,8 m du centre).
   const direction = { x: 0.9, y: -0.3, z: -0.3 };
   assert.equal(intersectVirtualTable({ x: 0, y: 1.35, z: 0 }, direction), null);
+});
+
+test('sprint 5 : le rayon d\'un clic part de la vue et passe exactement par le point projeté sous le pointeur', () => {
+  // Vue d'un téléphone émulé, avec une projection asymétrique comme celles de WebXR.
+  const camera = new THREE.PerspectiveCamera(60, 0.6, 0.01, 20);
+  camera.setViewOffset(1000, 1000, 40, -30, 1000, 1000);
+  camera.position.set(0.1, 1.35, 0.05);
+  camera.quaternion.setFromEuler(new THREE.Euler(-0.61, 0.3, 0.02, 'YXZ'));
+  camera.updateMatrixWorld();
+  const orientation = { x: camera.quaternion.x, y: camera.quaternion.y, z: camera.quaternion.z, w: camera.quaternion.w };
+
+  for (const point of [new THREE.Vector3(0.2, 0.72, -0.85), new THREE.Vector3(-0.3, 0.73, -1.1)]) {
+    const ndc = point.clone().project(camera);
+    const direction = rayDirectionThroughPixel(ndc, camera.projectionMatrix.elements, orientation);
+    const expected = point.clone().sub(camera.position).normalize();
+    assert.ok(Math.abs(direction.x - expected.x) < 1e-9 && Math.abs(direction.y - expected.y) < 1e-9
+      && Math.abs(direction.z - expected.z) < 1e-9, `(${direction.x}, ${direction.y}, ${direction.z})`);
+  }
+});
+
+test('sprint 5 : la manette orientée par quaternionFromForward regarde exactement dans la direction voulue', () => {
+  for (const direction of [{ x: 0, y: -1, z: 0 }, { x: 0.6, y: -0.48, z: -0.64 }, { x: 0, y: 0, z: -1 }, { x: 0, y: 0, z: 1 }]) {
+    const q = quaternionFromForward(direction);
+    assert.ok(Math.abs(Math.hypot(q.x, q.y, q.z, q.w) - 1) < 1e-12, 'quaternion unitaire');
+    const forward = rotateByQuaternion(FORWARD, q);
+    assert.ok(Math.abs(forward.x - direction.x) < 1e-9 && Math.abs(forward.y - direction.y) < 1e-9
+      && Math.abs(forward.z - direction.z) < 1e-9, `${JSON.stringify(direction)} → ${JSON.stringify(forward)}`);
+  }
 });

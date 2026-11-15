@@ -384,6 +384,172 @@ function isInFormation(state, expected) {
 }
 
 /**
+ * Script de page (sprint 5) : outils de visée, installés dans window.__aim. La caméra active est
+ * celle de la vue 3D, ou en AR la caméra de la vue WebXR (pose et projection de la session). Un
+ * point ne convient que s'il est à l'écran, hors de l'interface, et si le rayon qui passe par ce
+ * pixel touche bien ce qui est visé : le test vérifie le raycasting de l'application, pas un clic
+ * caché par un autre joueur.
+ * @responsable Bilel Khlif
+ * @date 2026-11-15
+ * @role Tests de bout en bout — outillage de l'interaction tactique
+ */
+function installAimTools() {
+  /** Éléments d'interface qui reçoivent les touchers. */
+  const ui = 'button, .toolbar, .formation-panel, .notice';
+  window.__aim = {
+    async context() {
+      const THREE = await import('three');
+      const app = window.__footballSimulator;
+      const camera = app.renderer.xr.isPresenting ? app.renderer.xr.getCamera().cameras[0] : app.camera;
+      app.pitchGroup.updateMatrixWorld(true);
+      return { THREE, app, camera, rect: app.renderer.domElement.getBoundingClientRect() };
+    },
+    // Pixel d'un point monde, et s'il est utilisable (à l'écran, hors de l'interface).
+    toScreen({ THREE, camera, rect }, world) {
+      const ndc = world.clone().applyMatrix4(new THREE.Matrix4().copy(camera.matrixWorld).invert()).applyMatrix4(camera.projectionMatrix);
+      const x = rect.left + ((ndc.x + 1) / 2) * rect.width;
+      const y = rect.top + ((1 - ndc.y) / 2) * rect.height;
+      const onScreen = Math.abs(ndc.x) < 0.92 && Math.abs(ndc.y) < 0.92 && ndc.z > -1 && ndc.z < 1;
+      return { x, y, usable: onScreen && !document.elementFromPoint(x, y)?.closest(ui) };
+    },
+    // Premier objet touché par le rayon de la caméra vers un point monde.
+    firstHit({ THREE, app, camera }, world) {
+      const origin = new THREE.Vector3().setFromMatrixPosition(camera.matrixWorld);
+      const raycaster = new THREE.Raycaster(origin, world.clone().sub(origin).normalize());
+      return raycaster.intersectObjects(app.tacticalView.hitboxes, false)[0]?.object.parent ?? null;
+    },
+    async player(teamId) {
+      const context = await this.context();
+      const { THREE, app } = context;
+      for (const player of app.pitchGroup.getObjectByName(`team-${teamId}`).children) {
+        const head = player.localToWorld(new THREE.Vector3(0, 0.03, 0));
+        const screen = this.toScreen(context, head);
+        if (screen.usable && this.firstHit(context, head) === player) {
+          return { number: player.userData.number, x: screen.x, y: screen.y };
+        }
+      }
+      return null;
+    },
+    async ball() {
+      const context = await this.context();
+      const { THREE, app } = context;
+      const ball = app.pitchGroup.getObjectByName('ball');
+      const center = ball.getWorldPosition(new THREE.Vector3());
+      const screen = this.toScreen(context, center);
+      return screen.usable && this.firstHit(context, center) === ball ? { x: screen.x, y: screen.y } : null;
+    },
+    async spot(candidates) {
+      const context = await this.context();
+      const { THREE, app } = context;
+      for (const [x, z] of candidates) {
+        const world = app.pitchGroup.localToWorld(new THREE.Vector3(x, 0, z));
+        const screen = this.toScreen(context, world);
+        if (screen.usable && this.firstHit(context, world) === null) {
+          return { x, z, sx: screen.x, sy: screen.y };
+        }
+      }
+      return null;
+    },
+  };
+}
+
+/**
+ * Lit l'état tactique dans la page : tableau, interaction, historique, flèches 3D et bandeau d'aide.
+ * @param {import('playwright-core').Page} page
+ * @returns {Promise<object>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-15
+ * @role Tests de bout en bout — outillage de l'interaction tactique
+ */
+function readTactics(page) {
+  return page.evaluate(() => {
+    const app = window.__footballSimulator;
+    const hint = document.getElementById('hint');
+    return {
+      snapshot: app.board.snapshot(),
+      initial: app.board.isInInitialState(),
+      selection: app.interaction.selection,
+      mode: app.interaction.mode,
+      state: app.interaction.state,
+      canUndo: app.history.canUndo,
+      canRedo: app.history.canRedo,
+      arrowMeshes: app.pitchGroup.getObjectByName('tactical-arrows').children.length,
+      ringVisible: app.pitchGroup.getObjectByName('selection-ring').visible,
+      previewVisible: app.pitchGroup.getObjectByName('arrow-preview').visible,
+      hint: hint.textContent,
+      feedback: hint.dataset.feedback ?? null,
+      undoDisabled: document.querySelector('[data-action="undo"]').disabled,
+      toolbarHidden: document.getElementById('tactical-toolbar').hidden,
+    };
+  });
+}
+
+/**
+ * Attend la fin des déplacements, puis renvoie l'écart maximal, en millimètres, entre les objets
+ * affichés et leurs places dans le tableau tactique.
+ * @param {import('playwright-core').Page} page
+ * @returns {Promise<number>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-15
+ * @role Tests de bout en bout — outillage de l'interaction tactique
+ */
+async function settledSceneGapMm(page) {
+  await waitForFormationsSettled(page);
+  return page.evaluate(() => {
+    const app = window.__footballSimulator;
+    let worst = 0;
+    for (const teamId of app.board.teamIds) {
+      for (const player of app.pitchGroup.getObjectByName(`team-${teamId}`).children) {
+        const { x, z } = app.board.getPlayerPosition(teamId, player.userData.number);
+        worst = Math.max(worst, Math.hypot(player.position.x - x, player.position.z - z));
+      }
+    }
+    const ball = app.board.getBallPosition();
+    const mesh = app.pitchGroup.getObjectByName('ball');
+    return Math.max(worst, Math.hypot(mesh.position.x - ball.x, mesh.position.z - ball.z)) * 1000;
+  });
+}
+
+/**
+ * Écart, en millimètres, entre une place du tableau et la place visée.
+ * @param {{x: number, z: number}} actual
+ * @param {{x: number, z: number}} expected
+ * @returns {number}
+ * @responsable Bilel Khlif
+ * @date 2026-11-15
+ * @role Tests de bout en bout — outillage de l'interaction tactique
+ */
+function gapMm(actual, expected) {
+  return Math.hypot(actual.x - expected.x, actual.z - expected.z) * 1000;
+}
+
+/**
+ * Déroule des étapes dépendantes : une étape en échec fait ignorer les suivantes.
+ * @param {Array<[string, () => Promise<[boolean, string]>]>} steps
+ * @param {(step: string) => string} label nom complet d'une étape dans le bilan
+ * @responsable Bilel Khlif
+ * @date 2026-11-15
+ * @role Tests de bout en bout — outillage
+ */
+async function runSteps(steps, label) {
+  let blocked = false;
+  for (const [step, run] of steps) {
+    if (blocked) {
+      record(label(step), 'ignoré', 'étape précédente en échec');
+      continue;
+    }
+    try {
+      const [ok, detail] = await run();
+      record(label(step), ok ? 'ok' : 'échec', detail);
+      blocked = !ok;
+    } catch (error) {
+      record(label(step), 'échec', error.message.split('\n')[0]);
+      blocked = true;
+    }
+  }
+}
+
+/**
  * Changement de formation par les boutons (sprint 4, BF4) : scénario de démonstration du cahier
  * (§4.1, étape 5), toutes les formations pour les deux équipes, et transition animée.
  * @param {import('playwright-core').Browser} browser
@@ -620,6 +786,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
   const label = (step) => `${webglTest ? 'Mode test WebGL, AR avec IWER' : 'Session AR avec IWER'} : ${step}`;
   const context = await browser.newContext(DESKTOP);
   try {
+    await context.addInitScript(installAimTools);
     const { page, errors } = await openApp(context, `${url}?iwer&debug${webglTest ? '&webgl' : ''}`);
     await page.waitForFunction(() => document.getElementById('xr-status')?.dataset.state !== 'checking', null, { timeout: 30000 });
     if (await page.evaluate(() => document.getElementById('xr-status').dataset.state) !== 'emulated') {
@@ -803,6 +970,79 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         const ok = !lifted.pitchVisible && !lifted.anchored && state.pitch[0] < -0.3 && near(state.rotationDegrees, 25, 1) && state.anchored;
         return [ok, `retiré : ${!lifted.pitchVisible}, nouvelle pose (${state.pitch.join(' ; ')}), rotation ${state.rotationDegrees}°`];
       }],
+      // Sprint 5 : interaction tactique sur ce terrain déplacé et tourné par son ancre.
+      ['joueur touché sur le terrain tourné : sélectionné par le rayon de la source d\'entrée (targetRaySpace)', async () => {
+        const toolbarVisible = await page.evaluate(() => !document.getElementById('tactical-toolbar').hidden);
+        const target = await page.evaluate(() => window.__aim.player('blue'));
+        if (!target) {
+          return [false, 'aucun joueur bleu visible'];
+        }
+        await page.mouse.click(target.x, target.y);
+        await page.waitForFunction(() => window.__footballSimulator.interaction.selection !== null, null, { timeout: 5000 });
+        const state = await readTactics(page);
+        const placed = await page.evaluate(() => window.__footballSimulator.placement.state === 'placed');
+        const ok = toolbarVisible && placed && state.selection?.teamId === 'blue' && state.selection?.number === target.number;
+        return [ok, `barre d'outils visible : ${toolbarVisible}, sélection : n° ${state.selection?.number} (visé : n° ${target.number}), terrain toujours posé : ${placed}`];
+      }],
+      ['joueur déplacé en AR : place exacte dans le repère du terrain tourné', async () => {
+        const spot = await page.evaluate(() => window.__aim.spot([[-0.12, 0.19], [-0.2, 0.18], [-0.05, 0.19], [-0.15, -0.19], [0.05, 0.17]]));
+        if (!spot) {
+          return [false, 'aucune place libre visible'];
+        }
+        const { number } = (await readTactics(page)).selection;
+        await page.mouse.click(spot.sx, spot.sy);
+        await page.waitForFunction(() => window.__footballSimulator.interaction.selection === null, null, { timeout: 5000 });
+        const sceneGap = await settledSceneGapMm(page);
+        const state = await readTactics(page);
+        const gap = gapMm(state.snapshot.players[`blue:${number}`], spot);
+        const rotation = await page.evaluate(() => (window.__footballSimulator.pitchGroup.rotation.y * 180) / Math.PI);
+        return [gap < 2 && sceneGap < 0.01, `visé (${spot.x} ; ${spot.z}) sur le terrain tourné de ${rotation.toFixed(1)}°, placé à ${gap.toFixed(3)} mm`];
+      }],
+      ['flèche de passe en AR : aperçu guidé par la source d\'entrée, puis « Annuler »', async () => {
+        await page.click('[data-mode="pass"]');
+        const start = await page.evaluate(() => window.__aim.spot([[-0.1, 0.05], [-0.05, 0.1], [0, 0.12], [-0.15, 0.12]]));
+        const end = await page.evaluate(() => window.__aim.spot([[0.12, -0.08], [0.15, 0.1], [0.08, 0.15], [0.2, 0]]));
+        if (!start || !end) {
+          return [false, 'points de la flèche cachés'];
+        }
+        await page.mouse.click(start.sx, start.sy);
+        await page.waitForFunction(() => window.__footballSimulator.interaction.state === 'arrow-end', null, { timeout: 5000 });
+        await page.mouse.move(end.sx, end.sy);
+        await page.waitForFunction(() => window.__footballSimulator.pitchGroup.getObjectByName('arrow-preview').visible, null, { timeout: 5000 });
+        await page.mouse.click(end.sx, end.sy);
+        await page.waitForFunction(() => window.__footballSimulator.board.getArrows().length === 1, null, { timeout: 5000 });
+        const drawn = await readTactics(page);
+        await page.click('[data-action="undo"]');
+        const undone = await readTactics(page);
+        await page.click('[data-mode="move"]');
+        const [arrow] = drawn.snapshot.arrows;
+        const ok = arrow.kind === 'pass' && gapMm(arrow.from, start) < 2 && gapMm(arrow.to, end) < 2 && drawn.arrowMeshes === 1
+          && undone.arrowMeshes === 0 && undone.snapshot.arrows.length === 0;
+        return [ok, `départ à ${gapMm(arrow.from, start).toFixed(3)} mm, arrivée à ${gapMm(arrow.to, end).toFixed(3)} mm ; annulée : ${undone.arrowMeshes === 0}`];
+      }],
+      ['DOM Overlay : un toucher sur la barre d\'outils n\'atteint pas la scène (beforexrselect)', async () => {
+        await page.evaluate(() => {
+          const input = window.__footballSimulator.tacticalInput;
+          window.__selects = 0;
+          const handleSelect = input.handleSelect.bind(input);
+          input.handleSelect = (event) => {
+            window.__selects += 1;
+            return handleSelect(event);
+          };
+        });
+        const before = await readTactics(page);
+        const box = await page.locator('#tactical-toolbar').boundingBox();
+        await page.mouse.click(box.x + 3, box.y + box.height / 2); // bord de la barre, entre les boutons
+        await page.waitForTimeout(400);
+        const blocked = await page.evaluate(() => window.__selects);
+        // Contrôle : un toucher sur le gazon, lui, atteint bien la scène.
+        const spot = await page.evaluate(() => window.__aim.spot([[0.05, 0.05], [-0.05, -0.05], [0.1, 0]]));
+        await page.mouse.click(spot.sx, spot.sy);
+        await page.waitForFunction(() => window.__selects > 0, null, { timeout: 5000 });
+        const after = await readTactics(page);
+        const ok = blocked === 0 && JSON.stringify(after.snapshot) === JSON.stringify(before.snapshot);
+        return [ok, `select reçus après un toucher sur la barre : ${blocked} ; après un toucher sur le gazon : 1`];
+      }],
       ['regard hors de la table : pas de réticule, et un toucher ne pose rien', async () => {
         await page.click('#move-pitch');
         await aim(0); // regard horizontal : le rayon ne rencontre aucune surface
@@ -819,6 +1059,16 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         const view = await readView();
         const counts = await countLoopCalls(800);
         return [sameAsInitial(view) && counts.updates > 0, `vue identique au départ : ${sameAsInitial(view)}, contrôles relancés : ${counts.updates > 0}`];
+      }],
+      ['fin de session : saisie AR arrêtée, tactique gardée pour la vue 3D', async () => {
+        const state = await page.evaluate(() => ({
+          inputStopped: window.__footballSimulator.tacticalInput === null,
+          interaction: window.__footballSimulator.interaction.state,
+          toolbar: !document.getElementById('tactical-toolbar').hidden,
+        }));
+        const tactics = await readTactics(page);
+        const ok = state.inputStopped && state.interaction === 'idle' && state.toolbar && !tactics.initial;
+        return [ok, `saisie AR arrêtée : ${state.inputStopped}, interaction : ${state.interaction}, joueur déplacé en AR gardé : ${!tactics.initial}`];
       }],
       ['nouvelle entrée, puis sortie par le système', async () => {
         await enterAr();
@@ -892,6 +1142,246 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
 }
 
 /**
+ * Interaction tactique en vue 3D (sprint 5, BF5 à BF8) : sélection et déplacement d'un joueur et
+ * du ballon par raycasting, annuler et rétablir, clic refusé hors du terrain, flèche de passe avec
+ * aperçu, formation annulée, réinitialisation ; toujours en WebGPU, sans erreur.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-15
+ * @role Tests de bout en bout — interaction tactique en vue 3D
+ */
+async function testTacticalBoard(browser, url) {
+  /** Nom d'une étape dans le bilan. */
+  const label = (step) => `Interaction tactique en vue 3D : ${step}`;
+  const context = await browser.newContext(DESKTOP);
+  try {
+    await context.addInitScript(recordCanvasContexts);
+    await context.addInitScript(installAimTools);
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    const moved = { number: null, place: null };
+    const steps = [
+      ['joueur sélectionné par raycasting (clic sur son pion), anneau de sélection et aide', async () => {
+        const target = await page.evaluate(() => window.__aim.player('blue'));
+        if (!target) {
+          return [false, 'aucun joueur bleu visible'];
+        }
+        await page.mouse.click(target.x, target.y);
+        // L'anneau suit la sélection à l'image suivante (tâche de la boucle de rendu).
+        await page.waitForFunction(() => window.__footballSimulator.pitchGroup.getObjectByName('selection-ring').visible, null, { timeout: 5000 })
+          .catch(() => {});
+        const state = await readTactics(page);
+        moved.number = target.number;
+        const ok = state.selection?.teamId === 'blue' && state.selection?.number === target.number && state.ringVisible
+          && state.hint.includes('sélectionné');
+        return [ok, `n° ${target.number} des Bleus, anneau : ${state.ringVisible}, aide : « ${state.hint} »`];
+      }],
+      ['clic sur le gazon : le joueur y va, au millimètre, par une commande annulable', async () => {
+        const spot = await page.evaluate(() => window.__aim.spot([[-0.12, 0.19], [-0.2, 0.19], [-0.05, 0.18], [-0.15, -0.19]]));
+        if (!spot) {
+          return [false, 'aucune place libre visible'];
+        }
+        await page.mouse.click(spot.sx, spot.sy);
+        const sceneGap = await settledSceneGapMm(page);
+        const state = await readTactics(page);
+        moved.place = state.snapshot.players[`blue:${moved.number}`];
+        const ok = gapMm(moved.place, spot) < 1 && sceneGap < 0.01 && state.selection === null && state.canUndo
+          && !state.undoDisabled && state.feedback === 'success';
+        return [ok, `visé (${spot.x} ; ${spot.z}), placé à ${gapMm(moved.place, spot).toFixed(3)} mm, affiché à ${sceneGap.toFixed(4)} mm de sa place`];
+      }],
+      ['« Annuler » puis « Rétablir », par la barre d\'outils', async () => {
+        await page.click('[data-action="undo"]');
+        await settledSceneGapMm(page);
+        const undone = await readTactics(page);
+        await page.click('[data-action="redo"]');
+        const sceneGap = await settledSceneGapMm(page);
+        const redone = await readTactics(page);
+        const ok = undone.initial && undone.canRedo && gapMm(redone.snapshot.players[`blue:${moved.number}`], moved.place) === 0 && sceneGap < 0.01;
+        return [ok, `annulé : état de départ ${undone.initial} ; rétabli : place exacte, affichée à ${sceneGap.toFixed(4)} mm`];
+      }],
+      ['ballon sélectionné puis déplacé', async () => {
+        const ball = await page.evaluate(() => window.__aim.ball());
+        if (!ball) {
+          return [false, 'ballon caché'];
+        }
+        await page.mouse.click(ball.x, ball.y);
+        const selected = (await readTactics(page)).selection;
+        const spot = await page.evaluate(() => window.__aim.spot([[0.04, 0.19], [0.1, 0.19], [0.02, 0.15], [0.05, -0.19]]));
+        await page.mouse.click(spot.sx, spot.sy);
+        await settledSceneGapMm(page);
+        const state = await readTactics(page);
+        const ok = selected?.type === 'ball' && gapMm(state.snapshot.ball, spot) < 1;
+        return [ok, `sélection : ${selected?.type}, ballon placé à ${gapMm(state.snapshot.ball, spot).toFixed(3)} mm du point visé`];
+      }],
+      ['clic hors du terrain : refusé, avec un retour, et rien ne bouge', async () => {
+        const target = await page.evaluate(() => window.__aim.player('red'));
+        await page.mouse.click(target.x, target.y);
+        const before = await readTactics(page);
+        const outside = await page.evaluate(async () => {
+          const context = await window.__aim.context();
+          for (const [x, z] of [[0, -0.3], [0.2, -0.3], [-0.2, -0.3], [0, 0.3], [0.4, 0]]) {
+            const screen = window.__aim.toScreen(context, context.app.pitchGroup.localToWorld(new context.THREE.Vector3(x, 0, z)));
+            if (screen.usable) {
+              return screen;
+            }
+          }
+          return null;
+        });
+        if (!outside) {
+          return [false, 'aucun point hors du terrain visible'];
+        }
+        await page.mouse.click(outside.x, outside.y);
+        const after = await readTactics(page);
+        await page.mouse.click(target.x, target.y); // désélection
+        const ok = after.feedback === 'invalid' && after.hint.includes('Hors du terrain')
+          && JSON.stringify(after.snapshot) === JSON.stringify(before.snapshot) && after.selection?.number === target.number;
+        return [ok, `aide : « ${after.hint} », sélection gardée : n° ${after.selection?.number}`];
+      }],
+      ['flèche de passe : deux clics, aperçu au survol, flèche 3D accrochée au joueur', async () => {
+        await page.click('[data-mode="pass"]');
+        const from = await page.evaluate(() => window.__aim.player('blue'));
+        await page.mouse.click(from.x, from.y);
+        const spot = await page.evaluate(() => window.__aim.spot([[0.1, 0.12], [0.15, -0.15], [0.05, 0.19], [0.2, 0.1]]));
+        await page.mouse.move(spot.sx, spot.sy);
+        await page.waitForFunction(() => window.__footballSimulator.pitchGroup.getObjectByName('arrow-preview').visible, null, { timeout: 5000 });
+        await page.mouse.click(spot.sx, spot.sy);
+        const state = await readTactics(page);
+        const [arrow] = state.snapshot.arrows;
+        const start = state.snapshot.players[`blue:${from.number}`];
+        const ok = state.arrowMeshes === 1 && arrow?.kind === 'pass' && gapMm(arrow.from, start) === 0 && gapMm(arrow.to, spot) < 1
+          && state.state === 'arrow-start';
+        return [ok, `départ accroché au n° ${from.number}, arrivée à ${gapMm(arrow.to, spot).toFixed(3)} mm du point visé, flèches 3D : ${state.arrowMeshes}`];
+      }],
+      ['changement de formation annulé : le joueur déplacé à la main retrouve sa place exacte', async () => {
+        await page.click('[data-mode="move"]');
+        await page.click('#formations-toggle');
+        await page.click('.formation-button[data-team="blue"][data-formation="4-4-2"]');
+        await settledSceneGapMm(page);
+        const changed = await readTactics(page);
+        await page.click('#formations-toggle');
+        await page.click('[data-action="undo"]');
+        const sceneGap = await settledSceneGapMm(page);
+        const state = await readTactics(page);
+        const chip = await page.evaluate(() => document.getElementById('formation-blue').textContent);
+        const ok = changed.snapshot.formations.blue === '4-4-2' && state.snapshot.formations.blue === '4-3-3' && chip === '4-3-3'
+          && gapMm(state.snapshot.players[`blue:${moved.number}`], moved.place) === 0 && sceneGap < 0.01;
+        return [ok, `pastille : ${chip}, n° ${moved.number} à sa place manuelle, scène à ${sceneGap.toFixed(4)} mm`];
+      }],
+      ['« Réinitialiser » : état de départ, et « Annuler » rétablit tout', async () => {
+        const before = await readTactics(page);
+        await page.click('[data-action="reset"]');
+        const sceneGap = await settledSceneGapMm(page);
+        const reset = await readTactics(page);
+        await page.click('[data-action="undo"]');
+        await settledSceneGapMm(page);
+        const restored = await readTactics(page);
+        const ok = reset.initial && reset.arrowMeshes === 0 && sceneGap < 0.01
+          && JSON.stringify(restored.snapshot) === JSON.stringify(before.snapshot) && restored.arrowMeshes === 1;
+        return [ok, `réinitialisé : ${reset.initial}, flèches 3D : ${reset.arrowMeshes} ; rétabli à l'identique : ${JSON.stringify(restored.snapshot) === JSON.stringify(before.snapshot)}`];
+      }],
+      ['toujours rendu en WebGPU, sans contexte WebGL, et sans erreur dans la console', async () => {
+        const contexts = await page.evaluate(() => window.__canvasContexts);
+        const webgl = contexts.filter((type) => WEBGL_CONTEXTS.includes(type));
+        return [webgl.length === 0 && contexts.includes('webgpu') && errors.length === 0,
+          `contextes : ${[...new Set(contexts)].join(', ')} ; erreurs : ${errors.slice(0, 2).join(' | ') || 'aucune'}`];
+      }],
+    ];
+    await runSteps(steps, label);
+  } catch (error) {
+    record(label('parcours complet'), 'échec', error.message);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Interaction tactique sur un téléphone de 360 px (sprint 5) : la barre d'outils tient entière à
+ * l'écran avec de grands boutons, et un toucher sur un joueur puis sur le gazon le déplace.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-15
+ * @role Tests de bout en bout — interaction tactique sur téléphone
+ */
+async function testTacticalMobile(browser, url) {
+  const name = 'Interaction tactique sur téléphone (360 × 740)';
+  const context = await browser.newContext({ viewport: { width: 360, height: 740 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+  try {
+    await context.addInitScript(installAimTools);
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    const layout = await page.evaluate(() => {
+      const tools = [...document.querySelectorAll('#tactical-toolbar .tool')];
+      const boxes = tools.map((tool) => tool.getBoundingClientRect());
+      return {
+        count: tools.length,
+        inside: boxes.every((box) => box.left >= 0 && box.right <= window.innerWidth && box.top >= 0 && box.bottom <= window.innerHeight),
+        minHeight: Math.min(...boxes.map((box) => box.height)),
+        labelsFit: tools.every((tool) => tool.scrollWidth <= tool.clientWidth),
+        overflow: document.documentElement.scrollWidth > window.innerWidth,
+      };
+    });
+    const layoutOk = layout.count === 6 && layout.inside && layout.minHeight >= 44 && layout.labelsFit && !layout.overflow;
+    record(`${name} : barre d'outils entière, six boutons de ${layout.minHeight} px de haut, libellés lisibles`, layoutOk ? 'ok' : 'échec',
+      `dans l'écran : ${layout.inside}, libellés entiers : ${layout.labelsFit}, débordement : ${layout.overflow}`);
+
+    const target = await page.evaluate(() => window.__aim.player('red'));
+    if (!target) {
+      record(`${name} : toucher un joueur puis le gazon le déplace`, 'échec', 'aucun joueur rouge visible');
+      return;
+    }
+    await page.touchscreen.tap(target.x, target.y);
+    const selected = (await readTactics(page)).selection;
+    const spot = await page.evaluate(() => window.__aim.spot([[0.3, -0.12], [0.3, 0.12], [0.25, -0.17], [-0.3, 0.12], [-0.3, -0.12]]));
+    await page.touchscreen.tap(spot.sx, spot.sy);
+    await settledSceneGapMm(page);
+    const state = await readTactics(page);
+    const gap = gapMm(state.snapshot.players[`red:${target.number}`], spot);
+    const ok = selected?.number === target.number && gap < 1 && errors.length === 0;
+    record(`${name} : toucher un joueur puis le gazon le déplace`, ok ? 'ok' : 'échec', `n° ${target.number} des Rouges placé à ${gap.toFixed(3)} mm du point touché`);
+  } catch (error) {
+    record(name, 'échec', error.message);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Mode diagnostic (sprint 5) : désactivé par défaut ; avec ?diagnostics, images par seconde,
+ * durée d'une image, moteur de rendu, session XR, appels de dessin et triangles.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-15
+ * @role Tests de bout en bout — mode diagnostic
+ */
+async function testDiagnostics(browser, url) {
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const plain = await openApp(context, `${url}?debug`);
+    const off = await plain.page.evaluate(() => document.getElementById('diagnostics').hidden && window.__footballSimulator.diagnostics === null);
+    record('Mode diagnostic : désactivé par défaut', off ? 'ok' : 'échec');
+    await plain.page.close(); // une seule page à la fois : une page en arrière-plan est ralentie
+
+    const { page, errors } = await openApp(context, `${url}?diagnostics&debug`);
+    // Mesure établie : la fenêtre de 120 images ne contient plus le démarrage (compilation des shaders).
+    await page.waitForTimeout(2500);
+    await page.waitForFunction(() => Number(document.querySelector('#diagnostics [data-field="fps"]')?.textContent) > 0, null, { timeout: 10000 });
+    const fields = await page.evaluate(() => ({
+      visible: !document.getElementById('diagnostics').hidden,
+      ...Object.fromEntries([...document.querySelectorAll('#diagnostics [data-field]')].map((field) => [field.dataset.field, field.textContent])),
+    }));
+    const ok = fields.visible && Number(fields.fps) > 0 && fields.backend === 'WebGPU' && fields.xr === 'aucune session'
+      && Number(fields.calls) > 0 && Number(fields.triangles) > 0 && errors.length === 0;
+    record('Mode diagnostic avec ?diagnostics : mesures affichées', ok ? 'ok' : 'échec',
+      `${fields.fps} images/s, ${fields.frame} par image, ${fields.backend}, ${fields.xr}, ${fields.calls} appels, ${fields.triangles} triangles`);
+  } catch (error) {
+    record('Mode diagnostic', 'échec', error.message);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Lance tous les tests, affiche le bilan et renvoie un code de sortie non nul en cas d'échec.
  * @responsable Bilel Khlif
  * @date 2026-11-09
@@ -908,6 +1398,9 @@ async function main() {
     await testFormations(browser, root.url);
     await testFormationButtons(browser, root.url);
     await testReducedMotion(browser, root.url);
+    await testTacticalBoard(browser, root.url);
+    await testTacticalMobile(browser, root.url);
+    await testDiagnostics(browser, root.url);
     await testWebGpuRendering(browser, root.url);
     await testWithoutWebGpu(browser, root.url);
     await testWebGlTestMode(browser, root.url);
