@@ -380,11 +380,25 @@ Le chef d'orchestre : il appelle les modules dans l'ordre du schéma de la parti
 - `renderer.setAnimationLoop` remplace `requestAnimationFrame` : en session WebXR, c'est le casque ou le téléphone qui cadence les images, et seule cette méthode le permet. Quand la scène est prête, la classe `is-ready` est ajoutée à la page et l'écran de chargement s'efface.
 - Si WebGPU est indisponible, `init()` lève une `WebGpuUnavailableError` : `showStartupError` remplace alors l'écran de chargement par un message qui dépend de la cause (pas de WebGPU, aucun processeur graphique utilisable), au lieu d'une page vide. Il n'y a pas de repli WebGL. Aux sprints 1 et 2, le message portait sur WebGL.
 
-Depuis le sprint 2, la boucle de rendu elle-même est dans `render-loop.js`, et `setUpArSession()` branche les boutons de l'AR et les observateurs de la session : voir [sprint-2.md](sprint-2.md). Depuis le sprint 3, `setUpArSession()` crée aussi la pose du terrain (`SurfacePlacement`) à chaque session, écoute le toucher (`select`) et ses états (`statechange`), et `setUpPwa()` branche la PWA : voir [sprint-3.md](sprint-3.md).
+Depuis le sprint 2, la boucle de rendu elle-même est dans `render-loop.js`, et `setUpArSession()` branche les boutons de l'AR et les observateurs de la session : voir [sprint-2.md](sprint-2.md). Depuis le sprint 3, `setUpArSession()` crée aussi la pose du terrain (`SurfacePlacement`) à chaque session, écoute le toucher (`select`) et ses états (`statechange`), et `setUpPwa()` branche la PWA : voir [sprint-3.md](sprint-3.md). Depuis le sprint 5, `init()` crée aussi l'historique des commandes, la vue tactique, l'interaction et la saisie par pointeur, et `setUpArSession()` envoie chaque toucher à la pose du terrain ou à l'interaction tactique (`routeXrSelect`) : voir [sprint-5.md](sprint-5.md).
 
 ### [`src/vendor/three-r187/`](../src/vendor/three-r187/)
 
 Une copie de three.js r187 (version 0.187.0), sous licence MIT : le build WebGPU (`three.webgpu.js`, `three.core.js`, `three.tsl.js`) et `OrbitControls.js`. Son `README.md` explique comment la mettre à jour, et donne les empreintes des fichiers, identiques au paquet npm. Aux sprints 1 et 2, c'était la r186, dans `src/vendor/three/`.
+
+### Fichiers du sprint 5
+
+Le sprint 5 ajoute neuf modules, expliqués dans [sprint-5.md](sprint-5.md) :
+
+- **`src/raycasting.js`** : le calcul commun. Un rayon depuis la caméra (`setRayFromCamera`) ou depuis la pose d'une source d'entrée WebXR (`setRayFromXrPose`), la zone de sélection la plus proche (`pickTarget`), le point du plan du gazon dans le repère du terrain (`intersectPitchPlane`).
+- **`src/tactical-interaction.js`** : la machine à états. Elle reçoit des rayons et crée des commandes ; elle ne dessine rien.
+- **`src/commands.js`** : le patron Command. Cinq commandes annulables et l'historique (`CommandHistory`).
+- **`src/tactical-view.js`** et **`src/tactical-arrows.js`** : la scène suit le tableau tactique ; flèches 3D, anneau de sélection, aperçu.
+- **`src/pointer-input.js`** et **`src/xr-input.js`** : la saisie, à la souris ou au doigt hors AR, par l'événement `select` en AR.
+- **`src/tactical-toolbar.js`** : la barre d'outils et le bandeau d'aide.
+- **`src/diagnostics.js`** : le mode diagnostic (`?diagnostics`).
+
+`src/tactics-board.js` garde désormais tout l'état tactique : formations, places des joueurs et du ballon, flèches. `src/ball.js` donne au ballon une zone de sélection, comme celle des joueurs.
 
 ### Fichiers du dépôt
 
@@ -402,8 +416,8 @@ Une copie de three.js r187 (version 0.187.0), sous licence MIT : le build WebGPU
 | --- | --- | --- | --- |
 | Strategy | En place | `formations.js` | Une classe par formation ; ajouter une formation revient à ajouter une classe, comme le 4-2-3-1 du sprint 4, dont le bouton est apparu de lui-même |
 | Factory | En place | `players.js` | Créer un pion selon l'équipe : couleur, numéro, orientation |
-| Command | Sprint 5 | futur `commands.js` | Chaque action (déplacer, tracer une flèche, changer de formation) sera un objet avec `execute()` et `undo()` ; l'historique de ces objets donnera l'annulation |
-| Observer | En place depuis le sprint 2 | `events.js`, `xr-session.js`, `ar-surface.js`, `tactics-board.js` | La session AR prévient l'interface de son début, de sa fin et de ses échecs ; depuis le sprint 3, la pose du terrain prévient de ses états (visée, surface, posé) ; depuis le sprint 4, le tableau tactique prévient la scène et les boutons des changements de formation ; le même mécanisme servira pour le joueur sélectionné (sprint 5) |
+| Command | En place depuis le sprint 5 | `commands.js` | Chaque action (déplacer un joueur ou le ballon, tracer une flèche, changer de formation, réinitialiser) est un objet avec `execute()` et `undo()` ; l'historique de ces objets donne Annuler et Rétablir |
+| Observer | En place depuis le sprint 2 | `events.js`, `xr-session.js`, `ar-surface.js`, `tactics-board.js` | La session AR prévient l'interface de son début, de sa fin et de ses échecs ; depuis le sprint 3, la pose du terrain prévient de ses états (visée, surface, posé) ; depuis le sprint 4, le tableau tactique prévient la scène et les boutons des changements de formation ; depuis le sprint 5, la scène (`tactical-view.js`) suit tout l'état tactique, et la barre d'outils suit l'interaction et l'historique |
 
 ---
 
@@ -425,7 +439,7 @@ Une copie de three.js r187 (version 0.187.0), sous licence MIT : le build WebGPU
 
 ## 6. Tests
 
-`npm test` lance d'abord les 94 tests unitaires (`npm run test:unit`, sans navigateur), puis rejoue dans Chrome, sans interface, les 44 vérifications de bout en bout (`npm run test:e2e`). Celles des sprints 1 et 3 hors AR sont décrites ici ; le parcours AR est décrit dans [sprint-3.md](sprint-3.md#12-tests), et les formations du sprint 4 dans [sprint-4.md](sprint-4.md#8-tests). Prérequis : Node.js 18 ou plus, Google Chrome, un processeur graphique compatible WebGPU, et un premier `npm install`. Pour utiliser Microsoft Edge à la place de Chrome : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`).
+`npm test` lance d'abord les 165 tests unitaires (`npm run test:unit`, sans navigateur), puis rejoue dans Chrome, sans interface, les 67 vérifications de bout en bout (`npm run test:e2e`). Celles des sprints 1 et 3 hors AR sont décrites ici ; le parcours AR est décrit dans [sprint-3.md](sprint-3.md#12-tests), les formations du sprint 4 dans [sprint-4.md](sprint-4.md#8-tests), et l'interaction tactique du sprint 5 dans [sprint-5.md](sprint-5.md#10-tests). Prérequis : Node.js 18 ou plus, Google Chrome, un processeur graphique compatible WebGPU, et un premier `npm install`. Pour utiliser Microsoft Edge à la place de Chrome : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`).
 
 | Test | Ce qu'il vérifie |
 | --- | --- |
@@ -458,13 +472,13 @@ Ce que les tests ne couvrent pas : le rendu visuel (contrôlé à l'œil sur les
 ## 7. Limites connues
 
 - Depuis le sprint 2, la session AR est en place. Elle a été testée le 12 novembre 2026 sur deux téléphones Android avec Chrome, et la vue 3D sur un iPhone 15 et un PC : voir [sprint-2.md](sprint-2.md).
-- La fluidité de 30 images par seconde reste à mesurer sur un téléphone de milieu de gamme (sprint 6).
+- La fluidité de 30 images par seconde reste à mesurer sur un téléphone de milieu de gamme. Depuis le sprint 5, le mode diagnostic (`?diagnostics`) l'affiche, aussi en AR : protocole dans [sprint-5.md](sprint-5.md#11-protocole-de-validation-sur-téléphone).
 - Le hit test est émulé sur PC par une table virtuelle (sprint 3) ; la détection de vraies surfaces par ARCore se vérifie sur téléphone.
 - En AR, la liaison WebXR/WebGPU est encore derrière un réglage de Chrome (`chrome://flags/#webxr-webgpu-binding`). Sans repli WebGL, l'AR demande ce réglage sur le téléphone (sprint 3).
 - Sans WebGPU, l'application affiche un message au lieu du terrain : sur iPhone, il faut iOS 26 (Safari 26) ; sur Android, Chrome bloque WebGPU avant Android 12 (Galaxy S10e sous Android 9, testé le 14 novembre 2026).
 - Pour tester malgré tout sur un tel téléphone, le mode test WebGL (`?webgl` dans l'adresse, `src/webgl-test-mode.js`) fait tourner la même scène en WebGL 2. Il est réservé aux tests : ce n'est pas un repli, l'application ne le choisit jamais d'elle-même. Voir [sprint-3.md](sprint-3.md#16-mode-test-webgl-webgl-réservé-aux-tests).
 - L'AR rendue en WebGPU (sprint 3) a été testée avec succès sur un téléphone, le TECNO POVA 6 Pro 5G, le 14 novembre 2026 : voir [sprint-3.md](sprint-3.md#13-test-sur-téléphone).
-- Le ballon ne se déplace pas encore : ce sera au sprint 5, avec la sélection par raycasting (voir [sprint-4.md](sprint-4.md#7-deux-équipes-et-le-ballon)).
+- Depuis le sprint 5, joueurs et ballon se sélectionnent et se déplacent par raycasting, et les flèches et l'annulation sont en place. C'est vérifié sur PC, en vue 3D et en AR émulée ; le critère du cahier « réussite sur 9 essais sur 10 » (§4.3) reste à mesurer sur téléphone : voir [sprint-5.md](sprint-5.md#11-protocole-de-validation-sur-téléphone).
 - Safari sur iPhone ne prend pas en charge les sessions WebXR `immersive-ar` : sur iPhone, l'application reste en vue 3D (vérifié sur un iPhone 15).
 
 ---

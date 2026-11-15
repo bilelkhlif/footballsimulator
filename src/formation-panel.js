@@ -4,7 +4,9 @@
  * Les boutons sont créés à partir du registre FORMATIONS : ajouter une stratégie (patron Strategy)
  * ajoute son bouton, sans toucher à l'interface. Un clic demande le changement au tableau tactique ;
  * le panneau ne se met à jour qu'à l'événement formationchange (patron Observer). Il affiche donc
- * toujours la formation réellement en place, quelle que soit l'origine du changement.
+ * toujours la formation réellement en place, quelle que soit l'origine du changement : un bouton,
+ * une annulation ou une réinitialisation (sprint 5). Depuis le sprint 5, main.js fait passer le
+ * clic par une commande (ChangeFormationCommand), pour qu'il soit annulable.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -18,12 +20,14 @@ import { FORMATIONS } from './formations.js';
  * @param {Array<{id: string, label: string}>} options.teams équipes (config.TEAMS)
  * @param {Record<string, HTMLElement>} [options.chips] pastille de chaque équipe dans le bandeau
  *   supérieur, qui affiche sa formation
+ * @param {(teamId: string, name: string) => void} [options.choose] action d'un clic ; par défaut,
+ *   le changement direct du tableau
  * @returns {{buttons: HTMLButtonElement[]}}
  * @responsable Bilel Khlif
  * @date 2026-11-14
  * @role Interface HTML — panneau des formations (observateur)
  */
-export function createFormationPanel({ root, board, teams, chips = {} }) {
+export function createFormationPanel({ root, board, teams, chips = {}, choose = (teamId, name) => board.setFormation(teamId, name) }) {
   const buttons = [];
   for (const team of teams) {
     const row = document.createElement('div');
@@ -43,7 +47,7 @@ export function createFormationPanel({ root, board, teams, chips = {} }) {
       button.textContent = name;
       button.dataset.team = team.id;
       button.dataset.formation = name;
-      button.addEventListener('click', () => board.setFormation(team.id, name));
+      button.addEventListener('click', () => choose(team.id, name));
       row.append(button);
       buttons.push(button);
     }

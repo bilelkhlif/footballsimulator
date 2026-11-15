@@ -8,9 +8,12 @@
  *   active (XRFrame) : three.js place la caméra selon la pose du téléphone, et la pose du
  *   terrain (hit test, réticule, ancre) est mise à jour. Les contrôles d'orbite ne doivent
  *   alors plus toucher à la caméra.
- * Dans les deux cas, les déplacements de joueurs en cours (changement de formation, sprint 4)
- * avancent, puis l'image se termine par renderer.render : three.js encode les commandes WebGPU et
- * les soumet au processeur graphique, vers le canvas ou vers la couche de projection de la session.
+ * Dans les deux cas, les déplacements de joueurs en cours (changement de formation, sprint 4 ;
+ * déplacement à la main, sprint 5) avancent. Viennent ensuite les tâches de l'image (sprint 5) :
+ * l'aperçu d'une flèche suit le rayon de la source d'entrée WebXR, l'anneau de sélection suit son
+ * joueur, et le mode diagnostic compte l'image. L'image se termine par renderer.render : three.js
+ * encode les commandes WebGPU et les soumet au processeur graphique, vers le canvas ou vers la
+ * couche de projection de la session.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -56,12 +59,17 @@ export function matchXrTargetToViews(renderer) {
  * @param {{update: () => void}} [context.animator] déplacements de joueurs (src/formation-transition.js)
  * @param {() => ({update: (frame: XRFrame) => void}|null)} context.getArPlacement renvoie la pose
  *   du terrain de la session en cours (src/ar-surface.js), ou null hors session
+ * @param {Array<{update: (time: number, frame?: XRFrame) => void, afterRender?: (time: number) => void}>} [context.tasks]
+ *   tâches de chaque image (sprint 5) : update est appelée dans l'ordre après les déplacements et
+ *   avant le rendu ; afterRender, si elle existe, juste après le rendu. three.js remet à zéro ses
+ *   statistiques (renderer.info) au début de chaque image : c'est après le rendu qu'elles décrivent
+ *   l'image dessinée.
  * @returns {(time: number, frame?: XRFrame) => void}
  * @responsable Bilel Khlif
  * @date 2026-11-09
  * @role Boucle de rendu — travail de chaque image
  */
-export function createRenderLoop({ renderer, scene, camera, controls, animator = null, getArPlacement }) {
+export function createRenderLoop({ renderer, scene, camera, controls, animator = null, getArPlacement, tasks = [] }) {
   return (time, frame) => {
     if (renderer.xr.isPresenting) {
       matchXrTargetToViews(renderer);
@@ -74,6 +82,13 @@ export function createRenderLoop({ renderer, scene, camera, controls, animator =
       controls.update();
     }
     animator?.update();
+    // Boucles indexées : aucun itérateur créé à chaque image.
+    for (let index = 0; index < tasks.length; index += 1) {
+      tasks[index].update(time, frame);
+    }
     renderer.render(scene, camera);
+    for (let index = 0; index < tasks.length; index += 1) {
+      tasks[index].afterRender?.(time);
+    }
   };
 }

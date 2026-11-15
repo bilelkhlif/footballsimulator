@@ -13,7 +13,12 @@
  * 3. une table virtuelle pour le hit test : un plan horizontal de 1,6 × 1 m, à 72 cm du sol et
  *    90 cm devant la position de départ. Le regard du téléphone émulé la touche ou non ;
  * 4. le toucher sur l'écran : un clic sur la scène appuie sur la gâchette de la manette droite
- *    d'IWER, qui produit l'événement select de WebXR, comme un toucher sur l'écran du téléphone ;
+ *    d'IWER, qui produit l'événement select de WebXR, comme un toucher sur l'écran du téléphone.
+ *    Depuis le sprint 5, la manette est d'abord orientée comme le rayon d'un toucher de téléphone :
+ *    depuis la vue, à travers le point cliqué (aimControllerAt). L'application lit ce rayon dans
+ *    targetRaySpace, comme sur un téléphone. Le clic est aussi proposé d'abord à l'interface par
+ *    l'événement beforexrselect, comme le fait le DOM Overlay : s'il est annulé, aucun select
+ *    n'est produit. Au survol, la manette suit le pointeur, pour l'aperçu des flèches ;
  * 5. la pose de départ : téléphone tenu à 1,35 m du sol, incliné de 35° vers la table ;
  * 6. une seule vue, comme l'écran d'un téléphone : IWER 2.7.0 rend toujours les deux yeux d'un
  *    casque (sans stéréo, la seconde vue a une largeur nulle) ; on ne garde que la première ;
@@ -59,6 +64,51 @@ export function rotateByQuaternion(v, q) {
     y: v.y + q.w * ty + (q.z * tx - q.x * tz),
     z: v.z + q.w * tz + (q.x * ty - q.y * tx),
   };
+}
+
+/**
+ * Direction monde du rayon qui part d'une vue et passe par un point de l'écran.
+ *
+ * Avec une projection perspective P (matrice 4 × 4 en colonnes, comme XRView.projectionMatrix),
+ * un point de la vue à la profondeur z = -1 donne clip.w = 1 et ndc.x = P[0]·x - P[8], ndc.y =
+ * P[5]·y - P[9]. D'où la direction (x, y, -1) dans la vue, tournée ensuite par l'orientation de la
+ * vue, puis normalisée.
+ * @param {{x: number, y: number}} ndc point de l'écran en coordonnées normalisées (-1 à 1)
+ * @param {ArrayLike<number>} projection matrice de projection de la vue
+ * @param {{x: number, y: number, z: number, w: number}} orientation orientation de la vue
+ * @returns {{x: number, y: number, z: number}} direction unitaire, en coordonnées monde
+ * @responsable Bilel Khlif
+ * @date 2026-11-15
+ * @role Développement — toucher émulé (rayon à travers le point cliqué)
+ */
+export function rayDirectionThroughPixel(ndc, projection, orientation) {
+  const inView = {
+    x: (ndc.x + projection[8]) / projection[0],
+    y: (ndc.y + projection[9]) / projection[5],
+    z: -1,
+  };
+  const d = rotateByQuaternion(inView, orientation);
+  const length = Math.hypot(d.x, d.y, d.z);
+  return { x: d.x / length, y: d.y / length, z: d.z / length };
+}
+
+/**
+ * Quaternion unitaire de la plus petite rotation qui amène l'axe -Z sur une direction unitaire d.
+ * Pour a = (0, 0, -1) : q = normaliser(a × d, 1 + a · d), avec a × d = (d.y, -d.x, 0) et
+ * 1 + a · d = 1 - d.z. Si d = +Z, la rotation est un demi-tour autour de X.
+ * @param {{x: number, y: number, z: number}} direction direction unitaire
+ * @returns {{x: number, y: number, z: number, w: number}}
+ * @responsable Bilel Khlif
+ * @date 2026-11-15
+ * @role Développement — toucher émulé (rayon à travers le point cliqué)
+ */
+export function quaternionFromForward(direction) {
+  const w = 1 - direction.z;
+  if (w < 1e-9) {
+    return { x: 1, y: 0, z: 0, w: 0 };
+  }
+  const length = Math.hypot(direction.y, direction.x, w);
+  return { x: direction.y / length, y: -direction.x / length, z: 0, w: w / length };
 }
 
 /**
@@ -532,9 +582,16 @@ function prepareSession(session, xrDevice) {
     },
   });
 
+  // Vue affichée (pose et projection), relevée à chaque image : un clic devient un rayon à travers
+  // le point cliqué de cette vue, exactement comme l'image que l'on voit.
+  const view = { position: null, orientation: null, projection: new Float32Array(16) };
+  let floorSpace = null;
+  session.requestReferenceSpace('local-floor').then((space) => { floorSpace = space; }).catch(() => {});
+
   // Mode test WebGL : après chaque image de l'application, l'image de la couche va dans le canvas.
   const requestAnimationFrame = session.requestAnimationFrame.bind(session);
   session.requestAnimationFrame = (callback) => requestAnimationFrame((time, frame) => {
+    recordView(frame, floorSpace, view);
     callback(time, frame);
     copyLayerToCanvas(readRenderState.call(session).baseLayer);
   });
@@ -548,17 +605,82 @@ function prepareSession(session, xrDevice) {
     return new EmulatedHitTestSource(space, floorSpace);
   };
 
-  // Toucher : un clic hors des boutons appuie brièvement sur la gâchette de la manette droite.
+  // Toucher : comme le DOM Overlay, le geste est d'abord proposé à l'interface (beforexrselect) ;
+  // sinon, la manette droite vise le point cliqué et sa gâchette est brièvement enfoncée.
   const onPointerDown = (event) => {
     const controller = xrDevice.controllers?.right;
-    if (!controller || event.target.closest?.('button')) {
+    if (!controller) {
       return;
     }
+    const beforeSelect = new Event('beforexrselect', { bubbles: true, cancelable: true });
+    event.target.dispatchEvent(beforeSelect);
+    if (beforeSelect.defaultPrevented) {
+      return;
+    }
+    aimControllerAt(controller, event, view);
     controller.updateButtonValue('trigger', 1);
     setTimeout(() => controller.updateButtonValue('trigger', 0), TRIGGER_PRESS_MS);
   };
+  // Survol : la manette suit le pointeur, comme une manette suivie en continu (aperçu des flèches).
+  const onPointerMove = (event) => {
+    const controller = xrDevice.controllers?.right;
+    if (controller) {
+      aimControllerAt(controller, event, view);
+    }
+  };
   window.addEventListener('pointerdown', onPointerDown, true);
-  session.addEventListener('end', () => window.removeEventListener('pointerdown', onPointerDown, true), { once: true });
+  window.addEventListener('pointermove', onPointerMove, true);
+  session.addEventListener('end', () => {
+    window.removeEventListener('pointerdown', onPointerDown, true);
+    window.removeEventListener('pointermove', onPointerMove, true);
+  }, { once: true });
+}
+
+/**
+ * Relève la pose et la projection de la vue affichée, dans l'espace local-floor.
+ * @param {XRFrame} frame image en cours
+ * @param {XRReferenceSpace|null} floorSpace espace local-floor, une fois obtenu
+ * @param {{position: object|null, orientation: object|null, projection: Float32Array}} view relevé
+ *   mis à jour sur place
+ * @responsable Bilel Khlif
+ * @date 2026-11-15
+ * @role Développement — toucher émulé (rayon à travers le point cliqué)
+ */
+function recordView(frame, floorSpace, view) {
+  const first = floorSpace ? frame.getViewerPose(floorSpace)?.views?.[0] : null;
+  if (!first) {
+    return;
+  }
+  const { position, orientation } = first.transform;
+  view.position = { x: position.x, y: position.y, z: position.z };
+  view.orientation = { x: orientation.x, y: orientation.y, z: orientation.z, w: orientation.w };
+  view.projection.set(first.projectionMatrix);
+}
+
+/**
+ * Oriente une manette d'IWER comme le rayon d'un toucher de téléphone : origine à la vue,
+ * direction à travers le point de l'écran sous le pointeur.
+ * @param {{position: {set: Function}, quaternion: {set: Function}}} controller manette émulée
+ * @param {{clientX: number, clientY: number}} event position du pointeur
+ * @param {{position: object|null, orientation: object|null, projection: Float32Array}} view vue relevée
+ * @returns {boolean} vrai si la manette a été orientée
+ * @responsable Bilel Khlif
+ * @date 2026-11-15
+ * @role Développement — toucher émulé (rayon à travers le point cliqué)
+ */
+function aimControllerAt(controller, event, view) {
+  if (!view.position) {
+    return false;
+  }
+  const rect = (targetCanvas ?? document.documentElement).getBoundingClientRect();
+  const ndc = {
+    x: ((event.clientX - rect.left) / rect.width) * 2 - 1,
+    y: -((event.clientY - rect.top) / rect.height) * 2 + 1,
+  };
+  const q = quaternionFromForward(rayDirectionThroughPixel(ndc, view.projection, view.orientation));
+  controller.position.set(view.position.x, view.position.y, view.position.z);
+  controller.quaternion.set(q.x, q.y, q.z, q.w);
+  return true;
 }
 
 /**

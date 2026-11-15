@@ -62,6 +62,7 @@ Les dates suivent l'historique Git :
 | 2026-11-10 | Sprint 2 : tests du mode AR |
 | 2026-11-12 | Correctif du réseau lent (Service Worker) |
 | 2026-11-14 | Sprint 3 (WebGPU, surface réelle, PWA), mode test WebGL et sprint 4 (formations) |
+| 2026-11-15 | Sprint 5 : raycasting, flèches tactiques, patron Command, mode diagnostic |
 
 **Méthode.** La date d'une fonction ou d'une classe est celle du premier commit où sa déclaration apparaît (`git log -S "function nom("`). La recherche porte sur tout le code de l'application : une fonction déplacée d'un fichier à un autre garderait ainsi sa date d'origine. Aucune ne l'a été à ce jour.
 

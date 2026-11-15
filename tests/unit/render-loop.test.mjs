@@ -151,3 +151,39 @@ test('les déplacements de joueurs avancent à chaque image, en 3D comme en AR, 
     assert.deepEqual(log, ['animator.update', 'render', 'animator.update', 'render'], presenting ? 'en AR' : 'hors AR');
   }
 });
+
+test('sprint 5 : les tâches de l\'image passent après les déplacements et avant le rendu, avec l\'instant et le XRFrame', () => {
+  const log = [];
+  const frame = { id: 'xr-frame' };
+  const renderer = {
+    backend: { isWebGPUBackend: true },
+    xr: { isPresenting: true, getCamera: () => ({ cameras: [{}] }) },
+    getOutputRenderTarget: () => createXrTarget(1),
+    render: () => log.push('render'),
+  };
+  const animator = { update: () => log.push('animator') };
+  const tasks = ['saisie AR', 'vue tactique', 'diagnostic'].map((name) => ({
+    update: (time, received) => log.push(`${name}(${time}, ${received?.id ?? '-'})`),
+  }));
+  const loop = createRenderLoop({ renderer, scene: {}, camera: {}, controls: { update: () => {} }, animator, getArPlacement: () => null, tasks });
+
+  loop(16, frame);
+
+  assert.deepEqual(log, ['animator', 'saisie AR(16, xr-frame)', 'vue tactique(16, xr-frame)', 'diagnostic(16, xr-frame)', 'render']);
+});
+
+test('sprint 5 : afterRender des tâches passe juste après le rendu, quand les statistiques de l\'image sont prêtes', () => {
+  const log = [];
+  const renderer = {
+    backend: { isWebGPUBackend: false },
+    xr: { isPresenting: false },
+    render: () => log.push('render'),
+  };
+  const tasks = [
+    { update: () => log.push('vue tactique') },
+    { update: () => log.push('diagnostic.update'), afterRender: (time) => log.push(`diagnostic.afterRender(${time})`) },
+  ];
+  const loop = createRenderLoop({ renderer, scene: {}, camera: {}, controls: { update: () => {} }, getArPlacement: () => null, tasks });
+  loop(32);
+  assert.deepEqual(log, ['vue tactique', 'diagnostic.update', 'render', 'diagnostic.afterRender(32)']);
+});

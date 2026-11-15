@@ -104,6 +104,21 @@ export class SurfacePlacement extends EventEmitter {
   }
 
   /**
+   * Vrai quand le terrain est affiché à sa place, posé sur la surface ou devant l'utilisateur : les
+   * touchers vont alors à l'interaction tactique (sprint 5), et non plus à la pose du terrain.
+   * @returns {boolean}
+   * @responsable Bilel Khlif
+   * @date 2026-11-15
+   * @role Réalité augmentée — séparation pose du terrain / interaction tactique
+   */
+  get pitchReady() {
+    if (this.#state === PLACEMENT_STATES.PLACED) {
+      return true;
+    }
+    return this.#state === PLACEMENT_STATES.IN_FRONT && !this.#view.needsPlacement;
+  }
+
+  /**
    * Démarre le hit test depuis le centre de l'écran. Sans hit test, passe en placement devant
    * l'utilisateur.
    * @returns {Promise<void>}
