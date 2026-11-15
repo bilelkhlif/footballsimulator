@@ -39,12 +39,15 @@ export const BOARD_THICKNESS = 0.008;
 export const PLAYER_SIZE = Object.freeze({
   radius: 0.0065,
   height: 0.028,
-  hitboxRadius: 0.014, // zone de sélection élargie (cahier, §6.3), utilisée au sprint 5
+  hitboxRadius: 0.014, // zone de sélection élargie (cahier, §6.3), visée par le raycasting (sprint 5)
   labelSize: 0.014,
 });
 
 /** Rayon du ballon, en mètres. */
 export const BALL_RADIUS = 0.0042;
+
+/** Rayon de la zone de sélection invisible du ballon, en mètres : près de trois fois le ballon. */
+export const BALL_HITBOX_RADIUS = 0.012;
 
 /**
  * Équipes : l'équipe bleue attaque vers +X, l'équipe rouge vers -X.

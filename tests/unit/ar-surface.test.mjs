@@ -308,3 +308,21 @@ test('fin de session : la source de hit test est annulée et l\'ancre supprimée
   assert.equal(session.sources[0].cancelled, true);
   assert.equal(anchor.deleted, true);
 });
+
+test('sprint 5 : pitchReady, faux pendant la visée, vrai une fois le terrain posé ou placé devant l\'utilisateur', async () => {
+  const { placement } = createPlacement();
+  await placement.start();
+  placement.update(createFakeFrame({ hit: HIT_POSE }));
+  assert.equal(placement.pitchReady, false, 'pendant la visée, un toucher pose le terrain');
+  placement.requestPlacement();
+  placement.update(createFakeFrame({ hit: HIT_POSE }));
+  assert.equal(placement.pitchReady, true, 'terrain posé : les touchers vont à la tactique');
+  placement.startOver();
+  assert.equal(placement.pitchReady, false, 'terrain retiré pour être déplacé');
+
+  const inFront = createPlacement({ features: ['local-floor', 'webgpu'] });
+  await inFront.placement.start();
+  assert.equal(inFront.placement.pitchReady, false, 'pas encore placé devant l\'utilisateur');
+  inFront.placement.update(createFakeFrame());
+  assert.equal(inFront.placement.pitchReady, true);
+});
