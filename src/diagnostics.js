@@ -6,6 +6,8 @@
  * de l'interface superposée : il reste donc visible en AR, par le DOM Overlay, sur le téléphone.
  *
  * Il affiche les images par seconde et la durée moyenne d'une image sur les 120 dernières images,
+ * le temps de processeur central d'une image (sprint 6 : de son début à la fin du rendu ; s'il est
+ * bien plus court que la durée d'une image, c'est le processeur graphique qui limite),
  * le moteur de rendu actif (WebGPU, ou WebGL en mode test), l'état de la session XR, et le nombre
  * d'appels de dessin et de triangles de la dernière image, lus dans renderer.info de three.js.
  *
@@ -158,6 +160,12 @@ export class DiagnosticsPanel {
   #interval;
   #fields;
   #lastWrite = -Infinity;
+  #now;
+  #frameStart = null;
+  /** Temps de processeur central des dernières images, en millisecondes (mémoire circulaire). */
+  #cpu = new Float64Array(FRAME_WINDOW);
+  #cpuCount = 0;
+  #cpuNext = 0;
 
   /**
    * @param {object} options
@@ -166,11 +174,13 @@ export class DiagnosticsPanel {
    * @param {FrameStats} [options.stats]
    * @param {() => string} options.getXrState état de la session XR, en clair
    * @param {number} [options.interval] intervalle entre deux mises à jour, en millisecondes
+   * @param {() => number} [options.now] horloge en millisecondes ; remplacée dans les tests
    * @responsable Bilel Khlif
    * @date 2026-11-15
    * @role Performance — panneau du mode diagnostic
    */
-  constructor({ element, renderer, stats = new FrameStats(), getXrState, interval = PANEL_INTERVAL_MS }) {
+  constructor({ element, renderer, stats = new FrameStats(), getXrState, interval = PANEL_INTERVAL_MS, now = () => performance.now() }) {
+    this.#now = now;
     this.#element = element;
     this.#renderer = renderer;
     this.#stats = stats;
@@ -189,6 +199,31 @@ export class DiagnosticsPanel {
    */
   get stats() {
     return this.#stats;
+  }
+
+  /**
+   * Temps moyen de processeur central d'une image, en millisecondes, sur les dernières images.
+   * @returns {number} 0 tant qu'aucune image n'est mesurée
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Performance — panneau du mode diagnostic
+   */
+  get averageCpuMs() {
+    let total = 0;
+    for (let index = 0; index < this.#cpuCount; index += 1) {
+      total += this.#cpu[index];
+    }
+    return this.#cpuCount ? total / this.#cpuCount : 0;
+  }
+
+  /**
+   * Tout début de l'image : retient l'instant, pour mesurer son temps de processeur central.
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Performance — panneau du mode diagnostic
+   */
+  beforeFrame() {
+    this.#frameStart = this.#now();
   }
 
   /**
@@ -212,6 +247,12 @@ export class DiagnosticsPanel {
    * @role Performance — panneau du mode diagnostic
    */
   afterRender(time) {
+    if (this.#frameStart !== null) {
+      this.#cpu[this.#cpuNext] = this.#now() - this.#frameStart;
+      this.#cpuNext = (this.#cpuNext + 1) % this.#cpu.length;
+      this.#cpuCount = Math.min(this.#cpuCount + 1, this.#cpu.length);
+      this.#frameStart = null;
+    }
     if (time - this.#lastWrite >= this.#interval || time < this.#lastWrite) {
       this.#lastWrite = time;
       this.write();
@@ -230,10 +271,14 @@ export class DiagnosticsPanel {
     const backend = this.#renderer.backend;
     this.#setField('fps', fps > 0 ? fps.toFixed(0) : '–');
     this.#setField('frame', averageFrameMs > 0 ? `${averageFrameMs.toFixed(1)} ms` : '–');
+    const cpu = this.averageCpuMs;
+    this.#setField('cpu', cpu > 0 ? `${cpu.toFixed(1)} ms` : '–');
     this.#setField('backend', backend?.isWebGPUBackend ? 'WebGPU' : (backend?.isWebGLBackend ? 'WebGL 2 (mode test)' : '–'));
     this.#setField('xr', this.#getXrState());
     this.#setField('calls', Number.isFinite(render?.drawCalls) ? String(render.drawCalls) : 'non fourni');
     this.#setField('triangles', Number.isFinite(render?.triangles) ? String(render.triangles) : 'non fourni');
+    const memory = this.#renderer.info?.memory?.total;
+    this.#setField('memory', Number.isFinite(memory) ? `${(memory / 1048576).toFixed(1)} Mio` : 'non fourni');
     this.#element.dataset.fps = fps.toFixed(1);
   }
 

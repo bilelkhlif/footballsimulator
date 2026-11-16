@@ -62,17 +62,19 @@
       <dl>
         <div><dt>Images/s</dt><dd data-field="fps">–</dd></div>
         <div><dt>Image</dt><dd data-field="frame">–</dd></div>
+        <div><dt>CPU / image</dt><dd data-field="cpu">–</dd></div>
         <div><dt>Rendu</dt><dd data-field="backend">–</dd></div>
         <div><dt>Session XR</dt><dd data-field="xr">–</dd></div>
         <div><dt>Appels de dessin</dt><dd data-field="calls">–</dd></div>
         <div><dt>Triangles</dt><dd data-field="triangles">–</dd></div>
+        <div><dt>Mémoire GPU</dt><dd data-field="memory">–</dd></div>
       </dl>
     </aside>
 
     <!-- Bandeau inférieur : aide aux gestes, messages, formations et actions.
          « Entrer en AR » n'apparaît que si l'AR est disponible ; pendant une session,
          « Déplacer le terrain » et « Quitter l'AR » remplacent les autres boutons, et
-         « Formations » n'apparaît qu'une fois le terrain posé. -->
+         « Formations » et « Séquence » n'apparaissent qu'une fois le terrain posé. -->
     <footer class="bottombar">
       <p id="hint" class="hint">Glissez pour tourner, pincez pour zoomer.</p>
       <p id="ar-message" class="notice" role="alert" hidden></p>
@@ -83,6 +85,22 @@
       <!-- Panneau des formations (sprint 4) : une ligne de boutons par équipe, créée par
            src/formation-panel.js à partir des formations enregistrées. -->
       <div id="formation-panel" class="formation-panel" hidden></div>
+      <!-- Panneau de la séquence animée (sprint 6, bonus BF9) : images clés, lecture, vitesse ; relié
+           par src/sequence-panel.js. En AR, il n'apparaît qu'une fois le terrain posé. -->
+      <div id="sequence-panel" class="sequence-panel" role="group" aria-label="Séquence animée" hidden>
+        <p class="sequence-panel__status" data-sequence="status" aria-live="polite"></p>
+        <div class="sequence-panel__row sequence-panel__row--3">
+          <button class="tool" type="button" data-sequence="keyframe">Image clé</button>
+          <button class="tool" type="button" data-sequence="play" disabled>Lecture</button>
+          <button class="tool" type="button" data-sequence="restart" disabled>Recommencer</button>
+        </div>
+        <div class="sequence-panel__row sequence-panel__row--4">
+          <button class="tool" type="button" data-speed="0.5" aria-pressed="false">0,5×</button>
+          <button class="tool" type="button" data-speed="1" aria-pressed="true">1×</button>
+          <button class="tool" type="button" data-speed="2" aria-pressed="false">2×</button>
+          <button class="tool" type="button" data-sequence="clear" disabled>Effacer</button>
+        </div>
+      </div>
       <!-- Barre d'outils tactique (sprint 5) : le mode (déplacer, passe, course), puis l'historique
            (annuler, rétablir, réinitialiser), reliés par src/tactical-toolbar.js. En AR, elle
            n'apparaît qu'une fois le terrain posé. -->
@@ -100,6 +118,7 @@
       </div>
       <div class="actions">
         <button id="formations-toggle" class="button button--secondary" type="button" aria-expanded="false" aria-controls="formation-panel">Formations</button>
+        <button id="sequence-toggle" class="button button--secondary" type="button" aria-expanded="false" aria-controls="sequence-panel">Séquence</button>
         <button id="copy-flag" class="button button--secondary" type="button" hidden>Copier l’adresse du réglage</button>
         <button id="install-app" class="button button--secondary" type="button" hidden>Installer l’application</button>
         <button id="reset-view" class="button" type="button">Recentrer</button>

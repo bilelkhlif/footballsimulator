@@ -5,6 +5,12 @@
  * Géométries et matériaux sont partagés entre les 22 joueurs pour limiter la
  * mémoire et le coût de rendu sur mobile (cahier, §6.1).
  *
+ * Sprint 6 : le pion visible (socle, flèche d'orientation, corps) est dessiné par instanciation.
+ * Chaque équipe a trois maillages instanciés (TeamMeshes) au lieu de 33 maillages : 6 appels de
+ * dessin au lieu de 66 pour les 22 joueurs, mesuré par le banc de « npm run bench » (cahier §6.3).
+ * Le groupe de chaque joueur garde son identité (équipe, numéro, poste), son numéro et sa zone de
+ * sélection : le raycasting, l'animation et la sélection ne changent pas.
+ *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import * as THREE from 'three';
@@ -138,6 +144,8 @@ export class PlayerFactory {
   /**
    * Crée un joueur prêt à être placé sur le terrain, tourné vers le but adverse.
    * Son numéro est un sprite, toujours tourné vers la caméra, donc lisible sous tous les angles.
+   * Depuis le sprint 6, son pion est dessiné par les maillages instanciés de son équipe
+   * (createTeamMeshes) : le groupe porte l'identité, la place, le numéro et la zone de sélection.
    * @param {{team: object, number: number, role: string}} options
    * @returns {THREE.Group} groupe du joueur ; `userData` décrit l'équipe, le numéro et le poste
    * @responsable Bilel Khlif
@@ -149,11 +157,6 @@ export class PlayerFactory {
     player.name = `player-${team.id}-${number}`;
     player.userData = { type: 'player', teamId: team.id, number, role };
 
-    const bodyMaterial = this.getBodyMaterial(team);
-    const base = new THREE.Mesh(this.baseGeometry, bodyMaterial);
-    const marker = new THREE.Mesh(this.markerGeometry, this.markerMaterial);
-    const body = new THREE.Mesh(this.bodyGeometry, bodyMaterial);
-
     const label = new THREE.Sprite(this.getLabelMaterial(team, number));
     label.scale.setScalar(PLAYER_SIZE.labelSize);
     label.position.y = PLAYER_SIZE.height + PLAYER_SIZE.labelSize * 0.62;
@@ -161,8 +164,136 @@ export class PlayerFactory {
     const hitbox = new THREE.Mesh(this.hitboxGeometry, this.hitboxMaterial);
     hitbox.name = 'hitbox';
 
-    player.add(base, marker, body, label, hitbox);
+    player.add(label, hitbox);
     player.rotation.y = team.attacksPositiveX ? 0 : Math.PI;
     return player;
+  }
+
+  /**
+   * Crée les pions visibles d'une équipe : trois maillages instanciés (socle, flèche, corps), dont
+   * l'instance i suit le joueur i.
+   * @param {{id: string, color: number}} team
+   * @param {THREE.Object3D[]} players joueurs de l'équipe (createPlayer), dans un groupe placé à
+   *   l'origine du terrain, comme celui des maillages
+   * @returns {TeamMeshes}
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Scène 3D — joueurs (patron Factory, instanciation)
+   */
+  createTeamMeshes(team, players) {
+    return new TeamMeshes({
+      team,
+      players,
+      parts: [
+        [this.baseGeometry, this.getBodyMaterial(team)],
+        [this.markerGeometry, this.markerMaterial],
+        [this.bodyGeometry, this.getBodyMaterial(team)],
+      ],
+    });
+  }
+}
+
+/**
+ * Pions instanciés d'une équipe. À chaque image (update), seuls les joueurs qui ont bougé ou
+ * tourné réécrivent leur matrice d'instance, et la mémoire du processeur graphique n'est mise à
+ * jour que dans ce cas : un terrain immobile ne coûte aucun envoi.
+ * @responsable Bilel Khlif
+ * @date 2026-11-16
+ * @role Scène 3D — joueurs (instanciation)
+ */
+export class TeamMeshes {
+  #players;
+  #meshes;
+  /** Dernière pose écrite de chaque joueur : x, y, z et angle autour de Y. */
+  #written;
+
+  /**
+   * @param {object} options
+   * @param {{id: string}} options.team
+   * @param {THREE.Object3D[]} options.players joueurs de l'équipe
+   * @param {Array<[THREE.BufferGeometry, THREE.Material]>} options.parts géométrie et matériau de
+   *   chaque partie du pion, partagés avec la fabrique
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Scène 3D — joueurs (instanciation)
+   */
+  constructor({ team, players, parts }) {
+    this.group = new THREE.Group();
+    this.group.name = `player-meshes-${team.id}`;
+    this.#players = players;
+    this.#meshes = parts.map(([geometry, material]) => {
+      const mesh = new THREE.InstancedMesh(geometry, material, players.length);
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      // Les joueurs se déplacent sur tout le terrain : la sphère englobante des instances de départ
+      // ne vaut plus après un déplacement.
+      mesh.frustumCulled = false;
+      this.group.add(mesh);
+      return mesh;
+    });
+    this.#written = new Float64Array(players.length * 4).fill(Number.NaN);
+    this.update();
+  }
+
+  /**
+   * Maillages instanciés de l'équipe (socle, flèche, corps).
+   * @returns {THREE.InstancedMesh[]}
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Scène 3D — joueurs (instanciation)
+   */
+  get meshes() {
+    return this.#meshes;
+  }
+
+  /**
+   * Travail d'une image : recopie la pose des joueurs qui ont bougé dans leurs instances. Boucles
+   * indexées, sans allocation.
+   * @returns {boolean} vrai si au moins une instance a changé
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Scène 3D — joueurs (instanciation)
+   */
+  update() {
+    const written = this.#written;
+    const meshes = this.#meshes;
+    let changed = false;
+    for (let index = 0; index < this.#players.length; index += 1) {
+      const player = this.#players[index];
+      const { x, y, z } = player.position;
+      const yaw = player.rotation.y;
+      const offset = index * 4;
+      if (written[offset] === x && written[offset + 1] === y && written[offset + 2] === z && written[offset + 3] === yaw) {
+        continue;
+      }
+      written[offset] = x;
+      written[offset + 1] = y;
+      written[offset + 2] = z;
+      written[offset + 3] = yaw;
+      player.updateMatrix();
+      for (let part = 0; part < meshes.length; part += 1) {
+        meshes[part].setMatrixAt(index, player.matrix);
+      }
+      changed = true;
+    }
+    if (changed) {
+      for (let part = 0; part < meshes.length; part += 1) {
+        meshes[part].instanceMatrix.needsUpdate = true;
+      }
+    }
+    return changed;
+  }
+
+  /**
+   * Libère les tampons d'instances et retire les maillages de la scène ; géométries et matériaux
+   * restent à la fabrique, qui les partage.
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Scène 3D — joueurs (instanciation)
+   */
+  dispose() {
+    for (const mesh of this.#meshes) {
+      mesh.dispose();
+    }
+    this.group.removeFromParent();
   }
 }

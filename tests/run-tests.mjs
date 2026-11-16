@@ -1043,6 +1043,45 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         const ok = blocked === 0 && JSON.stringify(after.snapshot) === JSON.stringify(before.snapshot);
         return [ok, `select reçus après un toucher sur la barre : ${blocked} ; après un toucher sur le gazon : 1`];
       }],
+      // Sprint 6 : séquence animée (BF9) sur le terrain ancré.
+      ['séquence animée en AR sur le terrain tourné : lecture dans le repère du terrain, terrain toujours ancré', async () => {
+        const toggleVisible = await page.evaluate(() => !document.getElementById('sequence-toggle').hidden);
+        const { start, to } = await page.evaluate(async () => {
+          const { AddKeyframeCommand, MovePlayerCommand } = await import(new URL('src/commands.js', document.baseURI).href);
+          const app = window.__footballSimulator;
+          app.history.execute(new AddKeyframeCommand({ sequence: app.sequence, board: app.board }));
+          const from = app.board.getPlayerPosition('red', 10);
+          const target = { x: from.x - 0.08, z: from.z + 0.03 };
+          app.history.execute(new MovePlayerCommand({ board: app.board, teamId: 'red', number: 10, to: target }));
+          app.history.execute(new AddKeyframeCommand({ sequence: app.sequence, board: app.board }));
+          return { start: from, to: target };
+        });
+        await waitForFormationsSettled(page);
+        /** Pose du terrain, place affichée du n° 10 rouge, et état de la pose. */
+        const read = () => page.evaluate(() => {
+          const app = window.__footballSimulator;
+          const ten = app.pitchGroup.getObjectByName('player-red-10');
+          return {
+            pose: [...app.pitchGroup.position.toArray(), ...app.pitchGroup.quaternion.toArray()],
+            ten: { x: ten.position.x, z: ten.position.z },
+            placed: app.placement.state === 'placed' && app.placement.anchored,
+            state: app.sequencePlayer.state,
+          };
+        });
+        const before = await read();
+        await page.click('#sequence-toggle');
+        await page.click('[data-sequence="play"]');
+        await page.waitForTimeout(700);
+        const middle = await read();
+        await page.waitForFunction(() => window.__footballSimulator.sequencePlayer.state === 'paused', null, { timeout: 8000 });
+        const after = await read();
+        await page.click('#sequence-toggle');
+        const between = middle.ten.x < start.x && middle.ten.x > to.x;
+        const exact = Math.abs(after.ten.x - to.x) < 1e-12 && Math.abs(after.ten.z - to.z) < 1e-12;
+        const anchored = JSON.stringify(after.pose) === JSON.stringify(before.pose) && after.placed && middle.placed;
+        return [toggleVisible && between && exact && anchored,
+          `bouton « Séquence » visible : ${toggleVisible}, à mi-lecture entre les deux images : ${between}, fin exacte : ${exact}, pose du terrain inchangée et ancrée : ${anchored}`];
+      }],
       ['regard hors de la table : pas de réticule, et un toucher ne pose rien', async () => {
         await page.click('#move-pitch');
         await aim(0); // regard horizontal : le rayon ne rencontre aucune surface
@@ -1077,6 +1116,29 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         await page.waitForFunction(() => document.body.dataset.xr === 'inactive', null, { timeout: 15000 });
         const view = await readView();
         return [sameAsInitial(view), `vue identique au départ : ${sameAsInitial(view)}`];
+      }],
+      // Sprint 6 : entrées et sorties répétées, sans fuite de ressources.
+      ['cinq entrées et sorties de suite, terrain posé à chaque fois : ressources du processeur graphique stables', async () => {
+        /** Ressources que three.js a créées sur le processeur graphique. */
+        const memory = () => page.evaluate(() => {
+          const { geometries, textures, renderTargets } = window.__footballSimulator.renderer.info.memory;
+          return { geometries, textures, renderTargets };
+        });
+        const samples = [];
+        for (let cycle = 0; cycle < 5; cycle += 1) {
+          await enterAr();
+          await waitForPlacementState('surface');
+          await tapScreen();
+          await waitForPlacementState('placed');
+          await page.click('#exit-ar');
+          await page.waitForFunction(() => document.body.dataset.xr === 'inactive', null, { timeout: 15000 });
+          await page.waitForTimeout(300);
+          samples.push(await memory());
+        }
+        const [first, last] = [samples[0], samples.at(-1)];
+        const stable = last.geometries <= first.geometries && last.textures <= first.textures && last.renderTargets <= first.renderTargets;
+        const released = await page.evaluate(() => window.__footballSimulator.tacticalInput === null && window.__footballSimulator.placement === null);
+        return [stable && released, `après la 1re sortie : ${JSON.stringify(first)} ; après la 5e : ${JSON.stringify(last)} ; session lâchée : ${released}`];
       }],
       ['sans liaison WebXR/WebGPU : réglage de Chrome indiqué, aucune session', async () => {
         await page.evaluate(() => {
@@ -1346,6 +1408,113 @@ async function testTacticalMobile(browser, url) {
 }
 
 /**
+ * Séquence animée en vue 3D (sprint 6, bonus BF9) : images clés par le panneau, lecture par le
+ * temps écoulé, pause, vitesse 2×, fin exacte sur la dernière image, arrêt par un changement du
+ * tableau, et annulation d'une image clé.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-16
+ * @role Tests de bout en bout — séquence animée (BF9)
+ */
+async function testSequencePlayback(browser, url) {
+  /** Nom d'une étape dans le bilan. */
+  const label = (step) => `Séquence animée (BF9) : ${step}`;
+  const context = await browser.newContext(DESKTOP);
+  try {
+    await context.addInitScript(recordCanvasContexts);
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    /** Déplace un objet par une commande annulable, comme un geste de l'utilisateur. */
+    const move = (teamId, number, to) => page.evaluate(async ([team, n, target]) => {
+      const { MoveBallCommand, MovePlayerCommand } = await import(new URL('src/commands.js', document.baseURI).href);
+      const app = window.__footballSimulator;
+      app.history.execute(team === 'ball'
+        ? new MoveBallCommand({ board: app.board, to: target })
+        : new MovePlayerCommand({ board: app.board, teamId: team, number: n, to: target }));
+    }, [teamId, number, to]);
+    /** Place affichée du n° 9 bleu et du ballon, état de la lecture et texte du panneau. */
+    const read = () => page.evaluate(() => {
+      const app = window.__footballSimulator;
+      const nine = app.pitchGroup.getObjectByName('player-blue-9');
+      const ball = app.pitchGroup.getObjectByName('ball');
+      return {
+        nine: { x: nine.position.x, z: nine.position.z },
+        ball: { x: ball.position.x, z: ball.position.z },
+        state: app.sequencePlayer.state,
+        keyframes: app.sequence.length,
+        status: document.querySelector('[data-sequence="status"]').textContent,
+        play: document.querySelector('[data-sequence="play"]').textContent,
+      };
+    });
+    const start = await page.evaluate(() => window.__footballSimulator.board.getPlayerPosition('blue', 9));
+    const steps = [
+      ['trois images clés enregistrées par le panneau, le n° 9 et le ballon avançant entre elles', async () => {
+        await page.click('#sequence-toggle');
+        await page.click('[data-sequence="keyframe"]');
+        await move('blue', 9, { x: 0.05, z: 0.02 });
+        await move('ball', 0, { x: 0.06, z: 0.03 });
+        await waitForFormationsSettled(page);
+        await page.click('[data-sequence="keyframe"]');
+        await move('blue', 9, { x: 0.15, z: -0.05 });
+        await waitForFormationsSettled(page);
+        await page.click('[data-sequence="keyframe"]');
+        const state = await read();
+        return [state.keyframes === 3 && state.status.startsWith('3 images clés'), `${state.keyframes} images clés ; « ${state.status} »`];
+      }],
+      ['lecture : à mi-étape entre deux images, puis exactement sur la dernière, sans changer le tableau', async () => {
+        await page.click('[data-sequence="play"]');
+        await page.waitForTimeout(600);
+        const middle = await read();
+        await page.waitForFunction(() => window.__footballSimulator.sequencePlayer.state === 'paused', null, { timeout: 8000 });
+        const end = await read();
+        const board = await page.evaluate(() => window.__footballSimulator.board.getPlayerPosition('blue', 9));
+        const between = middle.nine.x > start.x && middle.nine.x < 0.15 && middle.play === 'Pause';
+        const exact = end.nine.x === 0.15 && end.nine.z === -0.05 && end.ball.x === 0.06 && end.ball.z === 0.03;
+        return [between && exact && board.x === 0.15 && end.status.startsWith('Fin'),
+          `pendant la lecture : n° 9 en x = ${middle.nine.x.toFixed(4)} ; à la fin : (${end.nine.x} ; ${end.nine.z}) ; « ${end.status} »`];
+      }],
+      ['pause : rien ne bouge ; vitesse 2× : la lecture dure deux fois moins', async () => {
+        await page.click('[data-sequence="restart"]');
+        await page.waitForTimeout(400);
+        await page.click('[data-sequence="play"]'); // pause
+        const paused = await read();
+        await page.waitForTimeout(600);
+        const still = await read();
+        await page.click('[data-speed="2"]');
+        const begin = Date.now();
+        await page.click('[data-sequence="restart"]');
+        await page.waitForFunction(() => window.__footballSimulator.sequencePlayer.state === 'paused', null, { timeout: 8000 });
+        const seconds = (Date.now() - begin) / 1000;
+        await page.click('[data-speed="1"]');
+        const ok = paused.state === 'paused' && JSON.stringify(still.nine) === JSON.stringify(paused.nine) && seconds < 2.6;
+        return [ok, `en pause : immobile ; à 2× : ${seconds.toFixed(2)} s pour deux étapes (3 s à 1×)`];
+      }],
+      ['un changement du tableau arrête la lecture, et la scène rejoint le tableau', async () => {
+        await page.click('[data-sequence="restart"]');
+        await page.waitForTimeout(300);
+        await move('red', 5, { x: 0.12, z: 0.15 });
+        const stopped = await read();
+        const gap = await settledSceneGapMm(page);
+        return [stopped.state === 'stopped' && gap < 0.01, `état : ${stopped.state}, scène à ${gap.toFixed(4)} mm du tableau`];
+      }],
+      ['« Annuler » retire la dernière image clé ; rendu toujours en WebGPU, sans erreur', async () => {
+        await page.click('[data-action="undo"]'); // annule le déplacement du n° 5
+        await page.click('[data-action="undo"]'); // annule la troisième image clé
+        const state = await read();
+        const contexts = await page.evaluate(() => window.__canvasContexts);
+        const webgl = contexts.filter((type) => WEBGL_CONTEXTS.includes(type));
+        return [state.keyframes === 2 && webgl.length === 0 && errors.length === 0, `${state.keyframes} images clés ; contextes : ${[...new Set(contexts)].join(', ')} ; erreurs : ${errors.length}`];
+      }],
+    ];
+    await runSteps(steps, label);
+  } catch (error) {
+    record(label('parcours complet'), 'échec', error.message);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Mode diagnostic (sprint 5) : désactivé par défaut ; avec ?diagnostics, images par seconde,
  * durée d'une image, moteur de rendu, session XR, appels de dessin et triangles.
  * @param {import('playwright-core').Browser} browser
@@ -1401,6 +1570,7 @@ async function main() {
     await testTacticalBoard(browser, root.url);
     await testTacticalMobile(browser, root.url);
     await testDiagnostics(browser, root.url);
+    await testSequencePlayback(browser, root.url);
     await testWebGpuRendering(browser, root.url);
     await testWithoutWebGpu(browser, root.url);
     await testWebGlTestMode(browser, root.url);

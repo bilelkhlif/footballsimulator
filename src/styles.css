@@ -411,6 +411,42 @@ body[data-xr="active"] #copy-flag {
   outline-offset: 2px;
 }
 
+/* ---- Panneau de la séquence animée (sprint 6, BF9) : état, puis deux lignes de boutons ----
+   Même panneau translucide que celui des formations ; il capte les touchers. */
+.sequence-panel {
+  flex: 1 1 100%;
+  max-width: 36rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-panel-border);
+  border-radius: var(--radius);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+.sequence-panel__status {
+  margin: 0 4px;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.sequence-panel__row {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-panel__row--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sequence-panel__row--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 /* ---- Mode diagnostic (?diagnostics) : sous le bandeau supérieur, laisse passer les touchers ---- */
 .diagnostics {
   align-self: flex-start;
