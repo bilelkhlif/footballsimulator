@@ -194,7 +194,7 @@ test('toucher sur la surface : terrain posé à l\'image suivante, puis ancré �
   assert.deepEqual(states.at(-1), { state: 'placed', anchored: true });
 });
 
-test('terrain ancré : il suit la pose de l\'ancre tant qu\'elle est suivie', async () => {
+test('terrain ancré : il suit la pose de l\'ancre tant qu\'elle est suivie ; suivi interrompu, puis rétabli', async () => {
   const { view, placement } = createPlacement();
   const anchor = createFakeAnchor();
   await placement.start();
@@ -210,6 +210,15 @@ test('terrain ancré : il suit la pose de l\'ancre tant qu\'elle est suivie', as
   const callsBefore = view.calls.length;
   placement.update(createFakeFrame({ tracked: [], anchorPose })); // ancre perdue un instant
   assert.equal(view.calls.length, callsBefore, 'le terrain garde sa dernière pose');
+  placement.update(createFakeFrame({ tracked: [], viewer: null, anchorPose })); // suivi du téléphone perdu aussi
+  assert.equal(view.calls.length, callsBefore, 'ni nouvelle pose, ni retour à la visée');
+  assert.equal(placement.state, 'placed');
+  assert.equal(placement.anchored, true, 'l\'ancre est gardée pendant l\'interruption');
+
+  // Suivi rétabli : le système a recalé l'ancre, et le terrain la rejoint dès l'image suivante.
+  const recalibrated = { transform: { position: { x: 0.112, y: 0.729, z: -0.897 }, orientation: { x: 0, y: 0.02, z: 0, w: 0.9998 } } };
+  placement.update(createFakeFrame({ tracked: [anchor], anchorPose: recalibrated }));
+  assert.deepEqual(view.calls.at(-1), ['followAnchor', recalibrated.transform]);
 });
 
 test('« Déplacer le terrain » : l\'ancre est supprimée et la visée reprend', async () => {

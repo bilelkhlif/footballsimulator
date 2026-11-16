@@ -33,18 +33,27 @@ const MIME_TYPES = {
  * @param {{root?: string, port?: number, basePath?: string}} [options]
  *   root : dossier servi ; port : 0 pour un port libre ;
  *   basePath : sous-chemin de l'application, par exemple « /footballsimulator/ ».
- * @returns {Promise<{url: string, close: () => Promise<void>, setLatency: (ms: number) => void}>}
- *   setLatency : retarde chaque réponse, pour simuler un réseau lent (0 : aucun retard).
+ * @returns {Promise<{url: string, close: () => Promise<void>, setLatency: (ms: number, options?: {only?: string[]}) => void,
+ *   setOverride: (file: string, content: string|null) => void}>}
+ *   setLatency : retarde chaque réponse, pour simuler un réseau lent (0 : aucun retard) ; avec
+ *   only, seulement celles de ces fichiers (chemins relatifs à l'application, sprint 6).
+ *   setOverride : sert un autre contenu pour un fichier, pour simuler un nouveau déploiement sans
+ *   toucher au dépôt (null : revient au fichier ; sprint 6).
  * @responsable Bilel Khlif
  * @date 2026-11-09
  * @role Tests — serveur statique local
  */
 export function startServer({ root = REPO_ROOT, port = 0, basePath = '/' } = {}) {
   let latencyMs = 0;
+  /** Fichiers retardés (chemins relatifs à l'application), ou null pour tous. */
+  let latencyOnly = null;
+  /** Contenus servis à la place de fichiers du dépôt. */
+  const overrides = new Map();
   /** Réponses retardées en attente, annulées à l'arrêt du serveur. */
   const delayed = new Set();
   const server = http.createServer((request, response) => {
-    if (latencyMs <= 0) {
+    const relative = decodeURIComponent(new URL(request.url, 'http://localhost').pathname).slice(basePath.length);
+    if (latencyMs <= 0 || (latencyOnly && !latencyOnly.includes(relative))) {
       serveFile(request, response);
       return;
     }
@@ -68,7 +77,13 @@ export function startServer({ root = REPO_ROOT, port = 0, basePath = '/' } = {})
       response.writeHead(404).end();
       return;
     }
-    let file = path.join(root, pathname.slice(basePath.length));
+    const relative = pathname.slice(basePath.length);
+    if (overrides.has(relative)) {
+      response.writeHead(200, { 'content-type': MIME_TYPES[path.extname(relative)] ?? 'application/octet-stream', 'cache-control': 'no-cache' });
+      response.end(overrides.get(relative));
+      return;
+    }
+    let file = path.join(root, relative);
     if (!file.startsWith(root)) {
       response.writeHead(403).end();
       return;
@@ -98,8 +113,20 @@ export function startServer({ root = REPO_ROOT, port = 0, basePath = '/' } = {})
         server.closeAllConnections();
         server.close(done);
       });
-      const setLatency = (ms) => { latencyMs = ms; };
-      resolve({ url, close, setLatency });
+      /** Retarde les réponses de ms millisecondes, toutes ou seulement celles de certains fichiers. */
+      const setLatency = (ms, { only = null } = {}) => {
+        latencyMs = ms;
+        latencyOnly = only;
+      };
+      /** Remplace le contenu servi d'un fichier (null : revient au fichier du dépôt). */
+      const setOverride = (file, content) => {
+        if (content === null) {
+          overrides.delete(file);
+        } else {
+          overrides.set(file, content);
+        }
+      };
+      resolve({ url, close, setLatency, setOverride });
     });
   });
 }

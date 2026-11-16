@@ -111,3 +111,24 @@ test('statistiques lues après le rendu : three.js les remet à zéro au début 
   assert.equal(fields.calls.textContent, '27');
   assert.equal(fields.triangles.textContent, '9000');
 });
+
+test('sprint 6 : temps de processeur central de l\'image entière, du début de l\'image à la fin du rendu', () => {
+  const { element, fields } = createFakePanel();
+  fields.cpu = { dataset: { field: 'cpu' }, textContent: '–' };
+  element.querySelectorAll = () => Object.values(fields);
+  let clock = 0;
+  const panel = new DiagnosticsPanel({
+    element, renderer: { backend: { isWebGPUBackend: true }, info: { render: {}, memory: { total: 3 * 1048576 } } }, getXrState: () => '', now: () => clock,
+  });
+  for (let index = 0; index < 20; index += 1) {
+    const time = index * 16;
+    clock = time;
+    panel.beforeFrame(time);
+    panel.update(time);
+    clock = time + 6; // 6 ms de travail avant la fin du rendu
+    panel.afterRender(time);
+  }
+  assert.equal(panel.averageCpuMs, 6);
+  panel.write();
+  assert.equal(fields.cpu.textContent, '6.0 ms');
+});

@@ -187,3 +187,18 @@ test('sprint 5 : afterRender des tâches passe juste après le rendu, quand les 
   loop(32);
   assert.deepEqual(log, ['vue tactique', 'diagnostic.update', 'render', 'diagnostic.afterRender(32)']);
 });
+
+test('sprint 6 : beforeFrame des tâches passe au tout début de l\'image, avant la pose du terrain et les déplacements', () => {
+  const log = [];
+  const renderer = {
+    backend: { isWebGPUBackend: true },
+    xr: { isPresenting: true, getCamera: () => ({ cameras: [{}] }) },
+    getOutputRenderTarget: () => createXrTarget(1),
+    render: () => log.push('render'),
+  };
+  const placement = { update: () => log.push('placement') };
+  const tasks = [{ beforeFrame: () => log.push('diagnostic.beforeFrame'), update: () => log.push('diagnostic.update'), afterRender: () => log.push('diagnostic.afterRender') }];
+  const loop = createRenderLoop({ renderer, scene: {}, camera: {}, controls: { update: () => {} }, animator: { update: () => log.push('animator') }, getArPlacement: () => placement, tasks });
+  loop(16, { id: 1 });
+  assert.deepEqual(log, ['diagnostic.beforeFrame', 'placement', 'animator', 'diagnostic.update', 'render', 'diagnostic.afterRender']);
+});

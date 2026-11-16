@@ -189,6 +189,24 @@ export class TacticalView {
   }
 
   /**
+   * Ramène chaque joueur et le ballon à sa place du tableau, depuis l'endroit où il est affiché
+   * (sprint 6 : fin de la lecture d'une séquence, qui les avait déplacés sans changer le tableau).
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Scène 3D — vue tactique (observateur du tableau tactique)
+   */
+  returnToBoard() {
+    for (const { object, teamId, number } of this.#players) {
+      const target = this.#board.getPlayerPosition(teamId, number);
+      this.#targets.set(object, target);
+      this.#animator.moveTo(object, target, { duration: this.#moveDuration });
+    }
+    const ball = this.#board.getBallPosition();
+    this.#targets.set(this.#ball, ball);
+    this.#animator.moveTo(this.#ball, ball, { duration: this.#moveDuration });
+  }
+
+  /**
    * Travail d'une image : anneau de sélection, départ et aperçu de la flèche en cours.
    * @responsable Bilel Khlif
    * @date 2026-11-15

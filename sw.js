@@ -1,23 +1,30 @@
 /**
- * Service Worker de Football Simulator (cahier §2.3 et §3.3).
- * Il met l'application en cache à l'installation, pour qu'elle se lance
- * hors-ligne après une première visite.
+ * Service Worker de Football Simulator (cahier §2.3 et §3.3, finalisé au sprint 6).
+ * Il met l'application en cache à l'installation, pour qu'elle se lance hors-ligne après une
+ * première visite.
  *
- * Stratégies :
- * - bibliothèques (src/vendor) et ressources (assets) : cache d'abord, car elles ne changent pas ;
- * - page, code et styles : réseau d'abord, avec repli sur le cache hors-ligne, ou quand le
- *   réseau met plus de NETWORK_TIMEOUT_MS à répondre (connexion lente ou instable).
+ * Coquille à version de contenu (sprint 6). Tous les fichiers de l'application (APP_SHELL) sont
+ * téléchargés d'un bloc à l'installation, sans passer par le cache HTTP du navigateur, dans un
+ * cache nommé d'après SHELL_VERSION, une empreinte de leur contenu. cache.addAll est atomique : la
+ * version arrive en entier, ou pas du tout. Ils sont ensuite servis depuis ce cache (« cache
+ * d'abord ») : une page ne mélange jamais deux versions, même sur un réseau lent ou coupé, et se
+ * lance sans attendre le réseau.
  *
- * Tout nouveau fichier de l'application doit être ajouté à APP_SHELL. Incrémenter
- * CACHE_VERSION quand une bibliothèque ou une ressource change.
- * Les modules de l'émulateur (src/dev-emulator.js est importé par main.js, mais
- * src/dev-xr-emulation.js et IWER ne sont chargés qu'avec ?iwer) restent hors du cache.
+ * Mise à jour : quand un fichier de la coquille change, « npm run shell-version » recalcule
+ * SHELL_VERSION. sw.js change donc ; le navigateur installe le nouveau Service Worker, qui
+ * télécharge la nouvelle version complète, prend la main et supprime l'ancien cache ; la page
+ * affiche « Nouvelle version installée ». Un test unitaire vérifie que SHELL_VERSION correspond au
+ * contenu, et qu'aucun fichier chargé par l'application ne manque à APP_SHELL.
+ *
+ * Les autres requêtes de la même origine (module de l'émulateur, autres pages du dépôt) passent
+ * par le réseau d'abord, avec repli sur le cache ; le CDN de l'émulateur IWER est ignoré.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-const CACHE_VERSION = 2; // 2 : three.js r187 (WebGPU) remplace la r186, sprint 3
+/** Empreinte du contenu de la coquille, écrite par « npm run shell-version » (tests/shell-version.mjs). */
+const SHELL_VERSION = '0cabdc0abc04da44';
 const CACHE_PREFIX = 'football-simulator-';
-const CACHE_NAME = `${CACHE_PREFIX}v${CACHE_VERSION}`;
+const CACHE_NAME = `${CACHE_PREFIX}${SHELL_VERSION}`;
 
 /** Fichiers nécessaires au lancement hors-ligne, relatifs à l'emplacement de ce fichier. */
 const APP_SHELL = [
@@ -57,6 +64,9 @@ const APP_SHELL = [
   './src/pointer-input.js',
   './src/xr-input.js',
   './src/diagnostics.js',
+  './src/tactical-sequence.js',
+  './src/sequence-player.js',
+  './src/sequence-panel.js',
   './src/vendor/three-r187/build/three.webgpu.js',
   './src/vendor/three-r187/build/three.core.js',
   './src/vendor/three-r187/build/three.tsl.js',
@@ -68,8 +78,8 @@ const APP_SHELL = [
   './assets/icons/apple-touch-icon.png',
 ];
 
-/** Parties de chemin servies en « cache d'abord ». */
-const IMMUTABLE_PATHS = ['/src/vendor/', '/assets/'];
+/** Chemins de la coquille, résolus depuis l'emplacement de ce fichier (sous-chemin compris). */
+const SHELL_PATHS = new Set(APP_SHELL.map((file) => new URL(file, self.location).pathname));
 
 /**
  * Délai d'attente du réseau, en millisecondes, quand le cache peut répondre à sa place.
@@ -90,7 +100,10 @@ let slowNetworkUntil = 0;
 
 /**
  * Télécharge et met en cache les fichiers de l'application, puis active
- * immédiatement la nouvelle version du Service Worker.
+ * immédiatement la nouvelle version du Service Worker. Depuis le sprint 6, le téléchargement
+ * contourne le cache HTTP du navigateur (cache: 'reload') : la version mise en cache est celle du
+ * serveur, et non un mélange avec des fichiers gardés de la version précédente. cache.addAll échoue
+ * en entier si un seul fichier manque : l'ancienne version reste alors en place.
  * @returns {Promise<void>}
  * @responsable Bilel Khlif
  * @date 2026-11-05
@@ -98,7 +111,7 @@ let slowNetworkUntil = 0;
  */
 async function precacheAppShell() {
   const cache = await caches.open(CACHE_NAME);
-  await cache.addAll(APP_SHELL);
+  await cache.addAll(APP_SHELL.map((file) => new Request(file, { cache: 'reload' })));
   await self.skipWaiting();
 }
 
@@ -134,21 +147,19 @@ async function storeInCache(request, response) {
 }
 
 /**
- * Stratégie « cache d'abord » : répond depuis le cache, sinon télécharge et met en cache.
+ * Coquille de l'application : répond depuis le cache de la version installée, sans attendre le
+ * réseau ; les paramètres de l'adresse (« ?debug », « ?iwer ») sont ignorés. Un fichier absent du
+ * cache est téléchargé, mais pas ajouté au cache de la version : il pourrait venir d'une autre.
  * @param {Request} request
  * @returns {Promise<Response>}
  * @responsable Bilel Khlif
- * @date 2026-11-05
- * @role PWA — Service Worker : stratégies de cache et hors-ligne
+ * @date 2026-11-16
+ * @role PWA — Service Worker : coquille à version de contenu
  */
-async function cacheFirst(request) {
-  const cached = await caches.match(request);
-  if (cached) {
-    return cached;
-  }
-  const response = await fetch(request);
-  await storeInCache(request, response);
-  return response;
+async function fromShell(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request, { ignoreSearch: true });
+  return cached ?? fetch(request);
 }
 
 /**
@@ -251,7 +262,8 @@ self.addEventListener('activate', (event) => {
 
 /**
  * Requêtes : seules les requêtes GET vers l'application elle-même passent par le cache.
- * Le CDN de l'émulateur IWER, utilisé seulement en développement, est ignoré.
+ * Le CDN de l'émulateur IWER, utilisé seulement en développement, est ignoré. Depuis le sprint 6,
+ * les fichiers de la coquille viennent tous du cache de la même version.
  * @responsable Bilel Khlif
  * @date 2026-11-05
  * @role PWA — Service Worker : interception des requêtes
@@ -262,9 +274,8 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || url.origin !== self.location.origin) {
     return;
   }
-  const isImmutable = IMMUTABLE_PATHS.some((path) => url.pathname.includes(path));
-  if (isImmutable) {
-    event.respondWith(cacheFirst(request));
+  if (SHELL_PATHS.has(url.pathname)) {
+    event.respondWith(fromShell(request));
     return;
   }
   // Le téléchargement est lancé ici pour que waitUntil garde le Service Worker actif

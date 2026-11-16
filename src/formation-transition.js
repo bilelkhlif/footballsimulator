@@ -122,6 +122,17 @@ export class FormationAnimator {
   }
 
   /**
+   * Interrompt tous les déplacements en cours, sur place (sprint 6 : lancement de la lecture
+   * d'une séquence, qui place elle-même les objets).
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Scène 3D — animation des changements de formation
+   */
+  clear() {
+    this.#moves.clear();
+  }
+
+  /**
    * Fait avancer les déplacements en cours ; appelée à chaque image.
    * @responsable Bilel Khlif
    * @date 2026-11-14

@@ -10,6 +10,8 @@
  * Sprint 5 : sélection et déplacement des joueurs et du ballon par raycasting, à la souris, au doigt
  * et en AR ; flèches de passe et de course ; annuler, rétablir et réinitialiser (patron Command) ;
  * mode diagnostic des performances (?diagnostics).
+ * Sprint 6 : pions instanciés (6 appels de dessin au lieu de 66) ; séquence animée pas à pas
+ * (bonus BF9) ; Service Worker à version de contenu.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -30,6 +32,9 @@ import { createHintController, createTacticalToolbar, describeGuidance } from '.
 import { PointerInput } from './pointer-input.js';
 import { routeXrSelect, SELECT_ROUTES, XrTacticalInput } from './xr-input.js';
 import { DiagnosticsPanel, isDiagnosticsRequested } from './diagnostics.js';
+import { TacticalSequence } from './tactical-sequence.js';
+import { SequencePlayer } from './sequence-player.js';
+import { createSequencePanel } from './sequence-panel.js';
 import { installEmulatorIfRequested } from './dev-emulator.js';
 import { isImmersiveArSupported, showXrStatus } from './xr-support.js';
 import { registerServiceWorker, setUpInstallButton, watchForUpdates, watchNetworkStatus } from './pwa.js';
@@ -86,9 +91,9 @@ const PLACEMENT_LABELS = Object.freeze({
 
 /**
  * Éléments de l'interface où un toucher ne doit pas devenir un select WebXR (DOM Overlay) : boutons,
- * barre d'outils, panneau des formations et avis.
+ * barre d'outils, panneaux des formations et de la séquence, et avis.
  */
-const XR_UI_SELECTOR = 'button, .toolbar, .formation-panel, .notice';
+const XR_UI_SELECTOR = 'button, .toolbar, .formation-panel, .sequence-panel, .notice';
 
 /**
  * Affiche dans le badge de rendu l'API utilisée : WebGPU, avec le processeur graphique, ou
@@ -142,9 +147,15 @@ async function init(renderMode) {
 
   const playerFactory = new PlayerFactory();
   const teamGroups = {};
+  // Pions instanciés (sprint 6) : 3 appels de dessin par équipe, mis à jour seulement quand un
+  // joueur bouge.
+  const teamMeshes = [];
   for (const team of Object.values(TEAMS)) {
     teamGroups[team.id] = createTeam(team, board.getFormation(team.id), playerFactory);
     pitchGroup.add(teamGroups[team.id]);
+    const meshes = playerFactory.createTeamMeshes(team, teamGroups[team.id].children);
+    pitchGroup.add(meshes.group);
+    teamMeshes.push(meshes);
   }
   const ball = createBall();
   pitchGroup.add(ball);
@@ -195,6 +206,31 @@ async function init(renderMode) {
     setFormationPanelOpen(document.getElementById('formation-panel').hidden);
   });
 
+  // Séquence animée (sprint 6, BF9) : images clés par des commandes annulables, lecture dans la
+  // boucle de rendu, dans le repère du terrain.
+  const sequence = new TacticalSequence();
+  const sequencePlayer = new SequencePlayer({
+    sequence,
+    board,
+    view: tacticalView,
+    animator,
+    targets: [
+      ...Object.entries(teamGroups).flatMap(([teamId, group]) => group.children.map((object) => ({ object, key: `${teamId}:${object.userData.number}` }))),
+      { object: ball, key: 'ball' },
+    ],
+  });
+  createSequencePanel({
+    root: document.getElementById('sequence-panel'),
+    sequence,
+    player: sequencePlayer,
+    history,
+    board,
+    onFeedback: ({ kind, message }) => hint.flash(message, kind),
+  });
+  document.getElementById('sequence-toggle').addEventListener('click', () => {
+    setSequencePanelOpen(document.getElementById('sequence-panel').hidden);
+  });
+
   // Réticule du hit test : en dehors du terrain, car il se déplace avant la pose.
   const reticle = createReticle();
   scene.add(reticle);
@@ -235,10 +271,13 @@ async function init(renderMode) {
   };
 
   // Tâches de chaque image, après les déplacements et avant le rendu : aperçu d'une flèche guidé
-  // par la source d'entrée WebXR, anneau de sélection et aperçu, puis comptage des images.
+  // par la source d'entrée WebXR, lecture de la séquence, anneau de sélection et aperçu, pions
+  // instanciés (après tout ce qui déplace les joueurs), puis comptage des images.
   const tasks = [
     { update: (time, frame) => arState.tacticalInput?.update(frame) },
+    sequencePlayer,
     tacticalView,
+    ...teamMeshes,
   ];
   if (diagnostics) {
     tasks.push(diagnostics);
@@ -257,6 +296,7 @@ async function init(renderMode) {
   document.body.classList.add('is-ready');
   return {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, diagnostics, refreshGuidance,
+    sequence, sequencePlayer, teamMeshes,
   };
 }
 
@@ -306,8 +346,27 @@ function describeXrState(arState) {
  * @role Interface HTML — ouverture du panneau des formations
  */
 function setFormationPanelOpen(open) {
+  if (open) {
+    setSequencePanelOpen(false); // un seul panneau ouvert : le bas de l'écran reste libre
+  }
   document.getElementById('formation-panel').hidden = !open;
   document.getElementById('formations-toggle').setAttribute('aria-expanded', String(open));
+}
+
+/**
+ * Ouvre ou ferme le panneau de la séquence, et tient à jour l'état du bouton « Séquence ». Ouvrir
+ * l'un des deux panneaux ferme l'autre.
+ * @param {boolean} open
+ * @responsable Bilel Khlif
+ * @date 2026-11-16
+ * @role Interface HTML — ouverture du panneau de la séquence (BF9)
+ */
+function setSequencePanelOpen(open) {
+  if (open) {
+    setFormationPanelOpen(false);
+  }
+  document.getElementById('sequence-panel').hidden = !open;
+  document.getElementById('sequence-toggle').setAttribute('aria-expanded', String(open));
 }
 
 /**
@@ -346,6 +405,7 @@ function setUpArSession(sceneContext, arView, arState, renderMode, { interaction
   const exitButton = document.getElementById('exit-ar');
   const moveButton = document.getElementById('move-pitch');
   const formationsToggle = document.getElementById('formations-toggle');
+  const sequenceToggle = document.getElementById('sequence-toggle');
   const toolbar = document.getElementById('tactical-toolbar');
   const resetButton = document.getElementById('reset-view');
   const message = document.getElementById('ar-message');
@@ -378,9 +438,11 @@ function setUpArSession(sceneContext, arView, arState, renderMode, { interaction
       // Formations et outils tactiques servent sur le terrain posé, pas pendant la visée.
       const pitchShown = placement.pitchReady;
       formationsToggle.hidden = !pitchShown;
+      sequenceToggle.hidden = !pitchShown;
       toolbar.hidden = !pitchShown;
       if (!pitchShown) {
         setFormationPanelOpen(false);
+        setSequencePanelOpen(false);
       }
       interaction.setEnabled(pitchShown);
       refreshGuidance({ force: true });
@@ -398,8 +460,10 @@ function setUpArSession(sceneContext, arView, arState, renderMode, { interaction
     enterButton.hidden = true;
     resetButton.hidden = true;
     formationsToggle.hidden = true;
+    sequenceToggle.hidden = true;
     toolbar.hidden = true;
     setFormationPanelOpen(false);
+    setSequencePanelOpen(false);
     exitButton.hidden = false;
     hint.setBase(AR_HINT, { force: true });
   });
@@ -421,6 +485,7 @@ function setUpArSession(sceneContext, arView, arState, renderMode, { interaction
     moveButton.hidden = true;
     resetButton.hidden = false;
     formationsToggle.hidden = false;
+    sequenceToggle.hidden = false;
     toolbar.hidden = false;
     enterButton.hidden = false;
     enterButton.disabled = false;
@@ -581,6 +646,7 @@ async function start() {
   }
   const {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, diagnostics, refreshGuidance,
+    sequence, sequencePlayer, teamMeshes,
   } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
   const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance });
@@ -595,6 +661,9 @@ async function start() {
     interaction,
     tacticalView,
     diagnostics,
+    sequence,
+    sequencePlayer,
+    teamMeshes,
     xrDevice: emulator?.xrDevice ?? null,
     get placement() {
       return arState.placement;

@@ -59,11 +59,12 @@ export function matchXrTargetToViews(renderer) {
  * @param {{update: () => void}} [context.animator] déplacements de joueurs (src/formation-transition.js)
  * @param {() => ({update: (frame: XRFrame) => void}|null)} context.getArPlacement renvoie la pose
  *   du terrain de la session en cours (src/ar-surface.js), ou null hors session
- * @param {Array<{update: (time: number, frame?: XRFrame) => void, afterRender?: (time: number) => void}>} [context.tasks]
+ * @param {Array<{update: (time: number, frame?: XRFrame) => void, beforeFrame?: (time: number) => void, afterRender?: (time: number) => void}>} [context.tasks]
  *   tâches de chaque image (sprint 5) : update est appelée dans l'ordre après les déplacements et
  *   avant le rendu ; afterRender, si elle existe, juste après le rendu. three.js remet à zéro ses
  *   statistiques (renderer.info) au début de chaque image : c'est après le rendu qu'elles décrivent
- *   l'image dessinée.
+ *   l'image dessinée. beforeFrame, si elle existe, est appelée au tout début de l'image (sprint 6 :
+ *   mesure du temps de processeur central de l'image entière).
  * @returns {(time: number, frame?: XRFrame) => void}
  * @responsable Bilel Khlif
  * @date 2026-11-09
@@ -71,6 +72,9 @@ export function matchXrTargetToViews(renderer) {
  */
 export function createRenderLoop({ renderer, scene, camera, controls, animator = null, getArPlacement, tasks = [] }) {
   return (time, frame) => {
+    for (let index = 0; index < tasks.length; index += 1) {
+      tasks[index].beforeFrame?.(time);
+    }
     if (renderer.xr.isPresenting) {
       matchXrTargetToViews(renderer);
       // XRFrame : n'est valable que pendant cet appel (pose du téléphone, hit test, ancres).

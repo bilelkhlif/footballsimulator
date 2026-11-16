@@ -100,7 +100,7 @@ Rappel : L'usage des versions "latest" depuis les CDN est proscrit.
 
     * **Lien CDN de référence :** sans objet (outil de développement installé via npm) ; référence : https://www.npmjs.com/package/playwright-core/v/1.64.1
 
-    * **Rôle dans le projet :** pilote Chrome pour les tests `npm test` ; outil de développement, jamais chargé par l'application
+    * **Rôle dans le projet :** pilote Chrome pour les tests `npm test` et, depuis le sprint 6, pour la mesure des performances (`npm run bench`) ; outil de développement, jamais chargé par l'application
 
 Outils utilisés hors du projet, non distribués avec l'application : Google Chrome pour les tests et les captures, le lanceur de tests intégré à Node.js (`node --test`) pour les tests unitaires, sharp pour les icônes PNG, Python et Pillow pour le traitement des images, pptxgenjs et PowerPoint pour la présentation, MiKTeX (pdfLaTeX, polices Latin Modern) pour le rapport.
 
@@ -144,19 +144,21 @@ Sprint 4 : les formations sont propres au projet ; aucun code ni aucune donnée 
 
 Sprint 5 : aucun extrait copié. Le raycasting passe par l'API de three.js r187 (`Raycaster.setFromCamera`, `intersectObjects`, `Ray.intersectPlane`) et par celle de WebXR (`XRFrame.getPose` sur le `targetRaySpace` d'une source d'entrée). Les formules employées, l'intersection d'un rayon et d'un plan et le quaternion de la plus petite rotation entre deux directions, sont des résultats mathématiques classiques, écrits pour le projet. Le toucher émulé passe par l'API publique d'IWER (position et orientation d'une manette, `updateButtonValue`).
 
+Sprint 6 : aucun extrait copié. L'instanciation des joueurs passe par l'API de three.js r187 (`InstancedMesh`, `setMatrixAt`, `instanceMatrix`), le Service Worker par les API standard du navigateur (`Cache.addAll`, option `cache: 'reload'` de `Request`), et l'empreinte de la coquille par le module `node:crypto` de Node.js (SHA-256). La mesure des performances ralentit le processeur par la commande `Emulation.setCPUThrottlingRate` du protocole Chrome DevTools, via playwright-core. La séquence animée suit le principe relevé par l'état de l'art chez soccer-tactics-board et boardx : des places enregistrées étape par étape, puis interpolées. Aucun code n'en est repris ; l'interpolation utilise la courbe `easeInOutCubic` écrite pour le projet au sprint 4, et non `easeInOutQuad`. Aucune donnée de match, de SkillCorner ou d'ailleurs, n'est importée.
+
 ---
 
 ## 4. Déclaration de l'usage des Assistants IA (Copilot, ChatGPT, Claude)
 
 L'utilisation d'IA est un outil de complétion. Elle doit être documentée et maîtrisée.
 
-Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (modèle indiqué dans le journal de développement : Claude Opus 5.5), pour l’implémentation, les tests et la documentation ; **ChatGPT** pour la reformulation de ce fichier d’attribution.
+Assistants utilisés : **Claude Code** (Anthropic), du 5 au 16 novembre 2026 (modèle indiqué dans le journal de développement : Claude Opus 5.5), pour l’implémentation, les tests et la documentation ; **ChatGPT** pour la reformulation de ce fichier d’attribution.
 
-**Bilel Khlif — Responsable du sprint 1, pilotage technique, intégration WebXR/WebGPU et validation.** Responsable du sprint 1, il assure la conduite technique documentée des sprints 1 à 4 : découpage des travaux, formalisation des contraintes, interaction avec l’assistant de développement, revue des livrables, essais sur appareils physiques et intégration sur GitHub. Son rôle couvre notamment les arbitrages entre rendu WebGPU de production et mode WebGL de test, ainsi que la traduction des exigences pédagogiques en critères de validation.
+**Bilel Khlif — Responsable du sprint 1, pilotage technique, intégration WebXR/WebGPU et validation.** Responsable du sprint 1, il assure la conduite technique documentée des sprints 1 à 6 : découpage des travaux, formalisation des contraintes, interaction avec l’assistant de développement, revue des livrables, essais sur appareils physiques et intégration sur GitHub. Son rôle couvre notamment les arbitrages entre rendu WebGPU de production et mode WebGL de test, ainsi que la traduction des exigences pédagogiques en critères de validation.
 
 **Iyed Rachdi et Ghassen Dallekji — Contribution au cadrage collectif.** Avec Bilel Khlif, ils participent au cahier des charges de référence, qui définit les fonctionnalités, les contraintes d’architecture et les scénarios de démonstration. La répartition individuelle des autres travaux n’est pas détaillée dans le journal initial. Les essais collectifs sur téléphone prévus aux sprints 3 et 4 restent à mener.
 
-**Modalité de développement.** Le travail d’implémentation, notamment la génération du code des sprints 1 à 4, des tests et de la documentation, a été réalisé avec Claude Code à partir du cahier des charges collectif et sous le pilotage technique de Bilel Khlif. Les sprints 2 et 3 sont documentés comme intégralement générés par l’assistant. La contribution étudiante porte sur les spécifications, la direction des travaux, les arbitrages, la revue des livrables, les essais physiques et l’intégration.
+**Modalité de développement.** Le travail d’implémentation, notamment la génération du code des sprints 1 à 6, des tests et de la documentation, a été réalisé avec Claude Code à partir du cahier des charges collectif et sous le pilotage technique de Bilel Khlif. Les sprints 2 et 3 sont documentés comme intégralement générés par l’assistant. La contribution étudiante porte sur les spécifications, la direction des travaux, les arbitrages, la revue des livrables, les essais physiques et l’intégration.
 
 **Traçabilité :** le champ « Prompt ou usage principal » décrit les usages documentés et le périmètre technique de l’assistance pour chaque composant ; il ne reproduit pas un historique de conversation. Les essais physiques sont distingués des vérifications automatisées et émulées.
 
@@ -206,7 +208,9 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (mo
 
 19. **Test de l'AR rendue en WebGPU sur téléphone** : test physique réussi sur le TECNO POVA 6 Pro 5G, rapporté le 14 novembre 2026.
 
-20. **Sprint 5** : demande de réaliser le sprint 5 du cahier des charges, le 15 novembre 2026, avec des consignes détaillées : architecture, raycasting en AR depuis le `targetRaySpace`, patron Command, performance, tests de régression, protocole sur téléphone, documentation, et aucune fusion avant son approbation.
+20. **Sprint 5** : demande de réaliser le sprint 5 du cahier des charges, le 15 novembre 2026, avec des consignes détaillées : architecture, raycasting en AR depuis le `targetRaySpace`, patron Command, performance, tests de régression, protocole sur téléphone, documentation, et aucune fusion avant son approbation. Pull request #12 approuvée, puis fusionnée dans `main` à sa demande le 15 novembre 2026.
+
+21. **Sprint 6** : demande de réaliser le sixième et dernier sprint du cahier des charges, le 16 novembre 2026, avec des consignes détaillées : vérifier le sprint 5 d'abord ; optimiser les performances XR en mesurant avant et après, sans résultat inventé ; revoir la fiabilité du parcours AR ; animer une action (bonus BF9) dans la boucle de rendu existante ; fiabiliser la PWA ; recette finale distinguant validation physique, émulée et automatisée ; documentation finale (manuel illustré, UML, script de la vidéo) ; aucune fusion avant son approbation.
 
 **Déclaration détaillée par composant**
 
@@ -348,7 +352,27 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (mo
 
         * fonctionnement, mathématiques et protocole sur téléphone dans `docs/sprint-5.md` ; tests sur téléphone à faire par l'équipe.
 
-*   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles des sprints 2 à 5, et `assets/screenshots/`), figures du rapport (`docs/etat-de-l-art/figures/`)
+*   **Composant ou Shader concerné :** code du sprint 6, le 16 novembre 2026 : `src/tactical-sequence.js`, `src/sequence-player.js`, `src/sequence-panel.js`, `tests/benchmark.mjs`, `tests/shell-version.mjs` ; modifications de `src/players.js` (maillages instanciés), `src/commands.js`, `src/render-loop.js`, `src/diagnostics.js`, `src/tactical-view.js`, `src/formation-transition.js`, `src/main.js`, `index.html`, `src/styles.css`, `sw.js` (coquille à version de contenu), `package.json` et `tests/serve.mjs` ; tests (`tests/unit/`, `tests/run-tests.mjs`)
+
+    * **Prompt ou usage principal :** demande de Bilel Khlif de réaliser le sixième et dernier sprint du cahier des charges (§5.3 : Service Worker, optimisation mobile, tests finaux, documentation et vidéo ; bonus : animation d'une action, BF9 ; §4.3 : critères d'acceptation ; §5.4 : livrables), avec des consignes détaillées : mesures avant et après dans les mêmes conditions, sans résultat inventé, fiabilité du parcours AR, séquence dans la boucle de rendu existante, fiabilité de la PWA, recette distinguant validation physique, émulée et automatisée. Code, tests, mesures, captures et documentation générés par l'assistant.
+
+        **Périmètre technique :** Banc de mesure (Chrome sans interface, processeur ralenti 4 fois, médiane de 3 mesures) ; instanciation des pions (`InstancedMesh`) en gardant sélection, identité et ancrage ; temps CPU par image et mémoire GPU dans le mode diagnostic ; revue du cycle de vie de la session, de la liaison WebXR/WebGPU, du hit test, des ancres et du suivi interrompu ; séquence par images clés, interpolée selon le temps écoulé dans le repère du terrain, et ses conflits avec l'interaction et l'historique ; coquille du Service Worker à version de contenu, installée d'un bloc ; recette, manuel utilisateur, diagrammes UML et script de la vidéo.
+
+    * **Axe de vérification appliqué par l'étudiant :** Bilel Khlif a fixé les exigences du sprint et réservé la fusion à son approbation. Les vérifications suivantes sont automatisées, faites par l'assistant ; aucune validation physique du sprint 6 n'est consignée à cette date :
+
+        * avant tout changement, `npm test` sur `main` (fusion du sprint 5) : 165 tests unitaires et 67 vérifications de bout en bout réussis ;
+
+        * mesures dans les mêmes conditions, avant et après : 115 → 55 appels de dessin ; en AR émulée, 47,2 → 62,5 images par seconde et 13,7 → 9,1 ms de temps CPU de rendu, sur PC, processeur ralenti 4 fois. Ces mesures comparent deux versions ; elles ne remplacent pas la mesure sur téléphone ;
+
+        * `npm test` le 16 novembre 2026 : 182 tests unitaires réussis sur 182, puis 79 vérifications de bout en bout réussies sur 79. Elles couvrent la séquence animée (lecture exacte, pause, vitesse, arrêt sur un changement du tableau, annulation), la même séquence en AR émulée sur un terrain tourné et ancré, cinq entrées et sorties de l'AR sans fuite de ressources, et le déploiement d'une nouvelle version de la PWA sur réseau lent ;
+
+        * seize erreurs introduites volontairement, puis retirées, toutes détectées, dont l'ancien `sw.js`, qui échoue au nouveau test des versions ; l'une ne l'a été qu'après le renforcement d'un test unitaire ;
+
+        * captures prises par script sur l'application réelle et contrôlées à l'œil ;
+
+        * fonctionnement, mesures et méthode dans `docs/sprint-6.md` ; état de chaque exigence et protocole sur téléphone dans `docs/recette.md` ; tests sur téléphone à faire par l'équipe.
+
+*   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles des sprints 2 à 6, et `assets/screenshots/`), figures du rapport (`docs/etat-de-l-art/figures/`)
 
     * **Prompt ou usage principal :** dessin des icônes en SVG d'après la couverture du cahier des charges, captures automatisées de l'application, mise en page de la bannière dans le style de la présentation d'état de l'art
 
@@ -356,7 +380,7 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (mo
 
     * **Axe de vérification appliqué par l’étudiant :** critères graphiques issus du cahier des charges collectif ; contrôles visuels consignés par l’assistant : les captures sont prises par script sur l'application réelle ; le motif de l'icône « maskable » tient dans la zone sûre d'Android (un cercle de 80 % de la largeur).
 
-*   **Composant ou Shader concerné :** documentation : `README.md`, `docs/architecture.md`, `docs/sprint-1.md`, `docs/sprint-2.md`, `docs/sprint-3.md`, `docs/sprint-4.md`, `docs/sprint-5.md`, `docs/guide-du-code.md`, `docs/etat-de-l-art/README.md`, `src/vendor/three-r187/README.md` et ce fichier
+*   **Composant ou Shader concerné :** documentation : `README.md`, `docs/architecture.md`, `docs/sprint-1.md`, `docs/sprint-2.md`, `docs/sprint-3.md`, `docs/sprint-4.md`, `docs/sprint-5.md`, `docs/sprint-6.md`, `docs/recette.md`, `docs/manuel-utilisateur.md`, `docs/uml.md`, `docs/video-demonstration.md`, `docs/guide-du-code.md`, `docs/etat-de-l-art/README.md`, `src/vendor/three-r187/README.md` et ce fichier
 
     * **Prompt ou usage principal :** rédaction en français à partir du code et du cahier des charges. Le README a été refait à la demande de Bilel Khlif, dans le style du rapport et de la présentation d'état de l'art, avec des captures et la synthèse de la veille. Au sprint 3, ses parties « Rendu WebGPU », « La boucle de rendu » et « Application installable » répondent aux demandes de l'enseignant transmises par Bilel Khlif. Ce fichier suit le modèle fourni par l'enseignant.
 
@@ -392,5 +416,6 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 14 novembre 2026 (mo
 | Sprint 4 | 138/138 | Lancement du sprint à partir du cahier des charges collectif |
 | Documentation des fonctions | 141/141 | Contenu des en-têtes et contraintes définis |
 | Sprint 5 | 232/232 | Exigences détaillées du sprint ; fusion réservée à son approbation |
+| Sprint 6 | 261/261 | Exigences détaillées du sprint final ; fusion réservée à son approbation |
 
-**État de validation matérielle au 15 novembre 2026 :** rendu 3D WebGPU vérifié sur le PC ASUS TUF A15 ; parcours AR WebGPU vérifié en émulation, interaction tactique du sprint 5 comprise ; AR rendue en WebGPU vérifiée sur un téléphone, le TECNO POVA 6 Pro 5G (essai physique réussi) ; AR sur Galaxy S10e vérifiée uniquement dans le mode de test WebGL. Aucune validation physique des sprints 4 et 5 n’est consignée à cette date. Les résultats automatisés ci-dessus proviennent du journal de développement.
+**État de validation matérielle au 16 novembre 2026 :** rendu 3D WebGPU vérifié sur le PC ASUS TUF A15 ; parcours AR WebGPU vérifié en émulation, interaction tactique du sprint 5 et séquence animée du sprint 6 comprises ; AR rendue en WebGPU vérifiée sur un téléphone, le TECNO POVA 6 Pro 5G (essai physique réussi) ; AR sur Galaxy S10e vérifiée uniquement dans le mode de test WebGL. Aucune validation physique des sprints 4, 5 et 6 n’est consignée à cette date : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde restent à mesurer sur téléphone (`docs/recette.md`). Les résultats automatisés ci-dessus proviennent du journal de développement.
