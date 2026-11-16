@@ -397,6 +397,125 @@ export class ResetBoardCommand extends Command {
 }
 
 /**
+ * Enregistrer une image clé de la séquence (sprint 6, BF9) : la place de chaque joueur et du
+ * ballon, prise dans le tableau tactique. Rétablie après une annulation, c'est la même image.
+ * @responsable Bilel Khlif
+ * @date 2026-11-16
+ * @role Logique métier — patron Command : séquence animée (BF9)
+ */
+export class AddKeyframeCommand extends Command {
+  #sequence;
+  #board;
+  #keyframe = null;
+
+  /**
+   * @param {object} options
+   * @param {import('./tactical-sequence.js').TacticalSequence} options.sequence
+   * @param {import('./tactics-board.js').TacticsBoard} options.board
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Logique métier — patron Command : séquence animée (BF9)
+   */
+  constructor({ sequence, board }) {
+    super();
+    this.#sequence = sequence;
+    this.#board = board;
+  }
+
+  /**
+   * Libellé : « Ajouter une image clé ».
+   * @returns {string}
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Logique métier — patron Command : séquence animée (BF9)
+   */
+  get label() {
+    return 'Ajouter une image clé';
+  }
+
+  /**
+   * Prend l'image clé la première fois, puis l'ajoute à la séquence.
+   * @returns {boolean}
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Logique métier — patron Command : séquence animée (BF9)
+   */
+  execute() {
+    this.#keyframe ??= { players: this.#board.snapshot().players, ball: this.#board.getBallPosition() };
+    this.#sequence.add(this.#keyframe);
+    return true;
+  }
+
+  /**
+   * Retire l'image clé ajoutée, la dernière de la séquence.
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Logique métier — patron Command : séquence animée (BF9)
+   */
+  undo() {
+    this.#sequence.removeLast();
+  }
+}
+
+/**
+ * Effacer la séquence (sprint 6, BF9), de façon annulable.
+ * @responsable Bilel Khlif
+ * @date 2026-11-16
+ * @role Logique métier — patron Command : séquence animée (BF9)
+ */
+export class ClearSequenceCommand extends Command {
+  #sequence;
+  #keyframes = null;
+
+  /**
+   * @param {{sequence: import('./tactical-sequence.js').TacticalSequence}} options
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Logique métier — patron Command : séquence animée (BF9)
+   */
+  constructor({ sequence }) {
+    super();
+    this.#sequence = sequence;
+  }
+
+  /**
+   * Libellé : « Effacer la séquence ».
+   * @returns {string}
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Logique métier — patron Command : séquence animée (BF9)
+   */
+  get label() {
+    return 'Effacer la séquence';
+  }
+
+  /**
+   * Garde les images clés, puis les efface. Sans effet sur une séquence vide.
+   * @returns {boolean}
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Logique métier — patron Command : séquence animée (BF9)
+   */
+  execute() {
+    if (this.#sequence.length === 0) {
+      return false;
+    }
+    this.#keyframes = this.#sequence.clear();
+    return true;
+  }
+
+  /**
+   * Rétablit les images clés gardées.
+   * @responsable Bilel Khlif
+   * @date 2026-11-16
+   * @role Logique métier — patron Command : séquence animée (BF9)
+   */
+  undo() {
+    this.#sequence.restore(this.#keyframes);
+  }
+}
+
+/**
  * Historique des commandes : annuler (Undo) et rétablir (Redo).
  *
  * Événement :

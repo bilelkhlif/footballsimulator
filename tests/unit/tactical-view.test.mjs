@@ -183,3 +183,22 @@ test('vue libérée : plus d\'abonnement au tableau, flèches et repères retir�
     assert.equal(pitchGroup.getObjectByName(name), undefined, `${name} retiré`);
   }
 });
+
+test('sprint 6 : returnToBoard ramène chaque objet à sa place du tableau, depuis l\'endroit affiché', () => {
+  const fixture = createTacticalFixture();
+  const { board, view, animator } = fixture;
+  const three = playerObject(fixture, 'blue', 3);
+  three.position.x += 0.08; // déplacé par une lecture, sans changer le tableau
+  fixture.ball.position.z = 0.1;
+  view.returnToBoard();
+  assert.equal(animator.isMoving(three), true);
+  advance(fixture, MOVE_DURATION_MS);
+  assertSceneMatchesBoard(fixture);
+  const shown = [three.position.x, three.position.z];
+  animator.moveTo(three, { x: 0, z: 0 });
+  animator.clear();
+  advance(fixture, MOVE_DURATION_MS);
+  assert.equal(animator.isAnimating, false, 'clear interrompt tous les déplacements');
+  assert.deepEqual([three.position.x, three.position.z], shown, 'sur place');
+  assert.equal(board.getPlayerPosition('blue', 3).x, shown[0], 'le tableau, lui, n\'a pas changé');
+});
