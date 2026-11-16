@@ -14,15 +14,16 @@
 
 - **Le besoin.** Les entraîneurs amateurs expliquent la tactique sur un tableau blanc : une vue de dessus en 2D, des déplacements difficiles à montrer, aucun partage à distance.
 - **Notre réponse.** Une PWA qui pose un mini-terrain 3D de 60 × 39 cm sur une vraie table, à travers la caméra d'un smartphone Android, depuis une URL ou un QR code.
-- **Où nous en sommes.** Les sprints 1 à 5 sont faits :
+- **Où nous en sommes.** Les six sprints du cahier sont faits :
   - terrain et 22 joueurs en 3D ;
   - session AR immersive ;
   - terrain posé sur la table par hit test, réticule et toucher, puis ancré ;
   - formation de chaque équipe choisie par des boutons (4-4-2, 4-3-3, 3-5-2, 4-2-3-1), les joueurs rejoignant leurs places ;
   - joueurs et ballon sélectionnés puis déplacés par raycasting, à la souris, au doigt et en AR ; flèches de passe et de course ; annuler, rétablir et réinitialiser (patron Command) ;
-  - rendu **WebGPU sans repli WebGL** ;
-  - application installable, utilisable hors-ligne.
-- **Testé.** 232 tests automatisés sur PC. Sur téléphone : AR testée le 12 novembre 2026 sur deux téléphones Android. Le 14 novembre, l'AR rendue en WebGPU fonctionne sur le TECNO POVA 6 Pro 5G ; le Galaxy S10e sous Android 9 refuse WebGPU, et tout y fonctionne en mode test WebGL. Le sprint 5 reste à tester sur téléphone : protocole dans [docs/sprint-5.md](docs/sprint-5.md#11-protocole-de-validation-sur-téléphone).
+  - bonus BF9 : une action animée pas à pas, par images clés, avec lecture, pause et vitesse ;
+  - rendu **WebGPU sans repli WebGL**, optimisé pour le mobile : joueurs instanciés, 115 → 55 appels de dessin ;
+  - application installable, utilisable hors-ligne, mise à jour d'un bloc.
+- **Testé.** 261 tests automatisés sur PC : 182 unitaires et 79 de bout en bout, dont le parcours AR complet en émulation. Sur téléphone : AR testée le 12 novembre 2026 sur deux téléphones Android. Le 14 novembre, l'AR rendue en WebGPU fonctionne sur le TECNO POVA 6 Pro 5G ; le Galaxy S10e sous Android 9 refuse WebGPU, et tout y fonctionne en mode test WebGL. Restent à mesurer sur téléphone : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde ([recette](docs/recette.md)).
 
 ## Aperçu
 
@@ -64,6 +65,17 @@
   <sub>Sprint 5 : une passe (flèche dorée), une course (tirets blancs) et le n° 9 sélectionné ; la barre d'outils réunit les modes et l'historique</sub>
 </p>
 
+<table>
+  <tr>
+    <td width="60%"><img src="docs/images/sprint6-sequence.jpg" alt="Vue 3D : une contre-attaque en trois images clés, lecture en pause à mi-chemin, panneau de la séquence ouvert"></td>
+    <td width="40%"><img src="docs/images/sprint6-ar-sequence.jpg" alt="AR émulée : la même action jouée sur le terrain posé et ancré"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Sprint 6, bonus BF9 : une action en trois images clés, mise en pause au milieu de la première passe</sub></td>
+    <td align="center"><sub>En AR, l'action se joue sur le terrain ancré</sub></td>
+  </tr>
+</table>
+
 ## Avancement
 
 | Sprint | Contenu | État |
@@ -73,9 +85,11 @@
 | S3 | Hit testing, réticule, pose du terrain par un tap, ancre ; rendu WebGPU sans repli WebGL ; PWA complétée | Fait et testé sur PC ; AR WebGPU testée sur le TECNO POVA 6 Pro 5G |
 | S4 | Changement de formation (Strategy), deux équipes, ballon, boutons HTML | Fait et testé sur PC, en 3D et en AR émulée |
 | S5 | Sélection et déplacement des joueurs (raycasting), flèches, annulation (Command) | Fait et testé sur PC, en 3D et en AR émulée ; test sur téléphone à faire ([protocole](docs/sprint-5.md#11-protocole-de-validation-sur-téléphone)) |
-| S6 | Service Worker finalisé, optimisation mobile, tests, vidéo ; bonus : animation | À faire |
+| S6 | Service Worker finalisé, optimisation mobile, tests finaux, documentation et vidéo ; bonus : animation d'une action | Fait et testé sur PC, en 3D et en AR émulée ; validation sur téléphone à faire ([recette](docs/recette.md)) |
 
-Les comptes rendus sont dans [docs/sprint-1.md](docs/sprint-1.md), [docs/sprint-2.md](docs/sprint-2.md), [docs/sprint-3.md](docs/sprint-3.md) et [docs/sprint-4.md](docs/sprint-4.md). Le code est expliqué fichier par fichier, avec les questions probables du jury, dans [docs/guide-du-code.md](docs/guide-du-code.md) et dans les comptes rendus des sprints 2 à 4.
+Les comptes rendus sont dans [docs/sprint-1.md](docs/sprint-1.md) à [docs/sprint-6.md](docs/sprint-6.md). Le code est expliqué fichier par fichier, avec les questions probables du jury, dans [docs/guide-du-code.md](docs/guide-du-code.md) et dans les comptes rendus des sprints 2 à 6.
+
+Livrables de fin de projet (cahier §5.4) : [recette finale](docs/recette.md), [manuel utilisateur](docs/manuel-utilisateur.md), [diagrammes UML](docs/uml.md) (cas d'utilisation, séquence, déploiement, classes) et [script de la vidéo de démonstration](docs/video-demonstration.md).
 
 ## Rendu WebGPU
 
@@ -111,7 +125,7 @@ flowchart TD
   M --> P["placement.update(frame) : hit test, réticule, toucher, ancre"]
   A --> AN["animator.update() : joueurs et ballon rejoignent leur place (formation, déplacement à la main)"]
   P --> AN
-  AN --> TK["tâches de l'image : aperçu d'une flèche guidé par la source d'entrée, anneau de sélection, mesure des images"]
+  AN --> TK["tâches de l'image : aperçu d'une flèche guidé par la source d'entrée, séquence animée, anneau de sélection, maillages instanciés des joueurs, mesure des images"]
   TK --> R["renderer.render(scene, camera)"]
   R --> G["WebGPU : passes de rendu encodées, puis soumises au processeur graphique"]
   G --> S{"Destination"}
@@ -124,6 +138,9 @@ Le code de la boucle tient en quelques lignes :
 ```js
 export function createRenderLoop({ renderer, scene, camera, controls, animator = null, getArPlacement, tasks = [] }) {
   return (time, frame) => {
+    for (let index = 0; index < tasks.length; index += 1) {
+      tasks[index].beforeFrame?.(time);  // début de l'image : mesure du temps CPU (sprint 6)
+    }
     if (renderer.xr.isPresenting) {
       matchXrTargetToViews(renderer);   // une vue sur un téléphone, deux sur un casque
       const placement = getArPlacement(); // pose du terrain de la session en cours
@@ -135,7 +152,7 @@ export function createRenderLoop({ renderer, scene, camera, controls, animator =
     }
     animator?.update();                  // joueurs et ballon en route vers leur place
     for (let index = 0; index < tasks.length; index += 1) {
-      tasks[index].update(time, frame);  // aperçu de flèche, anneau de sélection, mesure (sprint 5)
+      tasks[index].update(time, frame);  // aperçu de flèche, séquence, anneau, instances des joueurs
     }
     renderer.render(scene, camera);      // commandes WebGPU, soumises au processeur graphique
     for (let index = 0; index < tasks.length; index += 1) {
@@ -155,6 +172,7 @@ Une image en AR, pas à pas :
 | 4 | `ar-surface.js` | Hit test : le réticule suit la surface visée ; après un toucher, le terrain y est posé et une ancre est créée ; ensuite, le terrain suit son ancre |
 | 4 bis | `formation-transition.js` | Après un changement de formation ou un déplacement à la main, chaque joueur avance d'un pas vers sa nouvelle place, sur le terrain posé |
 | 4 ter | `xr-input.js`, `tactical-view.js` | Pendant le tracé d'une flèche, l'aperçu suit le rayon de la source d'entrée (`targetRaySpace`) ; l'anneau suit le joueur sélectionné |
+| 4 quater | `sequence-player.js`, `players.js` | Pendant la lecture d'une séquence, joueurs et ballon prennent leur place interpolée, selon le temps écoulé ; puis les matrices des joueurs qui ont bougé sont recopiées dans les maillages instanciés (sprint 6) |
 | 5 | three.js | `renderer.render` : une passe de rendu de la scène et une passe de conversion des couleurs, soumises par `device.queue.submit` |
 | 6 | Système | La couche de projection est superposée à l'image de la caméra et affichée |
 
@@ -174,24 +192,42 @@ La barre d'outils, sous le terrain, réunit trois modes et l'historique :
 
 Un même calcul sert partout. Le toucher devient un **rayon** : depuis la caméra et à travers le point touché hors AR, depuis le `targetRaySpace` de la source d'entrée WebXR en AR. Ce rayon est confronté aux zones de sélection des joueurs, puis au plan du gazon. Le point trouvé est ramené dans le repère du terrain : le résultat ne dépend ni de la place ni de l'orientation de l'ancre. Chaque action est une **commande** annulable (patron Command), et la scène suit le tableau tactique (patron Observer). Une place hors du terrain est refusée, avec un message dans le bandeau d'aide.
 
-**Mode diagnostic** : ajouter `?diagnostics` à l'adresse affiche les images par seconde, la durée d'une image, le moteur de rendu, l'état de la session XR, les appels de dessin et les triangles, aussi en AR. Il sert à vérifier l'objectif du cahier, au moins 30 images par seconde sur un téléphone de milieu de gamme.
+**Mode diagnostic** : ajouter `?diagnostics` à l'adresse affiche les images par seconde, la durée d'une image, le temps CPU par image, le moteur de rendu, l'état de la session XR, les appels de dessin, les triangles et la mémoire GPU estimée, aussi en AR. Il sert à vérifier l'objectif du cahier, au moins 30 images par seconde sur un téléphone de milieu de gamme.
 
 Mathématiques, machine à états, patron Command, tests et protocole sur téléphone : [docs/sprint-5.md](docs/sprint-5.md).
+
+## Séquence animée et performance (sprint 6)
+
+**Animer une action (bonus BF9).** Le bouton « Séquence » ouvre un panneau : « Image clé » enregistre la place des 22 joueurs et du ballon ; après quelques déplacements, une autre image clé, et ainsi de suite. « Lecture » fait glisser les joueurs d'une image à l'autre, selon le temps écoulé, dans le repère du terrain : en AR, l'action se joue sur la table. « Pause », « Recommencer », vitesses 0,5×, 1× et 2×. Enregistrer et effacer sont des commandes annulables ; toute action sur le tableau arrête la lecture, et la scène rejoint le tableau. La lecture est une tâche de la boucle de rendu, sans boucle à part.
+
+**Performance mesurée, puis optimisée.** `npm run bench` mesure trois scénarios dans Chrome, processeur ralenti 4 fois pour approcher un téléphone de milieu de gamme, médiane de 3 mesures. Les 22 joueurs sont désormais dessinés par 3 maillages instanciés par équipe (`InstancedMesh`) ; chaque joueur garde son objet, son numéro et sa zone de sélection :
+
+| Scénario (PC, processeur ralenti 4 fois) | Images/s, sprint 5 → 6 | Temps CPU du rendu | Appels de dessin |
+| --- | ---: | ---: | ---: |
+| Vue 3D au repos | 62,7 → 90,1 | 12,7 → 8,2 ms | 115 → 55 |
+| Vue 3D, changements de formation | 46,3 → 76,9 | 18,2 → 9,8 ms | 115 → 55 |
+| AR émulée, terrain posé | 47,2 → 62,5 | 13,7 → 9,1 ms | 114 → 54 |
+
+Cette mesure compare deux versions dans les mêmes conditions ; elle ne remplace pas la mesure sur téléphone, à faire avec le mode diagnostic. Méthode, résultats complets, fiabilité de l'AR (cinq entrées et sorties de suite, suivi interrompu puis rétabli) et versions de la PWA : [docs/sprint-6.md](docs/sprint-6.md).
 
 ## Application installable (PWA)
 
 | Élément | Rôle |
 | --- | --- |
 | `manifest.json` | Nom, icônes (dont une « maskable » pour Android), affichage sans barre d'adresse, identifiant stable et deux captures pour la fenêtre d'installation |
-| `sw.js` | Service Worker : met en cache les 33 fichiers de l'application, pour un lancement hors-ligne après une première visite |
+| `sw.js` | Service Worker : met en cache les 48 entrées de l'application (`APP_SHELL`), pour un lancement hors-ligne après une première visite |
 | Bouton « Installer l'application » | Apparaît quand le navigateur propose l'installation ; disparaît une fois l'application installée |
 | Avis « Nouvelle version installée » | Propose de recharger quand une nouvelle version du Service Worker prend le relais |
 | Badge « Hors-ligne » | S'affiche quand le réseau est coupé |
 
-Le Service Worker utilise deux stratégies :
+Depuis le sprint 6, la page ne mélange jamais deux versions :
 
-- **Cache d'abord** pour three.js et les images, qui ne changent pas. La version de three.js est dans le nom de son dossier (`src/vendor/three-r187/`), pour que deux versions ne se mélangent jamais.
-- **Réseau d'abord** pour la page et le code. Si le réseau ne répond pas en 3 secondes, le cache répond, et la version récente est téléchargée pour le lancement suivant.
+- **Coquille à version de contenu.** `SHELL_VERSION`, dans `sw.js`, est une empreinte SHA-256 du contenu des fichiers de l'application, recalculée par `npm run shell-version`. Un fichier modifié change donc `sw.js`, et le navigateur installe la nouvelle version.
+- **Installation d'un bloc.** Les 48 entrées sont téléchargées ensemble, sans le cache HTTP du navigateur, dans un cache propre à la version : tout ou rien.
+- **Cache d'abord** pour ces fichiers : l'application se lance aussitôt, même sur un réseau lent ou coupé, et toujours en une seule version. La nouvelle version s'applique par « Recharger ».
+- Les autres requêtes (module de l'émulateur) passent par le réseau d'abord, avec repli sur le cache après 3 secondes.
+
+Un test unitaire vérifie que tout fichier chargé par l'application est dans `APP_SHELL`, et que `SHELL_VERSION` correspond au contenu. Le détail, avec le test qui faisait échouer l'ancien Service Worker : [docs/sprint-6.md](docs/sprint-6.md#6-pwa--une-seule-version-à-la-fois).
 
 Pour installer l'application :
 
@@ -234,8 +270,8 @@ Pour installer l'application :
 | Exemple `webxr_ar_hittest` (three.js) | MIT | BF1 à BF3 | S2–S3 |
 | Échantillon `hit-test-anchors` (Immersive Web) | MIT | Ancrage du terrain | S3 |
 | 13 formations de boardx | MIT | BF4 | Envisagées pour S4, finalement non reprises : formations propres au projet |
-| Format d'étapes et interpolation `easeInOutQuad` | Idée seulement | BF9 | S6 |
-| Extrait de match SkillCorner | MIT | BF9 (bonus) | S6 |
+| Format d'étapes (soccer-tactics-board) et interpolation `easeInOutQuad` (boardx) | Idée seulement | BF9 | S6 : idée des étapes retenue, sous forme d'images clés ; aucun code repris. Interpolation par la courbe `easeInOutCubic` des transitions du sprint 4 |
+| Extrait de match SkillCorner | MIT | BF9 (bonus) | Non retenu au S6 : l'action est construite sur le terrain par l'utilisateur ; aucune donnée importée |
 
 Le rapport complet, rédigé en LaTeX, est dans [docs/etat-de-l-art/etat_de_l_art.pdf](docs/etat-de-l-art/etat_de_l_art.pdf) : 12 pages, 9 tableaux, 3 figures et 29 références, avec sa source dans le même dossier.
 
@@ -272,7 +308,7 @@ Il faut un téléphone compatible ARCore, avec les Services Google Play pour la 
 
 Sur un téléphone dont Chrome bloque WebGPU (Android 11 ou plus ancien), l'application affiche un message. Pour tester quand même, ajouter `?webgl` à l'adresse : c'est le mode test WebGL, réservé aux tests, sans le réglage de l'étape 1.
 
-Le protocole de test complet est dans [docs/sprint-3.md](docs/sprint-3.md#13-test-sur-téléphone).
+Le protocole de validation finale, avec le tableau des résultats à remplir, est dans [docs/recette.md](docs/recette.md#5-protocole-de-validation-physique) ; le mode d'emploi complet, dans le [manuel utilisateur](docs/manuel-utilisateur.md).
 
 ## Tests
 
@@ -281,8 +317,10 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 ```bash
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
-npm run test:unit   # 165 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
-npm run test:e2e    # 67 vérifications dans Chrome, sans interface
+npm run test:unit   # 182 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
+npm run test:e2e    # 79 vérifications dans Chrome, sans interface
+npm run bench       # mesure des performances (sprint 6), hors de npm test : 1 à 2 minutes
+npm run shell-version  # recalcule SHELL_VERSION dans sw.js après une modification de l'application
 ```
 
 Les tests de bout en bout couvrent :
@@ -290,22 +328,23 @@ Les tests de bout en bout couvrent :
 - le chargement sans erreur, sur bureau, sur mobile et sous un sous-chemin comme sur GitHub Pages ;
 - les formations : règles de placement, changement par les boutons pour les deux équipes, transition animée, scénario de démonstration, et en AR sur le terrain posé ;
 - le rendu WebGPU sans aucun contexte WebGL, et le message quand WebGPU manque ;
-- le manifeste, le Service Worker, le rechargement hors-ligne et le lancement sur un réseau très lent ;
+- le manifeste, le Service Worker, le rechargement hors-ligne et le lancement sur un réseau très lent ; depuis le sprint 6, un nouveau déploiement sur réseau lent, l'installation d'un bloc de la nouvelle version, et le hors-ligne après la mise à jour ;
 - le parcours AR complet avec l'émulateur : session WebGPU, réticule, toucher et pose du terrain, ancre, déplacement, sorties, et messages d'échec ;
 - le mode test WebGL (`?webgl`) : seulement sur demande, jamais en repli, et le même parcours AR rejoué dans ce mode ;
-- l'interaction tactique (sprint 5) : sélection et déplacement d'un joueur et du ballon au millimètre, en vue 3D, au doigt sur un téléphone de 360 px et en AR sur un terrain tourné de 25° ; flèches avec aperçu ; annuler, rétablir et réinitialiser ; toucher refusé hors du terrain ; toucher sur la barre d'outils arrêté avant la scène ; mode diagnostic.
+- l'interaction tactique (sprint 5) : sélection et déplacement d'un joueur et du ballon au millimètre, en vue 3D, au doigt sur un téléphone de 360 px et en AR sur un terrain tourné de 25° ; flèches avec aperçu ; annuler, rétablir et réinitialiser ; toucher refusé hors du terrain ; toucher sur la barre d'outils arrêté avant la scène ; mode diagnostic ;
+- la séquence animée (sprint 6) : images clés, lecture exacte, pause, vitesse 2×, arrêt sur un changement du tableau, annulation ; en AR sur le terrain tourné, terrain toujours ancré ; et cinq entrées et sorties de l'AR de suite, sans fuite de ressources.
 
 Les tests unitaires vérifient aussi la documentation du code : chaque fonction, classe et membre de classe porte un en-tête avec son responsable, sa date et son rôle, et chaque fichier renvoie à ATTRIBUTION.md ([convention](docs/convention-de-documentation.md)).
 
-Résultat le 15 novembre 2026 : 165 tests unitaires et 67 vérifications de bout en bout, tous réussis. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-5.md](docs/sprint-5.md#10-tests), [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
+Résultat le 16 novembre 2026 : 182 tests unitaires et 79 vérifications de bout en bout, tous réussis. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-6.md](docs/sprint-6.md#7-tests), [docs/sprint-5.md](docs/sprint-5.md#10-tests), [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
 
 ## Arborescence
 
 ```text
 ├── index.html             Page, carte d'import (three.js WebGPU) et interface superposée
 ├── manifest.json          Manifeste de la PWA
-├── sw.js                  Service Worker (cache hors-ligne)
-├── package.json           Commandes npm start, npm test, test:unit et test:e2e
+├── sw.js                  Service Worker : coquille à version de contenu, hors-ligne
+├── package.json           Commandes npm start, npm test, test:unit, test:e2e, bench et shell-version
 ├── ATTRIBUTION.md         Origine des ressources et usage de l'IA
 ├── src/
 │   ├── main.js            Point d'entrée : assemble la scène, l'AR et la PWA
@@ -318,7 +357,7 @@ Résultat le 15 novembre 2026 : 165 tests unitaires et 67 vérifications de bout
 │   ├── tactics-board.js   Formation en place de chaque équipe (Observer, sprint 4)
 │   ├── formation-panel.js Boutons de formation, créés depuis les stratégies (sprint 4)
 │   ├── formation-transition.js  Joueurs qui rejoignent leurs places (sprint 4)
-│   ├── players.js         Fabrique de joueurs (Factory)
+│   ├── players.js         Fabrique de joueurs (Factory), maillages instanciés par équipe (sprint 6)
 │   ├── team.js            Placement d'une équipe, et changement de formation
 │   ├── ball.js            Ballon
 │   ├── xr-support.js      Détection de l'AR et badge d'état
@@ -340,12 +379,17 @@ Résultat le 15 novembre 2026 : 165 tests unitaires et 67 vérifications de bout
 │   ├── tactical-toolbar.js  Barre d'outils et bandeau d'aide
 │   ├── pointer-input.js   Souris et doigt hors AR
 │   ├── xr-input.js        Touchers en AR (targetRaySpace)
-│   ├── diagnostics.js     Mode diagnostic (?diagnostics) : images par seconde, rendu
+│   ├── diagnostics.js     Mode diagnostic (?diagnostics) : images par seconde, temps CPU, rendu
+│   ├── tactical-sequence.js  Images clés de la séquence animée (sprint 6, BF9)
+│   ├── sequence-player.js Lecture de la séquence : temps écoulé, interpolation, vitesse
+│   ├── sequence-panel.js  Panneau de la séquence
 │   ├── styles.css         Styles de l'interface
 │   └── vendor/three-r187/ three.js r187, build WebGPU (licence MIT)
 ├── tests/
 │   ├── serve.mjs          Serveur local (npm start), aussi utilisé par les tests
 │   ├── run-tests.mjs      Tests de bout en bout dans Chrome (npm run test:e2e)
+│   ├── benchmark.mjs      Mesure des performances (npm run bench, sprint 6)
+│   ├── shell-version.mjs  Empreinte de la coquille, écrite dans sw.js (npm run shell-version)
 │   └── unit/              Tests unitaires (npm run test:unit) et carte d'import pour Node.js
 ├── assets/
 │   ├── icons/             Icônes de l'application
@@ -359,6 +403,11 @@ Résultat le 15 novembre 2026 : 165 tests unitaires et 67 vérifications de bout
     ├── sprint-3.md        Compte rendu du sprint 3 : surface réelle, WebGPU, PWA
     ├── sprint-4.md        Compte rendu du sprint 4 : formations et boutons
     ├── sprint-5.md        Compte rendu du sprint 5 : raycasting, flèches, Command
+    ├── sprint-6.md        Compte rendu du sprint 6 : performance, fiabilité AR, BF9, PWA
+    ├── recette.md         Recette finale : BF1 à BF9 et critères d'acceptation
+    ├── manuel-utilisateur.md  Manuel utilisateur illustré
+    ├── uml.md             Diagrammes UML : cas d'utilisation, séquence, déploiement, classes
+    ├── video-demonstration.md  Script de la vidéo de démonstration (5 minutes au plus)
     ├── etat-de-l-art/     Rapport d'état de l'art (PDF et source LaTeX)
     └── images/            Captures et illustrations de ce README
 ```
@@ -373,7 +422,7 @@ Issues du cahier des charges (§7) :
 - des noms explicites : `pitchGroup`, `currentFormation`, `hitTestSource`, `selectedPlayer` ;
 - une branche par fonctionnalité, fusionnée dans `main` après relecture ;
 - des commits fréquents, et chaque push laisse l'application fonctionnelle ;
-- tout nouveau fichier de l'application est ajouté à `APP_SHELL` dans `sw.js`.
+- tout nouveau fichier de l'application est ajouté à `APP_SHELL` dans `sw.js`, et toute modification de l'application est suivie de `npm run shell-version` ; `npm test` vérifie les deux.
 
 ## Équipe
 

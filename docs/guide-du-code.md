@@ -6,6 +6,8 @@ Le sprint 2 (session AR) a son propre document, [sprint-2.md](sprint-2.md), qui 
 
 Le sprint 3 a lui aussi son document, [sprint-3.md](sprint-3.md). Il explique le rendu **WebGPU sans repli WebGL** (`src/webgpu.js`), la pose du terrain sur une surface réelle (`src/ar-surface.js`, `src/reticle.js`), la boucle de rendu et l'émulation sur PC (`src/dev-xr-emulation.js`). Ce guide signale ce que le sprint 3 a changé dans le code des sprints 1 et 2 : le moteur de rendu, la copie de three.js (r187), un démarrage asynchrone et la PWA.
 
+Les sprints 4, 5 et 6 ont aussi leur document : [sprint-4.md](sprint-4.md) (formations), [sprint-5.md](sprint-5.md) (raycasting, flèches, patron Command) et [sprint-6.md](sprint-6.md) (performance, fiabilité de l'AR, séquence animée, PWA versionnée). Ce guide signale ce qu'ils ont changé dans le code existant, et liste leurs nouveaux fichiers dans la partie 3.
+
 **Sommaire**
 
 1. [Ce qui se passe au chargement](#1-ce-qui-se-passe-au-chargement)
@@ -294,7 +296,9 @@ Trois points à savoir expliquer :
 
 Les Rouges sont tournés de 180° (`rotation.y = Math.PI`) pour que leur flèche pointe vers le but des Bleus.
 
-Le cahier (§6.3) cite aussi `InstancedMesh`, qui dessinerait les 22 corps en un seul appel. Il n'est pas utilisé : chaque joueur reste un objet indépendant, simple à sélectionner et à déplacer au sprint 5. Il sera à reconsidérer si la mesure de fluidité du sprint 6 le demande.
+Le cahier (§6.3) cite aussi `InstancedMesh`, qui dessine de nombreuses copies d'une forme en un seul appel. Aux sprints 1 à 5, il n'était pas utilisé : chaque joueur restait un objet indépendant, simple à sélectionner et à déplacer.
+
+**Depuis le sprint 6, socles, flèches et corps sont instanciés**, après une mesure : 88 des 115 appels de dessin venaient des joueurs. `createTeamMeshes(team, joueurs)` crée, pour chaque équipe, un objet `TeamMeshes` : trois `InstancedMesh` de 11 instances (socles, flèches, corps), avec les mêmes géométries et matériaux partagés. Le `Group` de chaque joueur ne garde que son numéro et sa zone de sélection, mais il reste l'objet qu'on déplace, qu'on anime et qu'on sélectionne. À chaque image, `TeamMeshes.update()` recopie dans les instances la matrice des seuls joueurs qui ont bougé, et ne demande un envoi au processeur graphique (`instanceMatrix.needsUpdate`) que dans ce cas. Résultat : 55 appels de dessin au lieu de 115. Le tableau ci-dessus décrit donc le pion tel qu'on le voit ; ses trois premières formes sont dessinées par les maillages instanciés de l'équipe. Mesures dans [sprint-6.md](sprint-6.md#3-performance--mesurer-puis-optimiser).
 
 ### [`src/team.js`](../src/team.js)
 
@@ -333,29 +337,33 @@ Le Service Worker réagit à trois événements :
 
 | Événement | Ce qu'il fait |
 | --- | --- |
-| `install` | Télécharge et met en cache les 36 fichiers de `APP_SHELL` (23 au sprint 1, 5 modules au sprint 2 ; au sprint 3, three.js r187 en 4 fichiers à la place des 3 de la r186, 3 nouveaux modules, puis le module du mode test WebGL ; 3 modules au sprint 4), puis s'active aussitôt (`skipWaiting`) |
+| `install` | Télécharge les 48 entrées de `APP_SHELL` d'un bloc (`cache.addAll`), sans le cache HTTP du navigateur (`cache: 'reload'`), dans le cache de la version (`football-simulator-<SHELL_VERSION>`), puis s'active aussitôt (`skipWaiting`). Si un seul fichier échoue, rien n'est installé |
 | `activate` | Supprime les caches des versions précédentes et prend le contrôle des pages ouvertes (`clients.claim`) |
-| `fetch` | Répond aux requêtes GET vers l'application selon deux stratégies ; les autres requêtes (le CDN d'IWER, par exemple) passent sans cache |
+| `fetch` | Fichiers de la coquille : depuis le cache de la version (`fromShell`). Autres requêtes de la même origine : réseau d'abord, avec délai. Les requêtes vers d'autres origines (le CDN d'IWER) passent sans cache |
 
 ```mermaid
 flowchart TD
-  R["Requête GET vers l'application"] --> Q{"Chemin dans src/vendor/ ou assets/ ?"}
-  Q -- "oui" --> CF["Cache d'abord : ces fichiers ne changent pas"]
-  Q -- "non" --> NF["Réseau d'abord : on récupère la dernière version"]
+  R["Requête GET de la même origine"] --> Q{"Fichier de APP_SHELL ?"}
+  Q -- "oui" --> SH["Cache de la version installée, paramètres d'adresse ignorés. S'il manque : réseau, sans mise en cache"]
+  Q -- "non" --> NF["Réseau d'abord"]
   NF --> HAS{"Copie dans le cache ?"}
-  HAS -- "non (première visite)" --> W["Attendre le réseau, puis mettre le cache à jour"]
+  HAS -- "non" --> W["Attendre le réseau, puis mettre le cache à jour"]
   HAS -- "oui" --> SLOW{"Réseau jugé lent depuis moins de 15 s ?"}
-  SLOW -- "oui" --> C["Répondre depuis le cache (la page d'accueil pour une navigation)"]
+  SLOW -- "oui" --> C["Répondre depuis le cache"]
   SLOW -- "non" --> NET{"Réponse du réseau en moins de 3 s ?"}
   NET -- "oui" --> U["Répondre et mettre le cache à jour"]
   NET -- "non : lent ou coupé" --> C
 ```
 
-Pourquoi deux stratégies : three.js et les icônes ne changent pas d'une version à l'autre, donc le cache suffit et va plus vite ; le code et la page changent souvent, donc le réseau d'abord évite de servir une version périmée tant qu'on est en ligne.
+**Depuis le sprint 6, une coquille à version de contenu.** Jusqu'au sprint 5, le code passait par le réseau d'abord, fichier par fichier : pendant un déploiement, sur un réseau lent, une page pouvait recevoir certains fichiers de la nouvelle version et d'autres de l'ancienne. Un test de bout en bout le reproduit, et l'ancien `sw.js` y échoue. Désormais :
 
-Pourquoi un délai de 3 secondes (ajouté le 12 novembre 2026, voir [sprint-2.md](sprint-2.md#12-test-sur-android)) : une connexion coupée échoue vite, mais une connexion très lente peut faire attendre le navigateur plus d'une minute par fichier, et la page restait alors sur « Chargement du terrain… ». Désormais, si le cache possède le fichier, le réseau a 3 secondes (`NETWORK_TIMEOUT_MS`) ; au-delà, le cache répond, et il répond directement pendant les 15 secondes suivantes (`SLOW_NETWORK_WINDOW_MS`), pour que toute la page vienne de la même version sans nouvelle attente. Le téléchargement continue en arrière-plan (`event.waitUntil`) et met le cache à jour pour le lancement suivant. Les fonctions : `fetchAndCache` télécharge et met en cache, `findInCache` cherche la copie, `withTimeout` limite l'attente, `networkFirst` choisit la réponse.
+- `SHELL_VERSION` est une empreinte SHA-256 du contenu des fichiers de `APP_SHELL`, recalculée par `npm run shell-version` ([`tests/shell-version.mjs`](../tests/shell-version.mjs)). Un fichier modifié change donc `sw.js`, et le navigateur installe la nouvelle version complète ;
+- la coquille est servie depuis le cache de sa version (`fromShell`) : une page ne mélange jamais deux versions, et se lance sans attendre le réseau ;
+- la nouvelle version s'applique quand l'utilisateur touche « Recharger », sur l'avis « Nouvelle version installée ».
 
-Deux règles à respecter : **tout nouveau fichier de l'application doit être ajouté à `APP_SHELL`**, et il faut incrémenter `CACHE_VERSION` quand une bibliothèque ou une icône change. Au sprint 3, `CACHE_VERSION` est passé à 2 avec three.js r187, et la version de three.js est dans le nom de son dossier : un ancien cache ne peut pas servir un fichier de la r186 à côté d'un fichier de la r187.
+Le délai de 3 secondes (ajouté le 12 novembre 2026, voir [sprint-2.md](sprint-2.md#12-test-sur-android)) ne sert plus qu'aux autres requêtes de la même origine. Une connexion très lente peut faire attendre le navigateur plus d'une minute par fichier : si le cache possède le fichier, le réseau a 3 secondes (`NETWORK_TIMEOUT_MS`) ; au-delà, le cache répond, et il répond directement pendant les 15 secondes suivantes (`SLOW_NETWORK_WINDOW_MS`). Les fonctions : `fetchAndCache` télécharge et met en cache, `findInCache` cherche la copie, `withTimeout` limite l'attente, `networkFirst` choisit la réponse.
+
+Deux règles à respecter, vérifiées par `npm test` (`tests/unit/service-worker.test.mjs`) : **tout nouveau fichier de l'application doit être ajouté à `APP_SHELL`**, et **`npm run shell-version` suit chaque modification d'un fichier de la coquille**. Le numéro `CACHE_VERSION`, incrémenté à la main jusqu'au sprint 5, a disparu. Détail dans [sprint-6.md](sprint-6.md#6-pwa--une-seule-version-à-la-fois).
 
 ### [`manifest.json`](../manifest.json)
 
@@ -400,12 +408,31 @@ Le sprint 5 ajoute neuf modules, expliqués dans [sprint-5.md](sprint-5.md) :
 
 `src/tactics-board.js` garde désormais tout l'état tactique : formations, places des joueurs et du ballon, flèches. `src/ball.js` donne au ballon une zone de sélection, comme celle des joueurs.
 
+### Fichiers du sprint 6
+
+Le sprint 6 ajoute trois modules, expliqués dans [sprint-6.md](sprint-6.md) :
+
+- **`src/tactical-sequence.js`** : les images clés de la séquence animée (bonus BF9). Chacune garde la place des 22 joueurs et du ballon, dans le repère du terrain ; 12 au plus.
+- **`src/sequence-player.js`** : le lecteur. À chaque image, il avance un curseur selon le temps écoulé et la vitesse, puis place chaque objet entre deux images clés, avec la courbe `easeInOutCubic` des transitions du sprint 4. Il s'arrête à tout changement du tableau ou de la séquence.
+- **`src/sequence-panel.js`** : le panneau « Séquence » : boutons, ligne d'état et retours.
+
+Il modifie aussi :
+
+- `src/players.js` : les maillages instanciés de chaque équipe (`createTeamMeshes`, `TeamMeshes`) ;
+- `src/commands.js` : `AddKeyframeCommand` et `ClearSequenceCommand`, annulables ;
+- `src/render-loop.js` : l'étape `beforeFrame`, au tout début de chaque image ;
+- `src/diagnostics.js` : le temps CPU par image et la mémoire GPU estimée ;
+- `src/tactical-view.js` (`returnToBoard`) et `src/formation-transition.js` (`clear`) : ramener la scène au tableau, et interrompre les déplacements en cours ;
+- `sw.js` : la coquille à version de contenu.
+
+Deux outils de développement s'ajoutent dans `tests/` : `benchmark.mjs` (`npm run bench`), qui mesure les performances, et `shell-version.mjs` (`npm run shell-version`), qui calcule `SHELL_VERSION`.
+
 ### Fichiers du dépôt
 
 - **`.editorconfig`** : règles communes à tous les éditeurs : UTF-8, fins de ligne LF, indentation de 2 espaces, ligne vide finale.
 - **`.gitattributes`** : force les fins de ligne LF dans le dépôt, même sous Windows, et ne convertit jamais les images ni les PDF.
 - **`.gitignore`** : exclut `node_modules/`, les fichiers système, ceux des éditeurs, les journaux et les fichiers intermédiaires de LaTeX.
-- **`package.json`** : version 0.3.0 ; déclare `"type": "module"` (les fichiers `.js` sont des modules, y compris pour Node.js dans les tests), les commandes `npm start`, `npm test`, `npm run test:unit` et `npm run test:e2e`, et une seule dépendance de développement, `playwright-core` 1.64.1, en version épinglée. L'application elle-même n'a aucune dépendance npm. Depuis le sprint 3, `test:unit` charge `tests/unit/import-map.mjs`, qui applique à Node.js la carte d'import de `index.html`.
+- **`package.json`** : version 0.3.0 ; déclare `"type": "module"` (les fichiers `.js` sont des modules, y compris pour Node.js dans les tests), les commandes `npm start`, `npm test`, `npm run test:unit` et `npm run test:e2e` (depuis le sprint 6 aussi `npm run bench` et `npm run shell-version`), et une seule dépendance de développement, `playwright-core` 1.64.1, en version épinglée. L'application elle-même n'a aucune dépendance npm. Depuis le sprint 3, `test:unit` charge `tests/unit/import-map.mjs`, qui applique à Node.js la carte d'import de `index.html`.
 - **`tests/`** : les tests de bout en bout, décrits dans la partie 6, et depuis le sprint 2 les tests unitaires (`tests/unit/`).
 
 ---
@@ -415,9 +442,9 @@ Le sprint 5 ajoute neuf modules, expliqués dans [sprint-5.md](sprint-5.md) :
 | Patron (cahier §3.4) | État | Où | Rôle |
 | --- | --- | --- | --- |
 | Strategy | En place | `formations.js` | Une classe par formation ; ajouter une formation revient à ajouter une classe, comme le 4-2-3-1 du sprint 4, dont le bouton est apparu de lui-même |
-| Factory | En place | `players.js` | Créer un pion selon l'équipe : couleur, numéro, orientation |
-| Command | En place depuis le sprint 5 | `commands.js` | Chaque action (déplacer un joueur ou le ballon, tracer une flèche, changer de formation, réinitialiser) est un objet avec `execute()` et `undo()` ; l'historique de ces objets donne Annuler et Rétablir |
-| Observer | En place depuis le sprint 2 | `events.js`, `xr-session.js`, `ar-surface.js`, `tactics-board.js` | La session AR prévient l'interface de son début, de sa fin et de ses échecs ; depuis le sprint 3, la pose du terrain prévient de ses états (visée, surface, posé) ; depuis le sprint 4, le tableau tactique prévient la scène et les boutons des changements de formation ; depuis le sprint 5, la scène (`tactical-view.js`) suit tout l'état tactique, et la barre d'outils suit l'interaction et l'historique |
+| Factory | En place | `players.js` | Créer un pion selon l'équipe : couleur, numéro, orientation ; depuis le sprint 6, aussi les maillages instanciés de chaque équipe |
+| Command | En place depuis le sprint 5 | `commands.js` | Chaque action (déplacer un joueur ou le ballon, tracer une flèche, changer de formation, réinitialiser ; depuis le sprint 6, ajouter une image clé, effacer la séquence) est un objet avec `execute()` et `undo()` ; l'historique de ces objets donne Annuler et Rétablir |
+| Observer | En place depuis le sprint 2 | `events.js`, `xr-session.js`, `ar-surface.js`, `tactics-board.js`, `tactical-sequence.js`, `sequence-player.js` | La session AR prévient l'interface de son début, de sa fin et de ses échecs ; depuis le sprint 3, la pose du terrain prévient de ses états (visée, surface, posé) ; depuis le sprint 4, le tableau tactique prévient la scène et les boutons des changements de formation ; depuis le sprint 5, la scène (`tactical-view.js`) suit tout l'état tactique, et la barre d'outils suit l'interaction et l'historique ; depuis le sprint 6, le lecteur s'arrête quand le tableau ou la séquence change, et le panneau de la séquence suit le lecteur |
 
 ---
 
@@ -430,7 +457,7 @@ Le sprint 5 ajoute neuf modules, expliqués dans [sprint-5.md](sprint-5.md) :
 - **Lignes dessinées sur un canvas** plutôt qu'une image : mesures exactes et modifiables dans le code, aucun fichier image à charger, netteté réglable.
 - **Pions et buts exagérés** : à l'échelle exacte, un joueur de 1,80 m ferait 1 cm de haut et serait difficile à toucher. Les pions font 2,8 cm, soit environ 2,7 fois l'échelle ; la largeur des buts et toutes les longueurs de lignes, elles, respectent l'échelle.
 - **Une lumière directionnelle, aucune ombre** : la fluidité de 30 images par seconde visée par le cahier (§2.3) passe avant le réalisme. L'écart avec le conseil « une seule lumière » (§6.3) est expliqué avec `addLights`.
-- **Pas d'`InstancedMesh` pour l'instant** : des joueurs indépendants simplifient la sélection et le déplacement du sprint 5.
+- **`InstancedMesh` seulement au sprint 6, après mesure** : aux sprints 1 à 5, des joueurs indépendants simplifiaient la sélection et le déplacement. Au sprint 6, la mesure a désigné les appels de dessin des joueurs ; leur dessin est instancié, mais chaque joueur reste un objet indépendant pour la sélection.
 - **Fond transparent du moteur de rendu** : préparé pour l'AR, où l'image de la caméra doit apparaître derrière la scène.
 - **Service Worker dès le sprint 1** : le sprint 1 demande la structure de la PWA (§5.3) ; avec le cache en place dès le début, chaque sprint est testé hors-ligne, et le sprint 6 n'aura qu'à le finaliser.
 - **IWER 2.7.0 plutôt que 2.8.0** : la 2.8.0 a été publiée la veille du début du sprint 1 ; la version précédente a été préférée, faute de recul sur la nouvelle.
@@ -439,7 +466,7 @@ Le sprint 5 ajoute neuf modules, expliqués dans [sprint-5.md](sprint-5.md) :
 
 ## 6. Tests
 
-`npm test` lance d'abord les 165 tests unitaires (`npm run test:unit`, sans navigateur), puis rejoue dans Chrome, sans interface, les 67 vérifications de bout en bout (`npm run test:e2e`). Celles des sprints 1 et 3 hors AR sont décrites ici ; le parcours AR est décrit dans [sprint-3.md](sprint-3.md#12-tests), les formations du sprint 4 dans [sprint-4.md](sprint-4.md#8-tests), et l'interaction tactique du sprint 5 dans [sprint-5.md](sprint-5.md#10-tests). Prérequis : Node.js 18 ou plus, Google Chrome, un processeur graphique compatible WebGPU, et un premier `npm install`. Pour utiliser Microsoft Edge à la place de Chrome : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`).
+`npm test` lance d'abord les 182 tests unitaires (`npm run test:unit`, sans navigateur), puis rejoue dans Chrome, sans interface, les 79 vérifications de bout en bout (`npm run test:e2e`). Celles des sprints 1 et 3 hors AR sont décrites ici ; le parcours AR est décrit dans [sprint-3.md](sprint-3.md#12-tests), les formations du sprint 4 dans [sprint-4.md](sprint-4.md#8-tests), l'interaction tactique du sprint 5 dans [sprint-5.md](sprint-5.md#10-tests), et la séquence animée, les versions de la PWA et les entrées répétées en AR du sprint 6 dans [sprint-6.md](sprint-6.md#7-tests). Prérequis : Node.js 18 ou plus, Google Chrome, un processeur graphique compatible WebGPU, et un premier `npm install`. Pour utiliser Microsoft Edge à la place de Chrome : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`).
 
 | Test | Ce qu'il vérifie |
 | --- | --- |
@@ -447,7 +474,8 @@ Le sprint 5 ajoute neuf modules, expliqués dans [sprint-5.md](sprint-5.md) :
 | Formations | Pour chaque formation : 11 joueurs, numéros 1 à 11, tous dans leur moitié, hors du rond central, sans pions qui se chevauchent (écart minimal mesuré : 7,1 cm, pour des socles de 1,8 cm de diamètre) |
 | Badge d'état de l'AR | Le badge quitte l'état « vérification » et affiche un résultat |
 | Service Worker et hors-ligne | Le Service Worker s'active, puis la page se recharge réseau coupé |
-| Réseau très lent (ajouté le 12 novembre 2026) | L'application étant en cache, la page est prête en 10 secondes au plus quand le serveur met 30 secondes à répondre (3,7 secondes mesurées) |
+| Réseau très lent (ajouté le 12 novembre 2026) | L'application étant en cache, la page est prête en 10 secondes au plus quand le serveur met 30 secondes à répondre (3,7 secondes mesurées le 12 novembre ; 1,1 seconde depuis la coquille à version de contenu du sprint 6) |
+| Versions de la PWA (sprint 6) | Nouveau déploiement sur réseau lent : la page reste sur une seule version ; nouveau `sw.js` : nouvelle version installée d'un bloc, avis, rechargement ; hors-ligne après la mise à jour |
 | Rendu WebGPU (sprint 3) | three.js r187 rend en WebGPU, sans fonction de repli, et seuls des contextes `2d` et `webgpu` sont créés : aucun contexte WebGL |
 | Sans WebGPU (sprint 3) | `navigator.gpu` retiré : message explicite, badge « WebGPU indisponible », aucun contexte WebGL |
 | Manifeste (sprint 3) | Champs exigés pour l'installation, icônes 192 et 512 px, icône « maskable », captures `wide` et `narrow` accessibles |
@@ -465,14 +493,14 @@ Le test des formations reprend le critère d'acceptation du cahier « 11 joueurs
 - `requestSession` exige une action de l'utilisateur : le test de l'émulateur ajoute un bouton à la page et clique dessus.
 - Le bilan s'affiche avec ✓, ✗ ou –, et la commande se termine en erreur si un test échoue.
 
-Ce que les tests ne couvrent pas : le rendu visuel (contrôlé à l'œil sur les captures), un vrai téléphone (détection des surfaces par ARCore, image de la caméra) et la fluidité.
+Ce que les tests ne couvrent pas : le rendu visuel (contrôlé à l'œil sur les captures), un vrai téléphone (détection des surfaces par ARCore, image de la caméra) et la fluidité sur téléphone. Depuis le sprint 6, `npm run bench` mesure la fluidité sur PC, pour comparer deux versions ; la mesure sur téléphone se fait avec le mode diagnostic ([recette](recette.md)).
 
 ---
 
 ## 7. Limites connues
 
 - Depuis le sprint 2, la session AR est en place. Elle a été testée le 12 novembre 2026 sur deux téléphones Android avec Chrome, et la vue 3D sur un iPhone 15 et un PC : voir [sprint-2.md](sprint-2.md).
-- La fluidité de 30 images par seconde reste à mesurer sur un téléphone de milieu de gamme. Depuis le sprint 5, le mode diagnostic (`?diagnostics`) l'affiche, aussi en AR : protocole dans [sprint-5.md](sprint-5.md#11-protocole-de-validation-sur-téléphone).
+- La fluidité de 30 images par seconde reste à mesurer sur un téléphone de milieu de gamme. Le mode diagnostic (`?diagnostics`) l'affiche, aussi en AR, avec depuis le sprint 6 le temps CPU par image : protocole dans [recette.md](recette.md#5-protocole-de-validation-physique). Sur PC, processeur ralenti 4 fois, l'AR émulée atteint 62,5 images par seconde depuis l'instanciation des joueurs ([sprint-6.md](sprint-6.md#3-performance--mesurer-puis-optimiser)).
 - Le hit test est émulé sur PC par une table virtuelle (sprint 3) ; la détection de vraies surfaces par ARCore se vérifie sur téléphone.
 - En AR, la liaison WebXR/WebGPU est encore derrière un réglage de Chrome (`chrome://flags/#webxr-webgpu-binding`). Sans repli WebGL, l'AR demande ce réglage sur le téléphone (sprint 3).
 - Sans WebGPU, l'application affiche un message au lieu du terrain : sur iPhone, il faut iOS 26 (Safari 26) ; sur Android, Chrome bloque WebGPU avant Android 12 (Galaxy S10e sous Android 9, testé le 14 novembre 2026).
@@ -480,6 +508,7 @@ Ce que les tests ne couvrent pas : le rendu visuel (contrôlé à l'œil sur les
 - L'AR rendue en WebGPU (sprint 3) a été testée avec succès sur un téléphone, le TECNO POVA 6 Pro 5G, le 14 novembre 2026 : voir [sprint-3.md](sprint-3.md#13-test-sur-téléphone).
 - Depuis le sprint 5, joueurs et ballon se sélectionnent et se déplacent par raycasting, et les flèches et l'annulation sont en place. C'est vérifié sur PC, en vue 3D et en AR émulée ; le critère du cahier « réussite sur 9 essais sur 10 » (§4.3) reste à mesurer sur téléphone : voir [sprint-5.md](sprint-5.md#11-protocole-de-validation-sur-téléphone).
 - Safari sur iPhone ne prend pas en charge les sessions WebXR `immersive-ar` : sur iPhone, l'application reste en vue 3D (vérifié sur un iPhone 15).
+- La séquence animée du sprint 6 (BF9) est vérifiée sur PC, en vue 3D et en AR émulée. Elle n'est pas enregistrée : elle disparaît au rechargement de la page. Ses déplacements vont en ligne droite d'une image clé à l'autre.
 
 ---
 
@@ -512,7 +541,7 @@ Ils utilisent la même description de formation, tournée de 180° autour du poi
 Un `Raycaster` partira du point touché sur l'écran. Il visera la zone de sélection invisible de chaque joueur, plus large que le pion, et le `userData` du joueur touché indiquera son équipe et son numéro.
 
 **Pourquoi deux lumières, alors que le cahier en conseille une seule ?**
-Une seule lumière directionnelle donne le relief ; la lumière hémisphérique ajoute un éclairage d'ambiance très peu coûteux. Il n'y a aucune ombre portée, qui est le vrai coût. La mesure de fluidité du sprint 6 tranchera.
+Une seule lumière directionnelle donne le relief ; la lumière hémisphérique ajoute un éclairage d'ambiance très peu coûteux. Il n'y a aucune ombre portée, qui est le vrai coût. La mesure du sprint 6 a désigné un autre coût, le nombre d'appels de dessin, réduit par l'instanciation des joueurs ; aucune mesure ne justifiait de retirer la lumière d'ambiance.
 
 **Pourquoi `setAnimationLoop` ?**
 En WebXR, c'est la session qui cadence les images, et c'est la méthode prévue par three.js pour cela. La même boucle servira donc hors AR et en AR.
@@ -533,7 +562,7 @@ Avec l'émulateur IWER, activé par `?iwer` : « Entrer en AR » y ouvre une vra
 C'est un simulateur de tactique : l'entraîneur place et déplace les joueurs lui-même. Il n'y a ni intelligence artificielle des joueurs, ni simulation de match.
 
 **Avez-vous utilisé l'IA ?**
-Oui, et tout est déclaré dans `ATTRIBUTION.md` : le code, la documentation et l'état de l'art des sprints 1 à 3 ont été produits avec Claude Code, à partir de notre cahier des charges, de nos consignes et des demandes de l'enseignant. Le code est vérifié par des tests que chacun peut rejouer (`npm test`) et expliqué dans ce guide, dans `sprint-2.md` et dans `sprint-3.md`.
+Oui, et tout est déclaré dans `ATTRIBUTION.md` : le code, la documentation et l'état de l'art des sprints 1 à 6 ont été produits avec Claude Code, à partir de notre cahier des charges, de nos consignes et des demandes de l'enseignant. Le code est vérifié par des tests que chacun peut rejouer (`npm test`) et expliqué dans ce guide et dans les comptes rendus des sprints 2 à 6.
 
 ---
 
@@ -546,3 +575,7 @@ Tout est expliqué dans [sprint-2.md](sprint-2.md), qui se termine par les point
 Le sprint 3 est fait lui aussi : terrain posé sur la table (hit test, réticule, toucher, ancre), rendu WebGPU sans repli WebGL, PWA complétée. Voir [sprint-3.md](sprint-3.md), qui se termine par les points d'entrée du sprint 4.
 
 Le sprint 4 est fait : formation de chaque équipe choisie par des boutons, joueurs qui rejoignent leurs places (patrons Strategy et Observer). Voir [sprint-4.md](sprint-4.md), qui se termine par les points d'entrée du sprint 5.
+
+Le sprint 5 est fait : sélection et déplacement des joueurs et du ballon par raycasting, flèches de passe et de course, annuler, rétablir et réinitialiser (patron Command), mode diagnostic. Voir [sprint-5.md](sprint-5.md).
+
+Le sprint 6, le dernier, est fait : performance mesurée et joueurs instanciés, fiabilité de l'AR revue, séquence animée (bonus BF9), PWA à version de contenu. Voir [sprint-6.md](sprint-6.md), la [recette finale](recette.md), le [manuel utilisateur](manuel-utilisateur.md), les [diagrammes UML](uml.md) et le [script de la vidéo](video-demonstration.md).
