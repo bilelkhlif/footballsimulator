@@ -134,7 +134,7 @@ sequenceDiagram
   participant App as xr-session.js
   participant Nav as Navigateur (WebXR)
   participant Three as three.js r187
-  App->>Nav: requestSession('immersive-ar', local-floor + webgpu ; hit-test, anchors, dom-overlay)
+  App->>Nav: requestSession('immersive-ar', exigées : local-floor + webgpu, facultatives : hit-test, anchors, dom-overlay)
   Nav-->>App: XRSession
   App->>Nav: requestReferenceSpace('local-floor')
   App->>Three: renderer.xr.setSession(session)

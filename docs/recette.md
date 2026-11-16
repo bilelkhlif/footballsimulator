@@ -12,13 +12,15 @@ Trois niveaux de validation sont distingués. Seul le premier vaut pour un crit�
 
 **Résultat automatisé du 16 novembre 2026** : 182 tests unitaires et 79 vérifications de bout en bout, tous réussis (`npm test`).
 
+**Version des essais physiques.** Les essais physiques consignés ont été faits les 12 et 14 novembre, sur les versions publiées à ces dates, avant les sprints 5 et 6. La version finale n'a été vérifiée qu'en émulation et par les tests automatisés. Les essais de la partie 5 sont à faire sur elle.
+
 ---
 
 ## 1. Besoins fonctionnels
 
 | ID | Besoin (priorité) | Automatisée et émulée | Physique | Statut |
 | --- | --- | --- | --- | --- |
-| BF1 | Démarrer une session AR par « Entrer en AR » (haute) | Session WebGPU ouverte puis fermée, par le bouton et par le système, cinq fois de suite ; échecs signalés (caméra refusée, réglage WebGPU absent) | 12 nov. : entrée en AR, terrain visible et sortie sur deux téléphones Android avec Chrome (Samsung Galaxy S récent, TECNO POVA 6 Pro 5G), en WebGL à l'époque. 14 nov. : AR rendue en WebGPU réussie sur le TECNO POVA 6 Pro 5G ; mode test WebGL réussi sur le Galaxy S10e | **Validé** |
+| BF1 | Démarrer une session AR par « Entrer en AR » (haute) | Session WebGPU ouverte puis fermée, par le bouton et par le système, cinq fois de suite ; échecs signalés (caméra refusée, réglage WebGPU absent) | 12 nov. : entrée en AR, terrain visible et sortie sur deux téléphones Android avec Chrome (Samsung Galaxy S récent, TECNO POVA 6 Pro 5G), en WebGL à l'époque. 14 nov. : AR rendue en WebGPU réussie sur le TECNO POVA 6 Pro 5G ; mode test WebGL réussi sur le Galaxy S10e | **Validé** sur téléphone (versions du 12 et du 14 novembre) ; version finale vérifiée en émulation |
 | BF2 | Réticule sur la surface détectée (haute) | Réticule sur la table virtuelle ; aucun réticule hors de la table | 14 nov. : AR réussie sur le TECNO POVA 6 Pro 5G et sur le Galaxy S10e (mode test), sans détail des étapes consigné | Validé en émulation ; à confirmer sur téléphone |
 | BF3 | Poser le terrain d'un toucher (haute) | Terrain posé sur la table, puis ancré ; reposé ailleurs, tourné de 25° | Comme BF2 | Validé en émulation ; à confirmer sur téléphone |
 | BF4 | Choisir la formation de chaque équipe (haute) | 4-4-2, 4-3-3, 3-5-2 et 4-2-3-1 par les boutons, pour les deux équipes, au millimètre ; en vue 3D et en AR sur le terrain posé | Aucun essai consigné | **Validé** (automatisé, émulé) |

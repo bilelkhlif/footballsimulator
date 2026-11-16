@@ -426,11 +426,13 @@ Issues du cahier des charges (§7) :
 
 ## Équipe
 
-| Membre | Responsabilités |
+| Membre | Responsabilités prévues par le cahier des charges (§5.2) |
 | --- | --- |
 | Iyed Rachdi | Session WebXR, hit testing, ancrage du terrain |
 | Bilel Khlif | Scène three.js, modélisation du terrain et des joueurs, formations |
 | Ghassen Dallekji | Interface HTML, raycasting, PWA, documentation |
+
+Les contributions effectivement documentées, et l'usage de l'IA, sont déclarés dans [ATTRIBUTION.md](ATTRIBUTION.md) (§4).
 
 Encadrant : Dr. Ing. Mohamed-Bécha Kaâniche.
 
