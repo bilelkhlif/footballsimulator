@@ -11,7 +11,7 @@
  * et en AR ; flèches de passe et de course ; annuler, rétablir et réinitialiser (patron Command) ;
  * mode diagnostic des performances (?diagnostics).
  * Sprint 6 : pions instanciés (6 appels de dessin au lieu de 66) ; séquence animée pas à pas
- * (bonus BF9).
+ * (bonus BF9) ; Service Worker à version de contenu.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */

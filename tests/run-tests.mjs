@@ -10,8 +10,10 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { chromium } from 'playwright-core';
-import { startServer } from './serve.mjs';
+import { REPO_ROOT, startServer } from './serve.mjs';
 
 /** Navigateur utilisé : Chrome par défaut. */
 const CHANNEL = process.env.BROWSER_CHANNEL ?? 'chrome';
@@ -1515,6 +1517,85 @@ async function testSequencePlayback(browser, url) {
 }
 
 /**
+ * Service Worker à version de contenu (sprint 6). Un nouveau déploiement est simulé par le
+ * serveur : main.js utilise une nouvelle exportation de config.js, et config.js répond lentement.
+ * 1. Rechargement : la page doit rester sur une seule version, cohérente (avec un réseau d'abord
+ *    et un délai d'attente, main.js arrivait neuf et config.js ancien : le démarrage échouait).
+ * 2. Nouveau sw.js : la nouvelle version s'installe d'un bloc, l'avis s'affiche, et après
+ *    « Recharger » toute la page est de la nouvelle version.
+ * 3. Hors-ligne ensuite : la nouvelle version se lance.
+ * @param {import('playwright-core').Browser} browser
+ * @responsable Bilel Khlif
+ * @date 2026-11-16
+ * @role Tests de bout en bout — PWA (versions et mises à jour)
+ */
+async function testShellVersioning(browser) {
+  /** Nom d'une étape dans le bilan. */
+  const label = (step) => `PWA, versions : ${step}`;
+  const server = await startServer();
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const { page, errors } = await openApp(context, `${server.url}?debug`);
+    await page.waitForFunction(() => navigator.serviceWorker.controller !== null, null, { timeout: 20000 });
+    /** État de la page : prête ou en erreur, marque du déploiement B, caches. */
+    const read = () => page.evaluate(async () => ({
+      ready: document.body.classList.contains('is-ready'),
+      failed: document.getElementById('loader').dataset.state === 'error',
+      marker: window.__deployMarker ?? null,
+      caches: (await caches.keys()).filter((name) => name.startsWith('football-simulator-')),
+    }));
+    /** Recharge et attend la fin du démarrage, réussi ou non. */
+    const reload = async () => {
+      await page.reload();
+      await page.waitForFunction(
+        () => document.body.classList.contains('is-ready') || document.getElementById('loader')?.dataset.state === 'error',
+        null, { timeout: 30000 },
+      ).catch(() => {});
+    };
+    const source = async (file) => readFile(path.join(REPO_ROOT, file), 'utf8');
+    const steps = [
+      ['nouveau déploiement sur réseau lent : la page reste sur une seule version, cohérente', async () => {
+        server.setOverride('src/config.js', `${await source('src/config.js')}\nexport const DEPLOY_MARKER = 'B';\n`);
+        server.setOverride('src/main.js', `${await source('src/main.js')}\nimport { DEPLOY_MARKER } from './config.js';\nwindow.__deployMarker = DEPLOY_MARKER;\n`);
+        server.setLatency(5000, { only: ['src/config.js'] });
+        const before = errors.length;
+        await reload();
+        const state = await read();
+        const ok = state.ready && !state.failed && state.marker === null && errors.length === before && state.caches.length === 1;
+        return [ok, `prête : ${state.ready}, version : ${state.marker ?? 'A'}, erreurs : ${errors.slice(before, before + 2).join(' | ') || 'aucune'}`];
+      }],
+      ['nouveau sw.js : la version B s\'installe d\'un bloc, avis affiché, puis rechargement en version B', async () => {
+        const sw = await source('sw.js');
+        const next = sw.replace(/const SHELL_VERSION = '[^']*';/, "const SHELL_VERSION = 'deploiement-b';");
+        server.setOverride('sw.js', next === sw ? `${sw}\n// déploiement B\n` : next);
+        await reload();
+        await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.update());
+        await page.waitForSelector('#update-notice:not([hidden])', { timeout: 30000 });
+        await page.click('#reload-app');
+        await page.waitForFunction(() => window.__deployMarker === 'B' && document.body.classList.contains('is-ready'), null, { timeout: 30000 });
+        const state = await read();
+        const ok = state.marker === 'B' && state.caches.length === 1 && state.caches[0].endsWith('deploiement-b');
+        return [ok, `version : ${state.marker}, caches : ${state.caches.join(', ')}`];
+      }],
+      ['hors-ligne après la mise à jour : la version B se lance', async () => {
+        server.setLatency(0);
+        await context.setOffline(true);
+        await reload();
+        const state = await read();
+        await context.setOffline(false);
+        return [state.ready && state.marker === 'B', `prête hors-ligne : ${state.ready}, version : ${state.marker}`];
+      }],
+    ];
+    await runSteps(steps, label);
+  } catch (error) {
+    record(label('parcours complet'), 'échec', error.message);
+  } finally {
+    await context.close();
+    await server.close();
+  }
+}
+
+/**
  * Mode diagnostic (sprint 5) : désactivé par défaut ; avec ?diagnostics, images par seconde,
  * durée d'une image, moteur de rendu, session XR, appels de dessin et triangles.
  * @param {import('playwright-core').Browser} browser
@@ -1571,6 +1652,7 @@ async function main() {
     await testTacticalMobile(browser, root.url);
     await testDiagnostics(browser, root.url);
     await testSequencePlayback(browser, root.url);
+    await testShellVersioning(browser);
     await testWebGpuRendering(browser, root.url);
     await testWithoutWebGpu(browser, root.url);
     await testWebGlTestMode(browser, root.url);
