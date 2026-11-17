@@ -201,13 +201,77 @@ def _ball_record(ball: Any, calibration: Any) -> dict[str, Any] | None:
     return contract.make_ball(ball.confidence, ball.box, position if status == "ok" else None, status)
 
 
+class FrameClock:
+    """Instant de chaque image lue : l'horodatage du conteneur, sinon numéro ÷ cadence.
+
+    Une vidéo à cadence variable (fréquente au téléphone) rend « numéro ÷ cadence » faux : sur une
+    copie à cadence variable de la vidéo de la Bundesliga, l'écart atteignait 2,4 s, contre 0 avec
+    l'horodatage du conteneur (CAP_PROP_POS_MSEC d'OpenCV). L'horloge garde aussi l'écart le plus
+    grand entre deux images, pour dire si la cadence est fixe : le visualiseur en a besoin pour
+    retrouver l'image affichée à l'arrêt.
+
+    @responsable Bilel Khlif
+    @date 2026-11-17
+    @role Analyse vidéo — lecture de la vidéo (horodatage)
+    """
+
+    def __init__(self, fps: float):
+        """Prépare l'horloge pour une cadence annoncée.
+
+        @responsable Bilel Khlif
+        @date 2026-11-17
+        @role Analyse vidéo — lecture de la vidéo (horodatage)
+        """
+        self.fps = fps
+        self.last: float | None = None
+        self.count = 0
+        self.container = True
+        self.worst_jitter = 0.0
+
+    def tick(self, index: int, position_ms: float) -> float:
+        """Renvoie l'instant de l'image lue, en secondes, et met à jour les statistiques.
+
+        Args:
+            index: numéro de l'image, à partir de 0.
+            position_ms: CAP_PROP_POS_MSEC juste après grab().
+
+        @responsable Bilel Khlif
+        @date 2026-11-17
+        @role Analyse vidéo — lecture de la vidéo (horodatage)
+        """
+        candidate = position_ms / 1000.0
+        valid = candidate >= 0 and (self.last is None or candidate > self.last) and not (index > 0 and candidate == 0)
+        if not valid:
+            self.container = False
+        time = candidate if valid and self.container else index / self.fps
+        if self.last is not None:
+            self.worst_jitter = max(self.worst_jitter, abs(time - self.last - 1 / self.fps))
+        self.last = time
+        self.count += 1
+        return time
+
+    def summary(self) -> dict[str, Any]:
+        """Source des instants, cadence fixe ou non, et durée lue.
+
+        @responsable Bilel Khlif
+        @date 2026-11-17
+        @role Analyse vidéo — lecture de la vidéo (horodatage)
+        """
+        return {
+            "timestamps": "container" if self.container else "frame-index",
+            "constantFrameRate": self.worst_jitter <= 0.25 / self.fps,
+            "duration": None if self.last is None else round(self.last + 1 / self.fps, 3),
+            "frameCount": self.count,
+        }
+
+
 def _analyse_frames(path: Path, video: dict[str, Any], options: AnalysisOptions, detector: FootballDetector,
-                    calibrator: PitchCalibrator, meter: ResourceMeter, progress: Progress) -> tuple[list, CropCollector, dict, int]:
+                    calibrator: PitchCalibrator, meter: ResourceMeter, progress: Progress) -> tuple[list, CropCollector, dict, int, dict]:
     """Analyse les images échantillonnées : détection, suivi, calibration, positions.
 
     Returns:
         les images analysées, les images de joueurs gardées pour les équipes, les votes de rôle
-        par trajectoire, et le pas d'échantillonnage.
+        par trajectoire, le pas d'échantillonnage et le résumé de l'horloge (FrameClock).
 
     @responsable Bilel Khlif
     @date 2026-11-17
@@ -223,12 +287,14 @@ def _analyse_frames(path: Path, video: dict[str, Any], options: AnalysisOptions,
     role_votes: dict[int, Counter] = defaultdict(Counter)
     frames = []
     capture = cv2.VideoCapture(str(path))
+    clock = FrameClock(fps)
     index = -1
     try:
         while capture.grab():
             index += 1
             if last_index is not None and index > last_index:
                 break
+            time = clock.tick(index, capture.get(cv2.CAP_PROP_POS_MSEC))
             if index % stride:
                 continue
             ok, image = capture.retrieve()
@@ -251,7 +317,7 @@ def _analyse_frames(path: Path, video: dict[str, Any], options: AnalysisOptions,
                 objects.append(contract.make_object(track_id, role, tracked.confidence[k], tracked.xyxy[k], pitch, status))
             players = [k for k in range(len(tracked)) if objects[k]["role"] == "player"]
             collector.offer(image, [int(tracked.tracker_id[k]) for k in players], tracked.xyxy[players] if players else np.zeros((0, 4)))
-            frames.append(contract.make_frame(index, index / fps, tracker.shot, cut, calibration.to_dict(),
+            frames.append(contract.make_frame(index, time, tracker.shot, cut, calibration.to_dict(),
                                               objects, _ball_record(ball, calibration)))
             meter.sample()
             if len(frames) % 10 == 0:
@@ -259,7 +325,7 @@ def _analyse_frames(path: Path, video: dict[str, Any], options: AnalysisOptions,
                          f"{len(frames)} images analysées")
     finally:
         capture.release()
-    return frames, collector, role_votes, stride
+    return frames, collector, role_votes, stride, clock.summary()
 
 
 def _assign_teams(frames: list, collector: CropCollector, role_votes: dict, options: AnalysisOptions,
@@ -347,7 +413,7 @@ def analyse_video(path: Path, options: AnalysisOptions | None = None, progress: 
     timings["models"] = clock.perf_counter() - started
 
     started = clock.perf_counter()
-    frames, collector, role_votes, stride = _analyse_frames(path, video, options, detector, calibrator, meter, progress)
+    frames, collector, role_votes, stride, timing = _analyse_frames(path, video, options, detector, calibrator, meter, progress)
     timings["frames"] = clock.perf_counter() - started
     if not frames:
         raise VideoError("Aucune image n'a pu être lue dans cette vidéo.")
@@ -364,27 +430,37 @@ def analyse_video(path: Path, options: AnalysisOptions | None = None, progress: 
     timings["teams"] = clock.perf_counter() - started
 
     progress("mesures", None, "Mesures de qualité")
-    analysed_seconds = frames[-1]["time"] - frames[0]["time"] + stride / video["fps"]
+    # Vitesse : temps de traitement rapporté à la durée de vidéo réellement lue (horloge des images),
+    # et non au nombre d'images analysées, qui n'est qu'une image sur « stride ».
+    video_seconds = timing["duration"]
+    processing_seconds = sum(timings.values())
     metrics = quality_metrics(frames)
     metrics["processing"] = {
         "device": device,
         "seconds": {stage: round(value, 2) for stage, value in timings.items()},
+        "videoSeconds": video_seconds,
+        "processingSeconds": round(processing_seconds, 2),
+        "slowdown": round(processing_seconds / video_seconds, 2),
         "analysedFrames": len(frames),
-        "framesPerSecond": round(len(frames) / timings["frames"], 2),
-        "realtimeFactor": round(analysed_seconds / sum(timings.values()), 3),
+        "analysedFramesPerSecond": round(len(frames) / timings["frames"], 2),
         **meter.summary(),
     }
     limitations = describe_limitations(metrics)
+    if not timing["constantFrameRate"]:
+        limitations.append("Cadence variable : les instants viennent du conteneur ; à l'arrêt, sans "
+                           "requestVideoFrameCallback, la synchronisation se fait à l'image analysée près.")
     if options.team_backbone == "clip":
         limitations.append("Équipes calculées avec CLIP ViT-L/14, modèle réservé à la recherche par sa fiche.")
     return {
         "format": contract.FORMAT,
         "version": contract.VERSION,
-        "source": {"kind": "file", "name": name or path.name, **video},
+        "source": {"kind": "file", "name": name or path.name, **video, "duration": timing["duration"],
+                   "frameCount": timing["frameCount"], "constantFrameRate": timing["constantFrameRate"],
+                   "timestamps": timing["timestamps"]},
         "analysis": {
             "createdAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "stride": stride, "fps": round(video["fps"] / stride, 4),
-            "analysedSeconds": round(analysed_seconds, 3),
+            "analysedSeconds": video_seconds,
             "models": models,
         },
         "pitch": dict(contract.PITCH),
