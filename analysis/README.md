@@ -4,6 +4,7 @@ Ce dossier analyse une vidéo de match : il détecte et suit les joueurs, les cl
 
 - Composants réutilisés, licences et choix : [docs/opensource-research.md](../docs/opensource-research.md).
 - Architecture, format des données et résultats mesurés : [docs/visualiseur-match.md](../docs/visualiseur-match.md).
+- Équipes sous soleil et ombre : [recherche et variantes comparées](../docs/equipes-lumiere-recherche.md).
 
 L'application AR (index.html) n'en dépend pas : elle reste une PWA statique, publiée sur GitHub Pages. Le visualiseur, lui, a besoin de ce serveur, sur l'ordinateur qui fait l'analyse.
 
@@ -11,7 +12,7 @@ L'application AR (index.html) n'en dépend pas : elle reste une PWA statique, pu
 
 | Matériel | Effet |
 | --- | --- |
-| GPU NVIDIA avec CUDA, 4 Go de mémoire au moins | Mesuré sur une RTX 2050 (4 Go), vidéos de 30 s : traitement de 7,8 à 8,8 fois la durée de la vidéo, dont 60 à 83 s fixes pour les équipes ; pic de 0,65 Go de mémoire GPU avec SigLIP |
+| GPU NVIDIA avec CUDA, 4 Go de mémoire au moins | Nouveau passage sur une RTX 2050 (4 Go), vidéos de 30 s : traitement de 6,72 à 7,13 fois leur durée, dont 55,99 à 61,69 s pour les équipes ; pic alloué par PyTorch de 627 Mio avec SigLIP. Mesures uniques, comparaison et limites : [partie 6.7](../docs/visualiseur-match.md#67-fiabilisation-des-équipes-17-novembre-2026) |
 | Processeur seul | Fonctionne, beaucoup plus lentement (non mesuré) |
 | Disque | 0,4 Go pour les poids ; 1,6 Go pour CLIP ou 0,8 Go pour SigLIP, au premier usage ; PyTorch à part |
 
@@ -73,4 +74,6 @@ Quand la calibration échoue, aucune position n'est donnée sur le terrain pour 
 .venv\Scripts\python -m unittest discover -s tests
 ```
 
-40 tests, sans GPU ni poids : le contrat de données, la calibration (homographies synthétiques, erreur hors échantillon), l'horodatage à cadence variable, les équipes, le suivi, les coupures de plan, les mesures, le serveur et la documentation du code. Les tests de l'interface sont dans `npm test` (tests/visualizer-tests.mjs et tests/unit/visualizer.test.mjs).
+55 tests, sans GPU ni poids : le contrat de données, la calibration (homographies synthétiques, erreur hors échantillon), l'horodatage à cadence variable, les équipes, le cadrage des maillots, les lots d'extraction, le chargement évité sur les vidéos trop pauvres en images de joueurs, le suivi, les coupures de plan, les mesures, le protocole d'audit, le serveur et la documentation du code. Les tests de l'interface sont dans `npm test` (tests/visualizer-tests.mjs et tests/unit/visualizer.test.mjs).
+
+L'[audit interne des équipes](validation/README.md) conserve les annotations textuelles de 446 observations lisibles, leurs vidéos de référence et un script de comparaison avant/après. Les vidéos et les résultats complets restent dans `data/`, hors du dépôt.

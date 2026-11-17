@@ -1,6 +1,6 @@
 # Visualiseur de match : architecture et validation
 
-Phases B et D du visualiseur de match. La phase A, la recherche des composants libres, est dans [opensource-research.md](opensource-research.md). L'installation et l'utilisation sont dans [analysis/README.md](../analysis/README.md).
+Phases B et D du visualiseur de match. La phase A, la recherche des composants libres, est dans [opensource-research.md](opensource-research.md). La [recherche sur les équipes et la lumière](equipes-lumiere-recherche.md) compare les corrections légères. L'installation et l'utilisation sont dans [analysis/README.md](../analysis/README.md).
 
 **Statut :** prototype sur la branche `feature/visualiseur-match`, pas encore fusionné dans `main`. L'application AR n'est pas modifiée : aucun fichier de sa coquille ne change, et `SHELL_VERSION` reste `0cabdc0abc04da44`.
 
@@ -40,7 +40,7 @@ flowchart LR
     ING --> CAL[Points du terrain et homographie]
     TRK --> POS[Positions sur le terrain]
     CAL --> POS
-    POS --> TEAM[Équipes : plongements, UMAP, KMeans]
+    POS --> TEAM[Équipes : torse, plongements, UMAP, KMeans]
     TEAM --> DOC[Document de suivi]
   end
   subgraph Navigateur["Navigateur : visualizer.html"]
@@ -61,7 +61,7 @@ flowchart LR
 | Lecture de la vidéo | `pipeline.py` (`probe_video`, `_analyse_frames`) | OpenCV ; échantillonnage à cadence fixe (12,5 images/s), horodatage de la vidéo source |
 | Détection et suivi | `detection.py`, `tracking.py` | YOLOv8 (Roboflow Sports) ; ByteTrack (trackers) ; coupures (PySceneDetect) |
 | Calibration | `calibration.py` | 32 points du terrain, homographie RANSAC, contrôles, causes d'échec |
-| Équipes | `teams.py` | `TeamClassifier` de Roboflow, vote par trajectoire |
+| Équipes | `teams.py` | Torse avec SigLIP, personne entière avec CLIP ; `TeamClassifier` de Roboflow, extraction par lots, vote par trajectoire |
 | Données | `contract.py`, `metrics.py`, `jobs.py` | Format commun au fichier et au direct ; mesures de qualité ; un dossier par analyse |
 | Transport | `server.py` | HTTP, bibliothèque standard ; lecture partielle de la vidéo |
 | Rendu et interaction | `src/visualizer/` | Magasin, synchronisation, annotations, terrain 3D, panneau, placement, mesures |
@@ -161,9 +161,9 @@ Pour un flux, une différence demeure : les équipes demandent une phase d'appre
 | Caméra qui suit le jeu, zoom | Une homographie par image analysée, à partir des points du terrain visibles |
 | Coupure de plan | PySceneDetect ; suivi remis à zéro, identifiants neufs, numéro de plan dans chaque image ; aucune interpolation à travers une coupure |
 | Joueur masqué ou hors champ | Absent de l'image analysée : ni dessiné, ni interpolé. ByteTrack garde sa trajectoire ouverte 1 s (réglage par défaut de trackers : 30 images à 30 images/s), puis l'abandonne |
-| Échange d'identifiants | Non corrigé (pas de réidentification) ; mesuré : fragmentation, déplacements invraisemblables. Les votes d'équipe couvrent toute la trajectoire : un échange partage les votes, et l'équipe reste inconnue plutôt que fausse. Un saut de plus de 12 m/s ne compte ni dans la vitesse, ni dans la distance, ni dans les traces |
+| Échange d'identifiants | Non corrigé (pas de réidentification) ; mesuré : fragmentation, déplacements invraisemblables. Les votes couvrent toute la trajectoire : un échange peut les partager. L'équipe reste inconnue sous le seuil, mais une majorité suffisante peut encore donner une équipe fausse après l'échange. Un saut de plus de 12 m/s ne compte ni dans la vitesse, ni dans la distance, ni dans les traces |
 | Échec de calibration | Cause enregistrée, aucune position ; le visualiseur l'écrit et laisse le terrain 3D vide |
-| Équipes faussées par la lumière | Non corrigé ; repéré : part de l'équipe majoritaire dans chaque image, annoncée comme limite au-delà de 65 % |
+| Équipes faussées par la lumière ou le fond | Cadrage sur le torse avant SigLIP ; mêmes UMAP et vote. L'indicateur d'équipe majoritaire reste un avertissement, pas une preuve de justesse. Validation de la correction en partie 6.7 |
 | Position incertaine | Erreur d'ajustement et erreur hors échantillon par image ; position hors du terrain écartée ; confiance de détection et d'équipe |
 | Cadences et résolutions | Échantillonnage à cadence fixe ; horodatage du conteneur (une vidéo à cadence variable était décalée jusqu'à 2,4 s avant la correction) ; boîtes mises à l'échelle de l'image affichée |
 | Synchronisation | `requestVideoFrameCallback` en lecture ; après un déplacement dans la vidéo, `currentTime`, ramené au début de l'image affichée si la cadence est fixe ; interpolation linéaire seulement entre deux analyses consécutives d'un même joueur |
@@ -173,6 +173,9 @@ Pour un flux, une différence demeure : les équipes demandent une phase d'appre
 ## 6. Validation
 
 Revue critique du 17 novembre 2026 : toutes les vidéos ont été réanalysées avec le code corrigé, avec le réglage par défaut (SigLIP), sur un PC portable (RTX 2050 de 4 Go, Ryzen 7 6800HS).
+
+Les parties 6.1 à 6.6 conservent cette première campagne, avant la correction du cadrage des
+équipes. La nouvelle campagne, ses 55 tests Python et ses mesures avant/après sont en partie 6.7.
 
 ### 6.1 Niveaux de preuve
 
@@ -210,7 +213,7 @@ Les conditions d'utilisation des vidéos du concours n'ont pas pu être lues (pa
 - **Vitesse.** La lenteur (`slowdown`) est le temps total de traitement (modèles, images, équipes) divisé par la durée de vidéo lue. Les « images analysées par seconde » comptent les images analysées, une sur deux à 25 images/s, et non les images de la vidéo. **Correction de la revue :** le chiffre de 2,2 à 2,6 images/s, donné sans cette précision, pouvait faire croire à 750 ÷ 2,2 = 341 s pour une vidéo de 30 s ; c'était en fait de 237 à 264 s, soit de 7,9 à 8,8 fois la durée.
 - **Mémoire.** Pic de mémoire vive du processus et pic de mémoire GPU de toute l'analyse. **Correction de la revue :** les 1,75 Go de GPU attribués aux modèles YOLO venaient en fait de CLIP ; avec SigLIP, le pic est de 0,65 Go. Sur cette machine, UMAP charge aussi TensorFlow, installé hors du projet et visible depuis l'environnement : la mémoire vive mesurée (2,6 Go) en est gonflée.
 
-### 6.4 Résultats
+### 6.4 Résultats avant le cadrage des maillots
 
 | Vidéo | Images analysées | Plans | Calibrées | Erreur d'ajustement | Erreur hors échantillon, médiane (90 %) | Fragmentation | Ballon | Équipe majoritaire par image | Lenteur |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -236,7 +239,7 @@ Lecture :
   Sur `573e61_0`, des remplaçants qui s'échauffent près du banc sont détectés comme joueurs. Sur `0bfacc_0`, le gardien en vert est détecté comme joueur.
 - **Équipes.**
   - **Défaut constaté sur `573e61_0`.** Des joueurs blancs au soleil sont classés avec l'équipe sombre, avec des votes unanimes. Sur ces cinq vidéos, c'est la seule où le classement échoue.
-  - **Ce que la revue change.** Le classement lui-même n'est pas corrigé. Le défaut est désormais signalé : dans une image typique, 80 % des joueurs classés y sont dans la même équipe, contre 50 à 55 % ailleurs, et le visualiseur l'annonce au-delà de 65 %.
+  - **Ce que cette première revue change.** À ce stade, le classement lui-même n'est pas corrigé. Le défaut est signalé : dans une image typique, 80 % des joueurs classés y sont dans la même équipe, contre 50 à 55 % ailleurs, et le visualiseur l'annonce au-delà de 65 %. La correction ultérieure et ses mesures sont en partie 6.7.
   - **Contrôle visuel.** Ailleurs, 19 joueurs sur 20 sont bien classés sur l'image vérifiée de `2e57b9_0`. L'exception est un échange d'identifiants.
 - **Vitesse.** De 7,8 à 8,8 fois la durée de la vidéo pour 30 s, dont 60 à 83 s fixes pour les équipes. Les clips courts paient donc plus cher en proportion : 13,5 fois pour 10 s. La copie en 720p a pris 14,7 fois au premier passage, puis 8,0 fois au second. Pendant le premier, un téléversement fait par l'interface s'analysait en même temps sur le même GPU : deux analyses simultanées se partagent la carte, d'où la file, qui n'en traite qu'une à la fois.
 
@@ -251,7 +254,7 @@ Lecture :
 | Échange d'identifiants | Trajectoire 15 de `2e57b9_0`, d'un joueur sombre à un blanc ; vote d'équipe partagé (67 %) ; saut exclu des vitesses, distances et traces |
 | Équipe inconnue | 0 à 3 trajectoires de joueurs par vidéo, votes partagés : affichées en gris, avec un trait en pointillés |
 | Fausses détections | Entraîneur classé arbitre, remplaçants détectés : affichés sans filtre. Rien ne les distingue d'un joueur à la limite du terrain |
-| Équipes faussées par la lumière | `573e61_0` : signalé (partie 6.4), non corrigé |
+| Équipes faussées par la lumière | Première revue : `573e61_0` signalé (partie 6.4), non corrigé à ce stade ; correction ultérieure en partie 6.7 |
 
 ### 6.6 Interface
 
@@ -292,14 +295,109 @@ Les captures montrent le panneau 3D placé seul dans des zones vides : tribunes,
 - un écran de moins de 960 px de large, où les panneaux passent sous la vidéo : prévu, non vérifié ;
 - un ordinateur modeste.
 
+### 6.7 Fiabilisation des équipes, 17 novembre 2026
+
+**Recherche avant correction.** Les approches réutilisables et leurs sources sont dans
+[equipes-lumiere-recherche.md](equipes-lumiere-recherche.md). Les poids SigLIP déjà en cache sont
+conservés. Aucun entraînement de modèle ni téléchargement de poids supplémentaire.
+
+**Cause étayée par les essais.** Le découpage de la personne entière contient la tête, le short,
+les jambes et le fond. Sur `573e61_0`, les vues proches des remplaçants blancs forment un groupe,
+tandis que des joueurs éloignés des deux maillots se retrouvent ensemble. Le soleil et l'ombre ne
+sont donc pas la seule différence. Le cadrage du torse (15 à 55 % de la hauteur, 20 à 80 % de la
+largeur) supprime le défaut observé ; il ne démontre pas une invariance générale à l'éclairage.
+
+**Choix.** Vingt-deux combinaisons par vidéo ont été comparées : cadrage, CLAHE, regroupement direct,
+prototypes par trajectoire et regroupement spectral. Le torse avec les mêmes UMAP et KMeans est
+retenu. Sur les 1 308 images lisibles du corpus de choix, les affectations fausses passent de 43 à
+7, et les inconnues de 40 à 34. Ces images servent aussi à former les groupes : ce résultat ne
+constitue pas une validation sur des matchs nouveaux. Les variantes plus rapides qui dégradent
+les équipes sont écartées.
+
+**Audit interne.** Les annotations textuelles, empreintes des vidéos, instants, révisions du code,
+réglages et script sont dans [analysis/validation/](../analysis/validation/README.md). L'audit porte
+sur 454 observations à trois instants par vidéo, dont 446 maillots lisibles. Huit observations de
+gardiens ou de maillots illisibles sont exclues du décompte. Une seule permutation des numéros
+d'équipe est permise par vidéo. Les fausses affectations et les équipes inconnues restent
+séparées. Les numéros des trajectoires ne servent pas à déduire l'étiquette du maillot.
+
+Les doublons de pixels avec le corpus expérimental reconstruit sont exclus. La collecte originale
+utilisait toutefois les rôles instantanés avant correction majoritaire ; son identité complète
+avec cette reconstruction ne peut pas être prouvée après coup. C'est un contrôle interne sur les
+mêmes clips et trajectoires, sans vérité terrain officielle, pas une mesure de généralisation.
+
+**Résultats des nouvelles analyses complètes.** Les processus Python sont neufs, les options
+par défaut et le GPU réservé à une seule analyse. Les temps sont les temps internes du pipeline
+(modèles, images, équipes), hors lancement du processus. Le JSON de mesure est
+[validation-equipes-2026-11-17.json](validation-equipes-2026-11-17.json).
+
+| Vidéo | Observations lisibles | Fausses avant → après | Inconnues avant → après | Lenteur avant → après | Équipes après |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `2e57b9_0` | 59 | 2 → 2 | 0 → 0 | 8,81 → 7,13 fois | 61,69 s |
+| `0bfacc_0` | 58 | 0 → 0 | 0 → 0 | 8,73 → 6,9 fois | 56,63 s |
+| `121364_0` | 59 | 1 → 1 | 3 → 3 | 7,97 → 6,75 fois | 56,71 s |
+| `08fd33_0` | 59 | 0 → 0 | 0 → 0 | 7,79 → 6,72 fois | 56,96 s |
+| `573e61_0` | 61 | 16 → 0 | 0 → 0 | 8,64 → 7 fois | 60,46 s |
+| `2e57b9_0-720p30` | 58 | 0 → 0 | 6 → 6 | 8 → 7,11 fois | 55,99 s |
+| `montage-coupures-2e57b9` | 51 | 0 → 0 | 1 → 0 | 8,46 → 8,19 fois | 74,06 s |
+| `test-vfr-2e57b9` | 41 | 0 → 0 | 4 → 4 | 13,47 → 13,53 fois | 57,79 s |
+| **Total** | **446** | **19 → 3** | **14 → 13** | — | — |
+
+**Régressions.** Les 2 792 enregistrements d’images sont identiques, après retrait
+de l’équipe et de sa confiance : détections, rôles, suivi, calibration, positions, coupures,
+horodatage et ballon. Aucun maillot supplémentaire n’est faux ou inconnu sur une vidéo de
+l’audit. Sur `573e61_0`, les 16 erreurs sur 61 observations lisibles deviennent zéro ; la part
+médiane de l’équipe majoritaire passe de 80 % à 52,4 %. Les trois erreurs restantes de l’audit
+concernent des trajectoires ayant échangé deux joueurs de maillots différents. Le cadrage ne
+répare pas ces échanges.
+
+**Contrôle des deux modèles.** Le cadrage est propre au modèle. Sur les 151 maillots lisibles du
+corpus de choix de `573e61_0`, CLIP passe de zéro à 60 erreurs si le torse lui est imposé. Il garde
+donc la personne entière. Après cette correction (`0a0ecc2`), les plongements CLIP sont identiques
+à ceux de l'extraction précédente sur `2e57b9_0` et `573e61_0` : respectivement 4 erreurs sur 123
+et zéro sur 151, sans équipe inconnue. Ce contrôle CLIP porte sur deux clips, pas sur les huit.
+
+Les huit analyses complètes du tableau utilisent `d127e54`. Après la séparation des cadrages,
+les 1 361 plongements SigLIP du corpus reconstruit sont strictement identiques, avec zéro groupe
+changé sur les huit vidéos. Les mesures complètes restent donc celles du chemin SigLIP validé.
+Le [rapport de compatibilité](compatibilite-equipes-2026-11-17.json) conserve la variante CLIP
+rejetée, le contrôle final et les révisions du code.
+
+**Vitesse et mémoire.** Les clips de 30 s demandent de 6,72 à 7,13 fois leur durée,
+contre 7,79 à 8,81 avant. Le clip à cadence variable passe de 13,47 à 13,53 fois sa durée.
+Ces passages uniques ne sont pas un essai apparié : une grande partie de l’écart
+vient de l’étape d’images, dont le code est inchangé. Aucune accélération algorithmique de
+cette étape n’est donc établie. Le passage 720p qui partageait le GPU est exclu ; la référence
+`v3b-720p30` a les mêmes 450 enregistrements que `v3`, avec un GPU libre.
+
+Pic de mémoire vive du processus : 2533 à 2640 Mio ; pic alloué par PyTorch sur
+le GPU : 627 Mio (contre 645 à 646 Mio avant). Les champs historiques `Mb`
+du JSON utilisent 2²⁰ octets. UMAP charge toujours le TensorFlow visible dans cet environnement
+et paie sa compilation initiale ; les démarrages chauds ne sont pas mesurés ici.
+
+**Améliorations ciblées.** La conversion des images et l’inférence sont préparées par lots de
+32 ; les originaux restent disponibles pour les couleurs. Moins de 20 images utilisables évitent
+de charger le modèle, en gardant une équipe inconnue. Ces lots ne bornent ni les trajectoires,
+ni tous les plongements, ni les résultats d’un match entier. Le contrat fichier/direct est
+conservé ; le transport du direct, le stockage par segments et le gel des équipes après une
+phase initiale restent à développer.
+
+**Validation automatisée finale.** 55 tests Python, 197 tests unitaires JavaScript et 94
+vérifications de bout en bout passent. Parmi ces dernières, 79 concernent l'application AR et
+15 le visualiseur. Le contrôle de `SHELL_VERSION` passe avec `0cabdc0abc04da44`. L'AR utilise
+l'émulation IWER pour ces essais ; aucun résultat physique nouveau n'est déclaré.
+
+
+---
+
 ## 7. Limites et suites
 
 - **Numéros de maillot :** non lus (partie 2.5 de la recherche).
 - **Réidentification :** absente. Un joueur sorti du champ revient avec un nouvel identifiant ; deux joueurs croisés peuvent échanger leurs identifiants. Pistes : BoT-SORT avec compensation du mouvement de la caméra, réidentification de BoxMOT (AGPL-3.0).
 - **Domaine des modèles :** caméra principale de la Bundesliga. Les vidéos libres de Wikimedia Commons choisies pour tester d'autres prises de vue (tribunes, match amateur) n'ont pas pu être téléchargées : le serveur de fichiers a répondu « 429 Too Many Requests » à chaque essai, le 17 novembre 2026. Ce test reste à faire.
-- **Vitesse :** 8 à 9 fois la durée de la vidéo sur une RTX 2050, donc loin du direct. Pistes : un détecteur plus petit (RF-DETR N ou S, Apache-2.0, à affiner), l'export TensorRT, une cadence d'analyse plus basse.
-- **Équipes et lumière :** sur une vidéo avec soleil et ombre marqués, le classement peut séparer la lumière plutôt que les maillots. C'est signalé, pas corrigé.
-- **Matchs entiers :** non testés. Les vidéos testées durent de 10 à 30 s. À ce rythme, un match de 90 min demanderait environ 13 h sur ce PC et un document de suivi d'environ 250 Mo, trop lourd à charger d'un coup dans le navigateur. Il faudrait découper le stockage et la lecture.
+- **Vitesse :** 6,72 à 7,13 fois la durée des clips de 30 s lors du nouveau passage sur une RTX 2050, donc loin du direct ; la courte copie à cadence variable demande 13,53 fois sa durée. Isoler l'environnement sans TensorFlow facultatif et amortir les imports sont des pistes sans changement de modèle. Un export TensorRT demanderait son propre contrôle d'équivalence des détections et des équipes. Les regroupements plus rapides testés ici sont écartés pour leurs erreurs.
+- **Équipes et lumière :** le cas connu de `573e61_0` est traité par le cadrage du torse (partie 6.7). Ce contrôle sur les mêmes clips ne garantit pas le classement sous toutes les lumières, ni avec d'autres tenues et cadrages. La cohérence des votes n'est pas une précision.
+- **Matchs entiers :** non testés. Les vidéos testées durent de 10 à 30 s et paient un coût de démarrage important : les temps ne suffisent pas à estimer un match de 90 min. Les images, trajectoires et plongements restent en mémoire ; la préparation par lots ne borne que les intermédiaires d'inférence. Il faut découper le stockage et la lecture, apprendre les deux équipes sur un échantillon borné, conserver ce repère pour les segments suivants et libérer les trajectoires terminées.
 - **Ballon :** projeté comme s'il était au sol.
 - **Terrain :** supposé de 105 × 68 m.
 - **Faux positif constaté :** un entraîneur qui marche le long de la ligne de touche, classé arbitre.

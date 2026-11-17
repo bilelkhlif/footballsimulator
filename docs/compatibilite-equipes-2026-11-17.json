@@ -1,0 +1,100 @@
+{
+  "date": "2026-11-17",
+  "fullAnalysisCodeCommit": "d127e54",
+  "compatibilityCodeCommit": "0a0ecc2f28c6e7826983e4c0efd3df4339cccdec",
+  "method": "Contrôle interne sur les images du corpus de choix. CLIP conserve la personne entière ; SigLIP cadre le torse. Aucun poids téléchargé. Les erreurs de vote incluent les échanges de joueurs dans une trajectoire.",
+  "clipCropAblation": {
+    "roboflow-dfl-2e57b9_0": {
+      "full": {
+        "labelled": 123,
+        "wrong": 4,
+        "unknown": 0
+      },
+      "torso": {
+        "labelled": 123,
+        "wrong": 4,
+        "unknown": 0
+      }
+    },
+    "roboflow-dfl-573e61_0": {
+      "full": {
+        "labelled": 151,
+        "wrong": 0,
+        "unknown": 0
+      },
+      "torso": {
+        "labelled": 151,
+        "wrong": 60,
+        "unknown": 0
+      }
+    }
+  },
+  "finalBackboneChecks": {
+    "roboflow-dfl-2e57b9_0": {
+      "full": {
+        "labelled": 123,
+        "wrong": 4,
+        "unknown": 0
+      },
+      "current": {
+        "labelled": 123,
+        "wrong": 4,
+        "unknown": 0
+      }
+    },
+    "roboflow-dfl-573e61_0": {
+      "full": {
+        "labelled": 151,
+        "wrong": 0,
+        "unknown": 0
+      },
+      "current": {
+        "labelled": 151,
+        "wrong": 0,
+        "unknown": 0
+      }
+    },
+    "siglipCompatibility": {
+      "montage-coupures-2e57b9": {
+        "crops": 408,
+        "maxEmbeddingDifference": 0,
+        "differentLabels": 0
+      },
+      "roboflow-dfl-08fd33_0": {
+        "crops": 127,
+        "maxEmbeddingDifference": 0,
+        "differentLabels": 0
+      },
+      "roboflow-dfl-0bfacc_0": {
+        "crops": 129,
+        "maxEmbeddingDifference": 0,
+        "differentLabels": 0
+      },
+      "roboflow-dfl-121364_0": {
+        "crops": 125,
+        "maxEmbeddingDifference": 0,
+        "differentLabels": 0
+      },
+      "roboflow-dfl-2e57b9_0-720p30": {
+        "crops": 153,
+        "maxEmbeddingDifference": 0,
+        "differentLabels": 0
+      },
+      "roboflow-dfl-2e57b9_0": {
+        "crops": 136,
+        "maxEmbeddingDifference": 0,
+        "differentLabels": 0
+      },
+      "roboflow-dfl-573e61_0": {
+        "crops": 156,
+        "maxEmbeddingDifference": 0,
+        "differentLabels": 0
+      },
+      "test-vfr-2e57b9": {
+        "crops": 127,
+        "maxEmbeddingDifference": 0,
+        "differentLabels": 0
+      }
+    }
+  }
+}

@@ -235,6 +235,7 @@ La vidéo d'origine s'affiche annotée. Le terrain 3D de l'application, en WebGP
 L'analyse réutilise des composants libres (Roboflow Sports, Ultralytics, ByteTrack, PySceneDetect, OpenCV). Elle tourne sur un serveur Python local ([analysis/](analysis/README.md)), avec un GPU NVIDIA de préférence. L'application AR n'en dépend pas et n'est pas modifiée.
 
 - Recherche des composants, licences et choix : [docs/opensource-research.md](docs/opensource-research.md)
+- Fiabilité des équipes sous soleil et ombre : [recherche et comparaison des variantes](docs/equipes-lumiere-recherche.md)
 - Architecture, format des données et validation sur de vraies vidéos : [docs/visualiseur-match.md](docs/visualiseur-match.md)
 
 ## Application installable (PWA)
@@ -378,7 +379,7 @@ Les tests de bout en bout couvrent :
 
 Les tests unitaires vérifient aussi la documentation du code : chaque fonction, classe et membre de classe porte un en-tête avec son responsable, sa date et son rôle, et chaque fichier renvoie à ATTRIBUTION.md ([convention](docs/convention-de-documentation.md)).
 
-Résultat le 17 novembre 2026, avec le visualiseur de match : 197 tests unitaires et 94 vérifications de bout en bout, tous réussis ; le serveur d'analyse a ses 40 tests Python (`python -m unittest discover -s tests` dans `analysis/`). Avant lui, le 16 novembre : 182 et 79. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-6.md](docs/sprint-6.md#7-tests), [docs/sprint-5.md](docs/sprint-5.md#10-tests), [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
+Résultat le 17 novembre 2026, avec le visualiseur de match : 197 tests unitaires et 94 vérifications de bout en bout, tous réussis ; le serveur d'analyse a ses 55 tests Python (`python -m unittest discover -s tests` dans `analysis/`). Avant lui, le 16 novembre : 182 et 79. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-6.md](docs/sprint-6.md#7-tests), [docs/sprint-5.md](docs/sprint-5.md#10-tests), [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
 
 ## Arborescence
 
