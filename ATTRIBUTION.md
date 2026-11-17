@@ -64,6 +64,16 @@ Aucun modèle 3D, aucune texture et aucune police n'est importé d'une source ex
 
     * **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
 
+*   **Asset :** Présentation de soutenance et diapositives de la vidéo (`docs/presentation/`), QR code de l'application (`docs/images/qr-code.png`), le 17 novembre 2026
+
+    * **Source originale :** créées pour le projet, avec des captures de l'application prises par script. Le logo de SUP'COM et le rendu du terrain de la diapositive de titre sont repris de la présentation d'état de l'art du projet. Le QR code, qui pointe vers l'adresse de l'application, est généré avec la bibliothèque qrcode (npm, version 1.5.4)
+
+    * **Auteur / Créateur :** Claude Code (génération), sous le pilotage de Bilel Khlif ; logo : SUP'COM.
+
+    * **Licence :** aucune licence choisie à ce jour ; le logo reste la propriété de SUP'COM
+
+    * **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
+
 ---
 
 ## 2. Bibliothèques tierces et Modules externes (Pinnés)
@@ -102,7 +112,7 @@ Rappel : L'usage des versions "latest" depuis les CDN est proscrit.
 
     * **Rôle dans le projet :** pilote Chrome pour les tests `npm test` et, depuis le sprint 6, pour la mesure des performances (`npm run bench`) ; outil de développement, jamais chargé par l'application
 
-Outils utilisés hors du projet, non distribués avec l'application : Google Chrome pour les tests et les captures, le lanceur de tests intégré à Node.js (`node --test`) pour les tests unitaires, sharp pour les icônes PNG, Python et Pillow pour le traitement des images, pptxgenjs et PowerPoint pour la présentation, MiKTeX (pdfLaTeX, polices Latin Modern) pour le rapport.
+Outils utilisés hors du projet, non distribués avec l'application : Google Chrome pour les tests et les captures, le lanceur de tests intégré à Node.js (`node --test`) pour les tests unitaires, sharp pour les icônes PNG, Python et Pillow pour le traitement des images, pptxgenjs et PowerPoint pour les présentations, MiKTeX (pdfLaTeX, polices Latin Modern) pour le rapport, la bibliothèque qrcode pour le QR code, et une copie locale de Mermaid 11.4.1 pour vérifier l'affichage des diagrammes.
 
 ---
 
@@ -152,7 +162,7 @@ Sprint 6 : aucun extrait copié. L'instanciation des joueurs passe par l'API de 
 
 L'utilisation d'IA est un outil de complétion. Elle doit être documentée et maîtrisée.
 
-Assistants utilisés : **Claude Code** (Anthropic), du 5 au 16 novembre 2026 (modèle indiqué dans le journal de développement : Claude Opus 5.5), pour l’implémentation, les tests et la documentation ; **ChatGPT** pour la reformulation de ce fichier d’attribution.
+Assistants utilisés : **Claude Code** (Anthropic), du 5 au 17 novembre 2026 (modèle indiqué dans le journal de développement : Claude Opus 5.5), pour l’implémentation, les tests et la documentation ; **ChatGPT** pour la reformulation de ce fichier d’attribution.
 
 **Bilel Khlif — Responsable du sprint 1, pilotage technique, intégration WebXR/WebGPU et validation.** Responsable du sprint 1, il assure la conduite technique documentée des sprints 1 à 6 : découpage des travaux, formalisation des contraintes, interaction avec l’assistant de développement, revue des livrables, essais sur appareils physiques et intégration sur GitHub. Son rôle couvre notamment les arbitrages entre rendu WebGPU de production et mode WebGL de test, ainsi que la traduction des exigences pédagogiques en critères de validation.
 
@@ -211,6 +221,8 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 16 novembre 2026 (mo
 20. **Sprint 5** : demande de réaliser le sprint 5 du cahier des charges, le 15 novembre 2026, avec des consignes détaillées : architecture, raycasting en AR depuis le `targetRaySpace`, patron Command, performance, tests de régression, protocole sur téléphone, documentation, et aucune fusion avant son approbation. Pull request #12 approuvée, puis fusionnée dans `main` à sa demande le 15 novembre 2026.
 
 21. **Sprint 6** : demande de réaliser le sixième et dernier sprint du cahier des charges, le 16 novembre 2026, avec des consignes détaillées : vérifier le sprint 5 d'abord ; optimiser les performances XR en mesurant avant et après, sans résultat inventé ; revoir la fiabilité du parcours AR ; animer une action (bonus BF9) dans la boucle de rendu existante ; fiabiliser la PWA ; recette finale distinguant validation physique, émulée et automatisée ; documentation finale (manuel illustré, UML, script de la vidéo) ; aucune fusion avant son approbation.
+
+22. **Revue finale et livrables** : revue de la pull request #13 au regard du cahier des charges, demandée le 16 novembre 2026, avec fusion dans `main` si la revue réussissait (fusionnée le même jour) ; puis, le 17 novembre 2026, demande de rendre le projet prêt pour l'évaluation, sans nouvelle fonctionnalité et sans résultat physique inventé, en ne laissant à l'équipe que les essais sur téléphone et le tournage de la vidéo.
 
 **Déclaration détaillée par composant**
 
@@ -372,6 +384,22 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 16 novembre 2026 (mo
 
         * fonctionnement, mesures et méthode dans `docs/sprint-6.md` ; état de chaque exigence et protocole sur téléphone dans `docs/recette.md` ; tests sur téléphone à faire par l'équipe.
 
+*   **Composant ou Shader concerné :** revue finale et livrables de fin de projet, les 16 et 17 novembre 2026 : corrections de la revue (diagramme de `docs/sprint-3.md`, version des essais physiques dans `docs/recette.md`, tableau de l'équipe du README) ; `docs/conformite.md`, `docs/rapport-final.md`, `docs/presentation/`, protocole physique de `docs/recette.md`, storyboard de `docs/video-demonstration.md`, partie « Déploiement » du README, QR code
+
+    * **Prompt ou usage principal :** demandes de Bilel Khlif : revoir la pull request #13 au regard du cahier des charges, puis rendre le projet prêt pour l'évaluation, sans nouvelle fonctionnalité, sans refactorisation et sans résultat physique inventé. Documents, présentation et captures générés par l'assistant ; aucun code de l'application n'a changé.
+
+        **Périmètre technique :** Audit du dépôt section par section du cahier ; vérification des appels WebXR (session, hit test, ancres, rayon du `targetRaySpace`, DOM Overlay) et du Service Worker ; matrice de conformité ; rapport final ; protocole physique exécutable avec sa fiche de résultats ; présentation de soutenance dans le style de la présentation d'état de l'art ; storyboard et voix off de la vidéo ; instructions de déploiement.
+
+    * **Axe de vérification appliqué par l'étudiant :** Bilel Khlif a fixé les consignes et la condition de fusion. Les vérifications suivantes sont faites par l'assistant ; aucune validation physique n'est consignée à cette date :
+
+        * les 22 diagrammes Mermaid du dépôt rendus avec une copie locale de Mermaid 11.4.1 ; le seul qui ne s'affichait pas, dans `docs/sprint-3.md`, a été corrigé ;
+
+        * site publié vérifié après la fusion de la pull request #13, le 16 novembre 2026, dans Chrome sur PC : version de la coquille identique au dépôt, 48 entrées en cache, rechargement hors-ligne, séquence animée exacte, AR émulée posée et ancrée, aucune erreur ;
+
+        * présentation rendue diapositive par diapositive dans PowerPoint, et vérifiée par le validateur de fichiers PowerPoint ; texte et notes relus ;
+
+        * `npm test` le 17 novembre 2026 : 182 tests unitaires et 79 vérifications de bout en bout réussis.
+
 *   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles des sprints 2 à 6, et `assets/screenshots/`), figures du rapport (`docs/etat-de-l-art/figures/`)
 
     * **Prompt ou usage principal :** dessin des icônes en SVG d'après la couverture du cahier des charges, captures automatisées de l'application, mise en page de la bannière dans le style de la présentation d'état de l'art
@@ -380,7 +408,7 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 16 novembre 2026 (mo
 
     * **Axe de vérification appliqué par l’étudiant :** critères graphiques issus du cahier des charges collectif ; contrôles visuels consignés par l’assistant : les captures sont prises par script sur l'application réelle ; le motif de l'icône « maskable » tient dans la zone sûre d'Android (un cercle de 80 % de la largeur).
 
-*   **Composant ou Shader concerné :** documentation : `README.md`, `docs/architecture.md`, `docs/sprint-1.md`, `docs/sprint-2.md`, `docs/sprint-3.md`, `docs/sprint-4.md`, `docs/sprint-5.md`, `docs/sprint-6.md`, `docs/recette.md`, `docs/manuel-utilisateur.md`, `docs/uml.md`, `docs/video-demonstration.md`, `docs/guide-du-code.md`, `docs/etat-de-l-art/README.md`, `src/vendor/three-r187/README.md` et ce fichier
+*   **Composant ou Shader concerné :** documentation : `README.md`, `docs/architecture.md`, `docs/sprint-1.md`, `docs/sprint-2.md`, `docs/sprint-3.md`, `docs/sprint-4.md`, `docs/sprint-5.md`, `docs/sprint-6.md`, `docs/recette.md`, `docs/conformite.md`, `docs/rapport-final.md`, `docs/presentation/README.md`, `docs/manuel-utilisateur.md`, `docs/uml.md`, `docs/video-demonstration.md`, `docs/guide-du-code.md`, `docs/etat-de-l-art/README.md`, `src/vendor/three-r187/README.md` et ce fichier
 
     * **Prompt ou usage principal :** rédaction en français à partir du code et du cahier des charges. Le README a été refait à la demande de Bilel Khlif, dans le style du rapport et de la présentation d'état de l'art, avec des captures et la synthèse de la veille. Au sprint 3, ses parties « Rendu WebGPU », « La boucle de rendu » et « Application installable » répondent aux demandes de l'enseignant transmises par Bilel Khlif. Ce fichier suit le modèle fourni par l'enseignant.
 
@@ -417,5 +445,6 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 16 novembre 2026 (mo
 | Documentation des fonctions | 141/141 | Contenu des en-têtes et contraintes définis |
 | Sprint 5 | 232/232 | Exigences détaillées du sprint ; fusion réservée à son approbation |
 | Sprint 6 | 261/261 | Exigences détaillées du sprint final ; fusion réservée à son approbation |
+| Revue finale et livrables | 261/261 | Revue et fusion de la PR #13 demandées ; consignes de finalisation, sans résultat physique inventé |
 
-**État de validation matérielle au 16 novembre 2026 :** rendu 3D WebGPU vérifié sur le PC ASUS TUF A15 ; parcours AR WebGPU vérifié en émulation, interaction tactique du sprint 5 et séquence animée du sprint 6 comprises ; AR rendue en WebGPU vérifiée sur un téléphone, le TECNO POVA 6 Pro 5G (essai physique réussi) ; AR sur Galaxy S10e vérifiée uniquement dans le mode de test WebGL. Aucune validation physique des sprints 4, 5 et 6 n’est consignée à cette date : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde restent à mesurer sur téléphone (`docs/recette.md`). Les résultats automatisés ci-dessus proviennent du journal de développement.
+**État de validation matérielle au 17 novembre 2026 :** rendu 3D WebGPU vérifié sur le PC ASUS TUF A15 ; parcours AR WebGPU vérifié en émulation, interaction tactique du sprint 5 et séquence animée du sprint 6 comprises ; AR rendue en WebGPU vérifiée sur un téléphone, le TECNO POVA 6 Pro 5G (essai physique réussi) ; AR sur Galaxy S10e vérifiée uniquement dans le mode de test WebGL. Aucune validation physique des sprints 4, 5 et 6 n’est consignée à cette date : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde restent à mesurer sur téléphone (`docs/recette.md`). Les résultats automatisés ci-dessus proviennent du journal de développement.
