@@ -12,8 +12,12 @@ tous les points et lève une exception sous 4 points :
 - seuls les points sûrs (confiance ≥ 0,5) et dans l'image comptent ;
 - RANSAC écarte les points aberrants ; il faut au moins 5 points cohérents, pour qu'un point de
   plus que le minimum permette de mesurer l'erreur ;
-- l'erreur de reprojection est mesurée, en pixels et en mètres ; les points alignés (une seule
-  ligne du terrain) et les homographies en miroir sont refusés ;
+- deux erreurs sont mesurées, en pixels et en mètres. L'erreur d'ajustement porte sur les points
+  qui ont servi à l'estimation : elle est optimiste par construction. L'erreur hors échantillon
+  prédit chaque point par une homographie estimée sans lui (validation croisée « un point de
+  côté ») : c'est la meilleure estimation disponible sans vérité terrain, et elle reste une erreur
+  sur les repères du terrain, pas sur la position des joueurs ;
+- les points alignés (une seule ligne du terrain) et les homographies en miroir sont refusés ;
 - un échec renvoie sa cause au lieu d'une position inventée ;
 - le gabarit a les dimensions réglementaires (105 × 68 m, surface de réparation de
   40,32 × 16,5 m) au lieu des 120 × 70 m de la configuration par défaut.
@@ -86,8 +90,10 @@ class CalibrationResult:
     reason: str | None = None
     keypoints: int = 0
     inliers: int = 0
-    error_px: float | None = None
-    error_m: float | None = None
+    fit_error_px: float | None = None
+    fit_error_m: float | None = None
+    holdout_error_px: float | None = None
+    holdout_error_m: float | None = None
     image_to_pitch: np.ndarray | None = None
 
     @property
@@ -114,8 +120,10 @@ class CalibrationResult:
         if self.ok:
             record.update({
                 "inliers": self.inliers,
-                "errorPx": round(float(self.error_px), 2),
-                "errorM": round(float(self.error_m), 3),
+                "fitErrorPx": round(float(self.fit_error_px), 2),
+                "fitErrorM": round(float(self.fit_error_m), 3),
+                "holdoutErrorPx": None if self.holdout_error_px is None else round(float(self.holdout_error_px), 2),
+                "holdoutErrorM": None if self.holdout_error_m is None else round(float(self.holdout_error_m), 3),
                 "homography": [float(f"{v:.6g}") for v in self.image_to_pitch.ravel()],
             })
         else:
@@ -153,6 +161,33 @@ def _rms(differences: np.ndarray) -> float:
     @role Analyse vidéo — calibration (mesure de l'erreur)
     """
     return float(np.sqrt(np.mean(np.sum(differences ** 2, axis=1))))
+
+
+def holdout_errors(pitch_points: np.ndarray, image_points: np.ndarray) -> tuple[float | None, float | None]:
+    """Erreur hors échantillon : chaque point est prédit par une homographie estimée sans lui.
+
+    Pour chaque point retenu, l'homographie est recalculée sur les autres (moindres carrés), puis le
+    point écarté est projeté dans l'image (écart en pixels) et ramené sur le terrain (écart en
+    mètres). Renvoie la médiane de chaque écart. Avec cinq points, chaque estimation n'en a que
+    quatre : l'erreur est alors grande dès qu'un point est imprécis, ce qui est voulu.
+
+    @responsable Bilel Khlif
+    @date 2026-11-17
+    @role Analyse vidéo — calibration (erreur hors échantillon)
+    """
+    errors_px, errors_m = [], []
+    for index in range(len(pitch_points)):
+        keep = np.arange(len(pitch_points)) != index
+        pitch_to_image, _ = cv2.findHomography(pitch_points[keep], image_points[keep], 0)
+        if pitch_to_image is None or abs(np.linalg.det(pitch_to_image)) < 1e-12:
+            continue
+        predicted = cv2.perspectiveTransform(pitch_points[index:index + 1].reshape(-1, 1, 2), pitch_to_image).reshape(2)
+        back = cv2.perspectiveTransform(image_points[index:index + 1].reshape(-1, 1, 2), np.linalg.inv(pitch_to_image)).reshape(2)
+        errors_px.append(float(np.linalg.norm(predicted - image_points[index])))
+        errors_m.append(float(np.linalg.norm(back - pitch_points[index])))
+    if not errors_px:
+        return None, None
+    return float(np.median(errors_px)), float(np.median(errors_m))
 
 
 def _orientation(pitch_to_image: np.ndarray, point: np.ndarray) -> float:
@@ -216,16 +251,20 @@ def estimate_homography(image_points: np.ndarray, pitch_points: np.ndarray, imag
         return failed("mirrored", count)
 
     reprojected = cv2.perspectiveTransform(pitch_inliers.reshape(-1, 1, 2), pitch_to_image).reshape(-1, 2)
-    error_px = _rms(reprojected - image_inliers)
-    if error_px > settings.max_error * scale:
+    # Le seuil d'acceptation porte sur la moyenne quadratique ; les erreurs publiées sont des médianes
+    # par point, comme l'erreur hors échantillon, pour être comparables.
+    if _rms(reprojected - image_inliers) > settings.max_error * scale:
         return failed("reprojection-error", count)
 
     image_to_pitch = np.linalg.inv(pitch_to_image)
     image_to_pitch /= image_to_pitch[2, 2]
     projected = cv2.perspectiveTransform(image_inliers.reshape(-1, 1, 2), image_to_pitch).reshape(-1, 2)
+    holdout_px, holdout_m = holdout_errors(pitch_inliers.astype(np.float64), image_inliers.astype(np.float64))
     return CalibrationResult(
         status="ok", keypoints=count, inliers=int(inliers.sum()),
-        error_px=error_px, error_m=_rms(projected - pitch_inliers), image_to_pitch=image_to_pitch,
+        fit_error_px=float(np.median(np.linalg.norm(reprojected - image_inliers, axis=1))),
+        fit_error_m=float(np.median(np.linalg.norm(projected - pitch_inliers, axis=1))),
+        holdout_error_px=holdout_px, holdout_error_m=holdout_m, image_to_pitch=image_to_pitch,
     )
 
 

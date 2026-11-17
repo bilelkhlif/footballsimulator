@@ -72,7 +72,8 @@ class HomographyTest(unittest.TestCase):
         self.assertEqual(result.inliers, len(indices))
         player = np.array([[-40.0, 5.0]])
         np.testing.assert_allclose(result.project(project(player)), player, atol=0.01)
-        self.assertLess(result.error_m, 0.01)
+        self.assertLess(result.fit_error_m, 0.01)
+        self.assertLess(result.holdout_error_m, 0.01)
 
     def test_rejects_outlier(self):
         """Un point clé mal placé de 150 pixels est écarté par RANSAC.
@@ -87,7 +88,7 @@ class HomographyTest(unittest.TestCase):
         result = estimate_homography(image, TEMPLATE_M[indices], IMAGE_SIZE)
         self.assertTrue(result.ok, result.reason)
         self.assertEqual(result.inliers, len(indices) - 1)
-        self.assertLess(result.error_px, 1.0)
+        self.assertLess(result.fit_error_px, 1.0)
 
     def test_needs_a_redundant_point(self):
         """Quatre points suffisent à une homographie, mais pas à la vérifier : échec déclaré.
@@ -140,7 +141,22 @@ class HomographyTest(unittest.TestCase):
         record = estimate_homography(project(TEMPLATE_M[indices]), TEMPLATE_M[indices], IMAGE_SIZE).to_dict()
         self.assertEqual(record["status"], "ok")
         self.assertEqual(len(record["homography"]), 9)
-        self.assertIn("errorM", record)
+        self.assertIn("fitErrorM", record)
+        self.assertIn("holdoutErrorM", record)
+
+    def test_holdout_error_is_larger_than_fit_error(self):
+        """Avec du bruit, l'erreur hors échantillon dépasse l'erreur d'ajustement, optimiste.
+
+        @responsable Bilel Khlif
+        @date 2026-11-17
+        @role Tests de l'analyse vidéo — calibration
+        """
+        indices = [9, 10, 11, 12, 13, 14, 15, 16, 30, 31]
+        noisy = project(TEMPLATE_M[indices]) + np.random.default_rng(1).normal(0, 3.0, (len(indices), 2))
+        result = estimate_homography(noisy, TEMPLATE_M[indices], IMAGE_SIZE)
+        self.assertTrue(result.ok, result.reason)
+        self.assertGreater(result.holdout_error_px, result.fit_error_px)
+        self.assertGreater(result.holdout_error_m, result.fit_error_m)
 
     def test_settings_are_relative_to_image_size(self):
         """Un seuil d'erreur plus strict refuse une reprojection bruitée.

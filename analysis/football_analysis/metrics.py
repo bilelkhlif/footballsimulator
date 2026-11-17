@@ -7,7 +7,9 @@ indicateurs, calculés sur le document de suivi lui-même, et nommés comme tels
 - Suivi : nombre de trajectoires, durée, part des trajectoires brèves, et un indice de
   fragmentation (trajectoires de joueurs par plan, rapportées au plus grand nombre de joueurs vus
   ensemble) : 1 si chaque joueur garde un seul identifiant dans son plan, davantage s'il en change.
-- Calibration : part des images calibrées, causes d'échec, erreur de reprojection.
+- Calibration : part des images calibrées, causes d'échec, erreur d'ajustement (sur les points de
+  l'estimation, optimiste) et erreur hors échantillon (chaque point prédit sans lui). Aucune des
+  deux n'est une précision des positions de joueurs, faute de vérité terrain.
 - Positions : part des observations placées sur le terrain, et part des déplacements
   invraisemblables (plus de 12 m/s entre deux analyses rapprochées du même joueur), qui trahissent
   un tremblement de la calibration ou un échange d'identifiants.
@@ -131,16 +133,20 @@ def calibration_metrics(frames: list[dict[str, Any]]) -> dict[str, Any]:
     """
     calibrations = [frame["calibration"] for frame in frames]
     ok = [c for c in calibrations if c["status"] == "ok"]
-    errors_px = [c["errorPx"] for c in ok]
-    errors_m = [c["errorM"] for c in ok]
+    fit_px = [c["fitErrorPx"] for c in ok]
+    fit_m = [c["fitErrorM"] for c in ok]
+    holdout_px = [c["holdoutErrorPx"] for c in ok if c.get("holdoutErrorPx") is not None]
+    holdout_m = [c["holdoutErrorM"] for c in ok if c.get("holdoutErrorM") is not None]
     return {
         "calibratedShare": _share(len(ok), len(calibrations)),
         "failureReasons": dict(Counter(c.get("reason") for c in calibrations if c["status"] != "ok")),
         "medianKeypoints": None if not calibrations else median(c.get("keypoints", 0) for c in calibrations),
-        "medianErrorPx": None if not ok else round(median(errors_px), 2),
-        "p90ErrorPx": None if not ok else round(_quantile(errors_px, 0.9), 2),
-        "medianErrorM": None if not ok else round(median(errors_m), 3),
-        "p90ErrorM": None if not ok else round(_quantile(errors_m, 0.9), 3),
+        "medianFitErrorPx": None if not fit_px else round(median(fit_px), 2),
+        "medianFitErrorM": None if not fit_m else round(median(fit_m), 3),
+        "medianHoldoutErrorPx": None if not holdout_px else round(median(holdout_px), 2),
+        "p90HoldoutErrorPx": None if not holdout_px else round(_quantile(holdout_px, 0.9), 2),
+        "medianHoldoutErrorM": None if not holdout_m else round(median(holdout_m), 3),
+        "p90HoldoutErrorM": None if not holdout_m else round(_quantile(holdout_m, 0.9), 3),
     }
 
 

@@ -10,7 +10,8 @@ from football_analysis.contract import (document_to_messages, make_ball, make_fr
                                         messages_to_document, validate_document)
 from football_analysis.metrics import describe_limitations, quality_metrics
 
-CALIBRATED = {"status": "ok", "keypoints": 9, "inliers": 9, "errorPx": 2.0, "errorM": 0.3, "homography": [1, 0, 0, 0, 1, 0, 0, 0, 1]}
+CALIBRATED = {"status": "ok", "keypoints": 9, "inliers": 9, "fitErrorPx": 2.0, "fitErrorM": 0.3,
+              "holdoutErrorPx": 3.1, "holdoutErrorM": 0.45, "homography": [1, 0, 0, 0, 1, 0, 0, 0, 1]}
 UNCALIBRATED = {"status": "failed", "reason": "too-few-keypoints", "keypoints": 3}
 
 
