@@ -13,11 +13,12 @@ import { readdirSync, readFileSync } from 'node:fs';
 /** Racine du dépôt. */
 const ROOT = new URL('../../', import.meta.url);
 
-/** Dossiers contrôlés et fichiers retenus ; src/vendor (bibliothèques tierces) n'en fait pas partie. */
-const SCOPE = [['', /^sw\.js$/], ['src/', /\.js$/], ['tests/', /\.mjs$/], ['tests/unit/', /\.mjs$/]];
+/** Dossiers contrôlés et fichiers retenus ; src/vendor (bibliothèques tierces) n'en fait pas partie.
+ * src/visualizer : visualiseur de match. */
+const SCOPE = [['', /^sw\.js$/], ['src/', /\.js$/], ['src/visualizer/', /\.js$/], ['tests/', /\.mjs$/], ['tests/unit/', /\.mjs$/]];
 
 /** Fichiers sans fonction, dont l'en-tête renvoie aussi à ATTRIBUTION.md. */
-const OTHER_SOURCES = ['index.html', 'src/styles.css'];
+const OTHER_SOURCES = ['index.html', 'src/styles.css', 'visualizer.html', 'src/visualizer/visualizer.css'];
 
 /** Déclaration de premier niveau : fonction, classe, fonction fléchée nommée ou gestionnaire. */
 const TOP_LEVEL = new RegExp('^(?:export\\s+)?(?:default\\s+)?(?:'
