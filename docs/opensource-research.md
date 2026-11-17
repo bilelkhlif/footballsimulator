@@ -13,7 +13,7 @@ Ce qui n'a pas pu être vérifié est signalé comme tel. paperswithcode.com red
 - **Le point de départ est Roboflow Sports.** Il couvre presque toute la chaîne : détection des joueurs, des gardiens, des arbitres et du ballon ; 32 points clés du terrain pour la calibration ; classement des équipes ; passage aux coordonnées du terrain. Ses poids sont publics, son code est sous MIT, ses poids sous AGPL-3.0.
 - **Le suivi vient de `trackers` (Roboflow, Apache-2.0).** C'est la réécriture maintenue de ByteTrack, que supervision ne fournit plus. Sur SoccerNet, ByteTrack y obtient le meilleur HOTA, 84,0.
 - **Aucune brique libre et prête à l'emploi ne lit les numéros de maillot.** La seule chaîne complète est sous licence non commerciale et très lourde : le prototype ne lit pas les numéros.
-- **La licence change la donne.** Les modèles entraînés avec Ultralytics sont sous AGPL-3.0. L'usage universitaire est permis ; toute diffusion du serveur d'analyse, ou tout service en ligne, impose de publier tout son code source sous AGPL-3.0. Le dépôt n'a aujourd'hui aucun fichier LICENSE : c'est une décision pour l'équipe (partie 6).
+- **La licence demande de l'attention.** Ultralytics et les modèles entraînés avec lui sont sous AGPL-3.0. L'usage local, y compris universitaire, n'impose rien. Les obligations naissent de la diffusion du serveur d'analyse, ou de sa mise à disposition en ligne : il faut alors fournir tout son code source, sous une licence compatible avec l'AGPL. L'application AR et la page du visualiseur, programmes séparés, ne sont pas concernées (partie 6).
 - **Il faut encore adapter et écrire** : le vote des équipes par trajectoire, une homographie robuste avec ses mesures de qualité, le format de données commun au fichier et au direct, le serveur, et toute l'interface de superposition 3D.
 
 ---
@@ -252,12 +252,48 @@ GPU : « + » utile, « ++ » nécessaire en pratique. Direct : « oui » si l'o
 
 ## 6. Risques et décisions à prendre
 
-- **AGPL-3.0.** Le serveur d'analyse charge Ultralytics et des poids sous AGPL-3.0. C'est permis pour un travail universitaire. S'il est un jour distribué, ou proposé comme service en ligne, tout son code source doit être publié sous AGPL-3.0. **Le dépôt n'a pas de fichier LICENSE** : à l'équipe de choisir. Sans AGPL, il faudrait affiner RF-DETR (Apache-2.0) sur les jeux de données CC BY 4.0 de Roboflow, détection et points clés, donc entraîner des modèles.
+- **AGPL-3.0 : ce qu'elle impose, et à quoi.** L'inventaire de la partie 7 en est la base.
+  - **Composants concernés.** Trois paquets sont sous AGPL : `ultralytics` (AGPL-3.0 ou ultérieure), `ultralytics-thop` (idem) et `ultralytics-platform` (AGPL-3.0 seule). S'y ajoutent les trois poids de Roboflow : Ultralytics affirme que les modèles entraînés avec son code sont sous AGPL-3.0, et le README de Roboflow le reprend. Que des poids soient des œuvres protégées n'est pas tranché ; le prototype suit la position d'Ultralytics.
+  - **Ce qui déclenche les obligations.** L'AGPL ne s'applique qu'à la *transmission* du programme couvert (copie, paquet, image, installateur) et, par son article 13, à sa *mise à disposition en ligne* lorsqu'il a été modifié. L'usage privé ne déclenche rien : faire tourner le serveur sur sa machine, comme dans ce prototype, n'impose aucune obligation, universitaire ou non.
+  - **Ce qui hérite de l'AGPL, et ce qui n'en hérite pas.** Le serveur d'analyse (`analysis/`) importe Ultralytics dans le même processus. S'il est transmis avec Ultralytics, ou offert comme service, l'ensemble doit l'être selon l'AGPL : code source complet fourni aux utilisateurs, mêmes droits pour eux. Les fichiers propres du projet n'ont pas à être eux-mêmes sous AGPL. Il leur suffit d'une licence compatible (MIT, Apache-2.0, BSD ou AGPL), qui se combine à l'AGPL dans l'ensemble transmis.
+  - **Programmes séparés.** La page du visualiseur, l'application AR, three.js et les données produites (`tracking.json`) n'héritent de rien : ils ne communiquent avec le serveur que par HTTP. C'est un agrégat de programmes séparés au sens de la FAQ de la FSF, et la sortie d'un programme n'est pas couverte par sa licence. Ils gardent leurs propres licences.
+  - **Publier le dépôt.** Le dépôt public contient le code qui importe Ultralytics, mais pas Ultralytics : le publier n'est pas transmettre Ultralytics. Les obligations reviennent à qui transmet la combinaison installée ou l'offre en service.
+  - **Le vrai manque.** Le dépôt n'a pas de fichier LICENSE : sans licence, le code est « tous droits réservés ». Il ne pourrait donc pas être transmis avec Ultralytics sous AGPL. Choisir une licence, par exemple MIT ou Apache-2.0 pour `analysis/`, revient à l'équipe.
+  - **Usage commercial fermé.** Il demanderait la licence Enterprise d'Ultralytics, ou un autre détecteur : RF-DETR (Apache-2.0), à affiner sur les jeux de données CC BY 4.0 de Roboflow, donc à entraîner.
+- **Autres licences à réciprocité.**
+  - **MPL-2.0** (`certifi`, `tqdm`) : la réciprocité ne vaut que fichier par fichier, et seulement pour ces fichiers modifiés.
+  - **FFmpeg dans les roues binaires.** Le paquet `opencv-python` embarque FFmpeg sous LGPL-2.1. La roue de PyAV (`av`, exigée par supervision 0.31, inutilisée par notre code) embarque FFmpeg avec `libx264` et `libx265`, sous GPL-2.0 ou ultérieure. Rien à faire en usage local. Toute redistribution d'un environnement complet (image, installateur) devrait fournir ces sources ou ces notices ; la GPL-2.0 ou ultérieure est compatible avec l'AGPL-3.0.
+- **Modèles de plongements.**
+  - SigLIP (par défaut) est sous Apache-2.0.
+  - La fiche de CLIP ViT-L/14 (option) ne donne aucune licence et réserve le modèle à la recherche : ne pas l'utiliser hors de la recherche.
 - **Données d'entraînement.** Les vidéos du concours DFL, dont viennent les jeux de données de Roboflow, ont des conditions que nous n'avons pas pu lire. Les vidéos SoccerNet sont sous NDA. Le dépôt ne contient aucune de ces vidéos, et les poids sont téléchargés au moment de l'installation.
 - **Domaine.** Les trois modèles ont appris sur la caméra principale de la Bundesliga. Une vidéo filmée des tribunes, un match amateur ou un plan serré sortent de ce domaine : la calibration y échoue souvent, et le prototype le montre au lieu de le cacher.
 - **Identités.** Sans réidentification, ByteTrack change d'identifiant après une longue occlusion ou une sortie du champ. Le prototype mesure la fragmentation au lieu de prétendre la corriger.
 - **Numéros de maillot.** Non lus : aucune brique libre ne convient (partie 2.5).
 - **Dimensions du terrain.** Le gabarit suppose 105 × 68 m. Sur un autre terrain, les positions restent justes par rapport aux lignes, mais les distances et les vitesses s'écartent d'autant, quelques pour cent.
+
+## 7. Inventaire des licences du serveur d'analyse
+
+Établi le 17 novembre 2026 à partir des métadonnées des paquets installés (`importlib.metadata`), pour toute la fermeture des dépendances de `analysis/requirements.txt`, PyTorch compris. Deux métadonnées vagues ont été vérifiées sur GitHub : llvmlite (BSD-2-Clause) et umap-learn (BSD-3-Clause).
+
+| Licence | Paquets |
+| --- | --- |
+| **AGPL-3.0** | ultralytics 8.4.215, ultralytics-thop 2.2.5 (ou ultérieure) ; ultralytics-platform 0.1.111 (AGPL-3.0 seule) |
+| MPL-2.0 | certifi ; tqdm (MPL-2.0 et MIT) |
+| Apache-2.0 | trackers, transformers, huggingface-hub, hf-xet, safetensors, tokenizers, sentencepiece, opencv-python, requests, pydeprecate, regex (avec CNRI-Python), packaging (aussi BSD) |
+| BSD | torch, torchvision, numpy (avec 0BSD, MIT, Zlib, CC0), scipy, scikit-learn, umap-learn, pynndescent, numba, llvmlite, scenedetect, av, psutil, click, httpx, httpcore, idna, jinja2, markupsafe, joblib, threadpoolctl, networkx, sympy, mpmath, fsspec, pygments, kiwisolver, contourpy, cycler, colorama, protobuf, nvidia-ml-py, python-dateutil (aussi Apache-2.0) |
+| MIT | supervision, sports (Roboflow), gdown, polars, polars-runtime-32, rich, pyyaml, jsonargparse, platformdirs, filelock, typer, anyio, h11, urllib3, charset-normalizer, pyparsing, six, fonttools, beautifulsoup4, soupsieve, markdown-it-py, mdurl, annotated-doc |
+| Autres permissives | pillow (HPND), matplotlib, defusedxml et typing-extensions (PSF), shellingham (ISC) |
+| Binaires embarqués | FFmpeg sous LGPL-2.1 (opencv-python) ; FFmpeg avec libx264 et libx265 sous GPL-2.0 ou ultérieure (av) ; LLVM sous Apache-2.0 avec exception LLVM (llvmlite) |
+
+| Modèle ou donnée | Licence | Usage |
+| --- | --- | --- |
+| Poids `football-player-detection`, `football-ball-detection`, `football-pitch-detection` (Roboflow Sports) | AGPL-3.0 selon Ultralytics | Téléchargés à l'installation, jamais versionnés |
+| Jeux de données Roboflow Universe de ces poids | CC BY 4.0 d'après leurs copies (page d'origine inaccessible) ; vidéos sources du concours DFL, conditions non lues | Non utilisés directement |
+| SigLIP base patch16-224 | Apache-2.0 | Équipes, par défaut |
+| CLIP ViT-L/14 | aucune sur la fiche ; usage réservé à la recherche | Équipes, en option |
+| Vidéos de validation (exemples de Roboflow, tirés du concours DFL) | conditions non lues | Locales, ni versionnées ni diffusées |
+| Vidéo de test `tests/fixtures/visualizer/match-synthetique.webm` | créée pour le projet | Générée par `make_fixture.py` |
 
 ---
 
@@ -266,7 +302,7 @@ GPU : « + » utile, « ++ » nécessaire en pratique. Direct : « oui » si l'o
 Dépôts et fichiers lus le 17 novembre 2026 :
 
 - Roboflow Sports : [README de l'exemple football](https://github.com/roboflow/sports/blob/main/examples/soccer/README.md), [setup.sh](https://github.com/roboflow/sports/blob/main/examples/soccer/setup.sh), [main.py](https://github.com/roboflow/sports/blob/main/examples/soccer/main.py), [carnets d'entraînement](https://github.com/roboflow/sports/tree/main/examples/soccer/notebooks), [team.py](https://github.com/roboflow/sports/blob/main/sports/common/team.py), [view.py](https://github.com/roboflow/sports/blob/main/sports/common/view.py), [soccer.py](https://github.com/roboflow/sports/blob/main/sports/configs/soccer.py)
-- Licence Ultralytics : <https://www.ultralytics.com/license>
+- Licence Ultralytics : <https://www.ultralytics.com/license> ; texte de l'AGPL-3.0 (articles 2, 5, 6 et 13) : <https://www.gnu.org/licenses/agpl-3.0.html> ; agrégats et programmes séparés : FAQ de la GPL, <https://www.gnu.org/licenses/gpl-faq.html#MereAggregation>
 - RF-DETR : [README](https://github.com/roboflow/rf-detr) (licences par taille, tableau COCO)
 - trackers : [README](https://github.com/roboflow/trackers) (tableau HOTA), [pyproject.toml](https://github.com/roboflow/trackers/blob/develop/pyproject.toml)
 - ByteTrack : [README](https://github.com/FoundationVision/ByteTrack) ; BoT-SORT : [README](https://github.com/NirAharon/BoT-SORT)

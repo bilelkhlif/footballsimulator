@@ -88,12 +88,14 @@ Un document de suivi est un JSON. Exemple réduit, tiré de l'analyse réelle de
 ```json
 {
   "format": "football-tracking", "version": 1,
-  "source": { "kind": "file", "name": "roboflow-dfl-2e57b9_0.mp4", "width": 1920, "height": 1080, "fps": 25.0, "frameCount": 750, "duration": 30.0 },
+  "source": { "kind": "file", "name": "roboflow-dfl-2e57b9_0.mp4", "width": 1920, "height": 1080, "fps": 25.0, "frameCount": 750,
+              "duration": 30.0, "constantFrameRate": true, "timestamps": "container" },
   "analysis": { "stride": 2, "fps": 12.5, "models": { "players": { "file": "football-player-detection.pt", "sha256": "…" } } },
   "pitch": { "length": 105.0, "width": 68.0, "origin": "centre", "units": "m" },
   "frames": [
     { "index": 200, "time": 8.0, "shot": 0, "cut": false,
-      "calibration": { "status": "ok", "keypoints": 13, "inliers": 13, "errorPx": 2.9, "errorM": 0.36, "homography": [9 nombres] },
+      "calibration": { "status": "ok", "keypoints": 13, "inliers": 13, "fitErrorPx": 2.3, "fitErrorM": 0.2,
+                       "holdoutErrorPx": 4.3, "holdoutErrorM": 0.39, "homography": [9 nombres] },
       "objects": [ { "id": 1, "role": "player", "confidence": 0.91, "box": [x1, y1, x2, y2], "pitch": [15.6, 7.66],
                      "pitchStatus": "ok", "team": 0, "teamConfidence": 1.0 } ],
       "ball": { "confidence": 0.62, "box": [x1, y1, x2, y2], "pitch": [x, y], "pitchStatus": "ok" } }
@@ -107,7 +109,7 @@ Un document de suivi est un JSON. Exemple réduit, tiré de l'analyse réelle de
 
 Règles du format :
 
-- **Temps.** Chaque image analysée garde son numéro et son instant dans la vidéo source, ce qui rend les cadences et les résolutions indifférentes.
+- **Temps.** Chaque image analysée garde son numéro et son instant dans la vidéo source, lu dans l'horodatage du conteneur (`timestamps: "container"`), ce qui rend les cadences et les résolutions indifférentes, cadence variable comprise. `constantFrameRate` dit si la cadence est fixe.
 - **Boîtes.** Elles sont en pixels de la vidéo source.
 - **Positions.** Elles sont en mètres, l'origine au point central :
   - `x` va vers le but de droite de l'image ;
@@ -119,6 +121,7 @@ Règles du format :
   `validate_document` refuse une position dans une image non calibrée.
 - **Échec de calibration.** Il porte sa cause (`reason`), parmi `too-few-keypoints`, `too-few-inliers`, `aligned-keypoints`, `mirrored`, `reprojection-error`, `homography-failed` et `no-pitch-detected`.
 - **Confiance.** Chaque détection a la sienne ; chaque équipe a sa part des votes (`teamConfidence`). Sous deux tiers des votes, l'équipe reste `null`.
+- **Erreurs de calibration.** `fitError*` est mesurée sur les repères qui ont servi à l'estimation, `holdoutError*` sur chaque repère prédit sans lui (partie 6.3). Aucune n'est une précision des positions de joueurs.
 
 ### Même format pour le direct
 
@@ -158,126 +161,145 @@ Pour un flux, une différence demeure : les équipes demandent une phase d'appre
 | Caméra qui suit le jeu, zoom | Une homographie par image analysée, à partir des points du terrain visibles |
 | Coupure de plan | PySceneDetect ; suivi remis à zéro, identifiants neufs, numéro de plan dans chaque image ; aucune interpolation à travers une coupure |
 | Joueur masqué ou hors champ | Absent de l'image analysée : ni dessiné, ni interpolé. ByteTrack garde sa trajectoire ouverte 1 s (réglage par défaut de trackers : 30 images à 30 images/s), puis l'abandonne |
-| Échange d'identifiants | Non corrigé (pas de réidentification) ; mesuré : fragmentation, déplacements invraisemblables. Les votes d'équipe couvrent toute la trajectoire : un échange partage les votes, et l'équipe reste inconnue plutôt que fausse |
+| Échange d'identifiants | Non corrigé (pas de réidentification) ; mesuré : fragmentation, déplacements invraisemblables. Les votes d'équipe couvrent toute la trajectoire : un échange partage les votes, et l'équipe reste inconnue plutôt que fausse. Un saut de plus de 12 m/s ne compte ni dans la vitesse, ni dans la distance, ni dans les traces |
 | Échec de calibration | Cause enregistrée, aucune position ; le visualiseur l'écrit et laisse le terrain 3D vide |
-| Position incertaine | Erreur de reprojection par image ; position hors du terrain écartée ; confiance de détection et d'équipe |
-| Cadences et résolutions | Échantillonnage à cadence fixe et horodatage source ; boîtes mises à l'échelle de l'image affichée |
-| Synchronisation | `requestVideoFrameCallback` en lecture ; après un déplacement dans la vidéo, `currentTime` ramené au début de l'image affichée ; interpolation linéaire seulement entre deux analyses consécutives d'un même joueur |
+| Équipes faussées par la lumière | Non corrigé ; repéré : part de l'équipe majoritaire dans chaque image, annoncée comme limite au-delà de 65 % |
+| Position incertaine | Erreur d'ajustement et erreur hors échantillon par image ; position hors du terrain écartée ; confiance de détection et d'équipe |
+| Cadences et résolutions | Échantillonnage à cadence fixe ; horodatage du conteneur (une vidéo à cadence variable était décalée jusqu'à 2,4 s avant la correction) ; boîtes mises à l'échelle de l'image affichée |
+| Synchronisation | `requestVideoFrameCallback` en lecture ; après un déplacement dans la vidéo, `currentTime`, ramené au début de l'image affichée si la cadence est fixe ; interpolation linéaire seulement entre deux analyses consécutives d'un même joueur |
 
 ---
 
 ## 6. Validation
 
+Revue critique du 17 novembre 2026 : toutes les vidéos ont été réanalysées avec le code corrigé, avec le réglage par défaut (SigLIP), sur un PC portable (RTX 2050 de 4 Go, Ryzen 7 6800HS).
+
 ### 6.1 Niveaux de preuve
 
 | Niveau | Contenu |
 | --- | --- |
-| **Automatisé** | 34 tests Python (sans GPU ni poids), 14 tests unitaires du visualiseur, 14 vérifications de bout en bout dans Chrome avec WebGPU, sur des données synthétiques |
-| **Mesuré sur de vraies vidéos** | Analyses de vraies vidéos de match sur la machine de développement (RTX 2050, 4 Go), dont deux téléversements complets par l'interface (CLIP, puis SigLIP par défaut) |
-| **Inspecté à l'œil** | Comptage manuel sur deux images en pleine résolution ; images annotées et vue de dessus comparées à la vidéo |
-
-Aucune vérité terrain n'accompagne ces vidéos : les mesures de la partie 6.3 sont des indicateurs, pas des scores de précision. Les scores publiés des modèles sont dans [opensource-research.md](opensource-research.md) (partie 2.1).
+| **Automatisé** | 39 tests Python (sans GPU ni poids), 15 tests unitaires du visualiseur dans `npm test`, 15 vérifications de bout en bout dans Chrome avec WebGPU, sur des données synthétiques |
+| **Mesuré sur de vraies vidéos** | 8 analyses (partie 6.2), dont deux téléversements complets par l'interface |
+| **Inspecté à l'œil** | Comptage manuel sur deux images en pleine résolution ; images annotées et vue de dessus comparées à la vidéo, sur cinq vidéos |
+| **Non fait** | Vérité terrain des positions de joueurs ; autres angles de caméra (partie 6.2) |
 
 ### 6.2 Vidéos
 
-Quatre analyses de vraies vidéos de match, le 17 novembre 2026, par `python -m football_analysis analyse … --teams clip`, sur un PC portable avec une RTX 2050 (4 Go) et un Ryzen 7 6800HS :
-
 | Vidéo | Origine | Format | Ce qu'elle teste |
 | --- | --- | --- | --- |
-| `2e57b9_0` | Exemples de Roboflow Sports (`setup.sh`), tirés du concours Kaggle « DFL – Bundesliga Data Shootout » | 1920 × 1080, 25 images/s, 30 s | Caméra principale de la Bundesliga, qui suit le jeu |
-| `0bfacc_0` | Même source | 1920 × 1080, 25 images/s, 30 s | Un autre match (Stuttgart) |
-| `121364_0` | Même source | 1920 × 1080, 25 images/s, 30 s | Un troisième match |
-| `2e57b9_0` en 720p | Copie de la première, réencodée en local avec ffmpeg | 1280 × 720, 30 images/s, 30 s | Autre résolution et autre cadence, même scène |
+| `2e57b9_0`, `0bfacc_0`, `121364_0`, `08fd33_0`, `573e61_0` | Les cinq exemples de Roboflow Sports (`setup.sh`), tirés du concours Kaggle « DFL – Bundesliga Data Shootout » | 1920 × 1080, 25 images/s, 30 s chacune | Caméra principale qui suit le jeu, cinq stades ; soleil et ombre marqués sur `08fd33_0` et `573e61_0` |
+| `2e57b9_0` en 720p | Copie réencodée en local (ffmpeg) | 1280 × 720, 30 images/s, 30 s | Autre résolution, autre cadence |
+| Montage à coupures | Montage local de `2e57b9_0` : plan large de 0 à 8 s, zoom numérique ×2,5 de 8 à 16 s, plan large après un saut de 6 s | 1920 × 1080, 25 images/s, 24 s | Vraies coupures dans de vraies images ; plan serré. Ce n'est pas une réalisation de télévision : le zoom est un recadrage |
+| Copie à cadence variable | Copie locale de `2e57b9_0` : une image sur trois pendant 5 s, puis toutes | 1920 × 1080, 8 puis 25 images/s, 10 s | Horodatage à cadence variable, fréquent au téléphone |
 
-Les conditions d'utilisation des vidéos du concours n'ont pas pu être lues (partie 6 de la recherche). Elles sont utilisées en local, ni versionnées ni diffusées. Aucune de ces vidéos ne contient de coupure de plan : la remise à zéro du suivi aux coupures n'est vérifiée que par les tests automatisés.
+Les conditions d'utilisation des vidéos du concours n'ont pas pu être lues (partie 6 de la recherche) : elles restent en local, ni versionnées ni diffusées.
 
-### 6.3 Résultats
+**Autres angles de caméra : non testés.** Les vidéos libres repérées sur Wikimedia Commons (tribunes, match amateur, résumés à coupures) ont été refusées par le serveur de fichiers (« 429 Too Many Requests ») à chaque essai, le matin puis l'après-midi du 17 novembre 2026. Sa règle demande une adresse de contact dans la requête, que nous n'avons pas mise. Les deux candidates trouvées sur Internet Archive ne convenaient pas : l'une est filmée hors du stade, l'autre est un montage de la NFL faussement marqué CC BY.
 
-Indicateurs calculés par le prototype sur chaque analyse (`metrics.py`), sans vérité terrain :
+### 6.3 Méthode de mesure
 
-| Indicateur | `2e57b9_0` | `0bfacc_0` | `121364_0` | `2e57b9_0` en 720p, 30 images/s |
-| --- | ---: | ---: | ---: | ---: |
-| Images analysées (pas d'échantillonnage) | 375 (1 sur 2) | 375 (1 sur 2) | 375 (1 sur 2) | 450 (1 sur 2) |
-| Joueurs par image | 20,2 | 19,8 | 19,9 | 19,8 |
-| Ballon trouvé | 73 % des images | 84 % | 80 % | 72 % |
-| Images calibrées | 100 % | 100 % | 100 % | 100 % |
-| Repères du terrain par image (médiane) | 13 | 9 | 12 | 13 |
-| Erreur de reprojection, médiane (90ᵉ centile) | 3,0 px (4,4) | 2,7 px (3,5) | 3,9 px (5,0) | 2,0 px (3,1) |
-| Même erreur, en mètres sur le terrain | 0,37 m (0,60) | 0,35 m (0,59) | 0,49 m (0,62) | 0,41 m (0,63) |
-| Trajectoires (dont joueurs) | 31 (24) | 26 (22) | 27 (21) | 31 (22) |
-| Durée médiane d'une trajectoire | 29,8 s | 29,8 s | 29,8 s | 29,9 s |
-| Indice de fragmentation (1 = idéal) | 1,14 | 1,05 | 1,05 | 1,10 |
-| Déplacements de plus de 12 m/s | 4,5 % | 3,8 % | 8,3 % | 8,0 % |
-| Vitesse médiane mesurée | 3,5 m/s | 2,8 m/s | 3,2 m/s | 3,6 m/s |
-| Observations de joueurs avec une équipe | 100 % | 100 % | 95 % | 90 % |
-| Images analysées par seconde | 2,2 | 2,3 | 2,3 | 2,6 |
-| Durée totale, rapportée à la vidéo | 8,5 fois | 7,9 fois | 8,1 fois | 8,5 fois |
-| Mémoire vive au plus haut, mémoire GPU des modèles YOLO | 2,6 Go, 1,75 Go | 2,6 Go, 1,75 Go | 2,6 Go, 1,75 Go | 2,6 Go, 1,75 Go |
+- **Erreur d'ajustement** (`fitError`). C'est la distance entre chaque repère du terrain détecté et le même repère du gabarit, reprojeté par l'homographie. Elle porte sur les repères qui ont servi à l'estimation, donc elle est optimiste par construction : avec 5 repères, il ne reste que 2 degrés de liberté pour absorber le bruit. **Correction de la revue :** la première version de ce document l'a présentée, en moyenne quadratique, comme l'erreur de calibration (0,35 à 0,49 m).
+- **Erreur hors échantillon** (`holdoutError`). Chaque repère est prédit par une homographie estimée sans lui (validation croisée « un point de côté »). C'est la meilleure estimation disponible sans vérité terrain. Les deux erreurs sont des médianes par repère, donc comparables.
+- **Ce qu'aucune des deux ne mesure : la précision des positions de joueurs.**
+  - Les repères sont des marquages, et les joueurs sont ailleurs sur le terrain.
+  - Le pied d'un joueur est pris au milieu du bas de sa boîte, qui dépend de la boîte et de la posture.
+  - Une erreur commune à tous les repères échappe à la validation croisée.
+  - Le gabarit suppose 105 × 68 m.
 
-Lecture de ces résultats :
+  Mesurer cette précision demanderait des positions de référence alignées sur la vidéo : par exemple SoccerNet-GSR, sous accord de confidentialité, ou des données de suivi officielles synchronisées. Ce n'est pas fait.
+- **Vitesse.** La lenteur (`slowdown`) est le temps total de traitement (modèles, images, équipes) divisé par la durée de vidéo lue. Les « images analysées par seconde » comptent les images analysées, une sur deux à 25 images/s, et non les images de la vidéo. **Correction de la revue :** le chiffre de 2,2 à 2,6 images/s, donné sans cette précision, pouvait faire croire à 750 ÷ 2,2 = 341 s pour une vidéo de 30 s ; c'était en fait de 237 à 264 s, soit de 7,9 à 8,8 fois la durée.
+- **Mémoire.** Pic de mémoire vive du processus et pic de mémoire GPU de toute l'analyse. **Correction de la revue :** les 1,75 Go de GPU attribués aux modèles YOLO venaient en fait de CLIP ; avec SigLIP, le pic est de 0,65 Go. Sur cette machine, UMAP charge aussi TensorFlow, installé hors du projet et visible depuis l'environnement : la mémoire vive mesurée (2,6 Go) en est gonflée.
 
-- **Détection.** Compté à la main sur deux images de `2e57b9_0` en pleine résolution :
-  - image 400 : 24 personnes sur le terrain, dont 20 joueurs de champ, 1 gardien, 1 arbitre et 2 arbitres assistants, toutes détectées, sans fausse détection ;
-  - image 600 : 23 personnes, toutes détectées, et une fausse détection, un entraîneur qui marche le long de la ligne de touche, classé arbitre.
+### 6.4 Résultats
 
-  Les entraîneurs, remplaçants et photographes hors du terrain ne sont pas détectés. Deux images ne font pas un score de précision : ce comptage confirme seulement les scores publiés du modèle (mAP50 de 0,994 pour les joueurs). Sur `0bfacc_0`, le gardien en vert est détecté comme joueur : 0 gardien par image.
-- **Suivi.** La plupart des joueurs gardent un seul identifiant pendant toute la vidéo (durée médiane égale à la vidéo, fragmentation de 1,05 à 1,14). Un échange d'identifiants a été vu sur `2e57b9_0` : la trajectoire 15 passe d'un joueur sombre à un joueur blanc. Les déplacements invraisemblables (de 3,8 % à 8,3 %) mêlent ces échanges et le tremblement de la calibration.
-- **Calibration.** Toutes les images sont calibrées, avec une erreur médiane de 0,35 à 0,49 m sur les repères du terrain. Les positions, reportées sur une vue de dessus, correspondent à la partie du terrain filmée (contrôle visuel sur quatre images de deux vidéos). Cette erreur est mesurée sur les points qui ont servi à l'estimation : l'erreur sur un joueur, loin de ces points, peut être plus grande.
-- **Équipes.** Sur l'image 400 de `2e57b9_0`, 19 joueurs de champ sur 20 sont dans la bonne équipe ; l'exception est la trajectoire 15, échangée. Ce cas a conduit à répartir les images de vote sur toute la trajectoire (commit 0faf219) : la trajectoire 15 passe de 6 votes sur 6 pour la mauvaise équipe à 4 sur 6, et sa part des votes, 67 %, signale le mélange. Sur `0bfacc_0`, les maillots rouges et blancs sont bien séparés.
-- **Vitesse et mémoire.** De 2,2 à 2,6 images analysées par seconde, soit de 8 à 8,5 fois la durée de la vidéo, équipes comprises (75 à 84 s par vidéo). Le pipeline tient dans 4 Go de mémoire GPU.
-- **Cadence et résolution.** La copie en 720p à 30 images/s donne les mêmes ordres de grandeur que l'original : joueurs par image, calibration, trajectoires. Ses équipes sont un peu moins sûres (90 % des observations contre 100 %).
+| Vidéo | Images analysées | Plans | Calibrées | Erreur d'ajustement | Erreur hors échantillon, médiane (90 %) | Fragmentation | Ballon | Équipe majoritaire par image | Lenteur |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `2e57b9_0` | 375 | 1 | 100 % | 0,20 m | 0,39 m (0,58) | 1,14 | 73 % | 50 % | 8,8 fois |
+| `0bfacc_0` | 375 | 1 | 100 % | 0,31 m | 0,63 m (0,83) | 1,05 | 84 % | 50 % | 8,7 fois |
+| `121364_0` | 375 | 1 | 100 % | 0,25 m | 0,44 m (0,84) | 1,05 | 80 % | 53 % | 8,0 fois |
+| `08fd33_0` | 375 | 1 | 100 % | 0,25 m | 0,70 m (1,04) | 1,05 | 84 % | 50 % | 7,8 fois |
+| `573e61_0` | 375 | 1 | 100 % | 0,24 m | 0,45 m (0,72) | 1,27 | 59 % | **80 %** | 8,6 fois |
+| `2e57b9_0` en 720p, 30 images/s | 450 | 1 | 100 % | 0,21 m | 0,41 m (0,60) | 1,10 | 72 % | 50 % | 14,7 fois, puis 8,0 fois |
+| Montage à coupures | 300 | 3 | 99,3 % | 0,18 m | 0,43 m (1,23) | 1,10 | 53 % | 55 % | 8,5 fois |
+| Cadence variable | 167 | 1 | 100 % | 0,18 m | 0,34 m (0,49) | 1,29 | 78 % | 50 % | 13,5 fois |
 
-### 6.4 Interface
+Erreurs en mètres sur le terrain ; la colonne « 90 % » donne la valeur sous laquelle tombent 90 % des images. Environ 20 joueurs par image sur toutes les vidéos. Pic de mémoire : 2,6 Go de mémoire vive, 0,65 Go de GPU.
+
+Lecture :
+
+- **Calibration.** Toutes les images sont calibrées, sauf deux dans le plan zoomé, refusées avec leur cause. L'erreur hors échantillon est environ deux fois l'erreur d'ajustement : 0,34 à 0,70 m en médiane, jusqu'à 1,04 m pour 90 % des images de `08fd33_0` (8 repères par image en médiane). Dans le plan zoomé, les repères sont groupés autour du rond central : 90 % des images y restent sous 1,23 m, mais la médiane ne bouge presque pas. C'est la fragilité attendue d'un plan serré, et l'indicateur la montre.
+- **Suivi.** Fragmentation de 1,05 à 1,14, plus élevée sur `573e61_0` (1,27) et sur la copie à cadence variable (1,29), dont les 5 premières secondes n'ont que 8 images par seconde.
+- **Détection.** Comptage à la main sur deux images de `2e57b9_0` :
+  - image 400 : 24 personnes sur le terrain, 24 détectées, aucune fausse détection ;
+  - image 600 : 23 personnes, 23 détectées, une fausse détection (un entraîneur le long de la ligne de touche, classé arbitre).
+
+  Sur `573e61_0`, des remplaçants qui s'échauffent près du banc sont détectés comme joueurs. Sur `0bfacc_0`, le gardien en vert est détecté comme joueur.
+- **Équipes.**
+  - **Défaut constaté sur `573e61_0`.** Des joueurs blancs au soleil sont classés avec l'équipe sombre, avec des votes unanimes. Sur ces cinq vidéos, c'est la seule où le classement échoue.
+  - **Ce que la revue change.** Le classement lui-même n'est pas corrigé. Le défaut est désormais signalé : dans une image typique, 80 % des joueurs classés y sont dans la même équipe, contre 50 à 55 % ailleurs, et le visualiseur l'annonce au-delà de 65 %.
+  - **Contrôle visuel.** Ailleurs, 19 joueurs sur 20 sont bien classés sur l'image vérifiée de `2e57b9_0`. L'exception est un échange d'identifiants.
+- **Vitesse.** De 7,8 à 8,8 fois la durée de la vidéo pour 30 s, dont 60 à 83 s fixes pour les équipes. Les clips courts paient donc plus cher en proportion : 13,5 fois pour 10 s. La copie en 720p a pris 14,7 fois au premier passage, puis 8,0 fois au second : sur ce PC portable, le temps de traitement varie d'un passage à l'autre.
+
+### 6.5 Cas difficiles, sur de vraies images
+
+| Cas | Constat |
+| --- | --- |
+| Coupures de plan | Montage : coupures trouvées à 8,0 et 16,0 s exactement. Suivi remis à zéro : aucune trajectoire ne franchit une coupure (durée médiane 7,8 s pour des plans de 8 s) |
+| Plan serré (zoom ×2,5) | Toujours calibré à 99 % ; joueurs, arbitre et équipes justes au contrôle visuel ; erreur hors échantillon plus dispersée |
+| Échec de calibration | Deux images du plan zoomé, refusées avec leur cause, sans position ; sur les données de test, le terrain 3D reste vide |
+| Cadence variable | Avant la correction, instants décalés jusqu'à 2,4 s ; après, horodatage du conteneur, écart nul, cadence déclarée variable |
+| Échange d'identifiants | Trajectoire 15 de `2e57b9_0`, d'un joueur sombre à un blanc ; vote d'équipe partagé (67 %) ; saut exclu des vitesses, distances et traces |
+| Équipe inconnue | 0 à 3 trajectoires de joueurs par vidéo, votes partagés : affichées en gris, avec un trait en pointillés |
+| Fausses détections | Entraîneur classé arbitre, remplaçants détectés : affichés sans filtre. Rien ne les distingue d'un joueur à la limite du terrain |
+| Équipes faussées par la lumière | `573e61_0` : signalé (partie 6.4), non corrigé |
+
+### 6.6 Interface
 
 **Tests de bout en bout** (`tests/visualizer-tests.mjs`, Chrome avec WebGPU, vidéo synthétique dont chaque image porte son numéro en binaire) :
 
-- 14 vérifications sur 14 réussies le 17 novembre 2026 ;
+- 15 vérifications sur 15 réussies le 17 novembre 2026 ;
 - **à l'arrêt**, après un déplacement dans la vidéo, l'image affichée et l'image annotée sont la même, aux images 25, 47 et 91 ;
 - **en lecture**, selon l'essai, entre 265 et 312 des quelque 318 images peintes sont identiques, et l'écart ne dépasse jamais une image (40 ms) ;
+- **rotation et zoom** : glisser dans le terrain 3D le fait tourner (167°), la molette le rapproche (de 0,71 à 0,58 m), sans changer la sélection ;
+- **sélection** : un joueur se sélectionne sur la vidéo comme sur le terrain 3D ;
+- **panneau** : déplacé, redimensionné, verrouillé, réduit, et placé automatiquement hors des joueurs ;
 - **aucun contexte WebGL** n'est créé : seulement `webgpu`, et `2d` pour les annotations et les numéros.
 
-**Vraie vidéo, par l'interface.** `2e57b9_0` a été téléversée par la page, sur le serveur lancé avec `--teams clip` :
+**Vraies vidéos, par l'interface.** `2e57b9_0` (CLIP) puis `121364_0` (SigLIP, réglage par défaut) ont été téléversées par la page :
 
-- 286 s entre le choix du fichier et l'affichage de l'analyse ;
-- en lecture, dans Chrome sur le même PC : 144 images peintes par seconde, au plus 10,8 ms pour une image ;
-- 23 joueurs posés sur le terrain 3D ;
-- aucun écart entre l'instant de l'image présentée et celui des données affichées ;
+- 286 s et 256 s entre le choix du fichier et l'affichage ;
+- en lecture : 144 et 129 images peintes par seconde, au plus 10,8 et 38,9 ms pour une image ;
+- aucun écart entre l'instant de l'image présentée et celui des données ;
 - aucune erreur dans la console.
 
-Les captures montrent le panneau 3D placé seul au-dessus des tribunes à 16 s, puis en bas à gauche, sur une pelouse vide, à 28 s.
+Les captures montrent le panneau 3D placé seul dans des zones vides : tribunes, puis pelouse dégagée. Les maillots apparaissent à leur couleur, avec des étiquettes lisibles.
 
-**Réglage par défaut, SigLIP.** `121364_0` a aussi été téléversée sur le serveur lancé sans option, avec SigLIP (Apache-2.0) :
+**Défauts trouvés par les essais, et corrigés :**
 
-- 256 s jusqu'à l'affichage, dont 67 s pour les équipes (78 s avec CLIP) ;
-- la même répartition des équipes qu'avec CLIP : 13 et 10 trajectoires, une inconnue, 95 % des observations avec une équipe ;
-- en lecture, 129 images peintes par seconde, au plus 38,9 ms pour une image ;
-- aucune erreur.
-
-La capture montre les deux maillots, rouge et vert, à leur couleur, avec des étiquettes lisibles.
-
-**Défauts trouvés par ces essais, et corrigés :**
-
-- un message masqué qui restait au-dessus de la vidéo et bloquait les clics (`[hidden]` contre `display`) ;
+- un message masqué qui bloquait les clics ;
 - la taille de départ du panneau ;
-- l'instant utilisé après un déplacement dans la vidéo : Chrome sans fenêtre ne rappelle pas `requestVideoFrameCallback` à l'arrêt ;
+- l'instant utilisé après un déplacement dans la vidéo ;
 - des étiquettes blanches sur un maillot blanc ;
-- la couleur d'un maillot rouge, tirée vers le brun par la pelouse.
+- la couleur des maillots tirée par la pelouse ;
+- le vote d'équipe limité au début des trajectoires ;
+- l'horodatage à cadence variable ;
+- les sauts d'échange d'identifiants comptés dans les distances.
 
 **Hors de portée de ces essais :**
 
 - l'usage au doigt sur tablette ;
-- un écran de moins de 960 px de large, où les panneaux passent sous la vidéo : la mise en page est prévue, mais non vérifiée ;
-- la mesure des images par seconde sur un ordinateur modeste.
-
----
+- un écran de moins de 960 px de large, où les panneaux passent sous la vidéo : prévu, non vérifié ;
+- un ordinateur modeste.
 
 ## 7. Limites et suites
 
 - **Numéros de maillot :** non lus (partie 2.5 de la recherche).
 - **Réidentification :** absente. Un joueur sorti du champ revient avec un nouvel identifiant ; deux joueurs croisés peuvent échanger leurs identifiants. Pistes : BoT-SORT avec compensation du mouvement de la caméra, réidentification de BoxMOT (AGPL-3.0).
 - **Domaine des modèles :** caméra principale de la Bundesliga. Les vidéos libres de Wikimedia Commons choisies pour tester d'autres prises de vue (tribunes, match amateur) n'ont pas pu être téléchargées : le serveur de fichiers a répondu « 429 Too Many Requests » à chaque essai, le 17 novembre 2026. Ce test reste à faire.
-- **Vitesse :** environ 10 fois la durée de la vidéo sur une RTX 2050, donc loin du direct. Pistes : un détecteur plus petit (RF-DETR N ou S, Apache-2.0, à affiner), l'export TensorRT, une cadence d'analyse plus basse.
+- **Vitesse :** 8 à 9 fois la durée de la vidéo sur une RTX 2050, donc loin du direct. Pistes : un détecteur plus petit (RF-DETR N ou S, Apache-2.0, à affiner), l'export TensorRT, une cadence d'analyse plus basse.
+- **Équipes et lumière :** sur une vidéo avec soleil et ombre marqués, le classement peut séparer la lumière plutôt que les maillots. C'est signalé, pas corrigé.
+- **Matchs entiers :** non testés. Les vidéos testées durent de 10 à 30 s. À ce rythme, un match de 90 min demanderait environ 13 h sur ce PC et un document de suivi d'environ 250 Mo, trop lourd à charger d'un coup dans le navigateur. Il faudrait découper le stockage et la lecture.
 - **Ballon :** projeté comme s'il était au sol.
 - **Terrain :** supposé de 105 × 68 m.
 - **Faux positif constaté :** un entraîneur qui marche le long de la ligne de touche, classé arbitre.
-- **Licence :** voir la partie 6 de la recherche (AGPL-3.0 des poids, dépôt sans fichier LICENSE).
+- **Licence :** le serveur d'analyse relève de l'AGPL-3.0 s'il est transmis ou offert en ligne ; la page du visualiseur et l'application AR n'en relèvent pas ; le dépôt n'a pas de fichier LICENSE (parties 6 et 7 de la recherche).

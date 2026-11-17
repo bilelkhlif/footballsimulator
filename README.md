@@ -358,8 +358,8 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 ```bash
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
-npm run test:unit   # 196 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
-npm run test:e2e    # 93 vérifications dans Chrome, sans interface
+npm run test:unit   # 197 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
+npm run test:e2e    # 94 vérifications dans Chrome, sans interface
 npm run bench       # mesure des performances (sprint 6), hors de npm test : 1 à 2 minutes
 npm run shell-version  # recalcule SHELL_VERSION dans sw.js après une modification de l'application
 ```
@@ -374,11 +374,11 @@ Les tests de bout en bout couvrent :
 - le mode test WebGL (`?webgl`) : seulement sur demande, jamais en repli, et le même parcours AR rejoué dans ce mode ;
 - l'interaction tactique (sprint 5) : sélection et déplacement d'un joueur et du ballon au millimètre, en vue 3D, au doigt sur un téléphone de 360 px et en AR sur un terrain tourné de 25° ; flèches avec aperçu ; annuler, rétablir et réinitialiser ; toucher refusé hors du terrain ; toucher sur la barre d'outils arrêté avant la scène ; mode diagnostic ;
 - la séquence animée (sprint 6) : images clés, lecture exacte, pause, vitesse 2×, arrêt sur un changement du tableau, annulation ; en AR sur le terrain tourné, terrain toujours ancré ; et cinq entrées et sorties de l'AR de suite, sans fuite de ressources ;
-- le visualiseur de match (prototype) : WebGPU sans WebGL, synchronisation de la vidéo et des annotations à l'arrêt et en lecture, coupure de plan, calibration absente, sélection sur la vidéo et en 3D, panneau déplacé, redimensionné, verrouillé, réduit et placé automatiquement.
+- le visualiseur de match (prototype) : WebGPU sans WebGL, synchronisation de la vidéo et des annotations à l'arrêt et en lecture, coupure de plan, calibration absente, sélection sur la vidéo et en 3D, rotation et zoom du terrain 3D, panneau déplacé, redimensionné, verrouillé, réduit et placé automatiquement.
 
 Les tests unitaires vérifient aussi la documentation du code : chaque fonction, classe et membre de classe porte un en-tête avec son responsable, sa date et son rôle, et chaque fichier renvoie à ATTRIBUTION.md ([convention](docs/convention-de-documentation.md)).
 
-Résultat le 17 novembre 2026, avec le visualiseur de match : 196 tests unitaires et 93 vérifications de bout en bout, tous réussis ; le serveur d'analyse a ses 34 tests Python (`python -m unittest discover -s tests` dans `analysis/`). Avant lui, le 16 novembre : 182 et 79. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-6.md](docs/sprint-6.md#7-tests), [docs/sprint-5.md](docs/sprint-5.md#10-tests), [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
+Résultat le 17 novembre 2026, avec le visualiseur de match : 197 tests unitaires et 94 vérifications de bout en bout, tous réussis ; le serveur d'analyse a ses 39 tests Python (`python -m unittest discover -s tests` dans `analysis/`). Avant lui, le 16 novembre : 182 et 79. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-6.md](docs/sprint-6.md#7-tests), [docs/sprint-5.md](docs/sprint-5.md#10-tests), [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
 
 ## Arborescence
 

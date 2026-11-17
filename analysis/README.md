@@ -11,7 +11,7 @@ L'application AR (index.html) n'en dépend pas : elle reste une PWA statique, pu
 
 | Matériel | Effet |
 | --- | --- |
-| GPU NVIDIA avec CUDA, 4 Go de mémoire au moins | Mesuré sur une RTX 2050 (4 Go) : 1,8 image analysée par seconde, soit environ 10 fois la durée de la vidéo |
+| GPU NVIDIA avec CUDA, 4 Go de mémoire au moins | Mesuré sur une RTX 2050 (4 Go), vidéos de 30 s : traitement de 7,8 à 8,8 fois la durée de la vidéo, dont 60 à 83 s fixes pour les équipes ; pic de 0,65 Go de mémoire GPU avec SigLIP |
 | Processeur seul | Fonctionne, beaucoup plus lentement (non mesuré) |
 | Disque | 0,4 Go pour les poids ; 1,6 Go pour CLIP ou 0,8 Go pour SigLIP, au premier usage ; PyTorch à part |
 
@@ -57,13 +57,13 @@ Téléversez une vidéo (MP4, WebM, MOV, MKV…) : l'analyse se fait en arrière
 
 ## Ce qui est mesuré, et ce qui ne l'est pas
 
-Chaque analyse calcule des indicateurs de qualité sans vérité terrain, affichés par le visualiseur : part des images calibrées, erreur de reprojection, part des images avec ballon, indice de fragmentation des trajectoires, part des déplacements invraisemblables (plus de 12 m/s), part des joueurs dont l'équipe est connue, cadence et mémoire.
+Chaque analyse calcule des indicateurs de qualité sans vérité terrain, affichés par le visualiseur : part des images calibrées, erreur d'ajustement et erreur hors échantillon de la calibration (sur les repères du terrain, pas sur les joueurs), part des images avec ballon, indice de fragmentation des trajectoires, part des déplacements invraisemblables (plus de 12 m/s), part des joueurs dont l'équipe est connue, équilibre des équipes dans chaque image, lenteur rapportée à la durée de la vidéo, et mémoire.
 
 Quand la calibration échoue, aucune position n'est donnée sur le terrain pour l'image, et le visualiseur le dit. Les numéros de maillot ne sont pas lus. Le détail est dans [docs/visualiseur-match.md](../docs/visualiseur-match.md).
 
 ## Licences
 
-- Le code de ce dossier charge Ultralytics et des poids sous **AGPL-3.0**. L'usage universitaire est permis. S'il est distribué, ou proposé comme service en ligne, tout son code source doit être publié sous AGPL-3.0. Le dépôt n'a pas encore de fichier LICENSE : c'est à l'équipe de choisir.
+- Ce serveur importe Ultralytics (avec ultralytics-thop et ultralytics-platform) et charge des poids sous **AGPL-3.0**. L'usage sur sa propre machine n'impose rien. S'il est transmis avec ces composants (copie, image, installateur), ou offert comme service en ligne, l'ensemble relève de l'AGPL : code source complet et mêmes droits pour les utilisateurs. Les fichiers de ce dossier peuvent alors garder une licence compatible (MIT, Apache-2.0, BSD ou AGPL). La page du visualiseur et l'application AR, séparées, ne sont pas concernées. Le dépôt n'a pas encore de fichier LICENSE : c'est à l'équipe de choisir. Détail et inventaire de toutes les licences : [docs/opensource-research.md](../docs/opensource-research.md), parties 6 et 7.
 - Roboflow Sports (MIT), supervision (MIT), trackers (Apache-2.0), PySceneDetect (BSD-3-Clause), UMAP et scikit-learn (BSD-3-Clause), OpenCV (Apache-2.0), transformers (Apache-2.0) sont utilisés comme bibliothèques : aucun de leurs fichiers n'est copié dans le dépôt.
 - Ultralytics envoie par défaut des statistiques d'usage. Le serveur les coupe avant de charger les modèles : réglage `sync` à `false` dans `%APPDATA%\Ultralytics\settings.json`.
 
@@ -73,4 +73,4 @@ Quand la calibration échoue, aucune position n'est donnée sur le terrain pour 
 .venv\Scripts\python -m unittest discover -s tests
 ```
 
-Ils ne demandent ni GPU ni poids. Le contrat de données, la calibration (homographies synthétiques), les équipes, le suivi, les coupures de plan, les mesures, le serveur et la documentation du code sont testés. Les tests de l'interface sont dans `npm test` (tests/visualizer-tests.mjs et tests/unit/visualizer.test.mjs).
+39 tests, sans GPU ni poids : le contrat de données, la calibration (homographies synthétiques, erreur hors échantillon), l'horodatage à cadence variable, les équipes, le suivi, les coupures de plan, les mesures, le serveur et la documentation du code. Les tests de l'interface sont dans `npm test` (tests/visualizer-tests.mjs et tests/unit/visualizer.test.mjs).

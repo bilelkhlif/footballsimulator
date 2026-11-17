@@ -143,5 +143,5 @@ def make_document():
 
 if __name__ == "__main__":
     make_video(HERE / "match-synthetique.webm")
-    (HERE / "match-synthetique.tracking.json").write_text(json.dumps(make_document(), ensure_ascii=False, indent=1), encoding="utf-8")
+    (HERE / "match-synthetique.tracking.json").write_text(json.dumps(make_document(), ensure_ascii=False, indent=1), encoding="utf-8", newline=chr(10))
     print("ok")
