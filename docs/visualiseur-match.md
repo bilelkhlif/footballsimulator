@@ -219,7 +219,7 @@ Les conditions d'utilisation des vidéos du concours n'ont pas pu être lues (pa
 | `121364_0` | 375 | 1 | 100 % | 0,25 m | 0,44 m (0,84) | 1,05 | 80 % | 53 % | 8,0 fois |
 | `08fd33_0` | 375 | 1 | 100 % | 0,25 m | 0,70 m (1,04) | 1,05 | 84 % | 50 % | 7,8 fois |
 | `573e61_0` | 375 | 1 | 100 % | 0,24 m | 0,45 m (0,72) | 1,27 | 59 % | **80 %** | 8,6 fois |
-| `2e57b9_0` en 720p, 30 images/s | 450 | 1 | 100 % | 0,21 m | 0,41 m (0,60) | 1,10 | 72 % | 50 % | 14,7 fois, puis 8,0 fois |
+| `2e57b9_0` en 720p, 30 images/s | 450 | 1 | 100 % | 0,21 m | 0,41 m (0,60) | 1,10 | 72 % | 50 % | 8,0 fois (14,7 fois quand une autre analyse partageait le GPU) |
 | Montage à coupures | 300 | 3 | 99,3 % | 0,18 m | 0,43 m (1,23) | 1,10 | 53 % | 55 % | 8,5 fois |
 | Cadence variable | 167 | 1 | 100 % | 0,18 m | 0,34 m (0,49) | 1,29 | 78 % | 50 % | 13,5 fois |
 
@@ -238,7 +238,7 @@ Lecture :
   - **Défaut constaté sur `573e61_0`.** Des joueurs blancs au soleil sont classés avec l'équipe sombre, avec des votes unanimes. Sur ces cinq vidéos, c'est la seule où le classement échoue.
   - **Ce que la revue change.** Le classement lui-même n'est pas corrigé. Le défaut est désormais signalé : dans une image typique, 80 % des joueurs classés y sont dans la même équipe, contre 50 à 55 % ailleurs, et le visualiseur l'annonce au-delà de 65 %.
   - **Contrôle visuel.** Ailleurs, 19 joueurs sur 20 sont bien classés sur l'image vérifiée de `2e57b9_0`. L'exception est un échange d'identifiants.
-- **Vitesse.** De 7,8 à 8,8 fois la durée de la vidéo pour 30 s, dont 60 à 83 s fixes pour les équipes. Les clips courts paient donc plus cher en proportion : 13,5 fois pour 10 s. La copie en 720p a pris 14,7 fois au premier passage, puis 8,0 fois au second : sur ce PC portable, le temps de traitement varie d'un passage à l'autre.
+- **Vitesse.** De 7,8 à 8,8 fois la durée de la vidéo pour 30 s, dont 60 à 83 s fixes pour les équipes. Les clips courts paient donc plus cher en proportion : 13,5 fois pour 10 s. La copie en 720p a pris 14,7 fois au premier passage, puis 8,0 fois au second. Pendant le premier, un téléversement fait par l'interface s'analysait en même temps sur le même GPU : deux analyses simultanées se partagent la carte, d'où la file, qui n'en traite qu'une à la fois.
 
 ### 6.5 Cas difficiles, sur de vraies images
 
