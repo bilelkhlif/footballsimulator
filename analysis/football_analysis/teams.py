@@ -251,10 +251,15 @@ def resolve_goalkeepers(frames: list[dict[str, Any]], goalkeepers: set[int], tea
 def team_colour(images: list[np.ndarray]) -> str | None:
     """Couleur dominante du maillot d'une équipe : médiane du haut du torse de ses joueurs.
 
+    Les pixels de pelouse (teinte verte assez saturée) sont écartés : sur la vidéo de Stuttgart, ils
+    tiraient le rouge du maillot vers le brun. Un maillot vert garde ses pixels si tous sont verts.
+
     @responsable Bilel Khlif
     @date 2026-11-17
     @role Analyse vidéo — équipes (couleurs)
     """
+    import cv2
+
     samples = []
     for image in images:
         height, width = image.shape[:2]
@@ -263,5 +268,10 @@ def team_colour(images: list[np.ndarray]) -> str | None:
             samples.append(torso.reshape(-1, 3))
     if not samples:
         return None
-    blue, green, red = np.median(np.concatenate(samples), axis=0).astype(int)
+    pixels = np.concatenate(samples)
+    hsv = cv2.cvtColor(pixels.reshape(-1, 1, 3).astype(np.uint8), cv2.COLOR_BGR2HSV).reshape(-1, 3)
+    grass = (hsv[:, 0] >= 35) & (hsv[:, 0] <= 85) & (hsv[:, 1] >= 60) & (hsv[:, 2] >= 40)
+    if (~grass).sum() >= 0.1 * len(pixels):
+        pixels = pixels[~grass]
+    blue, green, red = np.median(pixels, axis=0).astype(int)
     return f"#{red:02x}{green:02x}{blue:02x}"

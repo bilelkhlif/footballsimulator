@@ -138,6 +138,27 @@ class AssignmentTest(unittest.TestCase):
         self.assertEqual(by_team, {})
 
 
+class ColourTest(unittest.TestCase):
+    """Couleur des maillots.
+
+    @responsable Bilel Khlif
+    @date 2026-11-17
+    @role Tests de l'analyse vidéo — équipes
+    """
+
+    def test_grass_is_ignored(self):
+        """Un maillot rouge sur fond de pelouse reste rouge ; un maillot vert reste vert.
+
+        @responsable Bilel Khlif
+        @date 2026-11-17
+        @role Tests de l'analyse vidéo — équipes
+        """
+        image = np.full((40, 20, 3), (40, 140, 50), dtype=np.uint8)  # pelouse (BGR)
+        image[6:20, 8:12] = (30, 30, 210)  # torse rouge, plus étroit que la zone mesurée
+        self.assertEqual(team_colour([image] * 3), "#d21e1e")
+        self.assertEqual(team_colour([np.full((40, 20, 3), (40, 140, 50), dtype=np.uint8)]), "#328c28")
+
+
 class CollectorTest(unittest.TestCase):
     """Choix des images de joueurs gardées pour le vote.
 
