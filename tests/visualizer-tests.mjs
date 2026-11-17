@@ -142,7 +142,8 @@ function overlaps(a, b) {
 /**
  * Tests de bout en bout du visualiseur : chargement en WebGPU, synchronisation à l'arrêt et en
  * lecture, interpolation, coupure de plan, calibration absente, sélection sur la vidéo et dans le
- * terrain 3D, panneau déplaçable, redimensionnable, verrouillable, réductible, placement automatique.
+ * terrain 3D, rotation et zoom du terrain 3D, panneau déplaçable, redimensionnable, verrouillable,
+ * réductible, placement automatique.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url adresse du serveur statique de test
  * @param {(name: string, status: string, detail?: string) => void} record
@@ -250,6 +251,29 @@ export async function testMatchVisualizer(browser, url, record, recordCanvasCont
     await page.waitForTimeout(300);
     const selectedIn3d = await page.evaluate(() => window.__matchVisualizer.selectedId);
     record('Visualiseur : sélection d\'un joueur sur le terrain 3D (raycasting)', selectedIn3d === 12 ? 'ok' : 'échec', `sélection ${selectedIn3d}`);
+
+    // Rotation et zoom du terrain 3D (OrbitControls) : glisser dans la vue, puis molette.
+    const view = await page.evaluate(() => {
+      const { overlay } = window.__matchVisualizer;
+      const rect = overlay.renderer.domElement.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, azimuth: overlay.controls.getAzimuthalAngle(),
+        distance: overlay.camera.position.distanceTo(overlay.controls.target) };
+    });
+    await page.mouse.move(view.x, view.y);
+    await page.mouse.down();
+    await page.mouse.move(view.x + 90, view.y, { steps: 10 });
+    await page.mouse.up();
+    await page.mouse.wheel(0, -400);
+    await page.waitForTimeout(600);
+    const turned = await page.evaluate(() => {
+      const { overlay, selectedId } = window.__matchVisualizer;
+      return { azimuth: overlay.controls.getAzimuthalAngle(), distance: overlay.camera.position.distanceTo(overlay.controls.target), selectedId };
+    });
+    const rotationDeg = Math.abs(turned.azimuth - view.azimuth) * 180 / Math.PI;
+    record('Visualiseur : terrain 3D tourné au glisser et zoomé à la molette, sans changer la sélection',
+      rotationDeg > 10 && turned.distance < view.distance * 0.95 && turned.selectedId === 12 ? 'ok' : 'échec',
+      `rotation ${rotationDeg.toFixed(0)}°, distance ${view.distance.toFixed(2)} → ${turned.distance.toFixed(2)} m`);
+    await page.evaluate(() => window.__matchVisualizer.overlay.resetView());
 
     // Panneau : déplacement à la main (coupe le placement automatique), redimensionnement, verrou, réduction.
     const before = (await page.evaluate(() => window.__matchVisualizer.snapshot())).panel;
