@@ -218,6 +218,25 @@ Mathématiques, machine à états, patron Command, tests et protocole sur télé
 
 Cette mesure compare deux versions dans les mêmes conditions ; elle ne remplace pas la mesure sur téléphone, à faire avec le mode diagnostic. Méthode, résultats complets, fiabilité de l'AR (cinq entrées et sorties de suite, suivi interrompu puis rétabli) et versions de la PWA : [docs/sprint-6.md](docs/sprint-6.md).
 
+## Visualiseur de match (prototype)
+
+Extension après le projet, sur la branche `feature/visualiseur-match`. [visualizer.html](visualizer.html) analyse une vraie vidéo de match téléversée :
+
+- détection et suivi des joueurs, des gardiens, des arbitres et du ballon ;
+- deux équipes ;
+- calibration de la caméra et position de chacun sur le terrain.
+
+La vidéo d'origine s'affiche annotée. Le terrain 3D de l'application, en WebGPU, est posé dans la vidéo, synchronisé image par image :
+
+- déplaçable, redimensionnable, orientable et verrouillable ;
+- placé seul dans la zone la moins encombrée ;
+- avec sélection d'un joueur, traces, flèches de déplacement et vitesse.
+
+L'analyse réutilise des composants libres (Roboflow Sports, Ultralytics, ByteTrack, PySceneDetect, OpenCV). Elle tourne sur un serveur Python local ([analysis/](analysis/README.md)), avec un GPU NVIDIA de préférence. L'application AR n'en dépend pas et n'est pas modifiée.
+
+- Recherche des composants, licences et choix : [docs/opensource-research.md](docs/opensource-research.md)
+- Architecture, format des données et validation sur de vraies vidéos : [docs/visualiseur-match.md](docs/visualiseur-match.md)
+
 ## Application installable (PWA)
 
 | Élément | Rôle |
@@ -339,8 +358,8 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 ```bash
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
-npm run test:unit   # 182 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
-npm run test:e2e    # 79 vérifications dans Chrome, sans interface
+npm run test:unit   # 196 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
+npm run test:e2e    # 93 vérifications dans Chrome, sans interface
 npm run bench       # mesure des performances (sprint 6), hors de npm test : 1 à 2 minutes
 npm run shell-version  # recalcule SHELL_VERSION dans sw.js après une modification de l'application
 ```
@@ -354,16 +373,18 @@ Les tests de bout en bout couvrent :
 - le parcours AR complet avec l'émulateur : session WebGPU, réticule, toucher et pose du terrain, ancre, déplacement, sorties, et messages d'échec ;
 - le mode test WebGL (`?webgl`) : seulement sur demande, jamais en repli, et le même parcours AR rejoué dans ce mode ;
 - l'interaction tactique (sprint 5) : sélection et déplacement d'un joueur et du ballon au millimètre, en vue 3D, au doigt sur un téléphone de 360 px et en AR sur un terrain tourné de 25° ; flèches avec aperçu ; annuler, rétablir et réinitialiser ; toucher refusé hors du terrain ; toucher sur la barre d'outils arrêté avant la scène ; mode diagnostic ;
-- la séquence animée (sprint 6) : images clés, lecture exacte, pause, vitesse 2×, arrêt sur un changement du tableau, annulation ; en AR sur le terrain tourné, terrain toujours ancré ; et cinq entrées et sorties de l'AR de suite, sans fuite de ressources.
+- la séquence animée (sprint 6) : images clés, lecture exacte, pause, vitesse 2×, arrêt sur un changement du tableau, annulation ; en AR sur le terrain tourné, terrain toujours ancré ; et cinq entrées et sorties de l'AR de suite, sans fuite de ressources ;
+- le visualiseur de match (prototype) : WebGPU sans WebGL, synchronisation de la vidéo et des annotations à l'arrêt et en lecture, coupure de plan, calibration absente, sélection sur la vidéo et en 3D, panneau déplacé, redimensionné, verrouillé, réduit et placé automatiquement.
 
 Les tests unitaires vérifient aussi la documentation du code : chaque fonction, classe et membre de classe porte un en-tête avec son responsable, sa date et son rôle, et chaque fichier renvoie à ATTRIBUTION.md ([convention](docs/convention-de-documentation.md)).
 
-Résultat le 16 novembre 2026 : 182 tests unitaires et 79 vérifications de bout en bout, tous réussis. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-6.md](docs/sprint-6.md#7-tests), [docs/sprint-5.md](docs/sprint-5.md#10-tests), [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
+Résultat le 17 novembre 2026, avec le visualiseur de match : 196 tests unitaires et 93 vérifications de bout en bout, tous réussis ; le serveur d'analyse a ses 34 tests Python (`python -m unittest discover -s tests` dans `analysis/`). Avant lui, le 16 novembre : 182 et 79. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-6.md](docs/sprint-6.md#7-tests), [docs/sprint-5.md](docs/sprint-5.md#10-tests), [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
 
 ## Arborescence
 
 ```text
 ├── index.html             Page, carte d'import (three.js WebGPU) et interface superposée
+├── visualizer.html        Visualiseur de match (prototype) : vidéo annotée et terrain 3D superposé
 ├── manifest.json          Manifeste de la PWA
 ├── sw.js                  Service Worker : coquille à version de contenu, hors-ligne
 ├── package.json           Commandes npm start, npm test, test:unit, test:e2e, bench et shell-version
@@ -406,10 +427,16 @@ Résultat le 16 novembre 2026 : 182 tests unitaires et 79 vérifications de bout
 │   ├── sequence-player.js Lecture de la séquence : temps écoulé, interpolation, vitesse
 │   ├── sequence-panel.js  Panneau de la séquence
 │   ├── styles.css         Styles de l'interface
+│   ├── visualizer/        Visualiseur de match : données de suivi, synchronisation, annotations,
+│   │                      terrain 3D superposé, panneau flottant, placement automatique
 │   └── vendor/three-r187/ three.js r187, build WebGPU (licence MIT)
+├── analysis/              Serveur d'analyse vidéo du visualiseur (Python) : détection, suivi,
+│                          équipes, calibration, format des données, API ; tests (unittest)
 ├── tests/
 │   ├── serve.mjs          Serveur local (npm start), aussi utilisé par les tests
 │   ├── run-tests.mjs      Tests de bout en bout dans Chrome (npm run test:e2e)
+│   ├── visualizer-tests.mjs  Tests de bout en bout du visualiseur de match
+│   ├── fixtures/visualizer/  Vidéo synthétique et document de suivi de ces tests
 │   ├── benchmark.mjs      Mesure des performances (npm run bench, sprint 6)
 │   ├── shell-version.mjs  Empreinte de la coquille, écrite dans sw.js (npm run shell-version)
 │   └── unit/              Tests unitaires (npm run test:unit) et carte d'import pour Node.js
@@ -433,6 +460,8 @@ Résultat le 16 novembre 2026 : 182 tests unitaires et 79 vérifications de bout
     ├── manuel-utilisateur.md  Manuel utilisateur illustré
     ├── uml.md             Diagrammes UML : cas d'utilisation, séquence, déploiement, classes
     ├── video-demonstration.md  Script de la vidéo de démonstration (5 minutes au plus)
+    ├── opensource-research.md  Visualiseur de match : recherche des composants libres
+    ├── visualiseur-match.md    Visualiseur de match : architecture, format des données, validation
     ├── etat-de-l-art/     Rapport d'état de l'art (PDF et source LaTeX)
     └── images/            Captures et illustrations de ce README
 ```
