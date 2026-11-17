@@ -1,0 +1,164 @@
+/*
+ * Visualiseur de match : mise en page et apparence.
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
+ */
+:root {
+  color-scheme: dark;
+  --vz-bg: #0d1511;
+  --vz-surface: #15211b;
+  --vz-surface-2: #1d2c24;
+  --vz-border: #2c3f34;
+  --vz-text: #eef3ef;
+  --vz-muted: #9fb2a6;
+  --vz-accent: #f4c542;
+  --vz-error: #ff8a7a;
+  --vz-radius: 10px;
+  font-family: system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+/* L'attribut hidden l'emporte toujours, même sur un display fixé plus bas. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--vz-bg);
+  color: var(--vz-text);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Barre du haut */
+.vz-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--vz-border);
+  background: var(--vz-surface);
+}
+.vz-title { font-size: 1.05rem; margin: 0 8px 0 0; }
+.vz-status { margin: 0; color: var(--vz-muted); font-size: 0.9rem; flex: 1 1 260px; }
+.vz-status[data-kind="error"] { color: var(--vz-error); }
+
+.vz-button, .vz-select, .vz-chip, .vz-icon {
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--vz-text);
+  background: var(--vz-surface-2);
+  border: 1px solid var(--vz-border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.vz-button--primary { background: #1f6b3d; border-color: #2d8a52; }
+.vz-button:focus-visible, .vz-chip:focus-visible, .vz-icon:focus-visible, .vz-select:focus-visible { outline: 2px solid var(--vz-accent); outline-offset: 2px; }
+.vz-chip { padding: 3px 9px; font-size: 0.78rem; border-radius: 999px; }
+.vz-chip[aria-pressed="true"] { background: #2d5a3e; border-color: #4a8a62; }
+.vz-icon { padding: 3px 8px; line-height: 1; }
+
+/* Page : la vidéo, puis les panneaux à droite (en dessous sur écran étroit) */
+.vz-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 14px;
+  padding: 14px 16px;
+  min-height: 0;
+}
+@media (max-width: 960px) {
+  .vz-main { grid-template-columns: minmax(0, 1fr); }
+}
+
+.vz-player { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.vz-stage {
+  position: relative;
+  background: #000;
+  border-radius: var(--vz-radius);
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  max-height: calc(100vh - 150px);
+  width: 100%;
+}
+.vz-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+.vz-annotations { position: absolute; inset: 0; cursor: pointer; }
+.vz-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: var(--vz-muted);
+  padding: 16px;
+  text-align: center;
+}
+
+/* Panneau du terrain 3D, posé sur la vidéo */
+.vz-panel {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(8, 14, 11, 0.28);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  z-index: 2;
+}
+.vz-panel--animating { transition: left 450ms ease, top 450ms ease; }
+.vz-panel--locked { border-color: var(--vz-accent); }
+.vz-panel-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  background: rgba(8, 14, 11, 0.78);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  flex-wrap: wrap;
+}
+.vz-panel--locked .vz-panel-bar { cursor: default; }
+.vz-panel-title { font-size: 0.78rem; font-weight: 600; margin-right: auto; }
+.vz-panel-view { flex: 1; min-height: 0; position: relative; color: var(--vz-muted); font-size: 0.82rem; }
+.vz-panel-view canvas { display: block; touch-action: none; }
+.vz-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  touch-action: none;
+  background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.55) 50%);
+}
+.vz-panel--locked .vz-resize { display: none; }
+.vz-restore { position: absolute; right: 12px; top: 12px; z-index: 2; }
+
+/* Commandes de lecture */
+.vz-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.vz-seek { flex: 1 1 200px; accent-color: var(--vz-accent); }
+.vz-time { font-variant-numeric: tabular-nums; font-size: 0.85rem; color: var(--vz-muted); }
+.vz-legend { display: flex; gap: 10px; font-size: 0.82rem; color: var(--vz-muted); }
+.vz-legend-item i, .vz-chip-colour {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: -1px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Panneaux latéraux */
+.vz-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.vz-card { background: var(--vz-surface); border: 1px solid var(--vz-border); border-radius: var(--vz-radius); padding: 12px 14px; }
+.vz-card h2 { font-size: 0.92rem; margin: 0 0 8px; }
+.vz-muted { color: var(--vz-muted); font-size: 0.86rem; margin: 0 0 4px; }
+.vz-list { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0; font-size: 0.84rem; }
+.vz-list dt { color: var(--vz-muted); }
+.vz-list dd { margin: 0; }
+.vz-limits { margin: 0; padding-left: 18px; font-size: 0.82rem; color: var(--vz-muted); display: grid; gap: 6px; }

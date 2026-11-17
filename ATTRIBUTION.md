@@ -74,6 +74,16 @@ Aucun modèle 3D, aucune texture et aucune police n'est importé d'une source ex
 
     * **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
 
+*   **Asset :** visualiseur de match (extension après le projet, branche `feature/visualiseur-match`, hors de la version évaluée) : poids des modèles préentraînés et données de test, le 17 novembre 2026
+
+    * **Source originale :** poids `football-player-detection.pt`, `football-ball-detection.pt` et `football-pitch-detection.pt` de Roboflow Sports (`examples/soccer/setup.sh`, commit 42c80c0), téléchargés à l'installation et jamais versionnés ; modèle de plongements des équipes : SigLIP base patch16-224 (Google) par défaut, CLIP ViT-L/14 (OpenAI) en option ; vidéo de test `tests/fixtures/visualizer/match-synthetique.webm` et son document de suivi, générés par `tests/fixtures/visualizer/make_fixture.py`
+
+    * **Auteur / Créateur :** Roboflow pour les poids, entraînés avec Ultralytics YOLOv8 sur des jeux de données Roboflow Universe tirés du concours Kaggle « DFL – Bundesliga Data Shootout » ; Google (SigLIP) ; OpenAI (CLIP) ; données de test : Claude Code (génération), sous le pilotage de Bilel Khlif
+
+    * **Licence :** poids de Roboflow : AGPL-3.0 selon Ultralytics ; jeux de données : CC BY 4.0 d'après leurs copies sur Roboflow Universe ; conditions des vidéos du concours non lues ; SigLIP : Apache-2.0 ; CLIP : aucune licence sur sa fiche, usage réservé à la recherche ; données de test : aucune licence choisie à ce jour
+
+    * **Modifications apportées par l'équipe :** aucune sur les poids. Les vidéos de validation (exemples de Roboflow Sports, et copies réencodées avec ffmpeg) restent en local, ni versionnées ni diffusées
+
 ---
 
 ## 2. Bibliothèques tierces et Modules externes (Pinnés)
@@ -112,7 +122,15 @@ Rappel : L'usage des versions "latest" depuis les CDN est proscrit.
 
     * **Rôle dans le projet :** pilote Chrome pour les tests `npm test` et, depuis le sprint 6, pour la mesure des performances (`npm run bench`) ; outil de développement, jamais chargé par l'application
 
-Outils utilisés hors du projet, non distribués avec l'application : Google Chrome pour les tests et les captures, le lanceur de tests intégré à Node.js (`node --test`) pour les tests unitaires, sharp pour les icônes PNG, Python et Pillow pour le traitement des images, pptxgenjs et PowerPoint pour les présentations, MiKTeX (pdfLaTeX, polices Latin Modern) pour le rapport, la bibliothèque qrcode pour le QR code, et une copie locale de Mermaid 11.4.1 pour vérifier l'affichage des diagrammes.
+*   **Bibliothèques :** serveur d'analyse du visualiseur de match (Python, extension hors de la version évaluée) : ultralytics 8.4.215 (AGPL-3.0), supervision 0.31.7 (MIT), trackers 2.7.0 (Apache-2.0), scenedetect 0.7.3 (BSD-3-Clause), umap-learn 0.6.0 et scikit-learn (BSD-3-Clause), transformers 5.13.0 et sentencepiece 0.2.3 (Apache-2.0), opencv-python 4.14 (Apache-2.0, avec FFmpeg sous LGPL-2.1), gdown 5.2.0 (MIT), Roboflow Sports au commit 42c80c0 (MIT), PyTorch 2.5.1 (BSD)
+
+    * **Version fixée :** `analysis/requirements.txt` ; licences de toutes les dépendances, transitives comprises, dans `docs/opensource-research.md` (partie 7)
+
+    * **Lien CDN de référence :** sans objet (paquets PyPI) ; Roboflow Sports : https://github.com/roboflow/sports/tree/42c80c06b6b65a7f89455b89fe31cdf4c38ba227
+
+    * **Rôle dans le projet :** détection, suivi, équipes et calibration des vidéos de match, sur un serveur local ; jamais chargées par l'application AR ni publiées sur GitHub Pages. Seuls ultralytics, ultralytics-thop et ultralytics-platform sont sous AGPL-3.0 ; leurs obligations sont décrites dans `docs/opensource-research.md` (partie 6)
+
+Outils utilisés hors du projet, non distribués avec l'application : Google Chrome pour les tests et les captures, le lanceur de tests intégré à Node.js (`node --test`) pour les tests unitaires, sharp pour les icônes PNG, Python et Pillow pour le traitement des images, pptxgenjs et PowerPoint pour les présentations, MiKTeX (pdfLaTeX, polices Latin Modern) pour le rapport, la bibliothèque qrcode pour le QR code, et une copie locale de Mermaid 11.4.1 pour vérifier l'affichage des diagrammes ; pour le visualiseur de match, ffmpeg pour la vidéo de test synthétique et les copies réencodées des vidéos de validation.
 
 ---
 
@@ -155,6 +173,8 @@ Sprint 4 : les formations sont propres au projet ; aucun code ni aucune donnée 
 Sprint 5 : aucun extrait copié. Le raycasting passe par l'API de three.js r187 (`Raycaster.setFromCamera`, `intersectObjects`, `Ray.intersectPlane`) et par celle de WebXR (`XRFrame.getPose` sur le `targetRaySpace` d'une source d'entrée). Les formules employées, l'intersection d'un rayon et d'un plan et le quaternion de la plus petite rotation entre deux directions, sont des résultats mathématiques classiques, écrits pour le projet. Le toucher émulé passe par l'API publique d'IWER (position et orientation d'une manette, `updateButtonValue`).
 
 Sprint 6 : aucun extrait copié. L'instanciation des joueurs passe par l'API de three.js r187 (`InstancedMesh`, `setMatrixAt`, `instanceMatrix`), le Service Worker par les API standard du navigateur (`Cache.addAll`, option `cache: 'reload'` de `Request`), et l'empreinte de la coquille par le module `node:crypto` de Node.js (SHA-256). La mesure des performances ralentit le processeur par la commande `Emulation.setCPUThrottlingRate` du protocole Chrome DevTools, via playwright-core. La séquence animée suit le principe relevé par l'état de l'art chez soccer-tactics-board et boardx : des places enregistrées étape par étape, puis interpolées. Aucun code n'en est repris ; l'interpolation utilise la courbe `easeInOutCubic` écrite pour le projet au sprint 4, et non `easeInOutQuad`. Aucune donnée de match, de SkillCorner ou d'ailleurs, n'est importée.
+
+Visualiseur de match (extension) : aucun extrait copié. Roboflow Sports (`SoccerPitchConfiguration`, `TeamClassifier`), supervision, trackers, PySceneDetect et OpenCV sont importés comme bibliothèques. Le prototype instancie `SoccerPitchConfiguration` aux dimensions réglementaires, et donne à `TeamClassifier` un autre modèle de plongements (CLIP, en option), sans recopier leur code. Les réglages de détection (images de 1280 px, doublons supprimés toutes classes confondues) reprennent ceux de l'exemple de Roboflow.
 
 ---
 
@@ -223,6 +243,10 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 17 novembre 2026 (mo
 21. **Sprint 6** : demande de réaliser le sixième et dernier sprint du cahier des charges, le 16 novembre 2026, avec des consignes détaillées : vérifier le sprint 5 d'abord ; optimiser les performances XR en mesurant avant et après, sans résultat inventé ; revoir la fiabilité du parcours AR ; animer une action (bonus BF9) dans la boucle de rendu existante ; fiabiliser la PWA ; recette finale distinguant validation physique, émulée et automatisée ; documentation finale (manuel illustré, UML, script de la vidéo) ; aucune fusion avant son approbation.
 
 22. **Revue finale et livrables** : revue de la pull request #13 au regard du cahier des charges, demandée le 16 novembre 2026, avec fusion dans `main` si la revue réussissait (fusionnée le même jour) ; puis, le 17 novembre 2026, demande de rendre le projet prêt pour l'évaluation, sans nouvelle fonctionnalité et sans résultat physique inventé, en ne laissant à l'équipe que les essais sur téléphone et le tournage de la vidéo.
+
+23. **Visualiseur de match** : demande du 17 novembre 2026 d'étendre le projet en visualiseur de match par IA. Rechercher d'abord les solutions libres (Roboflow Sports, SoccerNet, Ultralytics, ByteTrack…) en vérifiant licences et maintenance, puis construire un prototype qui traite une vraie vidéo téléversée, sans coordonnées inventées, avec le terrain 3D du projet posé dans la vidéo ; branche séparée, aucune fusion sans son accord.
+
+24. **Revue critique du visualiseur** : demande du 17 novembre 2026 de revoir la pull request #15 avant toute fusion : exigences de la vision d'origine, vitesse rapportée à la durée réelle, méthode de mesure de la calibration, vidéos réelles supplémentaires, licences de chaque paquet et de chaque poids, ce fichier, application AR intacte, place sur le disque, tous les tests ; recommander une étiquette de version avant toute intégration dans `main`.
 
 **Déclaration détaillée par composant**
 
@@ -400,6 +424,26 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 17 novembre 2026 (mo
 
         * `npm test` le 17 novembre 2026 : 182 tests unitaires et 79 vérifications de bout en bout réussis.
 
+*   **Composant ou Shader concerné :** visualiseur de match (extension après le projet, branche `feature/visualiseur-match`, pull request #15, hors de la version évaluée) : `analysis/` (serveur d'analyse Python), `visualizer.html`, `src/visualizer/`, `tests/visualizer-tests.mjs`, `tests/unit/visualizer.test.mjs`, `tests/fixtures/visualizer/`, `docs/opensource-research.md`, `docs/visualiseur-match.md`, partie du README
+
+    * **Prompt ou usage principal :** demandes de Bilel Khlif (contributions 23 et 24) : réutiliser les solutions libres éprouvées plutôt que réécrire la vision par ordinateur, ne jamais inventer de positions, puis revoir le tout de façon critique. Code, tests et documents générés par l'assistant ; composants libres utilisés comme bibliothèques.
+
+        **Périmètre technique :** Recherche et comparaison des projets libres ; analyse vidéo (détection, suivi, équipes votées par trajectoire, homographie RANSAC avec erreur hors échantillon et causes d'échec, horodatage du conteneur) ; format de données commun au fichier et au direct ; serveur local ; visualiseur WebGPU qui réutilise le terrain, les pions instanciés, le ballon, les flèches et le raycasting du projet ; placement automatique ; synchronisation image par image.
+
+    * **Axe de vérification appliqué par l'étudiant :** Bilel Khlif a fixé les priorités, demandé la revue critique et réservé la fusion à son accord. Les vérifications suivantes sont faites par l'assistant ; aucune n'est une vérité terrain :
+
+        * licences et activité des projets vérifiées par l'API GitHub, PyPI et Hugging Face ; licences de toutes les dépendances relevées dans les métadonnées des paquets installés, le 17 novembre 2026 ;
+
+        * vraies vidéos de match analysées sur une RTX 2050 (exemples de Roboflow Sports, copies à une autre résolution, à cadence variable, et un montage local avec des coupures), deux téléversements par l'interface, comptage manuel sur deux images, captures contrôlées à l'œil ; mesures et méthode dans `docs/visualiseur-match.md` ;
+
+        * défauts trouvés par ces essais, puis corrigés : vote d'équipe limité au début des trajectoires, couleur des maillots tirée par la pelouse, étiquettes illisibles, message masqué qui bloquait les clics, instant après un déplacement dans la vidéo, horodatage faux à cadence variable, sauts d'échange d'identifiants comptés dans les distances, téléversement en file perdu au redémarrage du serveur ;
+
+        * `npm test` et tests Python le 17 novembre 2026 : 40 tests Python, 197 tests unitaires et 94 vérifications de bout en bout réussis ; application AR inchangée (aucun de ses fichiers modifié, `SHELL_VERSION` identique) ;
+
+        * défaut constaté et seulement signalé, non corrigé : sur une vidéo avec soleil et ombre marqués (`573e61_0`), des joueurs classés dans la mauvaise équipe avec des votes unanimes ; un indicateur d'équilibre des équipes l'annonce désormais ;
+
+        * vidéos libres de Wikimedia Commons non téléchargeables (réponse « 429 ») : autres angles de caméra non testés.
+
 *   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles des sprints 2 à 6, et `assets/screenshots/`), figures du rapport (`docs/etat-de-l-art/figures/`)
 
     * **Prompt ou usage principal :** dessin des icônes en SVG d'après la couverture du cahier des charges, captures automatisées de l'application, mise en page de la bannière dans le style de la présentation d'état de l'art
@@ -446,5 +490,6 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 17 novembre 2026 (mo
 | Sprint 5 | 232/232 | Exigences détaillées du sprint ; fusion réservée à son approbation |
 | Sprint 6 | 261/261 | Exigences détaillées du sprint final ; fusion réservée à son approbation |
 | Revue finale et livrables | 261/261 | Revue et fusion de la PR #13 demandées ; consignes de finalisation, sans résultat physique inventé |
+| Visualiseur de match (extension, PR #15) | 331/331 | Demande d'extension, puis revue critique ; priorité à la réutilisation, aucune donnée inventée, fusion réservée à son approbation |
 
 **État de validation matérielle au 17 novembre 2026 :** rendu 3D WebGPU vérifié sur le PC ASUS TUF A15 ; parcours AR WebGPU vérifié en émulation, interaction tactique du sprint 5 et séquence animée du sprint 6 comprises ; AR rendue en WebGPU vérifiée sur un téléphone, le TECNO POVA 6 Pro 5G (essai physique réussi) ; AR sur Galaxy S10e vérifiée uniquement dans le mode de test WebGL. Aucune validation physique des sprints 4, 5 et 6 n’est consignée à cette date : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde restent à mesurer sur téléphone (`docs/recette.md`). Les résultats automatisés ci-dessus proviennent du journal de développement.

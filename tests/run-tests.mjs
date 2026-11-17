@@ -1,5 +1,6 @@
 /**
  * Tests de bout en bout des sprints 1 à 4, et du mode test WebGL, exécutés dans Chrome sans interface.
+ * Depuis le visualiseur de match, aussi ceux de visualizer.html (tests/visualizer-tests.mjs).
  * Ils rejouent les vérifications consignées dans docs/sprint-1.md, docs/sprint-2.md et
  * docs/sprint-3.md.
  *
@@ -14,6 +15,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { REPO_ROOT, startServer } from './serve.mjs';
+import { testMatchVisualizer } from './visualizer-tests.mjs';
 
 /** Navigateur utilisé : Chrome par défaut. */
 const CHANNEL = process.env.BROWSER_CHANNEL ?? 'chrome';
@@ -1652,6 +1654,7 @@ async function main() {
     await testTacticalMobile(browser, root.url);
     await testDiagnostics(browser, root.url);
     await testSequencePlayback(browser, root.url);
+    await testMatchVisualizer(browser, root.url, record, recordCanvasContexts);
     await testShellVersioning(browser);
     await testWebGpuRendering(browser, root.url);
     await testWithoutWebGpu(browser, root.url);
