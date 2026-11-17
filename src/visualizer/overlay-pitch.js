@@ -23,6 +23,7 @@ import { isTap } from '../pointer-input.js';
 import { pickTarget, pointerToNdc, setRayFromCamera } from '../raycasting.js';
 import { buildArrowGeometry } from '../tactical-arrows.js';
 import { createWebGpuRenderer } from '../webgpu.js';
+import { isPlausibleStep } from './analytics.js';
 import { accentOnWhite } from './video-annotations.js';
 
 /** Taille de la réserve de pions de chaque groupe. */
@@ -444,8 +445,8 @@ export class OverlayPitch {
       for (let index = 1; index < history.length && segment < MAX_TRAIL_SEGMENTS; index += 1) {
         const a = history[index - 1];
         const b = history[index];
-        if (b.time - a.time > 0.5) {
-          continue;
+        if (!isPlausibleStep(a, b)) {
+          continue; // trou dans les données, ou saut d'un échange d'identifiants
         }
         positions.setXYZ(segment * 2, a.pitch[0] * PITCH_SCALE, 0.001, a.pitch[1] * PITCH_SCALE);
         positions.setXYZ(segment * 2 + 1, b.pitch[0] * PITCH_SCALE, 0.001, b.pitch[1] * PITCH_SCALE);
