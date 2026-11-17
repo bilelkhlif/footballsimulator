@@ -159,7 +159,7 @@ supervision fournissait `sv.ByteTrack` ; sa branche de développement ne contien
 | --- | --- | --- | --- |
 | `TeamClassifier` de Roboflow Sports | MIT | voir plus haut | Plongements SigLIP, réduits par UMAP, regroupés par KMeans : aucun entraînement. **Retenu, adapté** |
 | [SigLIP base patch16-224](https://huggingface.co/google/siglip-base-patch16-224) | Apache-2.0 | 26/09/2024 | Poids de 813 Mo, téléchargés par transformers. Modèle par défaut du prototype, comme chez Roboflow |
-| [CLIP ViT-L/14](https://huggingface.co/openai/clip-vit-large-patch14) | aucune sur la fiche ; code d'OpenAI sous MIT | 15/09/2023 | Même rôle que SigLIP. La fiche le réserve à la recherche : « Any deployed use case of the model […] is currently out of scope. » Option du prototype, utilisée pour la validation parce qu'il était déjà sur la machine (partie 4 de [visualiseur-match.md](visualiseur-match.md)) |
+| [CLIP ViT-L/14](https://huggingface.co/openai/clip-vit-large-patch14) | aucune sur la fiche ; code d'OpenAI sous MIT | 15/09/2023 | Même rôle que SigLIP. La fiche le réserve à la recherche : « Any deployed use case of the model […] is currently out of scope. » Option du prototype, utilisée pour la validation parce qu'il était déjà sur la machine (partie 6 de [visualiseur-match.md](visualiseur-match.md)) |
 | [UMAP](https://github.com/lmcinnes/umap) et [scikit-learn](https://github.com/scikit-learn/scikit-learn) | BSD-3-Clause | 17/11/2026 | Réduction de dimension et KMeans |
 | [jersey-number-pipeline](https://github.com/mkoshkina/jersey-number-pipeline) | Creative Commons **non commerciale** | 07/10/2024 | Lisibilité, pose (ViTPose), lecture (PARSeq) : chaîne lourde, non commerciale. Non retenue |
 | [SoccerNet/sn-jersey](https://github.com/SoccerNet/sn-jersey) | **aucune** | 02/07/2024 | Trousse du défi ; non réutilisable |
@@ -246,7 +246,7 @@ GPU : « + » utile, « ++ » nécessaire en pratique. Direct : « oui » si l'o
 - un format de données horodaté, avec confiance et causes d'échec, commun au fichier et au futur direct ;
 - le serveur local, sa file d'analyses, et la lecture partielle de la vidéo ;
 - la superposition interactive : le terrain 3D dans la vidéo, déplaçable, redimensionnable, réductible et verrouillable ; le choix automatique de la zone la moins encombrée ; la synchronisation à l'image près ; les étiquettes sur la vidéo ; les traces, les flèches de déplacement et les mesures ;
-- les mesures de qualité sans vérité terrain (partie 4 de [visualiseur-match.md](visualiseur-match.md)).
+- les mesures de qualité sans vérité terrain (partie 6 de [visualiseur-match.md](visualiseur-match.md)).
 
 ---
 
