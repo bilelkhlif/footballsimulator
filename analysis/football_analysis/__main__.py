@@ -91,9 +91,11 @@ def command_serve(arguments: argparse.Namespace) -> int:
     disable_ultralytics_analytics()
     options = build_options(arguments)
     store = JobStore(DATA_DIR / "jobs")
-    store.mark_interrupted()
+    pending = store.recover()
     worker = AnalysisWorker(store, lambda path, progress, name: analyse_video(path, options, progress, name))
     worker.start()
+    for job_id in pending:
+        worker.submit(job_id)
     device = choose_device(options.device)
 
     def health() -> dict:

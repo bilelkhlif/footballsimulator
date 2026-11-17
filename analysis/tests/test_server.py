@@ -180,6 +180,34 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(self.request("/api/analyses/..%2F..%2Fsecret")[0], 404)
 
 
+class RecoveryTest(unittest.TestCase):
+    """Reprise des travaux après un arrêt du serveur.
+
+    @responsable Bilel Khlif
+    @date 2026-11-17
+    @role Tests de l'analyse vidéo — serveur
+    """
+
+    def test_queued_upload_survives_a_restart(self):
+        """En file et vidéo vérifiée : relancé ; en cours ou inachevé : déclaré interrompu.
+
+        @responsable Bilel Khlif
+        @date 2026-11-17
+        @role Tests de l'analyse vidéo — serveur
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            store = JobStore(Path(directory))
+            queued, _ = store.create("a.mp4", ".mp4")
+            store.update(queued, status="queued", video={"fps": 25.0})
+            running, _ = store.create("b.mp4", ".mp4")
+            store.update(running, status="running", video={"fps": 25.0})
+            receiving, _ = store.create("c.mp4", ".mp4")
+            self.assertEqual(store.recover(), [queued])
+            self.assertEqual(store.get(running)["status"], "failed")
+            self.assertEqual(store.get(receiving)["status"], "failed")
+            self.assertEqual(store.get(queued)["status"], "queued")
+
+
 class RangeTest(unittest.TestCase):
     """Lecture de l'en-tête Range.
 

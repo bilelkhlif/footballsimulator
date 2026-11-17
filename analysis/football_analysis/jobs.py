@@ -2,7 +2,8 @@
 
 Un seul travail à la fois : le GPU est la ressource rare. Chaque travail a son dossier
 (data/jobs/<id>/) avec la vidéo source, son état (status.json) et, à la fin, son document de suivi
-(tracking.json). Au redémarrage du serveur, un travail resté « en cours » est déclaré interrompu.
+(tracking.json). Au redémarrage du serveur, un travail resté « en cours » est déclaré interrompu ;
+un travail encore en file, dont la vidéo est arrivée entière, est remis en file.
 
 Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
 """
@@ -153,16 +154,25 @@ class JobStore:
         """
         return self.directory(job_id) / "tracking.json"
 
-    def mark_interrupted(self) -> None:
-        """Déclare interrompus les travaux laissés en attente ou en cours par un arrêt du serveur.
+    def recover(self) -> list[str]:
+        """Remet en ordre les travaux laissés par un arrêt du serveur ; renvoie ceux à remettre en file.
+
+        Un travail en file, dont la vidéo est arrivée et a été vérifiée, est rendu pour être relancé
+        (défaut constaté : un téléversement complet était perdu au redémarrage). Un travail en cours
+        est déclaré interrompu, sans relance : s'il a fait tomber le serveur, il le referait.
+        Un téléversement inachevé est déclaré interrompu.
 
         @responsable Bilel Khlif
         @date 2026-11-17
         @role Analyse vidéo — file des analyses (stockage)
         """
-        for status in self.list():
-            if status["status"] in ("receiving", "queued", "running"):
+        resubmit = []
+        for status in sorted(self.list(), key=lambda s: s["createdAt"]):
+            if status["status"] == "queued" and status.get("video"):
+                resubmit.append(status["id"])
+            elif status["status"] in ("receiving", "queued", "running"):
                 self.update(status["id"], status="failed", error="Analyse interrompue par l'arrêt du serveur.")
+        return resubmit
 
 
 class AnalysisWorker(threading.Thread):
