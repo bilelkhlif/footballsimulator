@@ -13,6 +13,49 @@
 export const ANNOTATION_COLORS = Object.freeze({ referee: '#202327', unknown: '#9aa0a6', selected: '#f4c542', ball: '#f4c542' });
 
 /**
+ * Luminance relative d'une couleur CSS « #rrggbb » (WCAG), entre 0 (noir) et 1 (blanc).
+ * @param {string} color
+ * @returns {number}
+ * @responsable Bilel Khlif
+ * @date 2026-11-17
+ * @role Visualiseur de match — annotations sur la vidéo (lisibilité)
+ */
+export function luminance(color) {
+  const channels = [1, 3, 5].map((start) => parseInt(color.slice(start, start + 2), 16) / 255)
+    .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+/**
+ * Couleur du texte posé sur une couleur : sombre sur un maillot clair, blanc sinon.
+ * @param {string} background couleur « #rrggbb »
+ * @returns {string}
+ * @responsable Bilel Khlif
+ * @date 2026-11-17
+ * @role Visualiseur de match — annotations sur la vidéo (lisibilité)
+ */
+export function readableText(background) {
+  return /^#[0-9a-f]{6}$/i.test(background) && luminance(background) > 0.45 ? '#111111' : '#ffffff';
+}
+
+/**
+ * Couleur d'accent lisible sur fond blanc : un maillot clair est assombri, les autres sont gardés.
+ * Sert aux numéros des pions 3D (disque blanc) et aux traces.
+ * @param {string} color couleur « #rrggbb »
+ * @returns {string}
+ * @responsable Bilel Khlif
+ * @date 2026-11-17
+ * @role Visualiseur de match — annotations sur la vidéo (lisibilité)
+ */
+export function accentOnWhite(color) {
+  if (!/^#[0-9a-f]{6}$/i.test(color) || luminance(color) <= 0.45) {
+    return color;
+  }
+  const darker = [1, 3, 5].map((start) => Math.round(parseInt(color.slice(start, start + 2), 16) * 0.4));
+  return `#${darker.map((value) => value.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/**
  * Rectangle de l'image dans un lecteur vidéo en object-fit: contain.
  * @param {{width: number, height: number}} element taille du lecteur, en pixels CSS
  * @param {{width: number, height: number}} video dimensions de la vidéo
@@ -145,7 +188,7 @@ export class VideoAnnotations {
       ctx.beginPath();
       ctx.roundRect(footX - labelWidth / 2, footY + 5, labelWidth, 15, 4);
       ctx.fill();
-      ctx.fillStyle = selected ? '#111' : '#fff';
+      ctx.fillStyle = selected ? '#111' : readableText(color);
       ctx.fillText(label, footX, footY + 12.5);
     }
     if (sample.ball) {

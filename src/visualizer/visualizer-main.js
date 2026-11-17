@@ -319,7 +319,9 @@ class MatchVisualizer {
       showArrows: this.options.arrows, centroids: teamCentroids(sample.objects),
     }) ?? null;
     this.#autoPlace(time);
-    if (performance.now() - this.lastPanelUpdate > 200) {
+    // Panneaux : aussitôt que l'image analysée change (après un déplacement), sinon 5 fois par seconde.
+    if (sample.frame !== this.lastPanelFrame || performance.now() - this.lastPanelUpdate > 200) {
+      this.lastPanelFrame = sample.frame;
       this.lastPanelUpdate = performance.now();
       this.#renderFrameInfo(sample, velocities);
       this.#renderControls(time);

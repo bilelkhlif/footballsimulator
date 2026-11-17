@@ -16,7 +16,7 @@ import { describeCalibration, formatShare, formatTime } from '../../src/visualiz
 import { clampRect } from '../../src/visualizer/overlay-frame.js';
 import { pitchToScene, poolKey } from '../../src/visualizer/overlay-pitch.js';
 import { TrackingStore } from '../../src/visualizer/tracking-store.js';
-import { annotationColor, boxToDisplay, containRect, VideoAnnotations } from '../../src/visualizer/video-annotations.js';
+import { accentOnWhite, annotationColor, boxToDisplay, containRect, readableText, VideoAnnotations } from '../../src/visualizer/video-annotations.js';
 import { PITCH_SCALE } from '../../src/config.js';
 
 const CALIBRATED = { status: 'ok', keypoints: 9, inliers: 8, errorPx: 2.4, errorM: 0.31, homography: [1, 0, 0, 0, 1, 0, 0, 0, 1] };
@@ -231,4 +231,12 @@ test('client de l\'API : serveur absent, erreurs lisibles, attente de la fin d\'
   const final = await waitForAnalysis('20261117-120000-abcdef', (status) => seen.push(status.status), { fetcher, interval: 1 });
   assert.equal(final.status, 'done');
   assert.deepEqual(seen, ['queued', 'running', 'done']);
+});
+
+test('lisibilité : texte sombre sur un maillot clair, numéros 3D assombris pour un maillot blanc', () => {
+  assert.equal(readableText('#f7f8ed'), '#111111', 'maillot blanc mesuré sur la vidéo de la Bundesliga');
+  assert.equal(readableText('#2f55d4'), '#ffffff');
+  assert.equal(readableText('rgb(0,0,0)'), '#ffffff', 'couleur illisible : blanc par défaut');
+  assert.equal(accentOnWhite('#f7f8ed'), '#63635f');
+  assert.equal(accentOnWhite('#6e726b'), '#6e726b', 'maillot sombre gardé tel quel');
 });

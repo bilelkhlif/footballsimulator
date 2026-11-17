@@ -23,6 +23,7 @@ import { isTap } from '../pointer-input.js';
 import { pickTarget, pointerToNdc, setRayFromCamera } from '../raycasting.js';
 import { buildArrowGeometry } from '../tactical-arrows.js';
 import { createWebGpuRenderer } from '../webgpu.js';
+import { accentOnWhite } from './video-annotations.js';
 
 /** Taille de la réserve de pions de chaque groupe. */
 export const POOL_SIZES = Object.freeze({ 0: 20, 1: 20, unknown: 14, referee: 5 });
@@ -309,7 +310,8 @@ export class OverlayPitch {
     }
     for (const [key, size] of Object.entries(POOL_SIZES)) {
       const css = colors[key] ?? NEUTRAL_COLORS.unknown;
-      const team = { id: `vz-${key}`, color: new THREE.Color(css).getHex(), cssColor: css, attacksPositiveX: true };
+      // Le pion garde la couleur du maillot ; son numéro (disque blanc) et ses traces, une couleur lisible.
+      const team = { id: `vz-${key}`, color: new THREE.Color(css).getHex(), cssColor: accentOnWhite(css), attacksPositiveX: true };
       this.pools.set(key, new PlayerPool(this.factory, team, size, this.pitchGroup));
     }
   }
