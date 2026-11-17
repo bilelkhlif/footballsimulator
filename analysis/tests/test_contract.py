@@ -123,6 +123,22 @@ class MetricsTest(unittest.TestCase):
         self.assertIn("Calibration impossible sur 25 %", notes)
         self.assertIn("numéros de maillot", notes)
 
+    def test_unbalanced_teams_are_flagged(self):
+        """Huit joueurs sur dix dans la même équipe à chaque image : équipes signalées comme suspectes.
+
+        @responsable Bilel Khlif
+        @date 2026-11-17
+        @role Tests de l'analyse vidéo — mesures de qualité
+        """
+        unbalanced = [player(i, i, team=0 if i <= 8 else 1) for i in range(1, 11)]
+        balanced = [player(i, i, team=i % 2) for i in range(1, 11)]
+        bad = quality_metrics([make_frame(0, 0.0, 0, False, CALIBRATED, unbalanced, None)])
+        good = quality_metrics([make_frame(0, 0.0, 0, False, CALIBRATED, balanced, None)])
+        self.assertEqual(bad["teams"]["medianMajorityShare"], 0.8)
+        self.assertEqual(good["teams"]["medianMajorityShare"], 0.5)
+        self.assertIn("Équipes probablement fausses", " ".join(describe_limitations(bad)))
+        self.assertNotIn("Équipes probablement fausses", " ".join(describe_limitations(good)))
+
     def test_fragmentation(self):
         """Six joueurs vus ensemble, neuf identifiants dans le plan : indice 1,5.
 

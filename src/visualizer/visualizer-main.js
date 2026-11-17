@@ -434,6 +434,7 @@ class MatchVisualizer {
       ['Ballon détecté', `${formatShare(detection.ballFrameShare)} des images`],
       ['Trajectoires', `${tracking.tracks ?? '—'}, fragmentation ${formatNumber(tracking.fragmentation, 2)}`],
       ['Équipe connue', `${formatShare(teams.knownTeamShare)} des observations`],
+      ['Équilibre des équipes', `${formatShare(teams.medianMajorityShare)} des joueurs d'une image dans la même équipe (vers 50 % attendu)`],
       ['Traitement', `${formatNumber(processing.slowdown)} fois la durée de la vidéo (${formatNumber(processing.analysedFramesPerSecond)} images analysées/s, ${processing.device ?? '—'})`],
     ];
     byId('quality-list').replaceChildren(...rows.flatMap(([label, value]) => {

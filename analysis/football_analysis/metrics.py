@@ -13,7 +13,11 @@ indicateurs, calculés sur le document de suivi lui-même, et nommés comme tels
 - Positions : part des observations placées sur le terrain, et part des déplacements
   invraisemblables (plus de 12 m/s entre deux analyses rapprochées du même joueur), qui trahissent
   un tremblement de la calibration ou un échange d'identifiants.
-- Équipes : trajectoires par équipe, part des observations de joueurs dont l'équipe est connue.
+- Équipes : trajectoires par équipe, part des observations de joueurs dont l'équipe est connue, et
+  équilibre des équipes dans chaque image. Sur une vidéo de télévision, chaque image montre à peu
+  près autant de joueurs de chaque équipe : sur les sept vidéos justes, l'équipe majoritaire d'une
+  image en réunit 50 à 55 % (médiane), contre 80 % sur la vidéo où soleil et ombre ont faussé les
+  équipes. Les votes, eux, y étaient unanimes : la confiance du vote ne repère pas ce défaut.
 
 Les mesures de traitement (durée, mémoire) sont ajoutées par le pipeline.
 
@@ -34,6 +38,12 @@ MAX_SPEED_GAP_S = 0.5
 
 #: Durée en dessous de laquelle une trajectoire est jugée brève, en secondes.
 SHORT_TRACK_S = 1.0
+
+#: Part médiane de l'équipe majoritaire par image au-delà de laquelle les équipes sont suspectes.
+MAX_MAJORITY_SHARE = 0.65
+
+#: Nombre minimal de joueurs classés dans une image pour juger de l'équilibre des équipes.
+MIN_PLAYERS_FOR_BALANCE = 8
 
 
 def _quantile(values: list[float], q: float) -> float | None:
@@ -194,7 +204,9 @@ def team_metrics(frames: list[dict[str, Any]]) -> dict[str, Any]:
     """
     tracks_by_team: dict[str, set[int]] = defaultdict(set)
     players = known = 0
+    majority_shares = []
     for frame in frames:
+        counts = Counter()
         for obj in frame["objects"]:
             if obj["role"] == "referee":
                 continue
@@ -202,9 +214,15 @@ def team_metrics(frames: list[dict[str, Any]]) -> dict[str, Any]:
             if obj["role"] == "player":
                 players += 1
                 known += obj["team"] is not None
+                if obj["team"] is not None:
+                    counts[obj["team"]] += 1
+        classified = sum(counts.values())
+        if classified >= MIN_PLAYERS_FOR_BALANCE:
+            majority_shares.append(max(counts.values()) / classified)
     return {
         "tracksByTeam": {team: len(ids) for team, ids in sorted(tracks_by_team.items())},
         "knownTeamShare": _share(known, players),
+        "medianMajorityShare": None if not majority_shares else round(median(majority_shares), 3),
     }
 
 
@@ -250,6 +268,11 @@ def describe_limitations(metrics: dict[str, Any]) -> list[str]:
     if jumps:
         notes.append(f"{round(jumps * 100, 1)} % des déplacements mesurés dépassent {MAX_PLAUSIBLE_SPEED:g} m/s : "
                      "tremblement de la calibration ou échange d'identifiants.")
+    majority = metrics["teams"].get("medianMajorityShare")
+    if majority is not None and majority > MAX_MAJORITY_SHARE:
+        notes.append(f"Équipes probablement fausses : dans une image typique, {round(majority * 100)} % des joueurs "
+                     "classés sont dans la même équipe, au lieu d'environ la moitié. La lumière (soleil et ombre) "
+                     "peut l'emporter sur la couleur des maillots.")
     known = metrics["teams"]["knownTeamShare"]
     if known is not None and known < 0.95:
         notes.append(f"Équipe inconnue pour {round((1 - known) * 100)} % des observations de joueurs "
