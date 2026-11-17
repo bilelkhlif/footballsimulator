@@ -26,7 +26,8 @@ from .calibration import CalibrationSettings, PitchCalibrator, foot_points, pitc
 from .detection import DetectionSettings, FootballDetector
 from .metrics import describe_limitations, quality_metrics
 from .models import MODELS_DIR, missing_models, model_path, sha256
-from .teams import BACKBONES, CropCollector, assign_player_teams, build_classifier, resolve_goalkeepers, team_colour
+from .teams import (BACKBONES, MIN_CROPS_TO_FIT, CropCollector, TeamAssignment, assign_player_teams,
+                    build_classifier, resolve_goalkeepers, team_colour)
 from .tracking import CutDetector, PeopleTracker
 
 #: Rappel de progression : étape, avancement entre 0 et 1 (ou None), message.
@@ -181,7 +182,8 @@ def _load_models(options: AnalysisOptions, device: str) -> tuple[FootballDetecto
     calibrator = PitchCalibrator(pitch, CalibrationSettings(), predict)
     described = {name: {"file": model_path(name, options.models_dir).name,
                         "sha256": sha256(model_path(name, options.models_dir))} for name in needed}
-    described["teams"] = {"embeddings": BACKBONES[options.team_backbone], "method": "UMAP + KMeans, vote par trajectoire"}
+    described["teams"] = {"embeddings": BACKBONES[options.team_backbone],
+                          "method": "torse + UMAP + KMeans, vote par trajectoire"}
     return detector, calibrator, described
 
 
@@ -338,9 +340,14 @@ def _assign_teams(frames: list, collector: CropCollector, role_votes: dict, opti
     """
     roles = {track: votes.most_common(1)[0][0] for track, votes in role_votes.items()}
     player_crops = {track: crops for track, crops in collector.crops.items() if roles.get(track) == "player"}
-    classifier = build_classifier(options.team_backbone, "cuda" if device.startswith("cuda") else "cpu", options.seed)
-    assignments, crops_by_team = assign_player_teams(classifier, player_crops)
-    del classifier
+    if sum(map(len, player_crops.values())) < MIN_CROPS_TO_FIT:
+        # Pas assez d'images : le résultat reste inconnu, sans charger un modèle de 0,8 à 1,6 Go.
+        assignments = {track: TeamAssignment(None, None, 0) for track in player_crops}
+        crops_by_team = {}
+    else:
+        classifier = build_classifier(options.team_backbone, "cuda" if device.startswith("cuda") else "cpu", options.seed)
+        assignments, crops_by_team = assign_player_teams(classifier, player_crops)
+        del classifier
     for track, role in roles.items():
         if role == "player" and track not in assignments:
             assignments[track] = None

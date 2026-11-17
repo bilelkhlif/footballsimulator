@@ -6,10 +6,14 @@ deux équipes avec KMeans. Aucun entraînement : les groupes sont appris sur la 
 
 Adaptations :
 
+- les plongements portent sur le torse (15 à 55 % de la hauteur, 20 à 80 % de la largeur), pour
+  limiter le fond, la tête et le short ; les images originales restent utilisées pour les couleurs ;
 - l'exemple de Roboflow prédit l'équipe de chaque joueur à chaque image ; ici, chaque trajectoire
   vote sur quelques images bien séparées des autres joueurs, et reçoit l'équipe majoritaire avec
   sa part des votes. Un joueur ne change donc plus de couleur d'une image à l'autre ;
 - les plongements sont calculés une seule fois pour l'apprentissage et les votes ;
+- la conversion des images et l'inférence se font par lots bornés, sans préparer toutes les images
+  en mémoire à la fois ;
 - UMAP et KMeans reçoivent une graine : deux analyses de la même vidéo donnent les mêmes équipes ;
 - CLIP ViT-L/14 peut remplacer SigLIP (option « clip ») ; sa fiche le réserve à la recherche ;
 - les gardiens rejoignent l'équipe dont le centre est le plus proche, comme chez Roboflow, mais
@@ -139,6 +143,8 @@ def build_classifier(backbone: str, device: str, seed: int = 0) -> Any:
     @date 2026-11-17
     @role Analyse vidéo — équipes (classifieur réutilisé)
     """
+    if backbone not in BACKBONES:
+        raise ValueError(f"modèle de plongements inconnu : {backbone}")
     import umap
     from sklearn.cluster import KMeans
     from sports.common.team import TeamClassifier
@@ -155,11 +161,47 @@ def build_classifier(backbone: str, device: str, seed: int = 0) -> Any:
         classifier.batch_size = 32
         classifier.features_model = CLIPVisionModel.from_pretrained(BACKBONES["clip"]).to(device)
         classifier.processor = CLIPImageProcessor.from_pretrained(BACKBONES["clip"])
-    else:
-        raise ValueError(f"modèle de plongements inconnu : {backbone}")
-    classifier.reducer = umap.UMAP(n_components=3, random_state=seed)
+    classifier.features_model.eval()
+    # UMAP 0.6 annonce un changement de méthode par défaut : conserver celle qui a été validée.
+    classifier.reducer = umap.UMAP(n_components=3, random_state=seed, compatibility_layout=True)
     classifier.cluster_model = KMeans(n_clusters=2, n_init=10, random_state=seed)
     return classifier
+
+
+def prepare_team_crop(image: np.ndarray) -> np.ndarray:
+    """Cadre le torse pour que le fond et le short pèsent moins dans le plongement.
+
+    Les proportions sont les mêmes pour SigLIP et CLIP. Aucune égalisation de lumière : la CLAHE
+    a dégradé plusieurs vidéos de validation. L'image d'origine n'est pas modifiée.
+
+    @responsable Bilel Khlif
+    @date 2026-11-17
+    @role Analyse vidéo — équipes (préparation des maillots)
+    """
+    height, width = image.shape[:2]
+    top, left = int(height * 0.15), int(width * 0.2)
+    bottom, right = max(top + 1, int(height * 0.55)), max(left + 1, int(width * 0.8))
+    return image[top:bottom, left:right]
+
+
+def extract_team_features(classifier: Any, crops: list[np.ndarray]) -> np.ndarray:
+    """Extrait les plongements des maillots par lots, dans l'ordre des images reçues.
+
+    Le prétraitement reste séparé du regroupement : il peut aussi préparer les images suivantes
+    d'un futur flux. La conversion PIL et les tenseurs du classifieur ne portent que sur un lot.
+
+    @responsable Bilel Khlif
+    @date 2026-11-17
+    @role Analyse vidéo — équipes (inférence par lots)
+    """
+    if not crops:
+        return np.empty((0, 0), dtype=np.float32)
+    batch_size = max(1, getattr(classifier, "batch_size", 32))
+    features = []
+    for offset in range(0, len(crops), batch_size):
+        batch = [prepare_team_crop(image) for image in crops[offset:offset + batch_size]]
+        features.append(classifier.extract_features(batch))
+    return np.concatenate(features)
 
 
 def cluster_crops(classifier: Any, crops: list[np.ndarray]) -> np.ndarray:
@@ -171,7 +213,7 @@ def cluster_crops(classifier: Any, crops: list[np.ndarray]) -> np.ndarray:
     @date 2026-11-17
     @role Analyse vidéo — équipes (classifieur réutilisé)
     """
-    features = classifier.extract_features(crops)
+    features = extract_team_features(classifier, crops)
     projections = classifier.reducer.fit_transform(features)
     return classifier.cluster_model.fit_predict(projections)
 
