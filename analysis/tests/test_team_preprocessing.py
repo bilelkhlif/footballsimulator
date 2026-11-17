@@ -105,6 +105,23 @@ class TeamPreprocessingTest(unittest.TestCase):
         self.assertEqual(features.shape[0], 0)
         self.assertEqual(classifier.batch_lengths, [])
 
+    def test_full_person_policy_preserves_clip_inputs(self):
+        """La politique CLIP conserve le contexte de l'image au lieu de ne garder que le maillot.
+
+        @responsable Bilel Khlif
+        @date 2026-11-17
+        @role Tests de l'analyse vidéo — cadrage selon le modèle
+        """
+        image = np.full((100, 80, 3), (30, 140, 40), dtype=np.uint8)
+        image[15:55, 16:64] = (20, 30, 210)
+        classifier = RecordingExtractor()
+        classifier.crop_torso = False
+
+        features = extract_team_features(classifier, [image])
+
+        np.testing.assert_array_equal(features, [image.mean(axis=(0, 1))])
+        self.assertFalse(np.array_equal(features[0], prepare_team_crop(image).mean(axis=(0, 1))))
+
 
 class TeamLoadingTest(unittest.TestCase):
     """Les entrées insuffisantes ou invalides ne chargent pas les dépendances des modèles.

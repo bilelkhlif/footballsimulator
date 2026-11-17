@@ -6,8 +6,9 @@ deux équipes avec KMeans. Aucun entraînement : les groupes sont appris sur la 
 
 Adaptations :
 
-- les plongements portent sur le torse (15 à 55 % de la hauteur, 20 à 80 % de la largeur), pour
-  limiter le fond, la tête et le short ; les images originales restent utilisées pour les couleurs ;
+- avec SigLIP, les plongements portent sur le torse (15 à 55 % de la hauteur, 20 à 80 % de la
+  largeur), pour limiter le fond, la tête et le short ; CLIP garde la personne entière, car le
+  même cadrage y dégrade les équipes ; les originaux restent utilisés pour les couleurs ;
 - l'exemple de Roboflow prédit l'équipe de chaque joueur à chaque image ; ici, chaque trajectoire
   vote sur quelques images bien séparées des autres joueurs, et reçoit l'équipe majoritaire avec
   sa part des votes. Un joueur ne change donc plus de couleur d'une image à l'autre ;
@@ -162,6 +163,7 @@ def build_classifier(backbone: str, device: str, seed: int = 0) -> Any:
         classifier.features_model = CLIPVisionModel.from_pretrained(BACKBONES["clip"]).to(device)
         classifier.processor = CLIPImageProcessor.from_pretrained(BACKBONES["clip"])
     classifier.features_model.eval()
+    classifier.crop_torso = backbone == "siglip"
     # UMAP 0.6 annonce un changement de méthode par défaut : conserver celle qui a été validée.
     classifier.reducer = umap.UMAP(n_components=3, random_state=seed, compatibility_layout=True)
     classifier.cluster_model = KMeans(n_clusters=2, n_init=10, random_state=seed)
@@ -171,8 +173,9 @@ def build_classifier(backbone: str, device: str, seed: int = 0) -> Any:
 def prepare_team_crop(image: np.ndarray) -> np.ndarray:
     """Cadre le torse pour que le fond et le short pèsent moins dans le plongement.
 
-    Les proportions sont les mêmes pour SigLIP et CLIP. Aucune égalisation de lumière : la CLAHE
-    a dégradé plusieurs vidéos de validation. L'image d'origine n'est pas modifiée.
+    Ce cadrage est utilisé avec SigLIP. CLIP conserve la personne entière après son contrôle de
+    régression. Aucune égalisation de lumière : la CLAHE a dégradé plusieurs vidéos de validation.
+    L'image d'origine n'est pas modifiée.
 
     @responsable Bilel Khlif
     @date 2026-11-17
@@ -188,7 +191,8 @@ def extract_team_features(classifier: Any, crops: list[np.ndarray]) -> np.ndarra
     """Extrait les plongements des maillots par lots, dans l'ordre des images reçues.
 
     Le prétraitement reste séparé du regroupement : il peut aussi préparer les images suivantes
-    d'un futur flux. La conversion PIL et les tenseurs du classifieur ne portent que sur un lot.
+    d'un futur flux. SigLIP cadre le torse ; CLIP conserve le découpage entier. La conversion PIL
+    et les tenseurs du classifieur ne portent que sur un lot.
 
     @responsable Bilel Khlif
     @date 2026-11-17
@@ -199,7 +203,9 @@ def extract_team_features(classifier: Any, crops: list[np.ndarray]) -> np.ndarra
     batch_size = max(1, getattr(classifier, "batch_size", 32))
     features = []
     for offset in range(0, len(crops), batch_size):
-        batch = [prepare_team_crop(image) for image in crops[offset:offset + batch_size]]
+        batch = crops[offset:offset + batch_size]
+        if getattr(classifier, "crop_torso", True):
+            batch = [prepare_team_crop(image) for image in batch]
         features.append(classifier.extract_features(batch))
     return np.concatenate(features)
 

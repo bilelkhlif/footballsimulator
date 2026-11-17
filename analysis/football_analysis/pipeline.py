@@ -182,8 +182,9 @@ def _load_models(options: AnalysisOptions, device: str) -> tuple[FootballDetecto
     calibrator = PitchCalibrator(pitch, CalibrationSettings(), predict)
     described = {name: {"file": model_path(name, options.models_dir).name,
                         "sha256": sha256(model_path(name, options.models_dir))} for name in needed}
+    crop_method = "torse" if options.team_backbone == "siglip" else "personne entière"
     described["teams"] = {"embeddings": BACKBONES[options.team_backbone],
-                          "method": "torse + UMAP + KMeans, vote par trajectoire"}
+                          "method": f"{crop_method} + UMAP + KMeans, vote par trajectoire"}
     return detector, calibrator, described
 
 
