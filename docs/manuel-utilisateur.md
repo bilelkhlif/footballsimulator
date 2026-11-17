@@ -33,7 +33,10 @@ Pour l'AR, choisissez une table bien éclairée, avec un peu de texture : bois, 
 
 ## 2. Ouvrir et installer l'application
 
-1. Ouvrez **https://bilelkhlif.github.io/footballsimulator/** dans Chrome.
+1. Ouvrez **https://bilelkhlif.github.io/footballsimulator/** dans Chrome, ou scannez ce QR code avec l'appareil photo du téléphone :
+
+   <img src="images/qr-code.png" alt="QR code vers https://bilelkhlif.github.io/footballsimulator/" width="160">
+
 2. Facultatif : touchez « Installer l'application », ou menu ⋮ → « Installer l'application ». L'icône « Football Sim » apparaît sur l'écran d'accueil, et l'application s'ouvre ensuite sans barre d'adresse.
 
 Après une première ouverture, l'application se lance aussi **sans réseau** : le badge « Hors-ligne » s'affiche alors. Quand une nouvelle version est publiée, l'avis « Nouvelle version installée. » apparaît : touchez « Recharger ».

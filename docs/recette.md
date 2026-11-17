@@ -34,11 +34,11 @@ Trois niveaux de validation sont distingués. Seul le premier vaut pour un crit�
 
 | Critère | Validé si | Automatisée et émulée | Physique | Statut |
 | --- | --- | --- | --- | --- |
-| Le terrain se pose sur une surface réelle | Stable pendant 1 minute | Le terrain suit son ancre ; sa pose est inchangée pendant l'interaction et la lecture d'une séquence ; suivi interrompu, puis rétabli | Non mesuré | **À valider sur téléphone** (essai C) |
+| Le terrain se pose sur une surface réelle | Stable pendant 1 minute | Le terrain suit son ancre ; sa pose est inchangée pendant l'interaction et la lecture d'une séquence ; suivi interrompu, puis rétabli | Non mesuré | **À valider sur téléphone** (P2) |
 | La formation choisie s'applique correctement | 11 joueurs bien placés | Pour les 4 formations et les 2 équipes : numéros 1 à 11, chacun dans sa moitié et hors du rond central, aucun chevauchement (écart minimal 7,1 cm) ; boutons au millimètre, en vue 3D et en AR | Non mesuré | **Validé** (automatisé) |
-| Un joueur peut être sélectionné et déplacé | Réussite sur 9 essais sur 10 | 0,000 mm à chaque essai automatisé, en vue 3D et en AR émulée | Non mesuré | **À valider sur téléphone** (essai A) |
-| L'application reste fluide | Au moins 30 images par seconde | Banc de mesure sur PC, processeur ralenti 4 fois : 62,5 images par seconde en AR émulée, 76,9 à 90,1 en vue 3D ([sprint-6.md](sprint-6.md#3-performance--mesurer-puis-optimiser)). Indicatif seulement | Non mesuré | **À valider sur téléphone** (essai D) |
-| L'application se lance hors-ligne | Après une première visite | Rechargement hors-ligne, à la racine et sous le sous-chemin de GitHub Pages ; page prête en 1,1 s quand le serveur met 30 s à répondre ; hors-ligne après une mise à jour | Non mesuré | **Validé** (automatisé) ; à confirmer sur téléphone (essai F) |
+| Un joueur peut être sélectionné et déplacé | Réussite sur 9 essais sur 10 | 0,000 mm à chaque essai automatisé, en vue 3D et en AR émulée | Non mesuré | **À valider sur téléphone** (P3) |
+| L'application reste fluide | Au moins 30 images par seconde | Banc de mesure sur PC, processeur ralenti 4 fois : 62,5 images par seconde en AR émulée, 76,9 à 90,1 en vue 3D ([sprint-6.md](sprint-6.md#3-performance--mesurer-puis-optimiser)). Indicatif seulement | Non mesuré | **À valider sur téléphone** (P4) |
+| L'application se lance hors-ligne | Après une première visite | Rechargement hors-ligne, à la racine et sous le sous-chemin de GitHub Pages ; page prête en 1,1 s quand le serveur met 30 s à répondre ; hors-ligne après une mise à jour | Non mesuré | **Validé** (automatisé) ; à confirmer sur téléphone (P7) |
 
 ## 3. Besoins non fonctionnels (cahier §2.3) et exigences de l'enseignant
 
@@ -54,34 +54,100 @@ Trois niveaux de validation sont distingués. Seul le premier vaut pour un crit�
 
 ## 4. Ce qui reste à faire sur téléphone
 
-1. Stabilité du terrain pendant une minute (essai C).
-2. Sélection et déplacement : 9 essais sur 10, à 60 cm et à 1 m (essai A).
-3. Fluidité : au moins 30 images par seconde avec le mode diagnostic (essai D).
-4. Lancement hors-ligne (essai F), séquence animée en AR (essai G), installation et mise à jour (essai H).
-5. Flèches et annulation (essai B), interface et fin de session (essai E).
+Toute la partie 5, sur la version finale : environ 45 minutes, par un membre de l'équipe, avec le téléphone et une table. Les quatre mesures du cahier sont en P2 (stabilité), P3 (9 essais sur 10), P4 (30 images par seconde) et P7 (hors-ligne).
 
 ---
 
 ## 5. Protocole de validation physique
 
-**Préparation.** Un téléphone Android compatible ARCore, de milieu de gamme, avec Android 12 ou plus, Chrome à jour et les Services Google Play pour la RA. Activer `chrome://flags/#webxr-webgpu-binding` (« Enabled »), relancer Chrome, puis ouvrir `https://bilelkhlif.github.io/footballsimulator/?diagnostics`. Noter le modèle, la version d'Android et celle de Chrome. Une table bien éclairée, avec un peu de texture (pas une surface blanche uniforme).
+Chaque essai donne un résultat simple, réussi ou non, avec sa mesure. **Ne noter « réussi » que pour ce qui a été vu sur le téléphone.** Un enregistrement d'écran du téléphone pendant les essais sert de preuve ; il est facultatif.
 
-**A à E** : sélection et déplacement (9 essais sur 10), flèches et annulation, stabilité d'une minute, images par seconde, interface et fin de session. Ces essais suivent le protocole détaillé de [sprint-5.md](sprint-5.md#11-protocole-de-validation-sur-téléphone).
+### P0. Préparation (10 minutes)
 
-**F. Hors-ligne.** Ouvrir l'application une fois avec le réseau, attendre le terrain, puis la fermer. Activer le mode avion, et la rouvrir par son icône si elle est installée, sinon par l'onglet. Attendu : le terrain s'affiche, avec le badge « Hors-ligne ». Entrer en AR et poser le terrain : l'AR ne demande pas de réseau.
+1. Téléphone Android compatible ARCore, sous Android 12 ou plus. Chrome et les « Services Google Play pour la RA » sont à jour (Play Store).
+2. Dans Chrome, ouvrir `chrome://flags/#webxr-webgpu-binding`, choisir « Enabled », puis toucher « Relaunch ».
+3. Avec le réseau, ouvrir `https://bilelkhlif.github.io/footballsimulator/?diagnostics`. Attendre les badges « Rendu WebGPU » et « AR disponible (WebGPU) ». Si l'avis « Nouvelle version installée » apparaît, toucher « Recharger ».
+4. Noter le modèle du téléphone, la version d'Android et celle de Chrome (`chrome://version`).
+5. Préparer une table bien éclairée, avec un peu de texture, une pièce de monnaie et un chronomètre.
 
-**G. Séquence animée en AR (BF9).** Poser le terrain, ouvrir « Séquence ». Enregistrer une « Image clé », déplacer deux joueurs et le ballon, enregistrer, recommencer une fois : 3 images clés. « Lecture » à 1×, puis à 2× ; « Pause » ; « Recommencer ». Pendant une lecture, tourner autour de la table. Attendu : les joueurs glissent d'une image à l'autre sur le terrain, et le terrain reste sur la table. Déplacer un joueur pendant la lecture : elle s'arrête, et les joueurs rejoignent leurs places. « Annuler » retire la dernière image clé.
+### P1. Détection de la surface et pose du terrain (BF1, BF2, BF3)
 
-**H. Installation et mise à jour.** Menu ⋮ → « Installer l'application », puis lancer depuis l'icône : l'application s'ouvre sans barre d'adresse. Après une nouvelle publication sur `main`, rouvrir l'application avec le réseau. Attendu : l'avis « Nouvelle version installée » ; « Recharger » donne la nouvelle version.
+1. Toucher « Entrer en AR », puis autoriser la caméra.
+2. Viser la table à environ 60 cm, en déplaçant lentement le téléphone. Attendu : un cercle doré sur la table, et l'aide « Touchez l'écran pour poser le terrain sur le cercle. »
+3. Toucher l'écran. Attendu : le terrain se pose sur le cercle, sa longueur face à soi ; la barre d'outils, « Formations » et « Séquence » apparaissent.
+4. Viser un mur ou le vide : pas de cercle ; un toucher ne pose rien.
+5. « Déplacer le terrain », viser un autre endroit de la table, toucher. Faire 3 poses en tout.
 
-| Date | Appareil (modèle, Android, Chrome) | Essai | Résultat |
+**Réussi si** les 3 poses tombent sur la table, à l'endroit du cercle.
+
+### P2. Stabilité pendant 60 secondes (critère du cahier)
+
+1. Terrain posé, poser la pièce sur la table, exactement sous un coin du plateau vu à l'écran.
+2. Lancer le chronomètre. Pendant 60 secondes, tourner lentement autour de la table en gardant le terrain à l'écran ; déplacer un joueur en chemin.
+3. Revenir au point de départ.
+
+**Réussi si** le coin du plateau est toujours sur la pièce, à moins de 1 cm, sans saut visible pendant la minute.
+
+### P3. Sélection et déplacement : au moins 9 essais sur 10 (critère du cahier)
+
+1. Debout à environ 60 cm de la table, mode « Déplacer ».
+2. Faire 10 essais, sur ces objets dans l'ordre : Bleus n° 1, 5, 9 et 11 ; Rouges n° 2, 6 et 10 ; le ballon ; Bleus n° 7 ; Rouges n° 8. Pour chacun, toucher l'objet, puis une place libre du terrain.
+3. Un essai réussit si l'objet touché est entouré de l'anneau doré dès le premier toucher, **et** s'il rejoint la place touchée, à moins d'une largeur de pion.
+4. « Réinitialiser », puis refaire les 10 essais à environ 1 m de la table.
+
+**Réussi si** chaque série compte au moins 9 réussites sur 10.
+
+### P4. Fluidité : au moins 30 images par seconde (critère du cahier)
+
+1. En AR, avec `?diagnostics` dans l'adresse, terrain posé : le panneau affiche « Images/s » et « CPU / image ».
+2. Pendant 60 secondes, en manipulant (déplacements, changement de formation, lecture d'une séquence), noter « Images/s » toutes les 10 secondes : 6 lectures.
+3. Noter une fois « CPU / image » et « Appels de dessin ».
+
+**Réussi si** les 6 lectures sont toutes d'au moins 30 images par seconde. Sinon, « CPU / image » aide à trouver la cause : proche de la durée d'une image, c'est le processeur central ; faible, c'est le processeur graphique.
+
+### P5. Formations, flèches, annulation et interface (BF4, BF7, BF8, DOM Overlay)
+
+1. « Formations » : Bleus en 3-5-2 et Rouges en 4-2-3-1, puis, comme dans le scénario du cahier, Bleus en 4-3-3 et Rouges en 4-4-2. Attendu, à chaque fois : 11 joueurs par équipe, chacun dans sa moitié, numéros 1 à 11 lisibles.
+2. « Passe » : du n° 6 au n° 11 des Bleus. Attendu : une flèche dorée. « Course » : du n° 9 vers l'avant. Attendu : une flèche blanche en tirets.
+3. « Annuler » : la course disparaît. « Rétablir » : elle revient.
+4. « Réinitialiser » : formations de départ, sans flèche. « Annuler » : tout revient.
+5. Sélectionner un joueur, puis toucher chaque bouton de la barre d'outils. Attendu : aucun joueur ne bouge.
+
+**Réussi si** chaque étape donne le résultat attendu.
+
+### P6. Séquence animée en AR réelle (BF9)
+
+1. « Séquence », puis « Image clé ».
+2. Déplacer le n° 9 et le ballon, puis « Image clé » ; déplacer le n° 7, puis « Image clé ». Attendu : « 3 images clés ».
+3. « Lecture » à 1× : les joueurs glissent d'une image à l'autre. « Pause », puis « Lecture » ; « 2× » ; « Recommencer ».
+4. Pendant une lecture, tourner autour de la table. Attendu : l'action reste sur le terrain, et le terrain reste en place.
+5. Pendant une lecture, déplacer un joueur. Attendu : la lecture s'arrête, et chacun rejoint sa place enregistrée.
+6. « Annuler » : la dernière image clé est retirée (« 2 images clés »).
+
+**Réussi si** chaque étape donne le résultat attendu.
+
+### P7. Hors-ligne, installation et mise à jour (critère du cahier)
+
+1. Menu ⋮ → « Installer l'application », ou bouton « Installer l'application ». L'ouvrir par son icône « Football Sim ». Attendu : pas de barre d'adresse.
+2. Fermer l'application, activer le mode avion, la rouvrir par son icône. Attendu : le terrain s'affiche, avec le badge « Hors-ligne ».
+3. Toujours en mode avion : « Entrer en AR », poser le terrain.
+4. Mise à jour, seulement après une nouvelle publication sur `main` : rouvrir l'application avec le réseau. Attendu : l'avis « Nouvelle version installée. » ; « Recharger » donne la nouvelle version.
+
+**Réussi si** les étapes 1 à 3 donnent le résultat attendu. L'étape 4 est notée « non applicable » s'il n'y a pas eu de nouvelle publication.
+
+### Fiche de résultats
+
+Appareil : ____________________ · Android : ______ · Chrome : ______ · Date : __________ · Testeur : ______________
+
+| Essai | Mesure à noter | Résultat | Réussi ? |
 | --- | --- | --- | --- |
-| à remplir | | A : 10 essais à 60 cm | |
-| à remplir | | A : 10 essais à 1 m | |
-| à remplir | | B : flèches et annulation | |
-| à remplir | | C : stabilité, 1 minute | |
-| à remplir | | D : images par seconde, en AR (moyenne, minimum) ; temps CPU par image | |
-| à remplir | | E : interface et fin de session | |
-| à remplir | | F : lancement hors-ligne, AR hors-ligne | |
-| à remplir | | G : séquence animée en AR | |
-| à remplir | | H : installation et mise à jour | |
+| P1 Pose du terrain | Poses réussies sur 3 | | |
+| P2 Stabilité, 60 s | Écart du coin avec la pièce (cm) ; saut visible ? | | |
+| P3 Sélection, 60 cm | Réussites sur 10 (essais 1 à 10 : ✓ ou ✗) | | |
+| P3 Sélection, 1 m | Réussites sur 10 | | |
+| P4 Fluidité | 6 lectures d'images/s ; CPU / image ; appels de dessin | | |
+| P5 Formations, flèches, annulation, interface | Étapes conformes sur 5 | | |
+| P6 Séquence en AR | Étapes conformes sur 6 | | |
+| P7 Hors-ligne, installation, mise à jour | Étapes conformes sur 3, et étape 4 | | |
+
+Les résultats se reportent dans ce tableau, et les statuts des parties 1 et 2 ne passent à « Validé » qu'avec leur mesure.

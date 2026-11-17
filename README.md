@@ -89,7 +89,15 @@
 
 Les comptes rendus sont dans [docs/sprint-1.md](docs/sprint-1.md) à [docs/sprint-6.md](docs/sprint-6.md). Le code est expliqué fichier par fichier, avec les questions probables du jury, dans [docs/guide-du-code.md](docs/guide-du-code.md) et dans les comptes rendus des sprints 2 à 6.
 
-Livrables de fin de projet (cahier §5.4) : [recette finale](docs/recette.md), [manuel utilisateur](docs/manuel-utilisateur.md), [diagrammes UML](docs/uml.md) (cas d'utilisation, séquence, déploiement, classes) et [script de la vidéo de démonstration](docs/video-demonstration.md).
+Livrables de fin de projet (cahier §5.2 et §5.4) :
+
+- [rapport final](docs/rapport-final.md) ;
+- [matrice de conformité au cahier des charges](docs/conformite.md) ;
+- [recette finale](docs/recette.md), avec le protocole à suivre sur téléphone ;
+- [manuel utilisateur](docs/manuel-utilisateur.md) ;
+- [diagrammes UML](docs/uml.md) : cas d'utilisation, séquence, déploiement, classes ;
+- [présentation de soutenance](docs/presentation/) ;
+- [storyboard et voix off de la vidéo de démonstration](docs/video-demonstration.md).
 
 ## Rendu WebGPU
 
@@ -310,6 +318,20 @@ Sur un téléphone dont Chrome bloque WebGPU (Android 11 ou plus ancien), l'appl
 
 Le protocole de validation finale, avec le tableau des résultats à remplir, est dans [docs/recette.md](docs/recette.md#5-protocole-de-validation-physique) ; le mode d'emploi complet, dans le [manuel utilisateur](docs/manuel-utilisateur.md).
 
+## Déploiement
+
+L'application est un site statique, sans compilation ni dépendance de production. GitHub Pages le publie depuis la branche `main`, à la racine du dépôt (Settings → Pages : « Deploy from a branch », `main`, `/`). Il le sert en HTTPS, exigé par WebXR et par le Service Worker, à l'adresse https://bilelkhlif.github.io/footballsimulator/.
+
+Pour publier une nouvelle version :
+
+1. sur une branche, faire la modification, puis lancer `npm run shell-version` si un fichier de l'application a changé ;
+2. lancer `npm test` ;
+3. ouvrir une pull request, la relire, puis la fusionner dans `main` ;
+4. GitHub Pages republie le site en une à deux minutes (onglet Actions, « pages build and deployment ») ;
+5. vérifier le site publié. Il affiche « Rendu WebGPU ». Les appareils qui avaient l'ancienne version reçoivent l'avis « Nouvelle version installée ».
+
+Pour un autre hébergeur, servir le dossier du dépôt tel quel, en HTTPS, avec le type MIME `text/javascript` pour les fichiers `.js`.
+
 ## Tests
 
 Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou plus, Google Chrome et un processeur graphique compatible WebGPU (l'application n'a pas de repli WebGL).
@@ -404,7 +426,10 @@ Résultat le 16 novembre 2026 : 182 tests unitaires et 79 vérifications de bout
     ├── sprint-4.md        Compte rendu du sprint 4 : formations et boutons
     ├── sprint-5.md        Compte rendu du sprint 5 : raycasting, flèches, Command
     ├── sprint-6.md        Compte rendu du sprint 6 : performance, fiabilité AR, BF9, PWA
-    ├── recette.md         Recette finale : BF1 à BF9 et critères d'acceptation
+    ├── rapport-final.md   Rapport final du projet
+    ├── conformite.md      Matrice de conformité au cahier des charges
+    ├── recette.md         Recette finale : BF1 à BF9, critères d'acceptation, protocole sur téléphone
+    ├── presentation/      Présentation de soutenance (PowerPoint, PDF) et diapositive d'ouverture de la vidéo
     ├── manuel-utilisateur.md  Manuel utilisateur illustré
     ├── uml.md             Diagrammes UML : cas d'utilisation, séquence, déploiement, classes
     ├── video-demonstration.md  Script de la vidéo de démonstration (5 minutes au plus)
