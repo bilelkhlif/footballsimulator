@@ -178,7 +178,7 @@ Revue critique du 17 novembre 2026 : toutes les vidéos ont été réanalysées 
 
 | Niveau | Contenu |
 | --- | --- |
-| **Automatisé** | 39 tests Python (sans GPU ni poids), 15 tests unitaires du visualiseur dans `npm test`, 15 vérifications de bout en bout dans Chrome avec WebGPU, sur des données synthétiques |
+| **Automatisé** | 40 tests Python (sans GPU ni poids), 15 tests unitaires du visualiseur dans `npm test`, 15 vérifications de bout en bout dans Chrome avec WebGPU, sur des données synthétiques |
 | **Mesuré sur de vraies vidéos** | 8 analyses (partie 6.2), dont deux téléversements complets par l'interface |
 | **Inspecté à l'œil** | Comptage manuel sur deux images en pleine résolution ; images annotées et vue de dessus comparées à la vidéo, sur cinq vidéos |
 | **Non fait** | Vérité terrain des positions de joueurs ; autres angles de caméra (partie 6.2) |
@@ -283,7 +283,8 @@ Les captures montrent le panneau 3D placé seul dans des zones vides : tribunes,
 - la couleur des maillots tirée par la pelouse ;
 - le vote d'équipe limité au début des trajectoires ;
 - l'horodatage à cadence variable ;
-- les sauts d'échange d'identifiants comptés dans les distances.
+- les sauts d'échange d'identifiants comptés dans les distances ;
+- un téléversement complet, encore en file, perdu au redémarrage du serveur : il est désormais remis en file.
 
 **Hors de portée de ces essais :**
 

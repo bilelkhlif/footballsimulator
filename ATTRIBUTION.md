@@ -436,9 +436,9 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 17 novembre 2026 (mo
 
         * vraies vidéos de match analysées sur une RTX 2050 (exemples de Roboflow Sports, copies à une autre résolution, à cadence variable, et un montage local avec des coupures), deux téléversements par l'interface, comptage manuel sur deux images, captures contrôlées à l'œil ; mesures et méthode dans `docs/visualiseur-match.md` ;
 
-        * défauts trouvés par ces essais, puis corrigés : vote d'équipe limité au début des trajectoires, couleur des maillots tirée par la pelouse, étiquettes illisibles, message masqué qui bloquait les clics, instant après un déplacement dans la vidéo, horodatage faux à cadence variable, sauts d'échange d'identifiants comptés dans les distances ;
+        * défauts trouvés par ces essais, puis corrigés : vote d'équipe limité au début des trajectoires, couleur des maillots tirée par la pelouse, étiquettes illisibles, message masqué qui bloquait les clics, instant après un déplacement dans la vidéo, horodatage faux à cadence variable, sauts d'échange d'identifiants comptés dans les distances, téléversement en file perdu au redémarrage du serveur ;
 
-        * `npm test` et tests Python le 17 novembre 2026 : 39 tests Python, 197 tests unitaires et 94 vérifications de bout en bout réussis ; application AR inchangée (aucun de ses fichiers modifié, `SHELL_VERSION` identique) ;
+        * `npm test` et tests Python le 17 novembre 2026 : 40 tests Python, 197 tests unitaires et 94 vérifications de bout en bout réussis ; application AR inchangée (aucun de ses fichiers modifié, `SHELL_VERSION` identique) ;
 
         * défaut constaté et seulement signalé, non corrigé : sur une vidéo avec soleil et ombre marqués (`573e61_0`), des joueurs classés dans la mauvaise équipe avec des votes unanimes ; un indicateur d'équilibre des équipes l'annonce désormais ;
 
@@ -490,6 +490,6 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 17 novembre 2026 (mo
 | Sprint 5 | 232/232 | Exigences détaillées du sprint ; fusion réservée à son approbation |
 | Sprint 6 | 261/261 | Exigences détaillées du sprint final ; fusion réservée à son approbation |
 | Revue finale et livrables | 261/261 | Revue et fusion de la PR #13 demandées ; consignes de finalisation, sans résultat physique inventé |
-| Visualiseur de match (extension, PR #15) | 330/330 | Demande d'extension, puis revue critique ; priorité à la réutilisation, aucune donnée inventée, fusion réservée à son approbation |
+| Visualiseur de match (extension, PR #15) | 331/331 | Demande d'extension, puis revue critique ; priorité à la réutilisation, aucune donnée inventée, fusion réservée à son approbation |
 
 **État de validation matérielle au 17 novembre 2026 :** rendu 3D WebGPU vérifié sur le PC ASUS TUF A15 ; parcours AR WebGPU vérifié en émulation, interaction tactique du sprint 5 et séquence animée du sprint 6 comprises ; AR rendue en WebGPU vérifiée sur un téléphone, le TECNO POVA 6 Pro 5G (essai physique réussi) ; AR sur Galaxy S10e vérifiée uniquement dans le mode de test WebGL. Aucune validation physique des sprints 4, 5 et 6 n’est consignée à cette date : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde restent à mesurer sur téléphone (`docs/recette.md`). Les résultats automatisés ci-dessus proviennent du journal de développement.

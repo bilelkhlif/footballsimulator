@@ -73,4 +73,4 @@ Quand la calibration échoue, aucune position n'est donnée sur le terrain pour 
 .venv\Scripts\python -m unittest discover -s tests
 ```
 
-39 tests, sans GPU ni poids : le contrat de données, la calibration (homographies synthétiques, erreur hors échantillon), l'horodatage à cadence variable, les équipes, le suivi, les coupures de plan, les mesures, le serveur et la documentation du code. Les tests de l'interface sont dans `npm test` (tests/visualizer-tests.mjs et tests/unit/visualizer.test.mjs).
+40 tests, sans GPU ni poids : le contrat de données, la calibration (homographies synthétiques, erreur hors échantillon), l'horodatage à cadence variable, les équipes, le suivi, les coupures de plan, les mesures, le serveur et la documentation du code. Les tests de l'interface sont dans `npm test` (tests/visualizer-tests.mjs et tests/unit/visualizer.test.mjs).
