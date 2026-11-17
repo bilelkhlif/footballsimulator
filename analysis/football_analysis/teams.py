@@ -72,7 +72,13 @@ def overlap_share(box: np.ndarray, others: np.ndarray) -> float:
 
 @dataclass
 class CropCollector:
-    """Garde quelques images de chaque joueur, prises à intervalles réguliers de sa trajectoire.
+    """Garde quelques images de chaque joueur, réparties sur toute sa trajectoire.
+
+    Une image toutes les « every » observations ; quand la réserve déborde, une image sur deux est
+    retirée et l'intervalle double. Les images couvrent ainsi toute la trajectoire, même longue : si
+    le suiveur a échangé deux joueurs en cours de route, les votes se partagent et l'équipe reste
+    inconnue, au lieu d'être celle du premier joueur (constaté sur la vidéo de la Bundesliga, avec un
+    échantillon limité aux premières secondes).
 
     Une image n'est gardée que si le joueur est assez grand et peu masqué par un autre : deux
     maillots mélangés fausseraient le vote.
@@ -82,11 +88,13 @@ class CropCollector:
     @role Analyse vidéo — équipes (choix des images)
     """
 
-    max_per_track: int = 6
+    max_per_track: int = 8
     every: int = 4
     min_height: int = 24
     max_overlap: float = 0.3
     crops: dict[int, list[np.ndarray]] = field(default_factory=lambda: defaultdict(list))
+    sampled: dict[int, list[int]] = field(default_factory=lambda: defaultdict(list))
+    strides: dict[int, int] = field(default_factory=dict)
     seen: Counter = field(default_factory=Counter)
 
     def offer(self, frame: np.ndarray, track_ids: Iterable[int], boxes: np.ndarray) -> None:
@@ -100,7 +108,8 @@ class CropCollector:
         for index, track_id in enumerate(track_ids):
             observation = self.seen[track_id]
             self.seen[track_id] += 1
-            if observation % self.every or len(self.crops.get(track_id, ())) >= self.max_per_track:
+            stride = self.strides.get(track_id, self.every)
+            if observation % stride:
                 continue
             box = boxes[index]
             if box[3] - box[1] < self.min_height:
@@ -111,6 +120,11 @@ class CropCollector:
             x2, y2 = min(int(box[2]), width), min(int(box[3]), height)
             if x2 > x1 and y2 > y1:
                 self.crops[track_id].append(frame[y1:y2, x1:x2].copy())
+                self.sampled[track_id].append(observation)
+                if len(self.crops[track_id]) > self.max_per_track:
+                    self.crops[track_id] = self.crops[track_id][::2]
+                    self.sampled[track_id] = self.sampled[track_id][::2]
+                    self.strides[track_id] = stride * 2
 
 
 def build_classifier(backbone: str, device: str, seed: int = 0) -> Any:

@@ -160,8 +160,8 @@ class CollectorTest(unittest.TestCase):
         collector.offer(frame, [1, 2, 3, 4], boxes)
         self.assertEqual(sorted(collector.crops), [3])
 
-    def test_keeps_regular_samples(self):
-        """Une image toutes les 4 observations, 6 au plus par trajectoire.
+    def test_samples_cover_the_whole_track(self):
+        """Sur 400 observations, au plus 8 images, réparties du début à la fin de la trajectoire.
 
         @responsable Bilel Khlif
         @date 2026-11-17
@@ -169,9 +169,14 @@ class CollectorTest(unittest.TestCase):
         """
         frame = np.zeros((200, 300, 3), dtype=np.uint8)
         collector = CropCollector()
-        for _ in range(40):
+        for _ in range(400):
             collector.offer(frame, [7], np.array([[10, 10, 40, 90]], dtype=float))
-        self.assertEqual(len(collector.crops[7]), 6)
+        sampled = collector.sampled[7]
+        self.assertLessEqual(len(sampled), 8)
+        self.assertGreaterEqual(len(sampled), 4)
+        self.assertEqual(sampled[0], 0)
+        self.assertGreater(sampled[-1], 250, "la fin de la trajectoire est aussi échantillonnée")
+        self.assertEqual(len(set(b - a for a, b in zip(sampled, sampled[1:]))), 1, "intervalle régulier")
 
 
 class GoalkeeperTest(unittest.TestCase):
