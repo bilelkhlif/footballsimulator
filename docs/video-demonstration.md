@@ -1,8 +1,24 @@
-# Script de la vidéo de démonstration
+# Storyboard et voix off de la vidéo de démonstration
 
-Exigences du cahier des charges (§5.4 et §7.3) : **5 minutes au plus**, **voix off**, **sans musique de fond**, démonstration réelle sur smartphone ou sur émulateur, et **diapositive d'ouverture obligatoire** avec le titre, l'équipe et la date.
+Exigences du cahier des charges (§5.4 et §7.3) :
 
-Le déroulé suit le scénario de démonstration du cahier (§4.1, étapes 1 à 8), puis montre le bonus BF9, la fluidité et le fonctionnement hors-ligne. Durée prévue : **4 min 45 s**, soit 15 s de marge.
+- **5 minutes au plus** ;
+- **voix off** ;
+- **sans musique de fond** ;
+- démonstration réelle, sur smartphone ou sur émulateur ;
+- **diapositive d'ouverture obligatoire**, avec le titre, l'équipe et la date.
+
+Le déroulé suit le scénario de démonstration du cahier (§4.1, étapes 1 à 8). Il montre ensuite le bonus BF9, la fluidité et le fonctionnement hors-ligne. Durée prévue : **4 min 45 s**, soit 15 s de marge ; environ 400 mots de voix off, soit 2 min 40 s de parole.
+
+**Diapositives prêtes à l'emploi** : [diapositive d'ouverture](presentation/diapositive-ouverture.png) et [diapositive de fin](presentation/diapositive-fin.png), en 1920 × 1080. Ce sont les diapositives 1 et 13 de la [présentation](presentation/). L'ouverture porte :
+
+- le titre « Football Simulator » ;
+- l'équipe : Iyed Rachdi, Bilel Khlif, Ghassen Dallekji ;
+- l'encadrant : Dr. Ing. Mohamed-Bécha Kaâniche ;
+- SUP'COM ;
+- la date : « Novembre 2026 ».
+
+Si la vidéo est tournée un autre mois, changer la date dans la diapositive 1 du fichier `.pptx`, puis l'exporter de nouveau en image (Fichier → Exporter).
 
 ---
 
@@ -18,10 +34,10 @@ Le déroulé suit le scénario de démonstration du cahier (§4.1, étapes 1 à 
 
 **Enregistrement.**
 
-- Image : l'enregistreur d'écran d'Android (réglages rapides → « Enregistrer l'écran »), sans le son. Une seconde caméra peut filmer le téléphone devant la table, pour montrer que le terrain est posé sur une vraie table ; c'est facultatif.
-- Voix off : enregistrée à part, au calme, puis posée au montage sur les images. Une seule voix, ou une voix par membre de l'équipe, au choix.
+- **Image** : l'enregistreur d'écran d'Android (réglages rapides → « Enregistrer l'écran »), sans le son. Une seconde caméra peut filmer le téléphone devant la table, pour montrer que le terrain est posé sur une vraie table ; c'est facultatif.
+- **Voix off** : enregistrée à part, au calme, puis posée au montage sur les images. Une seule voix, ou une voix par membre de l'équipe, au choix.
 - **Aucune musique**, ni en fond, ni en ouverture, ni en fin.
-- Export en 1080p ; vérifier la durée finale : 5:00 au plus.
+- **Montage** avec un outil gratuit (le cahier impose un budget nul), par exemple Clipchamp, fourni avec Windows, ou Shotcut, logiciel libre. Exporter en MP4 1080p, puis vérifier la durée finale : 5:00 au plus.
 
 **Sans téléphone disponible** (le cahier §7.3 autorise l'émulateur) : chaque scène AR se tourne sur PC, dans Chrome, avec `?iwer` dans l'adresse. Un clic remplace le toucher, et le fond reste sombre au lieu de l'image de la caméra. Le dire dans la voix off.
 
@@ -29,23 +45,23 @@ Le déroulé suit le scénario de démonstration du cahier (§4.1, étapes 1 à 
 
 ---
 
-## 2. Déroulé
+## 2. Storyboard
 
-| Temps | À l'écran | Voix off | Couvre |
-| --- | --- | --- | --- |
-| 0:00 – 0:10 | **Diapositive d'ouverture** : « Football Simulator — Tableau tactique de football en réalité augmentée » ; Iyed Rachdi, Bilel Khlif, Ghassen Dallekji ; encadrant : Dr. Ing. Mohamed-Bécha Kaâniche ; SUP'COM, module Réalité Étendue ; **date du tournage** | « Football Simulator : un tableau tactique de football en réalité augmentée. Un projet du module de réalité étendue de SUP'COM. » | §7.3 |
-| 0:10 – 0:30 | Un schéma tactique dessiné à la main sur une feuille ou un tableau blanc, puis le téléphone devant une table vide | « Pour expliquer une tactique, un entraîneur amateur utilise souvent un tableau blanc : une vue de dessus, en 2D, où les déplacements se montrent mal. Notre application pose un terrain en 3D sur une vraie table, depuis un simple lien web. » | §1.2, §1.3 |
-| 0:30 – 0:50 | Chrome : saisie de l'adresse, chargement ; badges « Rendu WebGPU » et « AR disponible (WebGPU) » | « On ouvre le lien dans Chrome, sur Android. Rien à installer. La scène est dessinée en WebGPU, sans repli sur WebGL. » | §4.1, étape 1 |
-| 0:50 – 1:20 | « Entrer en AR », autorisation de la caméra, le cercle doré qui suit la table, le toucher, le terrain posé | « “Entrer en AR” ouvre une session WebXR immersive. ARCore détecte la table, et le cercle doré montre la surface trouvée par le hit test. Un toucher pose le terrain ; une ancre spatiale le garde à sa place. » | BF1, BF2, BF3 ; §4.1, étapes 2 à 4 |
-| 1:20 – 1:45 | « Formations » : 4-3-3 pour les Bleus, 4-4-2 pour les Rouges ; les joueurs glissent vers leurs places | « On choisit 4-3-3 pour les Bleus et 4-4-2 pour les Rouges. Chaque formation est une classe, selon le patron Strategy : elle calcule les places des onze joueurs. » | BF4 ; §4.1, étape 5 |
-| 1:45 – 2:15 | Toucher le n° 9 des Bleus (anneau doré), puis une place ; puis le ballon, et sa nouvelle place | « Je touche un joueur : il est sélectionné. Je touche sa nouvelle place : il y va. Le toucher devient un rayon, lancé depuis la source d'entrée WebXR. Il trouve le joueur, puis le point du terrain, calculé dans le repère du terrain, quelle que soit la position de l'ancre. Le ballon se déplace de la même façon. » | BF5, BF6 ; §4.1, étape 6 |
-| 2:15 – 2:40 | « Passe » : du n° 6 au n° 11 ; « Course » : un appel du n° 9 ; puis « Annuler » | « Une passe, en doré ; une course, en tirets blancs. Chaque action est une commande, selon le patron Command : “Annuler” défait la dernière. » | BF7, BF8 ; §4.1, étape 7 |
-| 2:40 – 3:25 | « Séquence » : trois images clés, en déplaçant le n° 9, le n° 7 et le ballon entre elles ; « Lecture » à 1×, puis à 2× | « En bonus, on anime l'action. J'enregistre une image clé, je déplace des joueurs, j'en enregistre une autre. La lecture fait glisser les joueurs d'une image à l'autre, selon le temps écoulé, dans le repère du terrain. Pause, reprise, vitesse double. » | BF9 |
-| 3:25 – 3:45 | Le téléphone tourne autour de la table pendant une lecture | « Je tourne autour de la table : le terrain reste en place, et l'action se joue toujours dessus. » | §4.1, étape 8 ; §4.3, stabilité |
-| 3:45 – 4:05 | Application ouverte avec `?diagnostics`, en AR : le panneau des mesures | « Le mode diagnostic affiche la fluidité, mesurée sur ce téléphone : [valeur lue à l'écran] images par seconde. Au dernier sprint, regrouper les pions des joueurs en maillages instanciés a divisé par deux le nombre d'appels de dessin. » | §2.3, §4.3, fluidité |
-| 4:05 – 4:20 | Mode avion activé ; l'application lancée depuis son icône ; badge « Hors-ligne » | « En mode avion, l'application se lance depuis le cache de son Service Worker : une seule version, complète et cohérente. » | §2.3, §4.3, hors-ligne |
-| 4:20 – 4:35 | PC : `npm test` qui se termine ; « 182 » tests unitaires, « 79 réussi(s) » | « Sur PC, 261 tests automatisés vérifient le code à chaque modification, dont le parcours AR complet dans un émulateur. » | §7.1 |
-| 4:35 – 4:45 | Diapositive de fin : « Le terrain tient sur votre table : à vous de jouer la tactique ! » et l'adresse de l'application | « Le terrain tient sur votre table : à vous de jouer la tactique ! » | Conclusion du cahier |
+| Plan | Temps | Prise de vue | À l'écran | Voix off | Couvre |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 0:00 – 0:10 | Diapositive | [Diapositive d'ouverture](presentation/diapositive-ouverture.png) : titre, équipe, encadrant, SUP'COM, date | « Football Simulator : un tableau tactique de football en réalité augmentée. Un projet du module de réalité étendue de SUP'COM. » | §7.3 |
+| 2 | 0:10 – 0:30 | Caméra | Un schéma tactique dessiné à la main sur une feuille ou un tableau blanc, puis le téléphone devant une table vide | « Pour expliquer une tactique, un entraîneur amateur utilise souvent un tableau blanc : une vue de dessus, en 2D, où les déplacements se montrent mal. Notre application pose un terrain en 3D sur une vraie table, depuis un simple lien web. » | §1.2, §1.3 |
+| 3 | 0:30 – 0:50 | Écran du téléphone | Chrome : saisie de l'adresse, ou QR code de la [diapositive de fin](presentation/diapositive-fin.png) scanné ; chargement ; badges « Rendu WebGPU » et « AR disponible (WebGPU) » | « On ouvre le lien dans Chrome, sur Android. Rien à installer. La scène est dessinée en WebGPU, sans repli sur WebGL. » | §4.1, étape 1 |
+| 4 | 0:50 – 1:20 | Écran du téléphone ; en option, caméra sur la table | « Entrer en AR », autorisation de la caméra, le cercle doré qui suit la table, le toucher, le terrain posé | « “Entrer en AR” ouvre une session WebXR immersive. ARCore détecte la table, et le cercle doré montre la surface trouvée par le hit test. Un toucher pose le terrain ; une ancre spatiale le garde à sa place. » | BF1, BF2, BF3 ; §4.1, étapes 2 à 4 |
+| 5 | 1:20 – 1:45 | Écran du téléphone | « Formations » : d'abord 3-5-2 et 4-2-3-1, puis 4-3-3 pour les Bleus et 4-4-2 pour les Rouges ; les joueurs glissent vers leurs places | « On choisit 4-3-3 pour les Bleus et 4-4-2 pour les Rouges. Chaque formation est une classe, selon le patron Strategy : elle calcule les places des onze joueurs. » | BF4 ; §4.1, étape 5 |
+| 6 | 1:45 – 2:15 | Écran du téléphone | Toucher le n° 9 des Bleus (anneau doré), puis une place ; puis le ballon, et sa nouvelle place | « Je touche un joueur : il est sélectionné. Je touche sa nouvelle place : il y va. Le toucher devient un rayon, lancé depuis la source d'entrée WebXR. Il trouve le joueur, puis le point du terrain, calculé dans le repère du terrain, quelle que soit la position de l'ancre. Le ballon se déplace de la même façon. » | BF5, BF6 ; §4.1, étape 6 |
+| 7 | 2:15 – 2:40 | Écran du téléphone | « Passe » : du n° 6 au n° 11 ; « Course » : un appel du n° 9 ; puis « Annuler » | « Une passe, en doré ; une course, en tirets blancs. Chaque action est une commande, selon le patron Command : “Annuler” défait la dernière. » | BF7, BF8 ; §4.1, étape 7 |
+| 8 | 2:40 – 3:25 | Écran du téléphone | « Séquence » : trois images clés, en déplaçant le n° 9, le n° 7 et le ballon entre elles ; « Lecture » à 1×, puis à 2× | « En bonus, on anime l'action. J'enregistre une image clé, je déplace des joueurs, j'en enregistre une autre. La lecture fait glisser les joueurs d'une image à l'autre, selon le temps écoulé, dans le repère du terrain. Pause, reprise, vitesse double. » | BF9 |
+| 9 | 3:25 – 3:45 | Caméra sur la table, ou écran du téléphone | Le téléphone tourne autour de la table pendant une lecture | « Je tourne autour de la table : le terrain reste en place, et l'action se joue toujours dessus. » | §4.1, étape 8 ; §4.3, stabilité |
+| 10 | 3:45 – 4:05 | Écran du téléphone | Application ouverte avec `?diagnostics`, en AR : le panneau des mesures | « Le mode diagnostic affiche la fluidité, mesurée sur ce téléphone : [valeur lue à l'écran] images par seconde. Au dernier sprint, regrouper les pions des joueurs en maillages instanciés a divisé par deux le nombre d'appels de dessin. » | §2.3, §4.3, fluidité |
+| 11 | 4:05 – 4:20 | Écran du téléphone | Mode avion activé, visible dans la barre d'état ; l'application lancée depuis son icône ; badge « Hors-ligne » | « En mode avion, l'application se lance depuis le cache de son Service Worker : une seule version, complète et cohérente. » | §2.3, §4.3, hors-ligne |
+| 12 | 4:20 – 4:35 | Écran du PC | `npm test` qui se termine : « 182 » tests unitaires, « 79 réussi(s) » | « Sur PC, 261 tests automatisés vérifient le code à chaque modification, dont le parcours AR complet dans un émulateur. » | §7.1 |
+| 13 | 4:35 – 4:45 | Diapositive | [Diapositive de fin](presentation/diapositive-fin.png) : « Le terrain tient sur votre table : à vous de jouer la tactique ! », QR code et adresse de l'application | « Le terrain tient sur votre table : à vous de jouer la tactique ! » | Conclusion du cahier |
 
 ---
 
