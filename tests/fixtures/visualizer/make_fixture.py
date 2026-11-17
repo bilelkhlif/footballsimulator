@@ -114,7 +114,7 @@ def make_document():
             person(12, "player", [250, 120, 262, 160], 1, calibrated),
             person(3, "referee", [150, 30, 160, 60], None, calibrated),
         ]
-        calibration = ({"status": "ok", "keypoints": 9, "inliers": 9, "errorPx": 1.5, "errorM": 0.2, "homography": HOMOGRAPHY}
+        calibration = ({"status": "ok", "keypoints": 9, "inliers": 9, "fitErrorPx": 1.5, "fitErrorM": 0.2, "holdoutErrorPx": 2.1, "holdoutErrorM": 0.3, "homography": HOMOGRAPHY}
                        if calibrated else {"status": "failed", "reason": "too-few-keypoints", "keypoints": 3})
         ball_box = [player_box(index)[2] + 2, 114, player_box(index)[2] + 8, 120]
         ball = {"confidence": 0.7, "box": ball_box, "pitch": to_pitch(ball_box[0] + 3, 120) if calibrated else None,
@@ -134,9 +134,9 @@ def make_document():
                    {"id": 12, "role": "player", "shot": 0, "firstTime": 0.0, "lastTime": 3.92, "observations": 50, "team": 1, "teamConfidence": 1.0, "teamVotes": 6},
                    {"id": 3, "role": "referee", "shot": 0, "firstTime": 0.0, "lastTime": 3.92, "observations": 50, "team": None, "teamConfidence": None, "teamVotes": 0}],
         "metrics": {"detection": {"frames": len(frames), "ballFrameShare": 1.0},
-                    "calibration": {"calibratedShare": 0.88, "medianErrorPx": 1.5, "medianErrorM": 0.2},
+                    "calibration": {"calibratedShare": 0.88, "medianFitErrorPx": 1.5, "medianFitErrorM": 0.2, "medianHoldoutErrorPx": 2.1, "medianHoldoutErrorM": 0.3},
                     "tracking": {"tracks": 3, "fragmentation": 1.0}, "positions": {"placedShare": 0.88},
-                    "teams": {"knownTeamShare": 1.0}, "processing": {"framesPerSecond": None, "device": "test"}},
+                    "teams": {"knownTeamShare": 1.0}, "processing": {"slowdown": None, "analysedFramesPerSecond": None, "device": "test"}},
         "limitations": ["Données de test : vidéo synthétique, sans analyse."],
     }
 

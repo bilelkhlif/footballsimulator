@@ -9,7 +9,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { distanceCovered, formatSpeed, teamCentroids, velocityAt } from '../../src/visualizer/analytics.js';
+import { distanceCovered, formatSpeed, isPlausibleStep, teamCentroids, velocityAt } from '../../src/visualizer/analytics.js';
 import { getHealth, listAnalyses, waitForAnalysis } from '../../src/visualizer/api-client.js';
 import { applyHomography, AutoPlacer, candidateRects, overlapArea, pitchCoverage, scoreRegions } from '../../src/visualizer/auto-placement.js';
 import { describeCalibration, formatShare, formatTime } from '../../src/visualizer/format.js';
@@ -19,7 +19,7 @@ import { TrackingStore } from '../../src/visualizer/tracking-store.js';
 import { accentOnWhite, annotationColor, boxToDisplay, containRect, readableText, VideoAnnotations } from '../../src/visualizer/video-annotations.js';
 import { PITCH_SCALE } from '../../src/config.js';
 
-const CALIBRATED = { status: 'ok', keypoints: 9, inliers: 8, errorPx: 2.4, errorM: 0.31, homography: [1, 0, 0, 0, 1, 0, 0, 0, 1] };
+const CALIBRATED = { status: 'ok', keypoints: 9, inliers: 8, fitErrorPx: 2.4, fitErrorM: 0.31, holdoutErrorPx: 3.6, holdoutErrorM: 0.52, homography: [1, 0, 0, 0, 1, 0, 0, 0, 1] };
 
 /**
  * Personne de test : boîte et position proportionnelles à x.
@@ -216,7 +216,7 @@ test('mise en forme : durées, parts et calibration en clair', () => {
   assert.equal(formatTime(75.25), '1:15,3');
   assert.equal(formatTime(4), '0:04,0');
   assert.equal(formatShare(0.456), '46 %');
-  assert.match(describeCalibration(CALIBRATED), /8 repères cohérents sur 9/);
+  assert.match(describeCalibration(CALIBRATED), /8 repères cohérents sur 9, erreur hors échantillon 3,6 px \(0,52 m\)/);
   assert.match(describeCalibration({ status: 'failed', reason: 'aligned-keypoints' }), /une seule ligne visible/);
   assert.match(describeCalibration(null), /Aucune image analysée/);
 });
@@ -239,4 +239,13 @@ test('lisibilité : texte sombre sur un maillot clair, numéros 3D assombris pou
   assert.equal(readableText('rgb(0,0,0)'), '#ffffff', 'couleur illisible : blanc par défaut');
   assert.equal(accentOnWhite('#f7f8ed'), '#63635f');
   assert.equal(accentOnWhite('#6e726b'), '#6e726b', 'maillot sombre gardé tel quel');
+});
+
+test("échange d'identifiants : un saut de plus de 12 m/s ne compte ni dans la distance, ni dans la vitesse", () => {
+  const run = [0, 0.5, 1].map((time) => ({ time, pitch: [time * 6, 0] }));
+  const switched = [...run, { time: 1.08, pitch: [40, 20] }, { time: 1.16, pitch: [40.4, 20] }];
+  assert.equal(isPlausibleStep(run[2], switched[3]), false);
+  assert.ok(Math.abs(distanceCovered(switched) - 6.4) < 1e-9, 'le saut de 40 m est écarté');
+  assert.equal(velocityAt(switched, 1.16), null, "après le saut, suite trop courte : pas de vitesse plutôt qu'une fausse");
+  assert.equal(velocityAt(run, 1).speed, 6);
 });

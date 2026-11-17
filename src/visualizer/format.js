@@ -71,8 +71,10 @@ export function describeCalibration(calibration) {
     return 'Aucune image analysée à cet instant.';
   }
   if (calibration.status === 'ok') {
+    // Erreur hors échantillon : chaque repère prédit sans lui. Ce n'est pas la précision des joueurs.
     return `Calibration réussie : ${calibration.inliers} repères cohérents sur ${calibration.keypoints}, `
-      + `erreur ${formatNumber(calibration.errorPx)} px (${formatNumber(calibration.errorM, 2)} m).`;
+      + `erreur hors échantillon ${formatNumber(calibration.holdoutErrorPx)} px (${formatNumber(calibration.holdoutErrorM, 2)} m) `
+      + `sur les repères.`;
   }
   const reason = CALIBRATION_REASONS[calibration.reason] ?? calibration.reason;
   return `Calibration impossible (${reason}) : aucune position sur le terrain pour cette image.`;

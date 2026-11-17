@@ -294,8 +294,11 @@ class MatchVisualizer {
    */
   #loop() {
     requestAnimationFrame(() => this.#loop());
+    // Sans rappel d'image : currentTime ramené au début de l'image affichée, si la cadence est fixe
+    // (indiqué par l'analyse) ; à cadence variable, currentTime tel quel, à une image près.
     const fps = this.store?.source.fps ?? 25;
-    const time = this.mediaTime ?? Math.floor(this.video.currentTime * fps + 1e-3) / fps;
+    const snap = this.store?.source.constantFrameRate !== false;
+    const time = this.mediaTime ?? (snap ? Math.floor(this.video.currentTime * fps + 1e-3) / fps : this.video.currentTime);
     if (!this.store) {
       this.annotations.draw({ objects: [], ball: null }, { content: this.content, source: { width: 1, height: 1 }, teamColor: () => null, selectedId: null });
       return;
@@ -424,12 +427,14 @@ class MatchVisualizer {
     const rows = [
       ['Images analysées', `${detection.frames ?? this.store.frames.length} (${formatNumber(analysis.fps)} images/s)`],
       ['Calibration réussie', `${formatShare(calibration.calibratedShare)} des images`],
-      ['Erreur de reprojection', `${formatNumber(calibration.medianErrorPx)} px, ${formatNumber(calibration.medianErrorM, 2)} m (médianes)`],
+      ["Erreur d'ajustement", `${formatNumber(calibration.medianFitErrorPx)} px, ${formatNumber(calibration.medianFitErrorM, 2)} m (médianes, optimistes)`],
+      ['Erreur hors échantillon', `${formatNumber(calibration.medianHoldoutErrorPx)} px, ${formatNumber(calibration.medianHoldoutErrorM, 2)} m `
+        + `(médianes ; 90 % sous ${formatNumber(calibration.p90HoldoutErrorM, 2)} m), sur les repères du terrain`],
       ['Positions sur le terrain', formatShare(positions.placedShare)],
       ['Ballon détecté', `${formatShare(detection.ballFrameShare)} des images`],
       ['Trajectoires', `${tracking.tracks ?? '—'}, fragmentation ${formatNumber(tracking.fragmentation, 2)}`],
       ['Équipe connue', `${formatShare(teams.knownTeamShare)} des observations`],
-      ['Traitement', `${formatNumber(processing.framesPerSecond)} images/s sur ${processing.device ?? '—'}`],
+      ['Traitement', `${formatNumber(processing.slowdown)} fois la durée de la vidéo (${formatNumber(processing.analysedFramesPerSecond)} images analysées/s, ${processing.device ?? '—'})`],
     ];
     byId('quality-list').replaceChildren(...rows.flatMap(([label, value]) => {
       const term = document.createElement('dt');
