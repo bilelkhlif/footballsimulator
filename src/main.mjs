@@ -15,7 +15,7 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { Raycaster } from 'three';
+import { Raycaster, TOUCH } from 'three';
 import { createSceneContext } from './scene.mjs';
 import { createPitch } from './pitch.mjs';
 import { PlayerFactory } from './players.mjs';
@@ -204,6 +204,13 @@ async function init(renderMode) {
   });
   document.getElementById('formations-toggle').addEventListener('click', () => {
     setFormationPanelOpen(document.getElementById('formation-panel').hidden);
+  });
+  interaction.on('statechange', () => {
+    // Pendant le choix d'une destination, un doigt vise (src/pointer-input.mjs) : la rotation de
+    // la vue passe aux gestes à deux doigts, qui gardent aussi le zoom.
+    const aiming = interaction.wantsHover;
+    controls.touches.ONE = aiming ? null : TOUCH.ROTATE;
+    controls.touches.TWO = aiming ? TOUCH.DOLLY_ROTATE : TOUCH.DOLLY_PAN;
   });
 
   // Séquence animée (sprint 6, BF9) : images clés par des commandes annulables, lecture dans la

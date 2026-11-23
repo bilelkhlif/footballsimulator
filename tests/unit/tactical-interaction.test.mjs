@@ -248,6 +248,12 @@ test('double toucher involontaire : un second toucher au même endroit, en moins
   assert.equal(gestures.tapBall().action, 'cancel', 'toucher volontaire, plus tard');
   time += 50;
   assert.equal(gestures.tapPitch(0.1, 0.1).action, 'invalid', 'ailleurs, même aussitôt : traité');
+
+  // Après un changement d'outil, le même endroit touché aussitôt est une nouvelle intention.
+  gestures.tapBall();
+  interaction.setMode(INTERACTION_MODES.RUN);
+  time += 20;
+  assert.equal(gestures.tapBall().action, 'invalid', 'traité (course refusée depuis le ballon), pas ignoré');
 });
 
 test('changer de mode abandonne la sélection ou la flèche en cours ; mode inconnu refusé', () => {

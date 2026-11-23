@@ -135,3 +135,42 @@ test('la souris guide l\'aperçu pendant le tracé d\'une flèche ; sortir du ca
   canvas.dispatchEvent(pointerEvent('pointerup', { timeStamp: 10 }));
   assert.deepEqual(interaction.taps, []);
 });
+
+test('visée au doigt : aperçu sous le doigt dès l\'appui, qui suit le glissé ; le relâchement valide au point final', () => {
+  const { canvas, interaction, input } = createSetup({ wantsHover: true });
+  canvas.dispatchEvent(pointerEvent('pointerdown', { clientX: 200, timeStamp: 0 }));
+  assert.equal(input.aiming, true);
+  assert.equal(interaction.hovers.length, 1, 'aperçu dès l\'appui');
+  canvas.dispatchEvent(pointerEvent('pointermove', { clientX: 650, timeStamp: 400 }));
+  // Relâché loin et longtemps après l'appui : ce n'est pas un tap, mais c'est une visée.
+  canvas.dispatchEvent(pointerEvent('pointerup', { clientX: 650, timeStamp: 1500 }));
+  assert.equal(interaction.taps.length, 1);
+  assert.ok(interaction.taps[0].x > 0, 'validé là où le doigt a fini, à droite du centre');
+  assert.equal(interaction.hovers.at(-1), null, 'aperçu effacé ensuite');
+  assert.equal(input.aiming, false);
+});
+
+test('visée au doigt interrompue par un second doigt (pincer) : rien n\'est validé ; souris : pas de visée', () => {
+  const { canvas, interaction, input } = createSetup({ wantsHover: true });
+  canvas.dispatchEvent(pointerEvent('pointerdown', { pointerId: 1 }));
+  canvas.dispatchEvent(pointerEvent('pointerdown', { pointerId: 2, clientX: 500 }));
+  assert.equal(input.aiming, false);
+  assert.equal(interaction.hovers.at(-1), null);
+  canvas.dispatchEvent(pointerEvent('pointerup', { pointerId: 1, timeStamp: 900 }));
+  canvas.dispatchEvent(pointerEvent('pointerup', { pointerId: 2, timeStamp: 950 }));
+  assert.deepEqual(interaction.taps, []);
+
+  canvas.dispatchEvent(pointerEvent('pointerdown', { pointerType: 'mouse', pointerId: 3, timeStamp: 1000 }));
+  assert.equal(input.aiming, false, 'la souris garde le survol et le clic');
+  canvas.dispatchEvent(pointerEvent('pointerup', { pointerType: 'mouse', pointerId: 3, timeStamp: 1100 }));
+  assert.equal(interaction.taps.length, 1);
+});
+
+test('visée au doigt seulement quand une destination est attendue : sinon un glissé reste à la vue', () => {
+  const { canvas, interaction, input } = createSetup({ wantsHover: false });
+  canvas.dispatchEvent(pointerEvent('pointerdown', { clientX: 100 }));
+  assert.equal(input.aiming, false);
+  canvas.dispatchEvent(pointerEvent('pointerup', { clientX: 300, timeStamp: 200 }));
+  assert.deepEqual(interaction.taps, []);
+  assert.deepEqual(interaction.hovers, []);
+});

@@ -313,6 +313,7 @@ export class TacticalInteraction extends EventEmitter {
     }
     const abandoned = this.#draft ? 'Tracé en cours abandonné.' : (this.#selection ? 'Sélection abandonnée.' : null);
     this.#mode = mode;
+    this.#forgetLastTap();
     this.#clearDraft();
     this.#notify();
     if (abandoned) {
@@ -348,6 +349,7 @@ export class TacticalInteraction extends EventEmitter {
     if (!this.#selection && !this.#draft) {
       return false;
     }
+    this.#forgetLastTap();
     this.#clearDraft();
     this.#notify();
     return true;
@@ -541,6 +543,17 @@ export class TacticalInteraction extends EventEmitter {
     last.origin.copy(ray.origin);
     last.direction.copy(ray.direction);
     return repeated;
+  }
+
+  /**
+   * Oublie le dernier toucher : après un changement d'outil ou un abandon, le toucher suivant est
+   * une nouvelle intention, jamais un double toucher.
+   * @responsable Bilel Khlif
+   * @date 2026-11-23
+   * @role Interaction tactique — touchers répétés
+   */
+  #forgetLastTap() {
+    this.#lastTap.time = -Infinity;
   }
 
   /**

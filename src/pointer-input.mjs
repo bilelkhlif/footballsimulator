@@ -4,7 +4,13 @@
  * Un toucher court et immobile est un « tap » : il devient un rayon depuis la caméra, à travers le
  * point touché, transmis à l'interaction tactique. Un glissé reste aux contrôles d'orbite (tourner,
  * zoomer) ; un geste à deux doigts (pincer) n'est jamais un tap. La souris survolant le terrain
- * guide l'aperçu d'une flèche en cours de tracé.
+ * guide l'aperçu d'une flèche en cours de tracé, ou de la place visée par un déplacement.
+ *
+ * Visée au doigt : quand une destination est attendue (joueur ou ballon sélectionné, arrivée d'une
+ * flèche), un doigt posé sur le terrain montre l'aperçu jugé à l'endroit touché, le suit s'il glisse,
+ * et le relâcher valide à l'endroit final, comme en AR où l'aperçu suit le doigt et le select part
+ * au relâchement. Pendant ce choix, un doigt ne fait plus tourner la vue : src/main.mjs confie la
+ * rotation aux gestes à deux doigts. Un second doigt interrompt la visée sans rien valider.
  *
  * Pendant une session AR, cette saisie se tait : c'est la session WebXR qui transmet les touchers
  * (src/xr-input.mjs). Le rayon et les coordonnées normalisées sont réutilisés d'un geste à l'autre.
@@ -47,6 +53,8 @@ export class PointerInput {
   #isPresenting;
   #ndc = new THREE.Vector2();
   #down = null;
+  /** Doigt qui vise une destination (identifiant du pointeur), ou null. */
+  #aimingId = null;
   #activePointers = new Set();
   #attached = false;
 
@@ -102,11 +110,24 @@ export class PointerInput {
     this.#element.removeEventListener('pointerleave', this.#onPointerLeave);
     this.#attached = false;
     this.#down = null;
+    this.#aimingId = null;
     this.#activePointers.clear();
   }
 
   /**
-   * Appui : début d'un tap possible ; un deuxième doigt l'annule (pincer pour zoomer).
+   * Vrai pendant une visée au doigt (destination montrée sous le doigt, validée au relâchement).
+   * @returns {boolean}
+   * @responsable Bilel Khlif
+   * @date 2026-11-23
+   * @role Saisie hors AR — visée au doigt
+   */
+  get aiming() {
+    return this.#aimingId !== null;
+  }
+
+  /**
+   * Appui : début d'un tap possible ; un deuxième doigt l'annule (pincer pour zoomer), et
+   * interrompt une visée. Un doigt posé quand une destination est attendue commence une visée.
    * @param {PointerEvent} event
    * @responsable Bilel Khlif
    * @date 2026-11-15
@@ -116,9 +137,15 @@ export class PointerInput {
     this.#activePointers.add(event.pointerId);
     if (this.#isPresenting() || this.#activePointers.size > 1 || event.button > 0) {
       this.#down = null;
+      this.#stopAiming();
       return;
     }
     this.#down = { id: event.pointerId, x: event.clientX, y: event.clientY, time: event.timeStamp };
+    if (event.pointerType !== 'mouse' && this.#interaction.wantsHover) {
+      this.#aimingId = event.pointerId;
+      this.#castFrom(event);
+      this.#interaction.hover(this.#raycaster);
+    }
   };
 
   /**
@@ -133,6 +160,14 @@ export class PointerInput {
     const down = this.#down;
     this.#down = null;
     if (!down || down.id !== event.pointerId || this.#isPresenting()) {
+      return;
+    }
+    if (this.#aimingId === event.pointerId) {
+      // Fin d'une visée : la destination est celle sous le doigt au relâchement, glissé compris.
+      this.#aimingId = null;
+      this.#castFrom(event);
+      this.#interaction.handleTap(this.#raycaster);
+      this.#interaction.hover(null);
       return;
     }
     if (isTap(down, { x: event.clientX, y: event.clientY, time: event.timeStamp })) {
@@ -151,17 +186,19 @@ export class PointerInput {
   #onPointerCancel = (event) => {
     this.#activePointers.delete(event.pointerId);
     this.#down = null;
+    this.#stopAiming();
   };
 
   /**
-   * Survol à la souris : guide l'aperçu de la flèche en cours.
+   * Survol à la souris, ou doigt qui vise : guide l'aperçu de la destination.
    * @param {PointerEvent} event
    * @responsable Bilel Khlif
    * @date 2026-11-15
    * @role Saisie hors AR — souris et écran tactile
    */
   #onPointerMove = (event) => {
-    if (event.pointerType !== 'mouse' || this.#isPresenting() || !this.#interaction.wantsHover) {
+    const aimingFinger = this.#aimingId === event.pointerId;
+    if ((event.pointerType !== 'mouse' && !aimingFinger) || this.#isPresenting() || !this.#interaction.wantsHover) {
       return;
     }
     this.#castFrom(event);
@@ -179,6 +216,19 @@ export class PointerInput {
       this.#interaction.hover(null);
     }
   };
+
+  /**
+   * Interrompt une visée sans rien valider, et efface l'aperçu.
+   * @responsable Bilel Khlif
+   * @date 2026-11-23
+   * @role Saisie hors AR — visée au doigt
+   */
+  #stopAiming() {
+    if (this.#aimingId !== null) {
+      this.#aimingId = null;
+      this.#interaction.hover(null);
+    }
+  }
 
   /**
    * Oriente le rayon depuis la caméra, à travers la position du pointeur.
