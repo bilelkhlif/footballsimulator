@@ -1,5 +1,7 @@
 # Sprint 2 : session AR immersive
 
+> Document historique : les noms `.js`, les mesures et les résultats décrivent la version de l’époque. Depuis le 23 novembre 2026, les modules applicatifs portent `.mjs` ; les liens vers le code suivent ce renommage. Voir la [migration](migration-mjs.md).
+
 Réalisé le 9 et le 10 novembre 2026 sur la branche `feature/sprint-2`, sous la conduite de Bilel Khlif. Le code est généré avec Claude, sur des consignes détaillées fournies par Bilel Khlif : voir [ATTRIBUTION.md](../ATTRIBUTION.md).
 
 > **Depuis le sprint 3** (14 novembre 2026), la session est rendue en WebGPU par la liaison WebXR/WebGPU (`XRGPUBinding`), et non plus par une `XRWebGLLayer`. three.js passe en r187, et le terrain est posé sur la table par hit test. Ce compte rendu décrit le sprint 2 tel qu'il a été livré ; les changements sont expliqués dans [sprint-3.md](sprint-3.md).
@@ -47,11 +49,11 @@ Cinq petits modules s'ajoutent, chacun avec un seul rôle :
 
 | Fichier | Rôle |
 | --- | --- |
-| [`src/events.js`](../src/events.js) | `EventEmitter` : le patron Observer (`on`, `off`, `emit`) |
-| [`src/xr-session.js`](../src/xr-session.js) | `ArSession` : ouvre et ferme la session WebXR, la relie à three.js, signale son cycle de vie |
-| [`src/ar-view.js`](../src/ar-view.js) | Bascule la scène entre la vue 3D et la vue AR, et la restaure à la sortie |
-| [`src/ar-placement.js`](../src/ar-placement.js) | Calcule la position du terrain devant l'utilisateur, à partir de la pose du téléphone |
-| [`src/render-loop.js`](../src/render-loop.js) | Boucle de rendu commune : contrôles d'orbite hors AR, placement du terrain en AR |
+| [`src/events.js`](../src/events.mjs) | `EventEmitter` : le patron Observer (`on`, `off`, `emit`) |
+| [`src/xr-session.js`](../src/xr-session.mjs) | `ArSession` : ouvre et ferme la session WebXR, la relie à three.js, signale son cycle de vie |
+| [`src/ar-view.js`](../src/ar-view.mjs) | Bascule la scène entre la vue 3D et la vue AR, et la restaure à la sortie |
+| [`src/ar-placement.js`](../src/ar-placement.mjs) | Calcule la position du terrain devant l'utilisateur, à partir de la pose du téléphone |
+| [`src/render-loop.js`](../src/render-loop.mjs) | Boucle de rendu commune : contrôles d'orbite hors AR, placement du terrain en AR |
 
 ```mermaid
 flowchart LR

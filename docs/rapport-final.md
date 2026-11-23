@@ -1,5 +1,7 @@
 # Rapport final : Football Simulator
 
+> Document historique : les noms `.js`, les mesures et les résultats décrivent la version de l’époque. Depuis le 23 novembre 2026, les modules applicatifs portent `.mjs` ; les liens vers le code suivent ce renommage. Voir la [migration](migration-mjs.md).
+
 **Tableau tactique de football en réalité augmentée** (AR Football Tactics)
 
 | | |
@@ -183,3 +185,13 @@ Le tableau tactique demandé existe, ouvert par un lien, posé sur une vraie tab
 | [presentation/](presentation/) | Présentation de soutenance (PowerPoint et PDF) |
 | [etat-de-l-art/](etat-de-l-art/) | Rapport d'état de l'art (PDF) |
 | [ATTRIBUTION.md](../ATTRIBUTION.md) | Origine des ressources et usage de l'IA |
+
+## Addendum : retours du professeur, 23 novembre 2026
+
+Le corps du rapport et ses 261 tests décrivent le rendu du 17 novembre. La branche `feature/ux-fleches-mjs` ajoute les trois corrections demandées : interface mobile à icônes et aide progressive, règles des flèches validées avant commande, modules `.mjs` avec migration des installations anciennes.
+
+La reprise a corrigé des débordements démontrés à 320 × 568 et 568 × 320, conservé les commandes et le bouton de fermeture de l’aide visibles, et adapté le cadrage aux dimensions des commandes. Les panneaux longs défilent. Les limites des règles sont explicites : pas de hors-jeu déduit, pas d’identité de coureur inventée pour une fin de course.
+
+**Validation automatisée finale du 23 novembre 2026 : 226 tests unitaires et 104 vérifications de navigateur réussis (`npm test`), aucun échec et aucun cas ignoré.** Sont inclus les écrans étroits et en paysage, les sessions AR IWER en WebGPU et en mode test WebGL, les imports/MIME locaux, les en-têtes, la mise à jour cohérente de la PWA, la migration installée (un rechargement, un enregistrement et un cache), puis le démarrage hors-ligne. Aucun essai physique de cette version n’est consigné.
+
+Documentation détaillée : [ergonomie](ergonomie.md), [règles](regles-des-fleches.md), [migration](migration-mjs.md). Les essais physiques P0–P10 et la vidéo restent à faire par l’équipe. Cette branche n’est pas publiée tant que sa fusion n’est pas autorisée. La PR #15 reste distincte ; son [intégration future](integration-future-visualiseur.md) n’a pas été effectuée. Les [propositions d’attribution](attribution-proposee.md) sont soumises à relecture, sans modifier `ATTRIBUTION.md`.

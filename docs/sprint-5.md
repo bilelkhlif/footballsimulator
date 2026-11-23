@@ -1,5 +1,7 @@
 # Sprint 5 : sélection et déplacement par raycasting, flèches tactiques et annulation
 
+> Document historique : les noms `.js`, les mesures et les résultats décrivent la version de l’époque. Depuis le 23 novembre 2026, les modules applicatifs portent `.mjs` ; les liens vers le code suivent ce renommage. Voir la [migration](migration-mjs.md).
+
 Réalisé le 15 novembre 2026 sur la branche `feature/sprint-5`, à la demande de Bilel Khlif. Le code est généré avec Claude Code, à partir du cahier des charges et des consignes de Bilel Khlif : voir [ATTRIBUTION.md](../ATTRIBUTION.md).
 
 **Sommaire**

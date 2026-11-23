@@ -12,6 +12,8 @@ Trois niveaux de validation sont distingués. Seul le premier vaut pour un crit�
 
 **Résultat automatisé du 16 novembre 2026** : 182 tests unitaires et 79 vérifications de bout en bout, tous réussis (`npm test`).
 
+**Validation automatisée finale du 23 novembre 2026 : 226 tests unitaires et 104 vérifications de navigateur réussis (`npm test`), aucun échec et aucun cas ignoré.** Sont inclus les écrans étroits et en paysage, les sessions AR IWER en WebGPU et en mode test WebGL, les imports/MIME locaux, les en-têtes, la mise à jour cohérente de la PWA, la migration installée (un rechargement, un enregistrement et un cache), puis le démarrage hors-ligne. Aucun essai physique de cette version n’est consigné. Détail : [regles-des-fleches.md](regles-des-fleches.md), [ergonomie.md](ergonomie.md), [migration-mjs.md](migration-mjs.md).
+
 **Version des essais physiques.** Les essais physiques consignés ont été faits les 12 et 14 novembre, sur les versions publiées à ces dates, avant les sprints 5 et 6. La version finale n'a été vérifiée qu'en émulation et par les tests automatisés. Les essais de la partie 5 sont à faire sur elle.
 
 ---
@@ -45,7 +47,7 @@ Trois niveaux de validation sont distingués. Seul le premier vaut pour un crit�
 | Exigence | Preuve | Statut |
 | --- | --- | --- |
 | Performance : 30 images par seconde | Voir le critère « fluide » | À valider sur téléphone |
-| Ergonomie : gros boutons, une seule main | Boutons de 48 px de haut au moins (`src/styles.css`) ; barre d'outils vérifiée dans un écran de 360 px : six boutons de 48 px, libellés entiers | Validé (automatisé) ; confort à juger sur téléphone |
+| Ergonomie : gros boutons, une seule main | Outils de 52 px sur téléphone et en paysage court, 46 px sur bureau ; commandes secondaires à partir de 38 px. Sept dimensions contrôlées, dont 320 × 568 et 568 × 320 ; aide et panneaux défilants | Validé (automatisé) ; confort à juger sur téléphone |
 | Accessibilité : simple URL, sans installation obligatoire | GitHub Pages ; installation possible (PWA) | Validé |
 | Disponibilité : hors-ligne après le premier chargement | Voir le critère « hors-ligne » | Validé (automatisé) |
 | Sécurité : HTTPS exclusivement | GitHub Pages en HTTPS ; WebXR et le Service Worker exigent un contexte sécurisé | Validé |
@@ -54,7 +56,7 @@ Trois niveaux de validation sont distingués. Seul le premier vaut pour un crit�
 
 ## 4. Ce qui reste à faire sur téléphone
 
-Toute la partie 5, sur la version finale : environ 45 minutes, par un membre de l'équipe, avec le téléphone et une table. Les quatre mesures du cahier sont en P2 (stabilité), P3 (9 essais sur 10), P4 (30 images par seconde) et P7 (hors-ligne).
+Toute la partie 5, sur la version finale : environ 1 heure, par un membre de l'équipe, avec le téléphone et une table. Les quatre mesures du cahier sont en P2 (stabilité), P3 (9 essais sur 10), P4 (30 images par seconde) et P7 (hors-ligne). P8 à P10 vérifient les changements faits après l'évaluation : règles des flèches et visée au doigt, interface hors AR, passage d'une installation existante à `sw.mjs`.
 
 ---
 
@@ -93,7 +95,7 @@ Chaque essai donne un résultat simple, réussi ou non, avec sa mesure. **Ne not
 1. Debout à environ 60 cm de la table, mode « Déplacer ».
 2. Faire 10 essais, sur ces objets dans l'ordre : Bleus n° 1, 5, 9 et 11 ; Rouges n° 2, 6 et 10 ; le ballon ; Bleus n° 7 ; Rouges n° 8. Pour chacun, toucher l'objet, puis une place libre du terrain.
 3. Un essai réussit si l'objet touché est entouré de l'anneau doré dès le premier toucher, **et** s'il rejoint la place touchée, à moins d'une largeur de pion.
-4. « Réinitialiser », puis refaire les 10 essais à environ 1 m de la table.
+4. « Réinitialiser », puis « Confirmer ? » après au moins 0,4 s, puis refaire les 10 essais à environ 1 m de la table.
 
 **Réussi si** chaque série compte au moins 9 réussites sur 10.
 
@@ -108,9 +110,9 @@ Chaque essai donne un résultat simple, réussi ou non, avec sa mesure. **Ne not
 ### P5. Formations, flèches, annulation et interface (BF4, BF7, BF8, DOM Overlay)
 
 1. « Formations » : Bleus en 3-5-2 et Rouges en 4-2-3-1, puis, comme dans le scénario du cahier, Bleus en 4-3-3 et Rouges en 4-4-2. Attendu, à chaque fois : 11 joueurs par équipe, chacun dans sa moitié, numéros 1 à 11 lisibles.
-2. « Passe » : du n° 6 au n° 11 des Bleus. Attendu : une flèche dorée. « Course » : du n° 9 vers l'avant. Attendu : une flèche blanche en tirets.
+2. « Déplacer » : poser le ballon au pied du n° 6 des Bleus. « Passe » : toucher le ballon, puis le n° 11 des Bleus. Attendu : une flèche dorée du ballon au n° 11. « Course » : toucher le n° 9, puis un point devant lui. Attendu : une flèche blanche en tirets.
 3. « Annuler » : la course disparaît. « Rétablir » : elle revient.
-4. « Réinitialiser » : formations de départ, sans flèche. « Annuler » : tout revient.
+4. « Réinitialiser » : le bouton devient « Confirmer ? » ; le toucher de nouveau. Attendu : formations de départ, sans flèche. « Annuler » : tout revient.
 5. Sélectionner un joueur, puis toucher chaque bouton de la barre d'outils. Attendu : aucun joueur ne bouge.
 
 **Réussi si** chaque étape donne le résultat attendu.
@@ -135,9 +137,49 @@ Chaque essai donne un résultat simple, réussi ou non, avec sa mesure. **Ne not
 
 **Réussi si** les étapes 1 à 3 donnent le résultat attendu. L'étape 4 est notée « non applicable » s'il n'y a pas eu de nouvelle publication.
 
+### P8. Règles des flèches et visée au doigt, en AR
+
+Terrain posé, ballon au pied du n° 9 des Bleus (outil « Déplacer »).
+
+1. « Passe », puis toucher le n° 7 des Bleus, qui n'a pas le ballon. Attendu : message rouge « Une passe part du ballon… » ; rien ne commence.
+2. Toucher le ballon. Attendu : « Passe du n° 9 des Bleus… » et le bouton « Abandonner le tracé ».
+3. Poser le doigt sur un point du gazon et le garder posé, puis le glisser au-delà de la ligne de touche, sans relâcher. Attendu : l'aperçu suit le doigt, doré sur le terrain, rouge au-delà de la ligne.
+4. Relâcher au-delà de la ligne. Attendu : message rouge « Arrivée hors du terrain… » ; aucune flèche ; le départ reste posé.
+5. Toucher le n° 4 des Rouges. Attendu : message rouge « Passe vers un adversaire… ». Puis toucher le n° 10 des Bleus. Attendu : flèche dorée, message « Passe vers le n° 10 des Bleus tracée. ».
+6. Placer un joueur entre le téléphone et le ballon, téléphone bas, près de la table, puis toucher le ballon. Attendu : la passe part du ballon.
+7. « Course », toucher le ballon. Attendu : message rouge « Une course part d'un joueur… ».
+8. Lisibilité, en lumière du jour : bandeau, barre d'outils et messages lisibles sur l'image de la caméra.
+
+**Réussi si** chaque étape donne le résultat attendu.
+
+### P9. Interface hors AR, au doigt
+
+1. Première ouverture (ou données du site effacées) : la carte « Bienvenue » s'affiche. « Commencer » la ferme ; « ? » la rouvre.
+2. Après recentrage, panneaux fermés : le terrain entier est visible entre le bandeau et la barre d'outils, en portrait et en paysage, au repos, avec un joueur sélectionné et pendant une passe. Sous 380 px, vérifier la croix d’abandon et son nom avec TalkBack.
+3. Toucher un joueur, puis poser le doigt sur le gazon et le glisser. Attendu : un anneau suit le doigt ; le joueur va là où le doigt est relâché.
+4. Pendant qu'un joueur est sélectionné : tourner la vue à deux doigts, et zoomer. Attendu : la vue tourne et zoome ; le joueur ne bouge pas.
+5. « Passe », toucher le ballon, puis deux fois rapidement une même arrivée valide, différente du départ. Attendu : une seule flèche. Recommencer un départ, puis « Abandonner le tracé » : aucune autre flèche.
+6. En portrait et paysage, ouvrir l’aide, les formations et la séquence ; faire défiler leur contenu, les refermer. Attendu : outils, « Commencer », messages et sortie AR accessibles ; aucun contrôle sous la barre système.
+7. Tracer au moins 12 flèches réparties sur le terrain, puis tourner la vue, changer d’outil, annuler et rétablir. Attendu : distinction trait plein/tirets, aperçu et sélection lisibles ; pas de déplacement involontaire.
+
+**Réussi si** chaque étape donne le résultat attendu.
+
+### P10. Passage d'une installation existante à la nouvelle version
+
+À faire une seule fois, sur un téléphone où l'application était installée **avant** la fusion de cette version dans `main`.
+
+1. Ouvrir l'application installée, avec le réseau, une fois la nouvelle version publiée. Attendu : l'application se recharge seule, ou après « Recharger », et montre la nouvelle barre d'outils à icônes.
+2. Fermer l'application, activer le mode avion, la rouvrir. Attendu : la nouvelle version se lance hors-ligne.
+
+**Réussi si** les deux étapes donnent le résultat attendu. Noter « non applicable » si aucun téléphone n'avait l'ancienne version installée.
+
 ### Fiche de résultats
 
-Appareil : ____________________ · Android : ______ · Chrome : ______ · Date : __________ · Testeur : ______________
+Appareil : ____________________ · Android : ______ · Chrome : ______ · Date et heure : __________ · Testeur : ______________
+
+Version / commit testé : ____________________ · URL : ____________________ · Portrait (largeur × hauteur CSS) : __________ · Paysage : __________
+
+Installation ancienne avant fusion : oui / non · Ancienne version connue : __________ · Lien vers preuve (capture, vidéo ou relevé) : ____________________
 
 | Essai | Mesure à noter | Résultat | Réussi ? |
 | --- | --- | --- | --- |
@@ -149,5 +191,10 @@ Appareil : ____________________ · Android : ______ · Chrome : ______ · Date :
 | P5 Formations, flèches, annulation, interface | Étapes conformes sur 5 | | |
 | P6 Séquence en AR | Étapes conformes sur 6 | | |
 | P7 Hors-ligne, installation, mise à jour | Étapes conformes sur 3, et étape 4 | | |
+| P8 Règles des flèches, visée au doigt, en AR | Étapes conformes sur 8 | | |
+| P9 Interface hors AR, au doigt | Étapes conformes sur 7, dimensions et lisibilité des 12 flèches | | |
+| P10 Passage à sw.mjs | Étapes conformes sur 2, ou « non applicable » | | |
 
 Les résultats se reportent dans ce tableau, et les statuts des parties 1 et 2 ne passent à « Validé » qu'avec leur mesure.
+
+Pour chaque échec, noter l’étape, l’orientation, le message exact, la fréquence (sur 10 essais si applicable) et la preuve. Ne pas lancer P8–P10 sur l’ancien site : attendre la publication de la branche après fusion autorisée. La vidéo finale reste à réaliser par l’équipe.

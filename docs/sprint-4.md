@@ -1,5 +1,7 @@
 # Sprint 4 : système de formations et boutons HTML
 
+> Document historique : les noms `.js`, les mesures et les résultats décrivent la version de l’époque. Depuis le 23 novembre 2026, les modules applicatifs portent `.mjs` ; les liens vers le code suivent ce renommage. Voir la [migration](migration-mjs.md).
+
 Réalisé le 14 novembre 2026 sur la branche `feature/sprint-4`, à la demande de Bilel Khlif. Le code est généré avec Claude, à partir du cahier des charges : voir [ATTRIBUTION.md](../ATTRIBUTION.md).
 
 **Sommaire**
@@ -60,7 +62,7 @@ Modifiés : `src/formations.js` (4-2-3-1), `src/team.js` (`applyFormation`), `sr
 
 ## 3. Les formations : patron Strategy
 
-Chaque formation est une sous-classe de `FormationStrategy` qui décrit ses lignes, du gardien à l'attaque ; `computePositions()`, commun à toutes, en déduit les 11 places dans un repère propre à l'équipe (voir le [guide du code](guide-du-code.md#srcformationsjs)).
+Chaque formation est une sous-classe de `FormationStrategy` qui décrit ses lignes, du gardien à l'attaque ; `computePositions()`, commun à toutes, en déduit les 11 places dans un repère propre à l'équipe (voir le [guide du code](guide-du-code.md#srcformationsmjs)).
 
 Le sprint ajoute le **4-2-3-1** : deux milieux défensifs, trois milieux offensifs et un avant-centre. C'est la démonstration du patron : une classe de 30 lignes et une entrée dans le registre `FORMATIONS`, et rien d'autre. Son bouton apparaît dans l'interface, les tests la vérifient, et le changement de formation l'anime, sans qu'aucun autre fichier ne la connaisse.
 
