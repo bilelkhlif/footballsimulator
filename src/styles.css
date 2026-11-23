@@ -1,23 +1,37 @@
 /* ==========================================================================
    Football Simulator : feuille de style principale
    Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
+
+   Écrite d'abord pour le téléphone (boutons d'outil compacts, icône au-dessus du libellé), puis
+   élargie à partir de 720 px (une seule barre d'outils, libellés à côté des icônes). Les couleurs
+   des outils reprennent celles du terrain : vert pour déplacer, or pour les passes (trait plein),
+   blanc pour les courses (tirets), rouge pour ce qui est refusé.
    ========================================================================== */
 
-/* ---- Variables de thème : couleurs du terrain, tailles tactiles ---- */
+/* ---- Variables de thème : couleurs, rayons, tailles tactiles ---- */
 :root {
   color-scheme: dark;
-  --color-bg: #101915;
-  --color-panel: rgba(12, 26, 18, 0.78);
+  --color-bg: #0e1712;
+  --color-panel: rgba(10, 22, 16, 0.8);
+  --color-panel-strong: rgba(10, 22, 16, 0.93);
   --color-panel-border: rgba(158, 211, 174, 0.2);
+  --color-raised: rgba(255, 255, 255, 0.06);
+  --color-raised-hover: rgba(255, 255, 255, 0.14);
   --color-ink: #f2f6f3;
   --color-muted: #a9bdb0;
   --color-green: #1e7b45;
   --color-green-hover: #23904f;
+  --color-green-light: #8fdaa8;
   --color-gold: #e3a81a;
+  --color-pass: #f4c542;
+  --color-run: #f2f6f3;
+  --color-danger: #c9423a;
+  --color-invalid: #ff9a8b;
   --color-blue: #2f55d4;
   --color-red: #d63b2f;
   --radius: 14px;
-  --gap: 12px;
+  --radius-small: 11px;
+  --gap: 8px;
   --tap-size: 48px;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
@@ -27,7 +41,7 @@
   box-sizing: border-box;
 }
 
-/* L'attribut hidden l'emporte sur les display: flex des badges et des avis. */
+/* L'attribut hidden l'emporte sur les display: flex des badges, des avis et des boutons. */
 [hidden] {
   display: none !important;
 }
@@ -44,6 +58,25 @@ body {
   color: var(--color-ink);
   font-family: var(--font);
   -webkit-tap-highlight-color: transparent;
+}
+
+/* ---- Icônes SVG : le jeu de symboles est invisible, chaque icône suit la couleur du texte ---- */
+.icon-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* ---- Zone de rendu 3D : le canvas reçoit tous les gestes ---- */
@@ -68,101 +101,116 @@ body {
   justify-content: space-between;
   gap: var(--gap);
   padding:
-    max(12px, env(safe-area-inset-top))
-    max(16px, env(safe-area-inset-right))
-    max(16px, env(safe-area-inset-bottom))
-    max(16px, env(safe-area-inset-left));
+    max(10px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
   pointer-events: none;
 }
 
-#overlay button {
+#overlay button,
+.ui-surface {
   pointer-events: auto;
 }
 
-/* ---- Session AR : l'interface reste au-dessus de la vue AR ----
+/* ---- Session AR : l'interface reste au-dessus de la vue AR, réduite à l'essentiel ----
    Sur téléphone, le DOM Overlay s'en charge. Avec l'émulateur IWER sur PC, le canvas passe
    dans un conteneur plein écran de z-index 999 : sans ce réglage, il cacherait les boutons. */
 body[data-xr="active"] #overlay {
   z-index: 1000;
 }
 
-/* En AR, seuls « Déplacer le terrain » et « Quitter l'AR » restent dans le bandeau. */
+body[data-xr="active"] .brand,
+body[data-xr="active"] #gpu-status,
+body[data-xr="active"] #help-toggle,
 body[data-xr="active"] #install-app,
-body[data-xr="active"] #copy-flag {
+body[data-xr="active"] #copy-flag,
+body[data-xr="active"] .onboarding {
   display: none;
 }
 
-/* ---- Panneau translucide commun aux éléments de l'interface ---- */
+/* ---- Panneau translucide commun ---- */
 .brand,
-.hint,
-.notice {
-  margin: 0;
-  padding: 10px 14px;
+.status,
+.team-chip,
+.icon-button,
+.status-line,
+.notice,
+.dock,
+.formation-panel,
+.sequence-panel,
+.onboarding {
   background: var(--color-panel);
   border: 1px solid var(--color-panel-border);
-  border-radius: var(--radius);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
-/* ---- Bandeau supérieur : nom de l'application ---- */
+/* ---- Bandeau supérieur ---- */
 .topbar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--gap);
 }
 
-.topbar__group {
+.topbar__start,
+.topbar__end {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
+}
+
+.topbar__end {
+  justify-content: flex-end;
 }
 
 .brand {
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-}
-
-/* ---- Badge d'état de la réalité augmentée ---- */
-.status {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  color: var(--color-muted);
-  background: var(--color-panel);
-  border: 1px solid var(--color-panel-border);
+  margin: 0;
+  padding: 7px 12px 7px 9px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   border-radius: 999px;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+}
+
+.brand .icon {
+  color: var(--color-green-light);
+}
+
+/* ---- Badges d'état : AR, rendu, réseau ---- */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  border-radius: 999px;
 }
 
 .status::before {
   content: "";
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: currentColor;
 }
 
-.status[data-state="supported"] {
-  color: #9ed3ae;
+.status[data-state="supported"],
+.status[data-state="webgpu"] {
+  color: var(--color-green-light);
 }
 
 .status[data-state="emulated"],
 .status[data-state="needs-flag"],
 .status[data-state="supported-webgl-test"] {
   color: var(--color-gold);
-}
-
-/* ---- Badge du rendu : WebGPU actif, ou indisponible (pas de repli WebGL) ---- */
-.status[data-state="webgpu"] {
-  color: #9ed3ae;
 }
 
 .status[data-state="unavailable"],
@@ -176,11 +224,11 @@ body[data-xr="active"] #copy-flag {
   border-color: rgba(227, 168, 26, 0.55);
 }
 
-/* ---- Pastilles des équipes : couleur et formation en place ---- */
+/* ---- Pastilles des équipes : couleur et formation ; un toucher ouvre les formations ---- */
 .teams {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -189,23 +237,27 @@ body[data-xr="active"] #copy-flag {
 .team-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  background: var(--color-panel);
-  border: 1px solid var(--color-panel-border);
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 0.84rem;
+  color: var(--color-ink);
   border-radius: 999px;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  cursor: pointer;
 }
 
 .team-chip::before {
   content: "";
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   background: var(--team-color);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85);
+}
+
+.team-chip:hover {
+  background: var(--color-panel-strong);
 }
 
 .team-chip--blue {
@@ -216,43 +268,115 @@ body[data-xr="active"] #copy-flag {
   --team-color: var(--color-red);
 }
 
-/* ---- Bandeau inférieur : aide aux gestes et actions ---- */
+/* ---- Bouton rond à icône seule (aide) ---- */
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--color-ink);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.icon-button[aria-expanded="true"] {
+  color: #10201a;
+  background: var(--color-green-light);
+}
+
+/* ---- Bandeau inférieur : aide, panneaux et barre d'outils, empilés ---- */
 .bottombar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   gap: var(--gap);
 }
 
-.hint {
-  font-size: 0.9rem;
+/* Aide de l'étape en cours : laisse passer les touchers vers le terrain, sauf son bouton. */
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 6px 6px 12px;
+  border-radius: var(--radius);
+  transition: border-color 0.2s ease;
+}
+
+.status-line__icon {
+  width: 18px;
+  height: 18px;
   color: var(--color-muted);
 }
 
-/* ---- Retour d'un geste tactique (sprint 5) : action faite ou refusée ---- */
+.hint {
+  flex: 1;
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.35;
+  color: var(--color-muted);
+}
+
+/* ---- Retour d'un geste tactique (sprint 5) : action faite, information ou refus ---- */
 .hint[data-feedback="info"],
 .hint[data-feedback="success"] {
   color: var(--color-ink);
 }
 
-.hint[data-feedback="success"] {
-  border-color: rgba(227, 168, 26, 0.65);
+.status-line:has(.hint[data-feedback="success"]) {
+  border-color: rgba(244, 197, 66, 0.7);
 }
 
 .hint[data-feedback="invalid"] {
-  color: #ffb4a8;
-  border-color: rgba(255, 140, 120, 0.6);
+  color: var(--color-invalid);
 }
 
-/* ---- Message d'échec de l'entrée en AR ---- */
+.status-line:has(.hint[data-feedback="invalid"]) {
+  border-color: rgba(255, 120, 100, 0.75);
+}
+
+.status-line:has(.hint[data-feedback="invalid"]) .status-line__icon {
+  color: var(--color-invalid);
+}
+
+/* Bouton « Abandonner » : visible seulement pendant une sélection ou un tracé. */
+.chip-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 12px 0 9px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--color-ink);
+  background: var(--color-raised-hover);
+  border: 1px solid var(--color-panel-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chip-button .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.chip-button:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ---- Avis : échec de l'entrée en AR, nouvelle version ---- */
 .notice {
-  font-size: 0.9rem;
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 0.88rem;
   color: #ffb4a8;
+  border-radius: var(--radius);
   overflow-wrap: anywhere; /* l'adresse chrome://flags ne déborde pas sur un petit écran */
 }
 
-/* ---- Avis d'information : nouvelle version de l'application ---- */
 .notice--info {
   display: flex;
   flex-wrap: wrap;
@@ -261,27 +385,89 @@ body[data-xr="active"] #copy-flag {
   color: var(--color-ink);
 }
 
+/* ---- Aide au premier lancement : carte non modale ---- */
+.onboarding {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--color-panel-strong);
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.onboarding__title {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.onboarding__steps {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.onboarding__steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.86rem;
+  line-height: 1.38;
+  color: var(--color-muted);
+}
+
+.onboarding__steps strong {
+  color: var(--color-ink);
+}
+
+.onboarding__keys {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
+.onboarding .button {
+  justify-self: end;
+}
+
+.icon--move {
+  color: var(--color-green-light);
+}
+
+.icon--pass {
+  color: var(--color-pass);
+}
+
+.icon--run {
+  color: var(--color-run);
+}
+
+.onboarding__steps .text-invalid {
+  color: var(--color-invalid);
+}
+
+/* Sans souris ni clavier (téléphone), les raccourcis clavier ne servent à rien. */
+@media (hover: none) {
+  .onboarding__keys {
+    display: none;
+  }
+}
+
 /* ---- Panneau des formations (sprint 4) : une ligne de boutons par équipe ---- */
 .formation-panel {
-  flex: 1 1 100%;
-  max-width: 36rem; /* sur grand écran, les boutons gardent une largeur raisonnable */
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 10px;
-  background: var(--color-panel);
-  border: 1px solid var(--color-panel-border);
   border-radius: var(--radius);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  pointer-events: auto; /* un toucher entre deux boutons n'atteint pas le terrain (sprint 5) */
 }
 
 /* Une ligne par équipe : le nom, puis un bouton par formation, qui se partagent la largeur. */
 .formation-row {
   display: grid;
   grid-auto-flow: column;
-  grid-template-columns: 5.4rem; /* même largeur pour les deux équipes : les boutons s'alignent */
+  grid-template-columns: 5.2rem; /* même largeur pour les deux équipes : les boutons s'alignent */
   grid-auto-columns: minmax(0, 1fr);
   align-items: center;
   gap: 6px;
@@ -321,116 +507,34 @@ body[data-xr="active"] #copy-flag {
   font: inherit;
   font-weight: 600;
   color: var(--color-ink);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-raised);
   border: 1px solid var(--color-panel-border);
-  border-radius: 10px;
+  border-radius: var(--radius-small);
   cursor: pointer;
 }
 
 .formation-button:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--color-raised-hover);
 }
 
 .formation-button[aria-pressed="true"] {
   background: var(--team-color);
   border-color: transparent;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
 }
 
-.formation-button:focus-visible {
-  outline: 3px solid var(--color-gold);
-  outline-offset: 2px;
-}
-
-/* ---- Barre d'outils tactique (sprint 5) : le mode, puis l'historique ----
-   Deux groupes de trois boutons, côte à côte sur grand écran, l'un sous l'autre sur un téléphone.
-   Elle capte les touchers : un toucher entre deux boutons n'atteint pas le terrain. */
-.toolbar {
-  flex: 1 1 100%;
-  max-width: 36rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 8px;
-  background: var(--color-panel);
-  border: 1px solid var(--color-panel-border);
-  border-radius: var(--radius);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  pointer-events: auto;
-}
-
-.toolbar__group {
-  flex: 1 1 15rem;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-
-/* Outil : grande cible tactile ; le mode actif prend sa couleur (vert, or des passes, blanc des courses). */
-.tool {
-  min-width: 0;
-  min-height: var(--tap-size);
-  padding: 0 4px;
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--color-ink);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--color-panel-border);
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.tool:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.14);
-}
-
-.tool[aria-pressed="true"] {
-  background: var(--color-green);
-  border-color: transparent;
-}
-
-.tool--pass[aria-pressed="true"] {
-  background: #a87a12;
-}
-
-.tool--run[aria-pressed="true"] {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.tool:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.tool:focus-visible {
-  outline: 3px solid var(--color-gold);
-  outline-offset: 2px;
-}
-
-/* ---- Panneau de la séquence animée (sprint 6, BF9) : état, puis deux lignes de boutons ----
-   Même panneau translucide que celui des formations ; il capte les touchers. */
+/* ---- Panneau de la séquence animée (sprint 6, BF9) : état, puis deux lignes de boutons ---- */
 .sequence-panel {
-  flex: 1 1 100%;
-  max-width: 36rem;
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 8px;
-  background: var(--color-panel);
-  border: 1px solid var(--color-panel-border);
   border-radius: var(--radius);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  pointer-events: auto;
 }
 
 .sequence-panel__status {
   margin: 0 4px;
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   color: var(--color-muted);
 }
 
@@ -445,6 +549,207 @@ body[data-xr="active"] #copy-flag {
 
 .sequence-panel__row--4 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* ---- Barre d'outils (dock) : outils, historique, puis actions de la vue ----
+   Elle capte les touchers : un toucher entre deux boutons n'atteint pas le terrain. */
+.dock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 18px;
+}
+
+.toolbar {
+  display: grid;
+  gap: 6px;
+}
+
+.toolbar__group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+/* Outil : icône au-dessus du libellé sur téléphone ; l'outil actif prend la couleur de ses flèches. */
+.tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 5px 4px;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  background: var(--color-raised);
+  border: 1px solid var(--color-panel-border);
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+}
+
+.tool .icon {
+  width: 22px;
+  height: 22px;
+}
+
+.tool__label,
+.button__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool:hover:not(:disabled) {
+  background: var(--color-raised-hover);
+}
+
+.tool--move .icon {
+  color: var(--color-green-light);
+}
+
+.tool--pass .icon {
+  color: var(--color-pass);
+}
+
+.tool[aria-pressed="true"] {
+  color: #ffffff;
+  background: var(--color-green);
+  border-color: transparent;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.22);
+}
+
+.tool[aria-pressed="true"] .icon {
+  color: currentColor;
+}
+
+.tool--pass[aria-pressed="true"] {
+  color: #1d1600;
+  background: var(--color-pass);
+}
+
+.tool--run[aria-pressed="true"] {
+  color: #10201a;
+  background: var(--color-run);
+}
+
+.tool:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+/* « Réinitialiser » armé : attend sa confirmation. */
+.tool--danger[data-armed="true"] {
+  color: #ffffff;
+  background: var(--color-danger);
+  border-color: transparent;
+  animation: armed-pulse 1s ease-in-out infinite;
+}
+
+/* Annuler, Rétablir : marqués un instant après leur action. */
+.tool[data-flash="true"] {
+  background: rgba(143, 218, 168, 0.35);
+  transform: scale(0.95);
+}
+
+@keyframes armed-pulse {
+  50% {
+    box-shadow: 0 0 0 4px rgba(201, 66, 58, 0.35);
+  }
+}
+
+/* ---- Actions de la vue : formations, séquence, recentrer, AR ---- */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ---- Bouton : grande cible tactile, utilisable d'une seule main (cahier, §2.3) ---- */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--tap-size);
+  padding: 0 18px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-ink);
+  background: var(--color-green);
+  border: 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--color-green-hover);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* Petit bouton, à l'intérieur d'un avis. */
+.button--small {
+  min-height: 40px;
+  padding: 0 14px;
+}
+
+/* Bouton secondaire : surface claire, bordure fine. */
+.button--secondary {
+  background: var(--color-raised);
+  border: 1px solid var(--color-panel-border);
+}
+
+.button--secondary:hover {
+  background: var(--color-raised-hover);
+}
+
+.button--secondary[aria-expanded="true"] {
+  color: #10201a;
+  background: var(--color-green-light);
+}
+
+/* Bouton principal : l'entrée en AR. */
+.button--primary {
+  background: var(--color-green);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.18);
+}
+
+/* Sur téléphone, les actions ont la forme des outils : icône au-dessus du libellé. */
+.dock .actions .button {
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 5px 4px;
+  font-size: 0.76rem;
+  border-radius: var(--radius-small);
+}
+
+.dock .actions .button .icon {
+  width: 22px;
+  height: 22px;
+}
+
+/* ---- Focus au clavier : contour doré, sur tous les éléments activables ---- */
+.button:focus-visible,
+.tool:focus-visible,
+.formation-button:focus-visible,
+.team-chip:focus-visible,
+.icon-button:focus-visible,
+.chip-button:focus-visible {
+  outline: 3px solid var(--color-gold);
+  outline-offset: 2px;
 }
 
 /* ---- Mode diagnostic (?diagnostics) : sous le bandeau supérieur, laisse passer les touchers ---- */
@@ -479,59 +784,6 @@ body[data-xr="active"] #copy-flag {
   text-align: right;
 }
 
-/* ---- Groupe de boutons du bandeau inférieur, aligné à droite même sur deux lignes ---- */
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-left: auto;
-}
-
-/* ---- Bouton : grande cible tactile, utilisable d'une seule main (cahier, §2.3) ---- */
-.button {
-  min-height: var(--tap-size);
-  padding: 0 20px;
-  font: inherit;
-  font-weight: 600;
-  color: var(--color-ink);
-  background: var(--color-green);
-  border: 0;
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.button:hover {
-  background: var(--color-green-hover);
-}
-
-.button:focus-visible {
-  outline: 3px solid var(--color-gold);
-  outline-offset: 2px;
-}
-
-.button:disabled {
-  opacity: 0.6;
-  cursor: progress;
-}
-
-/* ---- Petit bouton, à l'intérieur d'un avis ---- */
-.button--small {
-  min-height: 40px;
-  padding: 0 14px;
-}
-
-/* ---- Bouton secondaire : panneau translucide, pour quitter l'AR ---- */
-.button--secondary {
-  background: var(--color-panel);
-  border: 1px solid var(--color-panel-border);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-}
-
-.button--secondary:hover {
-  background: rgba(12, 26, 18, 0.92);
-}
-
 /* ---- Écran de chargement et message d'erreur au démarrage ---- */
 .loader {
   position: fixed;
@@ -544,8 +796,6 @@ body[data-xr="active"] #copy-flag {
   background: var(--color-bg);
   transition: opacity 0.3s ease;
 }
-
-
 
 body.is-ready .loader {
   opacity: 0;
@@ -566,38 +816,168 @@ body.is-ready .loader {
   border-radius: var(--radius);
 }
 
-/* ---- Petits écrans (téléphone en portrait) : boutons de formation un peu plus compacts ---- */
-@media (max-width: 400px) {
-  .formation-panel {
-    padding: 8px;
+/* ---- Téléphone (moins de 720 px) : bandeau supérieur sur deux lignes courtes ----
+   Ligne 1 : logo et badges d'état ; ligne 2 : formations des équipes, puis l'aide à droite. */
+@media (max-width: 719px) {
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .topbar__end {
+    justify-content: space-between;
+    flex-wrap: nowrap;
+  }
+
+  .brand__name {
+    display: none;
+  }
+
+  .brand {
+    padding: 6px 8px;
+  }
+
+  .status {
+    padding: 5px 9px;
+    font-size: 0.72rem;
+  }
+
+  .team-chip {
+    min-height: 38px;
+    padding: 0 11px;
+    font-size: 0.8rem;
+  }
+
+  .icon-button {
+    width: 38px;
+    height: 38px;
+  }
+
+  .hint {
+    font-size: 0.82rem;
+  }
+
+  .chip-button {
+    padding: 0 10px 0 8px;
+    font-size: 0.76rem;
   }
 
   .formation-row {
-    grid-template-columns: 4.6rem;
-  }
-
-  .formation-row__team {
-    gap: 6px;
-    font-size: 0.85rem;
+    grid-template-columns: 4.9rem;
+    gap: 5px;
   }
 
   .formation-button {
     padding: 0 2px;
-    font-size: 0.85rem;
+    font-size: 0.86rem;
+  }
+}
+
+/* ---- Très petits écrans (moins de 380 px) : la couleur de l'équipe seule devant ses formations ;
+   son nom reste lu par les lecteurs d'écran (aria-label de la ligne). ---- */
+@media (max-width: 379px) {
+  .formation-row {
+    grid-template-columns: 1.2rem;
+  }
+
+  .formation-row__team {
+    gap: 0;
+    font-size: 0;
+  }
+}
+
+/* ---- Grand écran (720 px et plus) : une barre d'outils centrée, libellés à côté des icônes ---- */
+@media (min-width: 720px) {
+  #overlay {
+    padding:
+      max(14px, env(safe-area-inset-top))
+      max(16px, env(safe-area-inset-right))
+      max(16px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+  }
+
+  .bottombar {
+    align-items: center;
+  }
+
+  .status-line {
+    width: min(100%, 46rem);
+  }
+
+  .onboarding {
+    width: min(100%, 34rem);
+  }
+
+  .formation-panel,
+  .sequence-panel,
+  .notice {
+    width: min(100%, 38rem);
+  }
+
+  .dock {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    max-width: 100%;
   }
 
   .toolbar {
-    padding: 6px;
+    display: flex;
+    gap: 10px;
   }
 
-  .tool {
-    font-size: 0.85rem;
+  .toolbar__group {
+    display: flex;
+    gap: 6px;
+  }
+
+  .toolbar__group + .toolbar__group,
+  .dock .actions {
+    padding-left: 10px;
+    border-left: 1px solid var(--color-panel-border);
+  }
+
+  .tool,
+  .dock .actions .button {
+    flex: none;
+    flex-direction: row;
+    gap: 7px;
+    min-height: 46px;
+    padding: 0 13px;
+    font-size: 0.88rem;
+  }
+
+  .tool .icon,
+  .dock .actions .button .icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .actions {
+    flex-wrap: nowrap;
+  }
+
+  .sequence-panel .tool {
+    justify-content: center;
   }
 }
 
 /* ---- Préférence système : pas d'animation ---- */
 @media (prefers-reduced-motion: reduce) {
-  .loader {
+  .loader,
+  .tool,
+  .status-line {
     transition: none;
+  }
+
+  .tool--danger[data-armed="true"] {
+    animation: none;
+  }
+
+  .tool[data-flash="true"] {
+    transform: none;
   }
 }

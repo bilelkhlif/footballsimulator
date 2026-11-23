@@ -11,10 +11,45 @@ import { createWebGpuRenderer } from './webgpu.mjs';
 import { createWebGlTestRenderer, RENDER_MODES } from './webgl-test-mode.mjs';
 
 /**
- * Part de l'écran que le plateau peut occuper lors du cadrage, en coordonnées
- * normalisées (1 = bord de l'écran). La marge verticale laisse place aux bandeaux.
+ * Part de l'écran où le plateau est cadré, en coordonnées normalisées (1 = bord de l'écran) :
+ * entre le bandeau supérieur et la barre d'outils, plus haute sur un téléphone en portrait. La
+ * fenêtre ne dépend que de l'orientation : le cadrage est le même avant et après une session AR.
  */
-const FRAMING_LIMITS = Object.freeze({ x: 0.92, y: 0.74 });
+export const FRAMING_WINDOWS = Object.freeze({
+  portrait: Object.freeze({ x: 0.92, top: 0.7, bottom: -0.38 }),
+  landscape: Object.freeze({ x: 0.92, top: 0.8, bottom: -0.62 }),
+});
+
+/**
+ * Fenêtre de cadrage pour l'orientation de la caméra.
+ * @param {THREE.PerspectiveCamera} camera
+ * @returns {{x: number, top: number, bottom: number}}
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Scène 3D — cadrage de la caméra
+ */
+export function framingWindow(camera) {
+  return camera.aspect < 1 ? FRAMING_WINDOWS.portrait : FRAMING_WINDOWS.landscape;
+}
+
+/**
+ * Décale l'image vers le centre de la fenêtre de cadrage (setViewOffset) : le centre du terrain
+ * reste le pivot de la rotation, mais s'affiche au milieu de la place libre, au-dessus de la barre
+ * d'outils. Le rayon de la souris et du doigt utilise la même projection : la sélection reste exacte.
+ * @param {THREE.PerspectiveCamera} camera
+ * @param {number} width largeur du rendu, en pixels CSS
+ * @param {number} height hauteur du rendu, en pixels CSS
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Scène 3D — cadrage de la caméra
+ */
+export function applyFramingOffset(camera, width, height) {
+  const { top, bottom } = framingWindow(camera);
+  if (width > 0 && height > 0) {
+    camera.setViewOffset(width, height, 0, ((top + bottom) / 2) * (height / 2), width, height);
+  }
+  camera.updateProjectionMatrix();
+}
 
 /** Coins du plateau, dessus et dessous, utilisés pour le cadrage. */
 const BOARD_CORNERS = [-1, 1].flatMap((sx) => [-1, 1].flatMap((sz) => [0, -BOARD_THICKNESS].map(
@@ -89,9 +124,10 @@ function createTable() {
  */
 function boardFitsInView(camera) {
   const projected = new THREE.Vector3();
+  const { x, top, bottom } = framingWindow(camera);
   return BOARD_CORNERS.every((corner) => {
     projected.copy(corner).project(camera);
-    return Math.abs(projected.x) <= FRAMING_LIMITS.x && Math.abs(projected.y) <= FRAMING_LIMITS.y;
+    return Math.abs(projected.x) <= x && projected.y <= top && projected.y >= bottom;
   });
 }
 
@@ -167,6 +203,7 @@ export async function createSceneContext(container, { renderMode = RENDER_MODES.
   scene.background = new THREE.Color(SCENE_COLORS.background);
 
   const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.01, 20);
+  applyFramingOffset(camera, container.clientWidth, container.clientHeight);
   const controls = createControls(camera, renderer.domElement);
 
   addLights(scene);
@@ -196,7 +233,7 @@ export async function createSceneContext(container, { renderMode = RENDER_MODES.
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     camera.aspect = container.clientWidth / container.clientHeight;
-    camera.updateProjectionMatrix();
+    applyFramingOffset(camera, container.clientWidth, container.clientHeight);
     const isPortrait = camera.aspect < 1;
     if (isPortrait !== wasPortrait) {
       wasPortrait = isPortrait;

@@ -12,6 +12,9 @@
  * mode diagnostic des performances (?diagnostics).
  * Sprint 6 : pions instanciés (6 appels de dessin au lieu de 66) ; séquence animée pas à pas
  * (bonus BF9) ; Service Worker à version de contenu.
+ * Retours d'évaluation : règles des flèches vérifiées avant toute action (src/arrow-rules.mjs),
+ * barre d'outils à icônes, aide au premier lancement, bouton « Abandonner », raccourcis clavier,
+ * visée au doigt, confirmation de la réinitialisation ; modules en .mjs.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -28,6 +31,8 @@ import { createFormationPanel } from './formation-panel.mjs';
 import { ChangeFormationCommand, CommandHistory } from './commands.mjs';
 import { MOVE_DURATION_MS, TacticalView } from './tactical-view.mjs';
 import { TacticalInteraction } from './tactical-interaction.mjs';
+import { attachKeyboardShortcuts } from './keyboard-shortcuts.mjs';
+import { createOnboarding } from './onboarding.mjs';
 import { createHintController, createTacticalToolbar, describeGuidance } from './tactical-toolbar.mjs';
 import { PointerInput } from './pointer-input.mjs';
 import { routeXrSelect, SELECT_ROUTES, XrTacticalInput } from './xr-input.mjs';
@@ -91,9 +96,12 @@ const PLACEMENT_LABELS = Object.freeze({
 
 /**
  * Éléments de l'interface où un toucher ne doit pas devenir un select WebXR (DOM Overlay) : boutons,
- * barre d'outils, panneaux des formations et de la séquence, et avis.
+ * surfaces de l'interface (barre d'outils, panneaux, pastilles, aide) et avis.
  */
-const XR_UI_SELECTOR = 'button, .toolbar, .formation-panel, .sequence-panel, .notice';
+const XR_UI_SELECTOR = 'button, .ui-surface, .notice';
+
+/** Libellé du bouton « Abandonner », selon ce qui est en cours. */
+const CANCEL_LABELS = Object.freeze({ selected: 'Désélectionner', 'arrow-end': 'Abandonner le tracé' });
 
 /**
  * Affiche dans le badge de rendu l'API utilisée : WebGPU, avec le processeur graphique, ou
@@ -195,7 +203,7 @@ async function init(renderMode) {
   // Bandeau d'aide : l'aide de l'état courant, et quelques instants le retour de chaque geste.
   const hint = createHintController(document.getElementById('hint'));
   interaction.on('feedback', ({ kind, message }) => hint.flash(message, kind));
-  createTacticalToolbar({
+  const toolbar = createTacticalToolbar({
     root: document.getElementById('tactical-toolbar'),
     interaction,
     history,
@@ -205,12 +213,58 @@ async function init(renderMode) {
   document.getElementById('formations-toggle').addEventListener('click', () => {
     setFormationPanelOpen(document.getElementById('formation-panel').hidden);
   });
-  interaction.on('statechange', () => {
+  // Une pastille d'équipe du bandeau supérieur ouvre directement le panneau des formations.
+  for (const chip of document.querySelectorAll('[data-opens="formations"]')) {
+    chip.addEventListener('click', () => setFormationPanelOpen(document.getElementById('formation-panel').hidden));
+  }
+
+  // Bouton « Abandonner » : visible pendant une sélection ou un tracé, comme Échap.
+  const cancelButton = document.getElementById('cancel-draft');
+  const cancelLabel = cancelButton.querySelector('[data-cancel-label]');
+  /** Abandonne la sélection ou le tracé en cours, et le dit. */
+  const cancelDraft = () => {
+    const wasDrawing = interaction.draft !== null;
+    if (!interaction.cancel()) {
+      return false;
+    }
+    hint.flash(wasDrawing ? 'Tracé abandonné.' : 'Sélection annulée.', 'info');
+    return true;
+  };
+  cancelButton.addEventListener('click', cancelDraft);
+  interaction.on('statechange', ({ state }) => {
+    const label = CANCEL_LABELS[state];
+    cancelButton.hidden = !label;
+    if (label) {
+      cancelLabel.textContent = label;
+    }
     // Pendant le choix d'une destination, un doigt vise (src/pointer-input.mjs) : la rotation de
     // la vue passe aux gestes à deux doigts, qui gardent aussi le zoom.
     const aiming = interaction.wantsHover;
     controls.touches.ONE = aiming ? null : TOUCH.ROTATE;
     controls.touches.TWO = aiming ? TOUCH.DOLLY_ROTATE : TOUCH.DOLLY_PAN;
+  });
+
+  // Aide au premier lancement, rouverte par « ? ».
+  const onboarding = createOnboarding({
+    card: document.getElementById('onboarding'),
+    closeButton: document.getElementById('onboarding-close'),
+    toggleButton: document.getElementById('help-toggle'),
+    storage: readLocalStorage(),
+  });
+
+  // Raccourcis clavier : D, P, C, Échap, Ctrl+Z, Ctrl+Y.
+  attachKeyboardShortcuts({
+    target: window,
+    actions: {
+      mode: (mode) => {
+        toolbar.disarmReset();
+        interaction.setMode(mode);
+      },
+      undo: toolbar.undo,
+      redo: toolbar.redo,
+      // Échap : la confirmation en attente, puis le tracé, puis un panneau ouvert, puis l'aide.
+      cancel: () => toolbar.disarmReset() || cancelDraft() || closeOpenPanel() || closeOnboarding(onboarding),
+    },
   });
 
   // Séquence animée (sprint 6, BF9) : images clés par des commandes annulables, lecture dans la
@@ -303,8 +357,55 @@ async function init(renderMode) {
   document.body.classList.add('is-ready');
   return {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, diagnostics, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes,
+    sequence, sequencePlayer, teamMeshes, onboarding,
   };
+}
+
+/**
+ * Stockage local du navigateur, ou null s'il est refusé (navigation privée, réglages) : l'aide au
+ * premier lancement s'en passe.
+ * @returns {Storage|null}
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Interface HTML — aide au premier lancement
+ */
+function readLocalStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Ferme le panneau des formations ou de la séquence, s'il y en a un d'ouvert (touche Échap).
+ * @returns {boolean} vrai si un panneau a été fermé
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Interface HTML — raccourcis clavier
+ */
+function closeOpenPanel() {
+  const formationsOpen = !document.getElementById('formation-panel').hidden;
+  const sequenceOpen = !document.getElementById('sequence-panel').hidden;
+  setFormationPanelOpen(false);
+  setSequencePanelOpen(false);
+  return formationsOpen || sequenceOpen;
+}
+
+/**
+ * Ferme l'aide au premier lancement si elle est ouverte (touche Échap), en rendant le focus au « ? ».
+ * @param {ReturnType<typeof createOnboarding>} onboarding
+ * @returns {boolean} vrai si l'aide a été fermée
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Interface HTML — aide au premier lancement
+ */
+function closeOnboarding(onboarding) {
+  if (!onboarding.isOpen) {
+    return false;
+  }
+  onboarding.close({ restoreFocus: true });
+  return true;
 }
 
 /**
@@ -399,14 +500,15 @@ function showFlagHelp(text) {
  * @param {{placement: SurfacePlacement|null, tacticalInput: XrTacticalInput|null}} arState
  * @param {string} renderMode une valeur de RENDER_MODES
  * @param {{interaction: TacticalInteraction, raycaster: Raycaster,
- *   hint: ReturnType<typeof createHintController>, refreshGuidance: (options?: {force?: boolean}) => void}} tactics
- *   interaction tactique (sprint 5), son rayon et l'aide
+ *   hint: ReturnType<typeof createHintController>, refreshGuidance: (options?: {force?: boolean}) => void,
+ *   onboarding?: ReturnType<typeof createOnboarding>}} tactics
+ *   interaction tactique (sprint 5), son rayon, l'aide de l'étape et l'aide au premier lancement
  * @returns {ArSession}
  * @responsable Bilel Khlif
  * @date 2026-11-09
  * @role Orchestration — branchement de la session AR sur la scène et l'interface
  */
-function setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance }) {
+function setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding }) {
   const overlay = document.getElementById('overlay');
   const enterButton = document.getElementById('enter-ar');
   const exitButton = document.getElementById('exit-ar');
@@ -438,6 +540,7 @@ function setUpArSession(sceneContext, arView, arState, renderMode, { interaction
   // Observateurs : la scène et l'interface suivent le cycle de vie de la session.
   arSession.on('sessionstart', ({ session, referenceSpace }) => {
     arView.enter();
+    onboarding?.close();
     const placement = new SurfacePlacement({ session, referenceSpace, view: arView });
     placement.on('statechange', ({ state }) => {
       document.body.dataset.placement = state;
@@ -529,12 +632,13 @@ function setUpArSession(sceneContext, arView, arState, renderMode, { interaction
   moveButton.addEventListener('click', () => arState.placement?.startOver());
 
   const copyFlagButton = document.getElementById('copy-flag');
+  const copyFlagLabel = copyFlagButton.querySelector('.button__label') ?? copyFlagButton;
   copyFlagButton.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(WEBGPU_FLAG_URL);
-      copyFlagButton.textContent = 'Adresse copiée';
+      copyFlagLabel.textContent = 'Adresse copiée';
     } catch {
-      copyFlagButton.textContent = WEBGPU_FLAG_URL;
+      copyFlagLabel.textContent = WEBGPU_FLAG_URL;
     }
   });
 
@@ -653,10 +757,10 @@ async function start() {
   }
   const {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, diagnostics, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes,
+    sequence, sequencePlayer, teamMeshes, onboarding,
   } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
-  const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance });
+  const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding });
   exposeForDebugging({
     ...sceneContext,
     renderMode,
