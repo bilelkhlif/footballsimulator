@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/ar-view.js, avec de vrais objets three.js (copie locale r187, chargée
+ * Tests unitaires de src/ar-view.mjs, avec de vrais objets three.js (copie locale r187, chargée
  * d'après la carte d'import de index.html) : préparation de la scène pour l'AR, réticule, pose du
  * terrain, suivi de l'ancre et restauration de la vue 3D.
  *
@@ -8,14 +8,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { createArView } from '../../src/ar-view.js';
-import { computePitchPlacement, computeSurfacePlacement } from '../../src/ar-placement.js';
+import { createArView } from '../../src/ar-view.mjs';
+import { computePitchPlacement, computeSurfacePlacement } from '../../src/ar-placement.mjs';
 
 /**
  * Scène minimale : fond, table, groupe du terrain, réticule et contrôles d'orbite.
  * @responsable Bilel Khlif
  * @date 2026-11-10
- * @role Tests unitaires (src/ar-view.js) — doublure
+ * @role Tests unitaires (src/ar-view.mjs) — doublure
  */
 function createScene() {
   const scene = new THREE.Scene();

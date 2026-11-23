@@ -1,5 +1,7 @@
 # Sprint 1 : dépôt, PWA et scène 3D hors AR
 
+> Document historique : les noms `.js`, les mesures et les résultats décrivent la version de l’époque. Depuis le 23 novembre 2026, les modules applicatifs portent `.mjs` ; les liens vers le code suivent ce renommage. Voir la [migration](migration-mjs.md).
+
 Terminé le 5 novembre 2026. Responsable principal : Bilel Khlif (scène three.js, terrain, joueurs, formations).
 
 Objectif du cahier des charges (§5.3) : structure du dépôt GitHub et de la PWA ; scène three.js de base, avec le terrain 3D et les joueurs visibles à l'écran, hors AR.

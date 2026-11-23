@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/formation-transition.js et de applyFormation (src/team.js) : places
+ * Tests unitaires de src/formation-transition.mjs et de applyFormation (src/team.mjs) : places
  * cibles, courbe d'animation, déplacements image par image, et joueurs three.js réels replacés.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
@@ -9,16 +9,16 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {
   computeTeamTargets, easeInOutCubic, FormationAnimator, TRANSITION_DURATION_MS,
-} from '../../src/formation-transition.js';
-import { applyFormation } from '../../src/team.js';
-import { FORMATIONS, toPitchCoordinates } from '../../src/formations.js';
-import { TEAMS } from '../../src/config.js';
+} from '../../src/formation-transition.mjs';
+import { applyFormation } from '../../src/team.mjs';
+import { FORMATIONS, toPitchCoordinates } from '../../src/formations.mjs';
+import { TEAMS } from '../../src/config.mjs';
 
 /**
  * Horloge manuelle, pour faire avancer le temps sans attendre.
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/formation-transition.js) — doublure
+ * @role Tests unitaires (src/formation-transition.mjs) — doublure
  */
 function createClock() {
   let now = 0;
@@ -29,7 +29,7 @@ function createClock() {
  * Un objet qui a une position, comme un joueur three.js.
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/formation-transition.js) — doublure
+ * @role Tests unitaires (src/formation-transition.mjs) — doublure
  */
 function createObject(x = 0, z = 0) {
   return { position: { x, y: 0, z } };

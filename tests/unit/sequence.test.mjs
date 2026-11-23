@@ -1,6 +1,6 @@
 /**
- * Tests unitaires de la séquence animée (sprint 6, bonus BF9) : src/tactical-sequence.js, ses
- * commandes annulables, le lecteur src/sequence-player.js (temps écoulé, courbe, pause, vitesse,
+ * Tests unitaires de la séquence animée (sprint 6, bonus BF9) : src/tactical-sequence.mjs, ses
+ * commandes annulables, le lecteur src/sequence-player.mjs (temps écoulé, courbe, pause, vitesse,
  * reprise, arrêt sur un changement du tableau) et le texte du panneau.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
@@ -8,12 +8,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { MAX_KEYFRAMES, TacticalSequence } from '../../src/tactical-sequence.js';
-import { PLAYBACK_STATES, SequencePlayer, STEP_DURATION_MS } from '../../src/sequence-player.js';
-import { AddKeyframeCommand, ClearSequenceCommand, CommandHistory, MovePlayerCommand } from '../../src/commands.js';
-import { TacticsBoard } from '../../src/tactics-board.js';
-import { describeSequence, formatSpeed } from '../../src/sequence-panel.js';
-import { DEFAULT_FORMATIONS } from '../../src/config.js';
+import { MAX_KEYFRAMES, TacticalSequence } from '../../src/tactical-sequence.mjs';
+import { PLAYBACK_STATES, SequencePlayer, STEP_DURATION_MS } from '../../src/sequence-player.mjs';
+import { AddKeyframeCommand, ClearSequenceCommand, CommandHistory, MovePlayerCommand } from '../../src/commands.mjs';
+import { TacticsBoard } from '../../src/tactics-board.mjs';
+import { describeSequence, formatSpeed } from '../../src/sequence-panel.mjs';
+import { DEFAULT_FORMATIONS } from '../../src/config.mjs';
 import { createTacticalFixture, playerObject } from './tactical-fixtures.mjs';
 
 /**
@@ -22,7 +22,7 @@ import { createTacticalFixture, playerObject } from './tactical-fixtures.mjs';
  * @returns {object}
  * @responsable Bilel Khlif
  * @date 2026-11-16
- * @role Tests unitaires (src/sequence-player.js) — montage du test
+ * @role Tests unitaires (src/sequence-player.mjs) — montage du test
  */
 function createSetup() {
   const board = new TacticsBoard(DEFAULT_FORMATIONS);

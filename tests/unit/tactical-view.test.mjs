@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/tactical-view.js et src/tactical-arrows.js (sprint 5) : la scène suit le
+ * Tests unitaires de src/tactical-view.mjs et src/tactical-arrows.mjs (sprint 5) : la scène suit le
  * tableau tactique, y compris quand un déplacement à la main croise une transition de formation ou
  * quand une transition interrompue est annulée ; les flèches 3D restent dans le repère du terrain
  * et leurs ressources sont libérées.
@@ -9,12 +9,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { createTacticalFixture, playerObject } from './tactical-fixtures.mjs';
-import { AddArrowCommand, ChangeFormationCommand, MovePlayerCommand, ResetBoardCommand } from '../../src/commands.js';
-import { computeTeamTargets, TRANSITION_DURATION_MS } from '../../src/formation-transition.js';
-import { MOVE_DURATION_MS } from '../../src/tactical-view.js';
-import { ARROW_DIMENSIONS } from '../../src/tactical-arrows.js';
-import { FORMATIONS } from '../../src/formations.js';
+import { aimRay, createTacticalFixture, pitchPointToWorld, playerObject } from './tactical-fixtures.mjs';
+import { AddArrowCommand, ChangeFormationCommand, MovePlayerCommand, ResetBoardCommand } from '../../src/commands.mjs';
+import { computeTeamTargets, TRANSITION_DURATION_MS } from '../../src/formation-transition.mjs';
+import { MOVE_DURATION_MS } from '../../src/tactical-view.mjs';
+import { ARROW_DIMENSIONS, ARROW_STYLES, INVALID_COLOR } from '../../src/tactical-arrows.mjs';
+import { PITCH_HALF_EXTENTS } from '../../src/tactics-board.mjs';
+import { FORMATIONS } from '../../src/formations.mjs';
 
 /**
  * Fait avancer l'horloge puis les déplacements d'une durée donnée.
@@ -22,7 +23,7 @@ import { FORMATIONS } from '../../src/formations.js';
  * @param {number} ms
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/tactical-view.js) — outil de vérification
+ * @role Tests unitaires (src/tactical-view.mjs) — outil de vérification
  */
 function advance(fixture, ms) {
   fixture.clock.advance(ms);
@@ -34,7 +35,7 @@ function advance(fixture, ms) {
  * @param {ReturnType<typeof createTacticalFixture>} fixture
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/tactical-view.js) — outil de vérification
+ * @role Tests unitaires (src/tactical-view.mjs) — outil de vérification
  */
 function assertSceneMatchesBoard(fixture) {
   for (const [teamId, group] of Object.entries(fixture.teamGroups)) {
@@ -169,6 +170,43 @@ test('anneau de sélection : il suit le joueur sélectionné pendant son déplac
   assert.equal(preview.visible, false, 'pas d\'aperçu sans point survolé');
 });
 
+test('aperçu jugé : départs de passe pulsés, flèche rouge si refusée, receveur entouré si valide', () => {
+  const fixture = createTacticalFixture();
+  const { interaction, view, pitchGroup, ball, board } = fixture;
+  const raycaster = new THREE.Raycaster();
+  const eye = pitchPointToWorld(pitchGroup, 0.02, 0.03, 0.9);
+  const shaft = pitchGroup.getObjectByName('arrow-preview').children[0];
+  const endMarker = pitchGroup.getObjectByName('arrow-end');
+  const receiverRing = pitchGroup.getObjectByName('receiver-ring');
+
+  interaction.setMode('pass');
+  view.update(0);
+  const origin = pitchGroup.getObjectByName('pass-origin-0');
+  assert.equal(origin.visible, true, 'le ballon est un départ possible');
+  assert.deepEqual([origin.position.x, origin.position.z], [0, 0]);
+  assert.equal(pitchGroup.getObjectByName('pass-origin-1').visible, false);
+  view.update(300);
+  assert.notEqual(origin.scale.x, 1, 'pulsation');
+
+  interaction.handleTap(aimRay(raycaster, eye, ball.getWorldPosition(new THREE.Vector3())));
+  view.update(400);
+  assert.equal(origin.visible, false, 'départ posé : plus de marques');
+
+  interaction.hover(aimRay(raycaster, eye, pitchPointToWorld(pitchGroup, PITCH_HALF_EXTENTS.x + 0.012, 0.02)));
+  view.update(500);
+  assert.equal(shaft.material.color.getHex(), INVALID_COLOR, 'arrivée hors des lignes : aperçu rouge');
+  assert.equal(endMarker.visible, true);
+  assert.equal(receiverRing.visible, false);
+
+  const six = playerObject(fixture, 'blue', 6);
+  interaction.hover(aimRay(raycaster, eye, six.localToWorld(new THREE.Vector3(0, 0.04, 0))));
+  view.update(600);
+  assert.equal(shaft.material.color.getHex(), ARROW_STYLES.pass.color);
+  assert.equal(receiverRing.visible, true);
+  const six2 = board.getPlayerPosition('blue', 6);
+  assert.deepEqual([receiverRing.position.x, receiverRing.position.z], [six2.x, six2.z]);
+});
+
 test('vue libérée : plus d\'abonnement au tableau, flèches et repères retirés de la scène', () => {
   const fixture = createTacticalFixture();
   const { board, view, pitchGroup } = fixture;
@@ -179,7 +217,8 @@ test('vue libérée : plus d\'abonnement au tableau, flèches et repères retir�
   board.setPlayerPosition('blue', 2, { x: -0.2, z: 0.1 });
   advance(fixture, TRANSITION_DURATION_MS);
   assert.deepEqual(player.position, before, 'la vue libérée ne suit plus le tableau');
-  for (const name of ['tactical-arrows', 'arrow-preview', 'selection-ring', 'arrow-start']) {
+  for (const name of ['tactical-arrows', 'arrow-preview', 'selection-ring', 'arrow-start', 'arrow-end', 'receiver-ring',
+    'move-destination', 'pass-origin-0']) {
     assert.equal(pitchGroup.getObjectByName(name), undefined, `${name} retiré`);
   }
 });

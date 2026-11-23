@@ -36,10 +36,10 @@ flowchart LR
 ```mermaid
 sequenceDiagram
   actor U as Utilisateur
-  participant M as main.js
-  participant S as ArSession (xr-session.js)
+  participant M as main.mjs
+  participant S as ArSession (xr-session.mjs)
   participant N as Navigateur (WebXR, ARCore)
-  participant P as SurfacePlacement (ar-surface.js)
+  participant P as SurfacePlacement (ar-surface.mjs)
   participant L as Boucle de rendu
   U->>M: « Entrer en AR »
   M->>S: start()

@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/webgl-test-mode.js : le mode test WebGL ne démarre qu'avec ?webgl dans
+ * Tests unitaires de src/webgl-test-mode.mjs : le mode test WebGL ne démarre qu'avec ?webgl dans
  * l'adresse, et ce n'est pas un repli : son moteur n'a, lui non plus, aucune fonction de repli.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
@@ -8,13 +8,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createWebGlTestRenderer, getRequestedRenderMode, RENDER_MODES, WebGlTestModeUnavailableError,
-} from '../../src/webgl-test-mode.js';
+} from '../../src/webgl-test-mode.mjs';
 
 /**
  * Canvas minimal, pour que three.js puisse construire un moteur de rendu sous Node.js.
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/webgl-test-mode.js) — doublure
+ * @role Tests unitaires (src/webgl-test-mode.mjs) — doublure
  */
 function createFakeCanvas() {
   return { style: {}, width: 300, height: 150, getContext: () => null, addEventListener() {}, removeEventListener() {}, setAttribute() {} };

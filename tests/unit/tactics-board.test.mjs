@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/tactics-board.js : formation en place de chaque équipe, et événement
+ * Tests unitaires de src/tactics-board.mjs : formation en place de chaque équipe, et événement
  * formationchange (patron Observer). Depuis le sprint 5 : places des joueurs et du ballon, limites
  * du plateau, flèches, instantanés et réinitialisation.
  *
@@ -8,17 +8,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ARROW_KINDS, BOARD_HALF_EXTENTS, clampToBoard, isOnBoard, PLAYER_MARGIN, TacticsBoard,
-} from '../../src/tactics-board.js';
-import { FORMATIONS } from '../../src/formations.js';
-import { computeTeamTargets } from '../../src/formation-transition.js';
+  ARROW_KINDS, BOARD_HALF_EXTENTS, clampToBoard, isOnBoard, isOnPitch, PITCH_HALF_EXTENTS, PLAYER_MARGIN, TacticsBoard,
+} from '../../src/tactics-board.mjs';
+import { FORMATIONS } from '../../src/formations.mjs';
+import { computeTeamTargets } from '../../src/formation-transition.mjs';
 
 /**
  * Crée un tableau tactique avec les formations du scénario de démonstration, et enregistre ses
  * événements.
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/tactics-board.js) — montage du test
+ * @role Tests unitaires (src/tactics-board.mjs) — montage du test
  */
 function createBoard() {
   const board = new TacticsBoard({ blue: '4-3-3', red: '4-4-2' });
@@ -125,11 +125,27 @@ test('sprint 5 : flèches, avec des identifiants qui ne reculent jamais ; flèch
   assert.deepEqual(board.getArrows().map(({ kind }) => kind), ['pass', 'run']);
   assert.throws(() => board.addArrow({ kind: 'dribble', from: { x: 0, z: 0 }, to: { x: 0.1, z: 0 } }), /Type de flèche/);
   assert.throws(() => board.addArrow({ kind: 'pass', from: { x: 0, z: 0 }, to: { x: 0.01, z: 0 } }), /trop courte/);
-  assert.throws(() => board.addArrow({ kind: 'pass', from: { x: 0, z: 0 }, to: { x: 0.5, z: 0 } }), /hors du plateau/);
+  assert.throws(() => board.addArrow({ kind: 'pass', from: { x: 0, z: 0 }, to: { x: 0.5, z: 0 } }), /hors du terrain/);
   assert.throws(() => board.addArrow({ kind: 'pass', from: { x: 0, z: 0 }, to: { x: 0.1, z: 0 }, id: 1 }), /déjà présente/);
   assert.equal(board.removeArrow(1), true);
   assert.equal(board.removeArrow(1), false);
   assert.equal(board.addArrow({ kind: 'pass', from: { x: 0, z: 0 }, to: { x: 0.1, z: 0 } }).id, 3);
+});
+
+test('flèches : arrivée entre les lignes (bande de gazon refusée), départ possible hors des lignes, ni doublon ni NaN', () => {
+  const { board } = createBoard();
+  const onRunoff = { x: 0, z: PITCH_HALF_EXTENTS.z + 0.01 };
+  assert.equal(isOnBoard(onRunoff), true);
+  assert.equal(isOnPitch(onRunoff), false);
+  assert.throws(() => board.addArrow({ kind: 'run', from: { x: 0, z: 0 }, to: onRunoff }), /hors du terrain/);
+  assert.equal(board.addArrow({ kind: 'pass', from: onRunoff, to: { x: 0.05, z: 0.1 } }).kind, 'pass', 'touche : le ballon est hors des lignes');
+  assert.equal(isOnPitch({ x: PITCH_HALF_EXTENTS.x, z: PITCH_HALF_EXTENTS.z }), true, 'coin, sur les lignes');
+  assert.throws(() => board.addArrow({ kind: 'pass', from: { x: Number.NaN, z: 0 }, to: { x: 0.1, z: 0 } }), /hors du plateau/);
+  assert.throws(() => board.addArrow({ kind: 'pass', from: { x: 0, z: 0 }, to: { x: Number.POSITIVE_INFINITY, z: 0 } }), /hors du terrain/);
+  board.addArrow({ kind: 'run', from: { x: 0, z: 0 }, to: { x: 0.1, z: 0 } });
+  assert.throws(() => board.addArrow({ kind: 'run', from: { x: 0.002, z: 0 }, to: { x: 0.1, z: 0.003 } }), /identique/);
+  assert.equal(board.addArrow({ kind: 'pass', from: { x: 0, z: 0 }, to: { x: 0.1, z: 0 } }).kind, 'pass', 'même tracé, autre type');
+  assert.equal(board.getArrows().length, 3);
 });
 
 test('sprint 5 : instantanés exacts, et réinitialisation vers l\'état de départ', () => {

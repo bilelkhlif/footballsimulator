@@ -10,7 +10,7 @@ Le cahier des charges (§7.1) demande un commentaire d'en-tête pour chaque fonc
  * demandée est déjà en place.
  * @param {string} teamId
  * @param {string} name nom d'une formation de FORMATIONS, par exemple « 4-4-2 »
- * @returns {import('./formations.js').FormationStrategy} la formation précédente
+ * @returns {import('./formations.mjs').FormationStrategy} la formation précédente
  * @responsable Bilel Khlif
  * @date 2026-11-14
  * @role Logique métier — tableau tactique (sujet du patron Observer)
@@ -36,8 +36,8 @@ L'assistance à l'implémentation n'est pas répétée dans chaque en-tête. Cha
 
 Le code adapté d'une source tierce porte en plus une balise `@see` vers ATTRIBUTION.md, §3 :
 
-- `installEmulatorIfRequested` ([`src/dev-emulator.js`](../src/dev-emulator.js)), adapté du guide de démarrage d'IWER ;
-- le constructeur de `WebGpuOnlyRenderer` ([`src/webgpu.js`](../src/webgpu.js)), adapté de celui de `WebGPURenderer` de three.js.
+- `installEmulatorIfRequested` ([`src/dev-emulator.mjs`](../src/dev-emulator.mjs)), adapté du guide de démarrage d'IWER ;
+- le constructeur de `WebGpuOnlyRenderer` ([`src/webgpu.mjs`](../src/webgpu.mjs)), adapté de celui de `WebGPURenderer` de three.js.
 
 ## 3. Portée
 
@@ -49,7 +49,7 @@ Le code adapté d'une source tierce porte en plus une balise `@see` vers ATTRIBU
 - **Méthodes d'un objet littéral** (doublures de test, descripteurs de propriété) et **fonctions passées en argument** : elles sont décrites par l'en-tête de la fonction qui les crée.
 - **Exclus** : les bibliothèques tierces de `src/vendor/`, copiées sans modification.
 
-Les fichiers concernés sont `sw.js`, `src/*.js`, `tests/*.mjs` et `tests/unit/*.mjs`. `index.html` et `src/styles.css` n'ont pas de fonction ; leur en-tête renvoie aussi à ATTRIBUTION.md.
+Les fichiers concernés sont `sw.mjs`, `sw.js` (migration), `src/*.mjs`, `tests/*.mjs` et `tests/unit/*.mjs`. `index.html` et `src/styles.css` n'ont pas de fonction ; leur en-tête renvoie aussi à ATTRIBUTION.md.
 
 ## 4. Dates de création
 
@@ -63,9 +63,10 @@ Les dates suivent l'historique Git :
 | 2026-11-12 | Correctif du réseau lent (Service Worker) |
 | 2026-11-14 | Sprint 3 (WebGPU, surface réelle, PWA), mode test WebGL et sprint 4 (formations) |
 | 2026-11-15 | Sprint 5 : raycasting, flèches tactiques, patron Command, mode diagnostic |
+| 2026-11-23 | Retours d’évaluation : règles des flèches, aide, raccourcis, migration `.mjs` et corrections des écrans courts |
 | 2026-11-16 | Sprint 6 : joueurs instanciés, séquence animée (BF9), coquille à version de contenu du Service Worker, mesure des performances |
 
-**Méthode.** La date d'une fonction ou d'une classe est celle du premier commit où sa déclaration apparaît (`git log -S "function nom("`). La recherche porte sur tout le code de l'application : une fonction déplacée d'un fichier à un autre garderait ainsi sa date d'origine. Aucune ne l'a été à ce jour.
+**Méthode.** La date d'une fonction ou d'une classe est celle du premier commit où sa déclaration apparaît (`git log -S "function nom("`). La recherche porte sur tout le code de l'application : une fonction déplacée d'un fichier à un autre garderait ainsi sa date d'origine. Un renommage `.js` → `.mjs` ne change pas la date de création. Lors d’une extraction dans un autre module, vérifier aussi le fichier d’origine.
 
 Un membre de classe est daté de la même façon dans son fichier. Sa date ne peut pas précéder celle de sa classe.
 

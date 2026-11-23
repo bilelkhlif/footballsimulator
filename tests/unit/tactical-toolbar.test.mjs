@@ -1,19 +1,19 @@
 /**
- * Tests unitaires de src/tactical-toolbar.js (sprint 5) : aide de chaque état de l'interaction, et
+ * Tests unitaires de src/tactical-toolbar.mjs (sprint 5) : aide de chaque état de l'interaction, et
  * bandeau d'aide qui montre un retour quelques instants avant de revenir à l'aide.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createHintController, describeGuidance, FEEDBACK_DURATION_MS } from '../../src/tactical-toolbar.js';
+import { createHintController, describeGuidance, FEEDBACK_DURATION_MS } from '../../src/tactical-toolbar.mjs';
 
 /**
  * Minuterie manuelle : les rappels ne partent que sur demande.
  * @returns {{setTimer: Function, clearTimer: Function, fire: () => void, pending: () => number}}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/tactical-toolbar.js) — doublure
+ * @role Tests unitaires (src/tactical-toolbar.mjs) — doublure
  */
 function createManualTimers() {
   const timers = new Map();
@@ -43,8 +43,16 @@ test('aide : ce qu\'il faut faire dans chaque état, en vue 3D et en AR', () => 
     'Le n° 9 des Rouges sélectionné : touchez sa nouvelle place.',
   );
   assert.equal(describeGuidance({ mode: 'move', state: 'selected', selection: { type: 'ball' } }), 'Le ballon sélectionné : touchez sa nouvelle place.');
-  assert.match(describeGuidance({ mode: 'pass', state: 'arrow-start' }), /^Passe : touchez le point de départ/);
-  assert.match(describeGuidance({ mode: 'run', state: 'arrow-end' }), /^Course : touchez le point d’arrivée/);
+  assert.match(describeGuidance({ mode: 'pass', state: 'arrow-start' }), /^Passe : touchez le ballon ou son porteur/);
+  assert.equal(describeGuidance({ mode: 'run', state: 'arrow-start' }), 'Course : touchez le joueur qui court.');
+  assert.equal(
+    describeGuidance({ mode: 'run', state: 'arrow-end', draft: { kind: 'run', actor: { type: 'player', teamId: 'red', number: 7 }, passer: null } }),
+    'Course du n° 7 des Rouges : touchez son point d’arrivée.',
+  );
+  assert.equal(
+    describeGuidance({ mode: 'pass', state: 'arrow-end', draft: { kind: 'pass', actor: { type: 'ball' }, passer: null } }),
+    'Passe depuis le ballon : touchez un partenaire ou un espace libre.',
+  );
   assert.equal(describeGuidance({ mode: 'move', state: 'disabled' }), '');
 });
 

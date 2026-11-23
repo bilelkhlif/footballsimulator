@@ -1,5 +1,7 @@
 # Sprint 6 : performance XR, fiabilité de l'AR, séquence animée (BF9), PWA versionnée et recette
 
+> Document historique : les noms `.js`, les mesures et les résultats décrivent la version de l’époque. Depuis le 23 novembre 2026, les modules applicatifs portent `.mjs` ; les liens vers le code suivent ce renommage. Voir la [migration](migration-mjs.md).
+
 Réalisé le 16 novembre 2026 sur la branche `feature/sprint-6`, à la demande de Bilel Khlif. C'est le dernier sprint du cahier des charges. Le code est généré avec Claude Code, à partir du cahier des charges et des consignes de Bilel Khlif : voir [ATTRIBUTION.md](../ATTRIBUTION.md).
 
 Documents livrés avec ce sprint : [recette finale](recette.md), [manuel utilisateur](manuel-utilisateur.md), [diagrammes UML](uml.md) et [script de la vidéo de démonstration](video-demonstration.md).

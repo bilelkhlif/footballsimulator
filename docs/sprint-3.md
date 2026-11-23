@@ -1,5 +1,7 @@
 # Sprint 3 : terrain posé sur la table, rendu WebGPU et application installable
 
+> Document historique : les noms `.js`, les mesures et les résultats décrivent la version de l’époque. Depuis le 23 novembre 2026, les modules applicatifs portent `.mjs` ; les liens vers le code suivent ce renommage. Voir la [migration](migration-mjs.md).
+
 Réalisé le 14 novembre 2026 sur la branche `feature/sprint-3`. Bilel Khlif a transmis les demandes de l'enseignant : un rendu WebGPU sans repli WebGL, la PWA, l'explication de la boucle de rendu dans le README, et un nouveau sprint. Le code est généré avec Claude, à partir de ces demandes et du cahier des charges : voir [ATTRIBUTION.md](../ATTRIBUTION.md).
 
 **Sommaire**

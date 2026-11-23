@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/pointer-input.js (sprint 5) : un tap devient un rayon depuis la caméra, un
+ * Tests unitaires de src/pointer-input.mjs (sprint 5) : un tap devient un rayon depuis la caméra, un
  * glissé ou un pincement restent aux contrôles d'orbite, la souris guide l'aperçu, et la saisie se
  * tait pendant une session AR.
  *
@@ -8,14 +8,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { isTap, PointerInput, TAP_MAX_DISTANCE_PX, TAP_MAX_DURATION_MS } from '../../src/pointer-input.js';
+import { isTap, PointerInput, TAP_MAX_DISTANCE_PX, TAP_MAX_DURATION_MS } from '../../src/pointer-input.mjs';
 
 /**
  * Doublure du canvas : un EventTarget de 800 × 400 pixels.
  * @returns {EventTarget & {getBoundingClientRect: () => object}}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/pointer-input.js) — doublure
+ * @role Tests unitaires (src/pointer-input.mjs) — doublure
  */
 function createFakeCanvas() {
   const canvas = new EventTarget();
@@ -29,7 +29,7 @@ function createFakeCanvas() {
  * @returns {object}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/pointer-input.js) — doublure
+ * @role Tests unitaires (src/pointer-input.mjs) — doublure
  */
 function createFakeInteraction(wantsHover = false) {
   return {
@@ -52,7 +52,7 @@ function createFakeInteraction(wantsHover = false) {
  * @returns {Event}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/pointer-input.js) — doublure
+ * @role Tests unitaires (src/pointer-input.mjs) — doublure
  */
 function pointerEvent(type, { clientX = 400, clientY = 200, pointerId = 1, timeStamp = 0, pointerType = 'touch', button = 0 } = {}) {
   const event = new Event(type);
@@ -69,7 +69,7 @@ function pointerEvent(type, { clientX = 400, clientY = 200, pointerId = 1, timeS
  * @returns {{canvas: EventTarget, interaction: object, input: PointerInput, state: {presenting: boolean}}}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/pointer-input.js) — montage du test
+ * @role Tests unitaires (src/pointer-input.mjs) — montage du test
  */
 function createSetup({ wantsHover = false } = {}) {
   const canvas = createFakeCanvas();
@@ -134,4 +134,43 @@ test('la souris guide l\'aperçu pendant le tracé d\'une flèche ; sortir du ca
   canvas.dispatchEvent(pointerEvent('pointerdown'));
   canvas.dispatchEvent(pointerEvent('pointerup', { timeStamp: 10 }));
   assert.deepEqual(interaction.taps, []);
+});
+
+test('visée au doigt : aperçu sous le doigt dès l\'appui, qui suit le glissé ; le relâchement valide au point final', () => {
+  const { canvas, interaction, input } = createSetup({ wantsHover: true });
+  canvas.dispatchEvent(pointerEvent('pointerdown', { clientX: 200, timeStamp: 0 }));
+  assert.equal(input.aiming, true);
+  assert.equal(interaction.hovers.length, 1, 'aperçu dès l\'appui');
+  canvas.dispatchEvent(pointerEvent('pointermove', { clientX: 650, timeStamp: 400 }));
+  // Relâché loin et longtemps après l'appui : ce n'est pas un tap, mais c'est une visée.
+  canvas.dispatchEvent(pointerEvent('pointerup', { clientX: 650, timeStamp: 1500 }));
+  assert.equal(interaction.taps.length, 1);
+  assert.ok(interaction.taps[0].x > 0, 'validé là où le doigt a fini, à droite du centre');
+  assert.equal(interaction.hovers.at(-1), null, 'aperçu effacé ensuite');
+  assert.equal(input.aiming, false);
+});
+
+test('visée au doigt interrompue par un second doigt (pincer) : rien n\'est validé ; souris : pas de visée', () => {
+  const { canvas, interaction, input } = createSetup({ wantsHover: true });
+  canvas.dispatchEvent(pointerEvent('pointerdown', { pointerId: 1 }));
+  canvas.dispatchEvent(pointerEvent('pointerdown', { pointerId: 2, clientX: 500 }));
+  assert.equal(input.aiming, false);
+  assert.equal(interaction.hovers.at(-1), null);
+  canvas.dispatchEvent(pointerEvent('pointerup', { pointerId: 1, timeStamp: 900 }));
+  canvas.dispatchEvent(pointerEvent('pointerup', { pointerId: 2, timeStamp: 950 }));
+  assert.deepEqual(interaction.taps, []);
+
+  canvas.dispatchEvent(pointerEvent('pointerdown', { pointerType: 'mouse', pointerId: 3, timeStamp: 1000 }));
+  assert.equal(input.aiming, false, 'la souris garde le survol et le clic');
+  canvas.dispatchEvent(pointerEvent('pointerup', { pointerType: 'mouse', pointerId: 3, timeStamp: 1100 }));
+  assert.equal(interaction.taps.length, 1);
+});
+
+test('visée au doigt seulement quand une destination est attendue : sinon un glissé reste à la vue', () => {
+  const { canvas, interaction, input } = createSetup({ wantsHover: false });
+  canvas.dispatchEvent(pointerEvent('pointerdown', { clientX: 100 }));
+  assert.equal(input.aiming, false);
+  canvas.dispatchEvent(pointerEvent('pointerup', { clientX: 300, timeStamp: 200 }));
+  assert.deepEqual(interaction.taps, []);
+  assert.deepEqual(interaction.hovers, []);
 });

@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/ar-placement.js : terrain devant l'utilisateur (sprint 2) et terrain
+ * Tests unitaires de src/ar-placement.mjs : terrain devant l'utilisateur (sprint 2) et terrain
  * posé sur une surface réelle (sprint 3).
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   computePitchPlacement, computeSurfacePlacement, yawToQuaternion, PLACEMENT_DISTANCE, PLACEMENT_DROP, SURFACE_OFFSET,
-} from '../../src/ar-placement.js';
+} from '../../src/ar-placement.mjs';
 
 /**
  * Quaternion d'une rotation d'angle donné autour d'un axe unitaire.
@@ -16,7 +16,7 @@ import {
  * @param {number} angle en radians
  * @responsable Bilel Khlif
  * @date 2026-11-10
- * @role Tests unitaires (src/ar-placement.js) — outil de vérification
+ * @role Tests unitaires (src/ar-placement.mjs) — outil de vérification
  */
 function rotation(axis, angle) {
   const s = Math.sin(angle / 2);
@@ -34,7 +34,7 @@ const VIEWER_POSITION = { x: 0.2, y: 1.4, z: -0.1 };
  * @param {number} rotationY
  * @responsable Bilel Khlif
  * @date 2026-11-10
- * @role Tests unitaires (src/ar-placement.js) — outil de vérification
+ * @role Tests unitaires (src/ar-placement.mjs) — outil de vérification
  */
 function assertPlacement(actual, position, rotationY) {
   for (const axis of ['x', 'y', 'z']) {

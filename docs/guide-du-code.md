@@ -1,10 +1,12 @@
-# Guide du code : sprint 1
+# Guide du code : sprint 1 et évolutions
+
+> Les modules cités suivent les noms actuels `.mjs`. Les descriptions des étapes et les résultats datés restent historiques. Les retours du 23 novembre sont résumés dans l’[addendum](#10-retours-de-lévaluation-du-23-novembre).
 
 Ce guide explique tout le code du sprint 1, fichier par fichier, pour que chaque membre de l'équipe puisse le présenter, le modifier et répondre aux questions du jury. Compter 30 à 45 minutes de lecture, avec le code ouvert à côté.
 
 Le sprint 2 (session AR) a son propre document, [sprint-2.md](sprint-2.md), qui explique ses cinq nouveaux modules ; ce guide signale ce que le sprint 2 a changé dans le code du sprint 1.
 
-Le sprint 3 a lui aussi son document, [sprint-3.md](sprint-3.md). Il explique le rendu **WebGPU sans repli WebGL** (`src/webgpu.js`), la pose du terrain sur une surface réelle (`src/ar-surface.js`, `src/reticle.js`), la boucle de rendu et l'émulation sur PC (`src/dev-xr-emulation.js`). Ce guide signale ce que le sprint 3 a changé dans le code des sprints 1 et 2 : le moteur de rendu, la copie de three.js (r187), un démarrage asynchrone et la PWA.
+Le sprint 3 a lui aussi son document, [sprint-3.md](sprint-3.md). Il explique le rendu **WebGPU sans repli WebGL** (`src/webgpu.mjs`), la pose du terrain sur une surface réelle (`src/ar-surface.mjs`, `src/reticle.mjs`), la boucle de rendu et l'émulation sur PC (`src/dev-xr-emulation.mjs`). Ce guide signale ce que le sprint 3 a changé dans le code des sprints 1 et 2 : le moteur de rendu, la copie de three.js (r187), un démarrage asynchrone et la PWA.
 
 Les sprints 4, 5 et 6 ont aussi leur document : [sprint-4.md](sprint-4.md) (formations), [sprint-5.md](sprint-5.md) (raycasting, flèches, patron Command) et [sprint-6.md](sprint-6.md) (performance, fiabilité de l'AR, séquence animée, PWA versionnée). Ce guide signale ce qu'ils ont changé dans le code existant, et liste leurs nouveaux fichiers dans la partie 3.
 
@@ -24,12 +26,12 @@ Les sprints 4, 5 et 6 ont aussi leur document : [sprint-4.md](sprint-4.md) (form
 
 ## 1. Ce qui se passe au chargement
 
-Le navigateur charge `index.html`, qui déclare une carte d'import puis lance `src/main.js`. Tout le reste découle de ce fichier, dans cet ordre :
+Le navigateur charge `index.html`, qui déclare une carte d'import puis lance `src/main.mjs`. Tout le reste découle de ce fichier, dans cet ordre :
 
 ```mermaid
 flowchart TD
   A["index.html"] --> B["Carte d'import : three pointe vers src/vendor/three-r187 (build WebGPU)"]
-  B --> C["src/main.js : start()"]
+  B --> C["src/main.mjs : start()"]
   C --> P["setUpPwa() : Service Worker, bouton d'installation, avis de nouvelle version, badge hors-ligne"]
   P --> EM["installEmulatorIfRequested() : IWER, seulement avec ?iwer (avant le moteur de rendu)"]
   EM --> I0["init() : asynchrone"]
@@ -47,35 +49,35 @@ Les modules dépendent les uns des autres ainsi (une flèche signifie « importe
 
 ```mermaid
 flowchart LR
-  main["main.js"] --> scene["scene.js"]
-  main --> pitch["pitch.js"]
-  main --> players["players.js"]
-  main --> team["team.js"]
-  main --> ball["ball.js"]
-  main --> formations["formations.js"]
-  main --> config["config.js"]
-  main --> xr["xr-support.js"]
-  main --> emu["dev-emulator.js"]
-  main --> pwa["pwa.js"]
-  main --> session["xr-session.js (sprint 2)"]
-  main --> arview["ar-view.js (sprint 2)"]
-  main --> loop["render-loop.js (sprint 2)"]
-  main --> surface["ar-surface.js (sprint 3)"]
-  main --> reticle["reticle.js (sprint 3)"]
-  scene --> webgpu["webgpu.js (sprint 3)"]
-  session --> events["events.js (sprint 2)"]
+  main["main.mjs"] --> scene["scene.mjs"]
+  main --> pitch["pitch.mjs"]
+  main --> players["players.mjs"]
+  main --> team["team.mjs"]
+  main --> ball["ball.mjs"]
+  main --> formations["formations.mjs"]
+  main --> config["config.mjs"]
+  main --> xr["xr-support.mjs"]
+  main --> emu["dev-emulator.mjs"]
+  main --> pwa["pwa.mjs"]
+  main --> session["xr-session.mjs (sprint 2)"]
+  main --> arview["ar-view.mjs (sprint 2)"]
+  main --> loop["render-loop.mjs (sprint 2)"]
+  main --> surface["ar-surface.mjs (sprint 3)"]
+  main --> reticle["reticle.mjs (sprint 3)"]
+  scene --> webgpu["webgpu.mjs (sprint 3)"]
+  session --> events["events.mjs (sprint 2)"]
   surface --> events
   surface --> placement
-  arview --> placement["ar-placement.js (sprint 2)"]
+  arview --> placement["ar-placement.mjs (sprint 2)"]
   team --> formations
   emu --> xr
-  emu -. "avec ?iwer" .-> extras["dev-xr-emulation.js (sprint 3)"]
+  emu -. "avec ?iwer" .-> extras["dev-xr-emulation.mjs (sprint 3)"]
   scene --> config
   pitch --> config
   players --> config
   ball --> config
   formations --> config
-  pwa -. enregistre .-> sw["sw.js"]
+  pwa -. enregistre .-> sw["sw.mjs"]
 ```
 
 Les modules qui créent des objets 3D (`scene`, `pitch`, `players`, `team`, `ball`, `reticle`, `webgpu`) importent aussi three.js, non représenté ici.
@@ -88,12 +90,12 @@ Les modules qui créent des objets 3D (`scene`, `pitch`, `players`, `team`, `bal
 
 | Notion | Dans notre code | Rôle |
 | --- | --- | --- |
-| Scène (`THREE.Scene`) | `scene.js` | Contient tout ce qui est affiché |
-| Caméra (`PerspectiveCamera`) | `scene.js` | Le point de vue ; en AR, c'est le téléphone qui la pilotera (sprint 2) |
-| Moteur de rendu (`WebGpuOnlyRenderer` depuis le sprint 3, `WebGLRenderer` avant) | `webgpu.js`, `scene.js` | Dessine la scène dans un canvas, à chaque image, en WebGPU |
-| Maillage (`Mesh`) = géométrie + matériau | `pitch.js`, `players.js`, `ball.js` | Un objet visible : sa forme, et l'apparence de sa surface |
+| Scène (`THREE.Scene`) | `scene.mjs` | Contient tout ce qui est affiché |
+| Caméra (`PerspectiveCamera`) | `scene.mjs` | Le point de vue ; en AR, c'est le téléphone qui la pilotera (sprint 2) |
+| Moteur de rendu (`WebGpuOnlyRenderer` depuis le sprint 3, `WebGLRenderer` avant) | `webgpu.mjs`, `scene.mjs` | Dessine la scène dans un canvas, à chaque image, en WebGPU |
+| Maillage (`Mesh`) = géométrie + matériau | `pitch.mjs`, `players.mjs`, `ball.mjs` | Un objet visible : sa forme, et l'apparence de sa surface |
 | Groupe (`Group`) et graphe de scène | `pitchGroup` | Déplacer un parent déplace tous ses enfants |
-| Boucle de rendu (`setAnimationLoop`) | `main.js` | Redessine la scène à chaque image ; en WebXR, c'est la session qui la cadence |
+| Boucle de rendu (`setAnimationLoop`) | `main.mjs` | Redessine la scène à chaque image ; en WebXR, c'est la session qui la cadence |
 
 Le graphe de scène du sprint 1 :
 
@@ -145,7 +147,7 @@ WebXR n'existe qu'en contexte sécurisé : HTTPS, ou `localhost` pendant le dév
 
 ### 2.4 PWA, en bref
 
-Une application web progressive repose sur deux fichiers : le **manifeste** (`manifest.json`), qui permet de l'installer sur l'écran d'accueil, et le **Service Worker** (`sw.js`), qui met ses fichiers en cache pour la lancer hors-ligne.
+Une application web progressive repose sur deux fichiers : le **manifeste** (`manifest.json`), qui permet de l'installer sur l'écran d'accueil, et le **Service Worker** (`sw.mjs`), qui met ses fichiers en cache pour la lancer hors-ligne. L’adresse historique `sw.js` reste un script de migration pour les installations anciennes.
 
 ---
 
@@ -174,7 +176,7 @@ Le reste de la page :
 
 Chaque bloc porte un commentaire d'en-tête, comme l'exige le cahier (§7.1). La balise `viewport` contient `viewport-fit=cover`, nécessaire pour gérer l'encoche des téléphones (voir `styles.css`).
 
-### [`src/config.js`](../src/config.js)
+### [`src/config.mjs`](../src/config.mjs)
 
 Toutes les constantes partagées, au même endroit :
 
@@ -193,11 +195,11 @@ Toutes les constantes partagées, au même endroit :
 
 `Object.freeze` empêche de modifier ces objets par erreur.
 
-### [`src/scene.js`](../src/scene.js)
+### [`src/scene.mjs`](../src/scene.mjs)
 
 Crée tout ce qui entoure le terrain. Ses fonctions :
 
-- **`createRenderer`** : depuis le sprint 3, un moteur de rendu WebGPU sans repli WebGL, créé par `createWebGpuRenderer` (`src/webgpu.js`, expliqué dans [sprint-3.md](sprint-3.md#3-rendu-webgpu-sans-repli-webgl)), avec anticrénelage et fond transparent (`alpha: true`). La fonction est asynchrone : WebGPU demande l'adaptateur et le périphérique graphique avant le premier rendu. Le fond transparent sert en AR, où l'image de la caméra doit apparaître derrière la scène. La densité de pixels est plafonnée à 2 pour ménager les téléphones. Aux sprints 1 et 2, c'était un `WebGLRenderer`.
+- **`createRenderer`** : depuis le sprint 3, un moteur de rendu WebGPU sans repli WebGL, créé par `createWebGpuRenderer` (`src/webgpu.mjs`, expliqué dans [sprint-3.md](sprint-3.md#3-rendu-webgpu-sans-repli-webgl)), avec anticrénelage et fond transparent (`alpha: true`). La fonction est asynchrone : WebGPU demande l'adaptateur et le périphérique graphique avant le premier rendu. Le fond transparent sert en AR, où l'image de la caméra doit apparaître derrière la scène. La densité de pixels est plafonnée à 2 pour ménager les téléphones. Aux sprints 1 et 2, c'était un `WebGLRenderer`.
 - **`addLights`** : une seule lumière directionnelle (intensité 1,6), qui donne le relief, et une lumière d'ambiance hémisphérique (ciel blanc, sol vert sombre, intensité 2,2), très peu coûteuse. Aucune ombre portée : c'est le calcul le plus lourd sur mobile. Le cahier conseille « une seule lumière » (§6.3) : si la mesure de fluidité du sprint 6 le demande, la lumière hémisphérique pourra être retirée.
 - **`createTable`** : un disque sombre sous le terrain, nommé `table`. Il n'existe que hors AR : en AR, la vraie table le remplace.
 - **`createControls`** : `OrbitControls` pour tourner, zoomer et déplacer la vue. L'amortissement rend les gestes fluides, la distance est bornée entre 15 cm et 3 m, et l'angle vertical est limité à 82° pour ne jamais passer sous la table.
@@ -215,7 +217,7 @@ Une première version, fondée sur une formule, coupait les coins du terrain à 
 
 Au redimensionnement, la vue n'est recadrée que si l'écran passe de paysage à portrait, ou l'inverse. Sur mobile, la barre d'adresse qui apparaît et disparaît redimensionne la fenêtre en permanence : recadrer à chaque fois effacerait la vue choisie par l'utilisateur.
 
-### [`src/pitch.js`](../src/pitch.js)
+### [`src/pitch.mjs`](../src/pitch.mjs)
 
 Construit le terrain. Les lignes ne viennent pas d'une image : elles sont **dessinées sur un canvas 2D**, puis appliquées comme texture.
 
@@ -227,7 +229,7 @@ Construit le terrain. Les lignes ne viennent pas d'une image : elles sont **dess
 
 Les lignes font 0,3 m réel au lieu de 0,12 m, pour rester lisibles à cette échelle. Pour des lignes plus nettes, on peut augmenter `PIXELS_PER_METER`, mais la taille de la texture croît avec son carré.
 
-### [`src/formations.js`](../src/formations.js)
+### [`src/formations.mjs`](../src/formations.mjs)
 
 Le **patron Strategy** du cahier (§3.4) : chaque formation est une classe qui sait calculer les positions de ses 11 joueurs.
 
@@ -274,7 +276,7 @@ export class Formation532 extends FormationStrategy {
 
 Les tests vérifient automatiquement toute formation enregistrée : 11 joueurs, numéros 1 à 11, placements valides.
 
-### [`src/players.js`](../src/players.js)
+### [`src/players.mjs`](../src/players.mjs)
 
 Le **patron Factory** du cahier (§3.4) : `PlayerFactory.createPlayer({ team, number, role })` fabrique un pion complet selon l'équipe.
 
@@ -300,20 +302,20 @@ Le cahier (§6.3) cite aussi `InstancedMesh`, qui dessine de nombreuses copies d
 
 **Depuis le sprint 6, socles, flèches et corps sont instanciés**, après une mesure : 88 des 115 appels de dessin venaient des joueurs. `createTeamMeshes(team, joueurs)` crée, pour chaque équipe, un objet `TeamMeshes` : trois `InstancedMesh` de 11 instances (socles, flèches, corps), avec les mêmes géométries et matériaux partagés. Le `Group` de chaque joueur ne garde que son numéro et sa zone de sélection, mais il reste l'objet qu'on déplace, qu'on anime et qu'on sélectionne. À chaque image, `TeamMeshes.update()` recopie dans les instances la matrice des seuls joueurs qui ont bougé, et ne demande un envoi au processeur graphique (`instanceMatrix.needsUpdate`) que dans ce cas. Résultat : 55 appels de dessin au lieu de 115. Le tableau ci-dessus décrit donc le pion tel qu'on le voit ; ses trois premières formes sont dessinées par les maillages instanciés de l'équipe. Mesures dans [sprint-6.md](sprint-6.md#3-performance--mesurer-puis-optimiser).
 
-### [`src/team.js`](../src/team.js)
+### [`src/team.mjs`](../src/team.mjs)
 
 `createTeam(team, formation, playerFactory)` relie les deux patrons : la stratégie fournit les 11 positions, la fabrique crée les 11 pions, et `toPitchCoordinates` les place. Le groupe obtenu (`team-blue` ou `team-red`) retient la formation dans son `userData`.
 
-### [`src/ball.js`](../src/ball.js)
+### [`src/ball.mjs`](../src/ball.mjs)
 
 Une sphère blanche de 4,2 mm de rayon, posée sur le point central (`y = BALL_RADIUS`, pour qu'elle repose sur le gazon).
 
-### [`src/xr-support.js`](../src/xr-support.js)
+### [`src/xr-support.mjs`](../src/xr-support.mjs)
 
 - **`isImmersiveArSupported`** répond à la question « ce navigateur peut-il ouvrir une session AR ? » en trois vérifications : contexte sécurisé (HTTPS ou localhost), présence de `navigator.xr`, puis `navigator.xr.isSessionSupported('immersive-ar')`. Toute erreur vaut « non ».
 - **`showXrStatus`** met à jour le badge : vérification, AR disponible, AR émulée ou AR indisponible. Depuis le sprint 3, aussi « AR : réglage WebGPU à activer », quand l'AR existe mais sans la liaison WebXR/WebGPU (`XRGPUBinding`). Sans AR, l'application reste utilisable en vue 3D, comme proposé par l'état de l'art.
 
-### [`src/dev-emulator.js`](../src/dev-emulator.js)
+### [`src/dev-emulator.mjs`](../src/dev-emulator.mjs)
 
 Permet de tester l'AR sur PC, sans téléphone, avec **IWER** (Meta, licence MIT). L'Immersive Web Emulator prévu au cahier (§4.2) est archivé depuis le 1er octobre 2026 ; IWER est son moteur, toujours maintenu.
 
@@ -321,13 +323,13 @@ Permet de tester l'AR sur PC, sans téléphone, avec **IWER** (Meta, licence MIT
 - Il importe IWER 2.7.0 depuis jsDelivr, en version épinglée, puis installe un casque Meta Quest 3 simulé.
 - L'option `forceInstall` est nécessaire : Chrome sur PC expose déjà un `navigator.xr`, mais sans AR, et IWER refuse sinon de le remplacer. Ce comportement a été découvert pendant les tests.
 - Limites vérifiées : la session `immersive-ar` s'ouvre avec `local-floor` et les ancres, mais le hit test demande en plus le module `@iwer/sem`, et le DOM Overlay n'est pas émulé.
-- Depuis le sprint 3, l'appareil émulé annonce la fonctionnalité `webgpu`, et `src/dev-xr-emulation.js` complète IWER : liaison WebXR/WebGPU, table virtuelle pour le hit test, clic changé en toucher, une seule vue. L'émulateur s'installe avant le moteur de rendu, qui vérifie la présence de `XRGPUBinding` à sa création. Voir [sprint-3.md](sprint-3.md#11-émulation-sur-pc).
+- Depuis le sprint 3, l'appareil émulé annonce la fonctionnalité `webgpu`, et `src/dev-xr-emulation.mjs` complète IWER : liaison WebXR/WebGPU, table virtuelle pour le hit test, clic changé en toucher, une seule vue. L'émulateur s'installe avant le moteur de rendu, qui vérifie la présence de `XRGPUBinding` à sa création. Voir [sprint-3.md](sprint-3.md#11-émulation-sur-pc).
 
-### [`src/pwa.js`](../src/pwa.js) et [`sw.js`](../sw.js)
+### [`src/pwa.mjs`](../src/pwa.mjs) et [`sw.mjs`](../sw.mjs)
 
-`registerServiceWorker` enregistre `sw.js`, seulement en contexte sécurisé. Le fichier `sw.js` est à la racine du dépôt parce que **l'emplacement d'un Service Worker fixe sa portée** : à la racine, il contrôle toutes les pages de l'application.
+`registerServiceWorker` enregistre `sw.mjs` en module, seulement en contexte sécurisé. Un navigateur refusant ce type de Worker reçoit le même script en mode classique. Le fichier `sw.mjs` est à la racine du dépôt parce que **l'emplacement d'un Service Worker fixe sa portée** : à la racine, il contrôle toutes les pages de l'application. Le cycle de migration de l’ancien `sw.js` est décrit dans [migration-mjs.md](migration-mjs.md).
 
-Depuis le sprint 3, `pwa.js` gère aussi :
+Depuis le sprint 3, `pwa.mjs` gère aussi :
 
 - `setUpInstallButton` : bouton « Installer l'application », branché sur l'invite du navigateur (`beforeinstallprompt`), qui ne sert qu'une fois ; masqué si l'application est déjà installée ;
 - `watchForUpdates` : avis « Nouvelle version installée » quand un nouveau Service Worker prend le contrôle (`controllerchange`), mais pas à la première visite ;
@@ -337,7 +339,7 @@ Le Service Worker réagit à trois événements :
 
 | Événement | Ce qu'il fait |
 | --- | --- |
-| `install` | Télécharge les 48 entrées de `APP_SHELL` d'un bloc (`cache.addAll`), sans le cache HTTP du navigateur (`cache: 'reload'`), dans le cache de la version (`football-simulator-<SHELL_VERSION>`), puis s'active aussitôt (`skipWaiting`). Si un seul fichier échoue, rien n'est installé |
+| `install` | Télécharge les 51 entrées de `APP_SHELL` d'un bloc (`cache.addAll`), sans le cache HTTP du navigateur (`cache: 'reload'`), dans le cache de la version (`football-simulator-<SHELL_VERSION>`), puis s'active aussitôt (`skipWaiting`). Si un seul fichier échoue, rien n'est installé |
 | `activate` | Supprime les caches des versions précédentes et prend le contrôle des pages ouvertes (`clients.claim`) |
 | `fetch` | Fichiers de la coquille : depuis le cache de la version (`fromShell`). Autres requêtes de la même origine : réseau d'abord, avec délai. Les requêtes vers d'autres origines (le CDN d'IWER) passent sans cache |
 
@@ -357,7 +359,7 @@ flowchart TD
 
 **Depuis le sprint 6, une coquille à version de contenu.** Jusqu'au sprint 5, le code passait par le réseau d'abord, fichier par fichier : pendant un déploiement, sur un réseau lent, une page pouvait recevoir certains fichiers de la nouvelle version et d'autres de l'ancienne. Un test de bout en bout le reproduit, et l'ancien `sw.js` y échoue. Désormais :
 
-- `SHELL_VERSION` est une empreinte SHA-256 du contenu des fichiers de `APP_SHELL`, recalculée par `npm run shell-version` ([`tests/shell-version.mjs`](../tests/shell-version.mjs)). Un fichier modifié change donc `sw.js`, et le navigateur installe la nouvelle version complète ;
+- `SHELL_VERSION` est une empreinte SHA-256 du contenu des fichiers de `APP_SHELL`, recalculée par `npm run shell-version` ([`tests/shell-version.mjs`](../tests/shell-version.mjs)). Un fichier modifié change donc `sw.mjs`, et le navigateur installe la nouvelle version complète ;
 - la coquille est servie depuis le cache de sa version (`fromShell`) : une page ne mélange jamais deux versions, et se lance sans attendre le réseau ;
 - la nouvelle version s'applique quand l'utilisateur touche « Recharger », sur l'avis « Nouvelle version installée ».
 
@@ -379,16 +381,16 @@ Rend l'application installable : nom (« Football Simulator », et « Football S
 - Depuis le sprint 2, les boutons sont regroupés dans `.actions`, alignés à droite, et pendant une session AR (`body[data-xr="active"]`) l'interface passe au-dessus du conteneur plein écran de l'émulateur IWER.
 - Depuis le sprint 3 : la règle `[hidden] { display: none !important; }`, sans laquelle les badges en `display: flex` resteraient visibles malgré l'attribut `hidden` ; les états du badge du rendu ; l'avis de nouvelle version ; et, en AR, le masquage des boutons d'installation et de copie.
 
-### [`src/main.js`](../src/main.js)
+### [`src/main.mjs`](../src/main.mjs)
 
 Le chef d'orchestre : il appelle les modules dans l'ordre du schéma de la partie 1. Depuis le sprint 3, le démarrage est asynchrone (`start()`, puis `await init()`), car WebGPU s'initialise avant le premier rendu. Quatre détails :
 
-- `currentFormation` retenait la formation de chaque équipe ; c'est l'un des noms donnés en exemple par le cahier (§7.1), comme `pitchGroup`. Depuis le sprint 4, c'est le tableau tactique (`TacticsBoard`, `src/tactics-board.js`) qui la retient, et des boutons la changent : voir [sprint-4.md](sprint-4.md).
+- `currentFormation` retenait la formation de chaque équipe ; c'est l'un des noms donnés en exemple par le cahier (§7.1), comme `pitchGroup`. Depuis le sprint 4, c'est le tableau tactique (`TacticsBoard`, `src/tactics-board.mjs`) qui la retient, et des boutons la changent : voir [sprint-4.md](sprint-4.md).
 - Le nom de chaque formation s'affiche dans les pastilles du bandeau supérieur.
 - `renderer.setAnimationLoop` remplace `requestAnimationFrame` : en session WebXR, c'est le casque ou le téléphone qui cadence les images, et seule cette méthode le permet. Quand la scène est prête, la classe `is-ready` est ajoutée à la page et l'écran de chargement s'efface.
 - Si WebGPU est indisponible, `init()` lève une `WebGpuUnavailableError` : `showStartupError` remplace alors l'écran de chargement par un message qui dépend de la cause (pas de WebGPU, aucun processeur graphique utilisable), au lieu d'une page vide. Il n'y a pas de repli WebGL. Aux sprints 1 et 2, le message portait sur WebGL.
 
-Depuis le sprint 2, la boucle de rendu elle-même est dans `render-loop.js`, et `setUpArSession()` branche les boutons de l'AR et les observateurs de la session : voir [sprint-2.md](sprint-2.md). Depuis le sprint 3, `setUpArSession()` crée aussi la pose du terrain (`SurfacePlacement`) à chaque session, écoute le toucher (`select`) et ses états (`statechange`), et `setUpPwa()` branche la PWA : voir [sprint-3.md](sprint-3.md). Depuis le sprint 5, `init()` crée aussi l'historique des commandes, la vue tactique, l'interaction et la saisie par pointeur, et `setUpArSession()` envoie chaque toucher à la pose du terrain ou à l'interaction tactique (`routeXrSelect`) : voir [sprint-5.md](sprint-5.md).
+Depuis le sprint 2, la boucle de rendu elle-même est dans `render-loop.mjs`, et `setUpArSession()` branche les boutons de l'AR et les observateurs de la session : voir [sprint-2.md](sprint-2.md). Depuis le sprint 3, `setUpArSession()` crée aussi la pose du terrain (`SurfacePlacement`) à chaque session, écoute le toucher (`select`) et ses états (`statechange`), et `setUpPwa()` branche la PWA : voir [sprint-3.md](sprint-3.md). Depuis le sprint 5, `init()` crée aussi l'historique des commandes, la vue tactique, l'interaction et la saisie par pointeur, et `setUpArSession()` envoie chaque toucher à la pose du terrain ou à l'interaction tactique (`routeXrSelect`) : voir [sprint-5.md](sprint-5.md).
 
 ### [`src/vendor/three-r187/`](../src/vendor/three-r187/)
 
@@ -398,32 +400,32 @@ Une copie de three.js r187 (version 0.187.0), sous licence MIT : le build WebGPU
 
 Le sprint 5 ajoute neuf modules, expliqués dans [sprint-5.md](sprint-5.md) :
 
-- **`src/raycasting.js`** : le calcul commun. Un rayon depuis la caméra (`setRayFromCamera`) ou depuis la pose d'une source d'entrée WebXR (`setRayFromXrPose`), la zone de sélection la plus proche (`pickTarget`), le point du plan du gazon dans le repère du terrain (`intersectPitchPlane`).
-- **`src/tactical-interaction.js`** : la machine à états. Elle reçoit des rayons et crée des commandes ; elle ne dessine rien.
-- **`src/commands.js`** : le patron Command. Cinq commandes annulables et l'historique (`CommandHistory`).
-- **`src/tactical-view.js`** et **`src/tactical-arrows.js`** : la scène suit le tableau tactique ; flèches 3D, anneau de sélection, aperçu.
-- **`src/pointer-input.js`** et **`src/xr-input.js`** : la saisie, à la souris ou au doigt hors AR, par l'événement `select` en AR.
-- **`src/tactical-toolbar.js`** : la barre d'outils et le bandeau d'aide.
-- **`src/diagnostics.js`** : le mode diagnostic (`?diagnostics`).
+- **`src/raycasting.mjs`** : le calcul commun. Un rayon depuis la caméra (`setRayFromCamera`) ou depuis la pose d'une source d'entrée WebXR (`setRayFromXrPose`), la zone de sélection la plus proche (`pickTarget`), le point du plan du gazon dans le repère du terrain (`intersectPitchPlane`).
+- **`src/tactical-interaction.mjs`** : la machine à états. Elle reçoit des rayons et crée des commandes ; elle ne dessine rien.
+- **`src/commands.mjs`** : le patron Command. Cinq commandes annulables et l'historique (`CommandHistory`).
+- **`src/tactical-view.mjs`** et **`src/tactical-arrows.mjs`** : la scène suit le tableau tactique ; flèches 3D, anneau de sélection, aperçu.
+- **`src/pointer-input.mjs`** et **`src/xr-input.mjs`** : la saisie, à la souris ou au doigt hors AR, par l'événement `select` en AR.
+- **`src/tactical-toolbar.mjs`** : la barre d'outils et le bandeau d'aide.
+- **`src/diagnostics.mjs`** : le mode diagnostic (`?diagnostics`).
 
-`src/tactics-board.js` garde désormais tout l'état tactique : formations, places des joueurs et du ballon, flèches. `src/ball.js` donne au ballon une zone de sélection, comme celle des joueurs.
+`src/tactics-board.mjs` garde désormais tout l'état tactique : formations, places des joueurs et du ballon, flèches. `src/ball.mjs` donne au ballon une zone de sélection, comme celle des joueurs.
 
 ### Fichiers du sprint 6
 
 Le sprint 6 ajoute trois modules, expliqués dans [sprint-6.md](sprint-6.md) :
 
-- **`src/tactical-sequence.js`** : les images clés de la séquence animée (bonus BF9). Chacune garde la place des 22 joueurs et du ballon, dans le repère du terrain ; 12 au plus.
-- **`src/sequence-player.js`** : le lecteur. À chaque image, il avance un curseur selon le temps écoulé et la vitesse, puis place chaque objet entre deux images clés, avec la courbe `easeInOutCubic` des transitions du sprint 4. Il s'arrête à tout changement du tableau ou de la séquence.
-- **`src/sequence-panel.js`** : le panneau « Séquence » : boutons, ligne d'état et retours.
+- **`src/tactical-sequence.mjs`** : les images clés de la séquence animée (bonus BF9). Chacune garde la place des 22 joueurs et du ballon, dans le repère du terrain ; 12 au plus.
+- **`src/sequence-player.mjs`** : le lecteur. À chaque image, il avance un curseur selon le temps écoulé et la vitesse, puis place chaque objet entre deux images clés, avec la courbe `easeInOutCubic` des transitions du sprint 4. Il s'arrête à tout changement du tableau ou de la séquence.
+- **`src/sequence-panel.mjs`** : le panneau « Séquence » : boutons, ligne d'état et retours.
 
 Il modifie aussi :
 
-- `src/players.js` : les maillages instanciés de chaque équipe (`createTeamMeshes`, `TeamMeshes`) ;
-- `src/commands.js` : `AddKeyframeCommand` et `ClearSequenceCommand`, annulables ;
-- `src/render-loop.js` : l'étape `beforeFrame`, au tout début de chaque image ;
-- `src/diagnostics.js` : le temps CPU par image et la mémoire GPU estimée ;
-- `src/tactical-view.js` (`returnToBoard`) et `src/formation-transition.js` (`clear`) : ramener la scène au tableau, et interrompre les déplacements en cours ;
-- `sw.js` : la coquille à version de contenu.
+- `src/players.mjs` : les maillages instanciés de chaque équipe (`createTeamMeshes`, `TeamMeshes`) ;
+- `src/commands.mjs` : `AddKeyframeCommand` et `ClearSequenceCommand`, annulables ;
+- `src/render-loop.mjs` : l'étape `beforeFrame`, au tout début de chaque image ;
+- `src/diagnostics.mjs` : le temps CPU par image et la mémoire GPU estimée ;
+- `src/tactical-view.mjs` (`returnToBoard`) et `src/formation-transition.mjs` (`clear`) : ramener la scène au tableau, et interrompre les déplacements en cours ;
+- `sw.mjs` : la coquille à version de contenu ; `sw.js` : la migration des anciennes installations.
 
 Deux outils de développement s'ajoutent dans `tests/` : `benchmark.mjs` (`npm run bench`), qui mesure les performances, et `shell-version.mjs` (`npm run shell-version`), qui calcule `SHELL_VERSION`.
 
@@ -441,10 +443,10 @@ Deux outils de développement s'ajoutent dans `tests/` : `benchmark.mjs` (`npm r
 
 | Patron (cahier §3.4) | État | Où | Rôle |
 | --- | --- | --- | --- |
-| Strategy | En place | `formations.js` | Une classe par formation ; ajouter une formation revient à ajouter une classe, comme le 4-2-3-1 du sprint 4, dont le bouton est apparu de lui-même |
-| Factory | En place | `players.js` | Créer un pion selon l'équipe : couleur, numéro, orientation ; depuis le sprint 6, aussi les maillages instanciés de chaque équipe |
-| Command | En place depuis le sprint 5 | `commands.js` | Chaque action (déplacer un joueur ou le ballon, tracer une flèche, changer de formation, réinitialiser ; depuis le sprint 6, ajouter une image clé, effacer la séquence) est un objet avec `execute()` et `undo()` ; l'historique de ces objets donne Annuler et Rétablir |
-| Observer | En place depuis le sprint 2 | `events.js`, `xr-session.js`, `ar-surface.js`, `tactics-board.js`, `tactical-sequence.js`, `sequence-player.js` | La session AR prévient l'interface de son début, de sa fin et de ses échecs ; depuis le sprint 3, la pose du terrain prévient de ses états (visée, surface, posé) ; depuis le sprint 4, le tableau tactique prévient la scène et les boutons des changements de formation ; depuis le sprint 5, la scène (`tactical-view.js`) suit tout l'état tactique, et la barre d'outils suit l'interaction et l'historique ; depuis le sprint 6, le lecteur s'arrête quand le tableau ou la séquence change, et le panneau de la séquence suit le lecteur |
+| Strategy | En place | `formations.mjs` | Une classe par formation ; ajouter une formation revient à ajouter une classe, comme le 4-2-3-1 du sprint 4, dont le bouton est apparu de lui-même |
+| Factory | En place | `players.mjs` | Créer un pion selon l'équipe : couleur, numéro, orientation ; depuis le sprint 6, aussi les maillages instanciés de chaque équipe |
+| Command | En place depuis le sprint 5 | `commands.mjs` | Chaque action (déplacer un joueur ou le ballon, tracer une flèche, changer de formation, réinitialiser ; depuis le sprint 6, ajouter une image clé, effacer la séquence) est un objet avec `execute()` et `undo()` ; l'historique de ces objets donne Annuler et Rétablir |
+| Observer | En place depuis le sprint 2 | `events.mjs`, `xr-session.mjs`, `ar-surface.mjs`, `tactics-board.mjs`, `tactical-sequence.mjs`, `sequence-player.mjs` | La session AR prévient l'interface de son début, de sa fin et de ses échecs ; depuis le sprint 3, la pose du terrain prévient de ses états (visée, surface, posé) ; depuis le sprint 4, le tableau tactique prévient la scène et les boutons des changements de formation ; depuis le sprint 5, la scène (`tactical-view.mjs`) suit tout l'état tactique, et la barre d'outils suit l'interaction et l'historique ; depuis le sprint 6, le lecteur s'arrête quand le tableau ou la séquence change, et le panneau de la séquence suit le lecteur |
 
 ---
 
@@ -466,7 +468,7 @@ Deux outils de développement s'ajoutent dans `tests/` : `benchmark.mjs` (`npm r
 
 ## 6. Tests
 
-`npm test` lance d'abord les 182 tests unitaires (`npm run test:unit`, sans navigateur), puis rejoue dans Chrome, sans interface, les 79 vérifications de bout en bout (`npm run test:e2e`). Celles des sprints 1 et 3 hors AR sont décrites ici ; le parcours AR est décrit dans [sprint-3.md](sprint-3.md#12-tests), les formations du sprint 4 dans [sprint-4.md](sprint-4.md#8-tests), l'interaction tactique du sprint 5 dans [sprint-5.md](sprint-5.md#10-tests), et la séquence animée, les versions de la PWA et les entrées répétées en AR du sprint 6 dans [sprint-6.md](sprint-6.md#7-tests). Prérequis : Node.js 18 ou plus, Google Chrome, un processeur graphique compatible WebGPU, et un premier `npm install`. Pour utiliser Microsoft Edge à la place de Chrome : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`).
+Au 17 novembre 2026, `npm test` lançait d’abord les 182 tests unitaires (`npm run test:unit`, sans navigateur), puis rejouait dans Chrome, sans interface, les 79 vérifications de bout en bout (`npm run test:e2e`). Celles des sprints 1 et 3 hors AR sont décrites ici ; le parcours AR est décrit dans [sprint-3.md](sprint-3.md#12-tests), les formations du sprint 4 dans [sprint-4.md](sprint-4.md#8-tests), l'interaction tactique du sprint 5 dans [sprint-5.md](sprint-5.md#10-tests), et la séquence animée, les versions de la PWA et les entrées répétées en AR du sprint 6 dans [sprint-6.md](sprint-6.md#7-tests). Le bilan du 23 novembre figure dans l’[addendum](#10-retours-de-lévaluation-du-23-novembre). Prérequis : Node.js 18 ou plus, Google Chrome, un processeur graphique compatible WebGPU, et un premier `npm install`. Pour utiliser Microsoft Edge à la place de Chrome : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`).
 
 | Test | Ce qu'il vérifie |
 | --- | --- |
@@ -487,7 +489,7 @@ Le test des formations reprend le critère d'acceptation du cahier « 11 joueurs
 
 - [`tests/serve.mjs`](../tests/serve.mjs) est un petit serveur statique en Node.js, sans dépendance. Il sert le dépôt avec les bons types MIME (les modules JavaScript exigent `text/javascript`), peut le servir sous un sous-chemin comme GitHub Pages, et refuse tout chemin qui sort du dépôt. `npm start` l'utilise aussi, sur `http://127.0.0.1:8080`.
 - [`tests/run-tests.mjs`](../tests/run-tests.mjs) pilote le Chrome installé sur la machine avec `playwright-core` (aucun navigateur n'est téléchargé). Aux sprints 1 et 2, il utilisait un rendu WebGL logiciel (SwiftShader), utilisable sans carte graphique. Depuis le sprint 3, il utilise le vrai processeur graphique, car SwiftShader ne fournit pas d'adaptateur WebGPU. Chaque test ouvre l'application et relève les erreurs de console, de script et les réponses HTTP en échec.
-- Le test des formations importe les vrais modules `formations.js` et `config.js` dans la page : il vérifie le code de l'application, pas une copie.
+- Le test des formations importe les vrais modules `formations.mjs` et `config.mjs` dans la page : il vérifie le code de l'application, pas une copie.
 - Le test hors-ligne recharge d'abord la page, pour qu'elle soit contrôlée par le Service Worker, puis coupe le réseau et la recharge encore.
 - Le test du réseau lent utilise un serveur à part, dont `setLatency` retarde chaque réponse de 30 secondes, puis il mesure le temps de rechargement. Avec l'ancien `sw.js`, sans délai d'attente, il échoue : la page n'est pas prête après 30 secondes.
 - `requestSession` exige une action de l'utilisateur : le test de l'émulateur ajoute un bouton à la page et clique dessus.
@@ -504,7 +506,7 @@ Ce que les tests ne couvrent pas : le rendu visuel (contrôlé à l'œil sur les
 - Le hit test est émulé sur PC par une table virtuelle (sprint 3) ; la détection de vraies surfaces par ARCore se vérifie sur téléphone.
 - En AR, la liaison WebXR/WebGPU est encore derrière un réglage de Chrome (`chrome://flags/#webxr-webgpu-binding`). Sans repli WebGL, l'AR demande ce réglage sur le téléphone (sprint 3).
 - Sans WebGPU, l'application affiche un message au lieu du terrain : sur iPhone, il faut iOS 26 (Safari 26) ; sur Android, Chrome bloque WebGPU avant Android 12 (Galaxy S10e sous Android 9, testé le 14 novembre 2026).
-- Pour tester malgré tout sur un tel téléphone, le mode test WebGL (`?webgl` dans l'adresse, `src/webgl-test-mode.js`) fait tourner la même scène en WebGL 2. Il est réservé aux tests : ce n'est pas un repli, l'application ne le choisit jamais d'elle-même. Voir [sprint-3.md](sprint-3.md#16-mode-test-webgl-webgl-réservé-aux-tests).
+- Pour tester malgré tout sur un tel téléphone, le mode test WebGL (`?webgl` dans l'adresse, `src/webgl-test-mode.mjs`) fait tourner la même scène en WebGL 2. Il est réservé aux tests : ce n'est pas un repli, l'application ne le choisit jamais d'elle-même. Voir [sprint-3.md](sprint-3.md#16-mode-test-webgl-webgl-réservé-aux-tests).
 - L'AR rendue en WebGPU (sprint 3) a été testée avec succès sur un téléphone, le TECNO POVA 6 Pro 5G, le 14 novembre 2026 : voir [sprint-3.md](sprint-3.md#13-test-sur-téléphone).
 - Depuis le sprint 5, joueurs et ballon se sélectionnent et se déplacent par raycasting, et les flèches et l'annulation sont en place. C'est vérifié sur PC, en vue 3D et en AR émulée ; le critère du cahier « réussite sur 9 essais sur 10 » (§4.3) reste à mesurer sur téléphone : voir [sprint-5.md](sprint-5.md#11-protocole-de-validation-sur-téléphone).
 - Safari sur iPhone ne prend pas en charge les sessions WebXR `immersive-ar` : sur iPhone, l'application reste en vue 3D (vérifié sur un iPhone 15).
@@ -556,19 +558,19 @@ La scène ne démarre pas : un message clair remplace l'écran de chargement, au
 Pour une seule origine HTTPS, un fonctionnement hors-ligne garanti et une version figée, sans dépendre d'un CDN.
 
 **Comment testez-vous l'AR sans téléphone ?**
-Avec l'émulateur IWER, activé par `?iwer` : « Entrer en AR » y ouvre une vraie session, et les tests de bout en bout parcourent l'entrée, la pose du terrain et la sortie. Depuis le sprint 3, notre module `dev-xr-emulation.js` ajoute la liaison WebXR/WebGPU et une table virtuelle pour le hit test. IWER n'émule ni l'image de la caméra, ni le DOM Overlay : pour ces points, le téléphone reste nécessaire.
+Avec l'émulateur IWER, activé par `?iwer` : « Entrer en AR » y ouvre une vraie session, et les tests de bout en bout parcourent l'entrée, la pose du terrain et la sortie. Depuis le sprint 3, notre module `dev-xr-emulation.mjs` ajoute la liaison WebXR/WebGPU et une table virtuelle pour le hit test. IWER n'émule ni l'image de la caméra, ni le DOM Overlay : pour ces points, le téléphone reste nécessaire.
 
 **Pourquoi « Football Simulator », alors que le cahier exclut la simulation de match (§2.5) ?**
 C'est un simulateur de tactique : l'entraîneur place et déplace les joueurs lui-même. Il n'y a ni intelligence artificielle des joueurs, ni simulation de match.
 
 **Avez-vous utilisé l'IA ?**
-Oui, et tout est déclaré dans `ATTRIBUTION.md` : le code, la documentation et l'état de l'art des sprints 1 à 6 ont été produits avec Claude Code, à partir de notre cahier des charges, de nos consignes et des demandes de l'enseignant. Le code est vérifié par des tests que chacun peut rejouer (`npm test`) et expliqué dans ce guide et dans les comptes rendus des sprints 2 à 6.
+Oui. Les contributions historiques figurent dans `ATTRIBUTION.md` ; les ajouts Claude Code puis Codex du 23 novembre sont proposés séparément dans [attribution-proposee.md](attribution-proposee.md), à relire par l’équipe : le code, la documentation et l'état de l'art des sprints 1 à 6 ont été produits avec Claude Code, à partir de notre cahier des charges, de nos consignes et des demandes de l'enseignant. Le code est vérifié par des tests que chacun peut rejouer (`npm test`) et expliqué dans ce guide et dans les comptes rendus des sprints 2 à 6.
 
 ---
 
 ## 9. Après le sprint 1
 
-Le sprint 2 est fait. Il suit les pistes laissées à la fin du sprint 1, avec deux écarts : la session est ouverte par notre module `src/xr-session.js` plutôt que par `ARButton.js`, et elle ne demande pas encore `hit-test` ni `anchors`, qui arrivent avec leur code au sprint 3.
+Le sprint 2 est fait. Il suit les pistes laissées à la fin du sprint 1, avec deux écarts : la session est ouverte par notre module `src/xr-session.mjs` plutôt que par `ARButton.js`, et elle ne demande pas encore `hit-test` ni `anchors`, qui arrivent avec leur code au sprint 3.
 
 Tout est expliqué dans [sprint-2.md](sprint-2.md), qui se termine par les points d'entrée du sprint 3.
 
@@ -579,3 +581,12 @@ Le sprint 4 est fait : formation de chaque équipe choisie par des boutons, joue
 Le sprint 5 est fait : sélection et déplacement des joueurs et du ballon par raycasting, flèches de passe et de course, annuler, rétablir et réinitialiser (patron Command), mode diagnostic. Voir [sprint-5.md](sprint-5.md).
 
 Le sprint 6, le dernier, est fait : performance mesurée et joueurs instanciés, fiabilité de l'AR revue, séquence animée (bonus BF9), PWA à version de contenu. Voir [sprint-6.md](sprint-6.md), la [recette finale](recette.md), le [manuel utilisateur](manuel-utilisateur.md), les [diagrammes UML](uml.md) et le [script de la vidéo](video-demonstration.md).
+
+## 10. Retours de l’évaluation du 23 novembre
+
+- `arrow-rules.mjs` reçoit des données simples, sans scène : `resolveArrowStart`, `resolveArrowEnd` et `validateArrow` jugent la flèche avant toute commande. Le tableau protège encore sa géométrie. [Règles et seuils](regles-des-fleches.md).
+- `tactical-interaction.mjs` garde la machine à états et les raisons des refus ; `tactical-view.mjs` les représente par l’aperçu rouge, le receveur et les départs possibles.
+- `onboarding.mjs` gère l’aide de première visite ; `keyboard-shortcuts.mjs` les outils et l’historique au clavier. Le HTML/CSS garde les outils visibles et permet aux panneaux de défiler. Le cadrage hors AR réserve les dimensions réelles du bandeau et des commandes, sans suivre l’ouverture des panneaux.
+- `sw.mjs` sert une coquille de 51 entrées ; `sw.js` migre les anciennes installations. Aucun fichier tiers renommé. [Migration et limites](migration-mjs.md).
+
+**Validation automatisée finale du 23 novembre 2026 : 226 tests unitaires et 104 vérifications de navigateur réussis (`npm test`), aucun échec et aucun cas ignoré.** Sont inclus les écrans étroits et en paysage, les sessions AR IWER en WebGPU et en mode test WebGL, les imports/MIME locaux, les en-têtes, la mise à jour cohérente de la PWA, la migration installée (un rechargement, un enregistrement et un cache), puis le démarrage hors-ligne. Aucun essai physique de cette version n’est consigné.

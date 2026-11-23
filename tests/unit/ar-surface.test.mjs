@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/ar-surface.js (sprint 3) : hit test, réticule, toucher pour poser,
+ * Tests unitaires de src/ar-surface.mjs (sprint 3) : hit test, réticule, toucher pour poser,
  * ancre, déplacement du terrain, et secours sans hit test. La session et les images WebXR sont
  * remplacées par des doublures qui suivent la spécification (WebXR Hit Test, WebXR Anchors).
  *
@@ -7,8 +7,8 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SurfacePlacement, PLACEMENT_STATES } from '../../src/ar-surface.js';
-import { computeSurfacePlacement, yawToQuaternion } from '../../src/ar-placement.js';
+import { SurfacePlacement, PLACEMENT_STATES } from '../../src/ar-surface.mjs';
+import { computeSurfacePlacement, yawToQuaternion } from '../../src/ar-placement.mjs';
 
 const REFERENCE_SPACE = { type: 'local-floor' };
 const VIEWER_POSE = { transform: { position: { x: 0, y: 1.35, z: 0 }, orientation: { x: -0.3, y: 0, z: 0, w: 0.95 } } };
@@ -19,7 +19,7 @@ const HIT_POSE = { transform: { position: { x: 0.1, y: 0.72, z: -0.9 }, orientat
  * @param {{features?: string[], failHitTest?: boolean}} [options]
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/ar-surface.js) — doublure
+ * @role Tests unitaires (src/ar-surface.mjs) — doublure
  */
 function createFakeSession({ features = ['local-floor', 'webgpu', 'hit-test', 'anchors'], failHitTest = false } = {}) {
   return {
@@ -41,7 +41,7 @@ function createFakeSession({ features = ['local-floor', 'webgpu', 'hit-test', 'a
  * Doublure de la vue AR : enregistre les appels.
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/ar-surface.js) — doublure
+ * @role Tests unitaires (src/ar-surface.mjs) — doublure
  */
 function createFakeView() {
   return {
@@ -72,7 +72,7 @@ function createFakeView() {
  * Doublure d'ancre WebXR.
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/ar-surface.js) — doublure
+ * @role Tests unitaires (src/ar-surface.mjs) — doublure
  */
 function createFakeAnchor() {
   return { anchorSpace: { type: 'anchor' }, deleted: false, delete() { this.deleted = true; } };
@@ -83,7 +83,7 @@ function createFakeAnchor() {
  * @param {{hit?: object|null, viewer?: object|null, anchorResult?: Promise<object>, tracked?: object[], anchorPose?: object}} [options]
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/ar-surface.js) — doublure
+ * @role Tests unitaires (src/ar-surface.mjs) — doublure
  */
 function createFakeFrame({ hit = null, viewer = VIEWER_POSE, anchorResult, tracked = [], anchorPose = null } = {}) {
   return {
@@ -110,7 +110,7 @@ function createFakeFrame({ hit = null, viewer = VIEWER_POSE, anchorResult, track
  * @param {object} [sessionOptions]
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/ar-surface.js) — montage du test
+ * @role Tests unitaires (src/ar-surface.mjs) — montage du test
  */
 function createPlacement(sessionOptions) {
   const session = createFakeSession(sessionOptions);
@@ -130,7 +130,7 @@ function createPlacement(sessionOptions) {
  * Laisse s'exécuter les promesses en attente (création d'ancre).
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/ar-surface.js) — outil de vérification
+ * @role Tests unitaires (src/ar-surface.mjs) — outil de vérification
  */
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 

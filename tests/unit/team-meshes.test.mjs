@@ -1,5 +1,5 @@
 /**
- * Tests unitaires des pions instanciés de src/players.js (sprint 6) : chaque instance suit son
+ * Tests unitaires des pions instanciés de src/players.mjs (sprint 6) : chaque instance suit son
  * joueur, seules les poses changées sont réécrites, et rien n'est envoyé au processeur graphique
  * quand le terrain est immobile. Identité, numéro et zone de sélection restent sur le joueur.
  *
@@ -8,18 +8,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { PlayerFactory } from '../../src/players.js';
-import { createTeam } from '../../src/team.js';
-import { FORMATIONS } from '../../src/formations.js';
-import { TEAMS } from '../../src/config.js';
+import { PlayerFactory } from '../../src/players.mjs';
+import { createTeam } from '../../src/team.mjs';
+import { FORMATIONS } from '../../src/formations.mjs';
+import { TEAMS } from '../../src/config.mjs';
 import { installFakeDocument } from './tactical-fixtures.mjs';
 
 /**
  * Équipe rouge en 4-4-2 et ses pions instanciés.
- * @returns {{group: THREE.Group, meshes: import('../../src/players.js').TeamMeshes}}
+ * @returns {{group: THREE.Group, meshes: import('../../src/players.mjs').TeamMeshes}}
  * @responsable Bilel Khlif
  * @date 2026-11-16
- * @role Tests unitaires (src/players.js) — montage du test
+ * @role Tests unitaires (src/players.mjs) — montage du test
  */
 function createSetup() {
   const restore = installFakeDocument();
@@ -39,7 +39,7 @@ function createSetup() {
  * @returns {THREE.Matrix4}
  * @responsable Bilel Khlif
  * @date 2026-11-16
- * @role Tests unitaires (src/players.js) — outil de vérification
+ * @role Tests unitaires (src/players.mjs) — outil de vérification
  */
 function instanceMatrix(mesh, index) {
   const matrix = new THREE.Matrix4();
@@ -55,7 +55,7 @@ function instanceMatrix(mesh, index) {
  * @returns {boolean}
  * @responsable Bilel Khlif
  * @date 2026-11-16
- * @role Tests unitaires (src/players.js) — outil de vérification
+ * @role Tests unitaires (src/players.mjs) — outil de vérification
  */
 function sameMatrix(a, b) {
   return a.elements.every((value, index) => Math.abs(value - b.elements[index]) < 1e-6);

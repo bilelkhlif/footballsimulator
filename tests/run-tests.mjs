@@ -10,10 +10,13 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { readFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { REPO_ROOT, startServer } from './serve.mjs';
+import { readShellVersion } from './shell-version.mjs';
 
 /** Navigateur utilisé : Chrome par défaut. */
 const CHANNEL = process.env.BROWSER_CHANNEL ?? 'chrome';
@@ -76,15 +79,34 @@ function withTimeout(promise, ms) {
 }
 
 /**
+ * Script injecté avant la page : l'aide au premier lancement est réputée vue, pour que les tests
+ * qui ne la concernent pas trouvent le terrain dégagé (src/onboarding.mjs).
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Tests de bout en bout — outillage
+ */
+function skipOnboarding() {
+  try {
+    window.localStorage.setItem('football-simulator:aide-vue', '1');
+  } catch {
+    // stockage refusé : l'aide s'ouvrira, les tests la fermeront
+  }
+}
+
+/**
  * Ouvre l'application et collecte les erreurs : console, script et réponses HTTP en échec.
  * @param {import('playwright-core').BrowserContext} context
  * @param {string} url
+ * @param {{onboarding?: boolean}} [options] vrai pour garder l'aide au premier lancement
  * @returns {Promise<{page: import('playwright-core').Page, errors: string[]}>}
  * @responsable Bilel Khlif
  * @date 2026-11-09
  * @role Tests de bout en bout — outillage
  */
-async function openApp(context, url) {
+async function openApp(context, url, { onboarding = false } = {}) {
+  if (!onboarding) {
+    await context.addInitScript(skipOnboarding);
+  }
   const page = await context.newPage();
   const errors = [];
   page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
@@ -135,8 +157,8 @@ async function testFormations(browser, url) {
     const { page } = await openApp(context, url);
     const issues = await page.evaluate(async () => {
       const base = new URL('.', location.href).href;
-      const { FORMATIONS } = await import(`${base}src/formations.js`);
-      const { PITCH_LENGTH, PITCH_WIDTH, PLAYER_SIZE } = await import(`${base}src/config.js`);
+      const { FORMATIONS } = await import(`${base}src/formations.mjs`);
+      const { PITCH_LENGTH, PITCH_WIDTH, PLAYER_SIZE } = await import(`${base}src/config.mjs`);
       const tokenDiameter = PLAYER_SIZE.radius * 2.8; // socle du pion : rayon 1,4 × celui du corps
       const found = [];
       for (const [label, formation] of Object.entries(FORMATIONS)) {
@@ -325,7 +347,7 @@ async function testManifest(browser, url) {
 
 /**
  * Lit la formation en place d'une équipe et l'écart, en centimètres, entre ses joueurs et les
- * places de cette formation (src/formation-transition.js). Page ouverte avec ?debug.
+ * places de cette formation (src/formation-transition.mjs). Page ouverte avec ?debug.
  * @param {import('playwright-core').Page} page
  * @param {string} teamId 'blue' ou 'red'
  * @returns {Promise<{formation: string, worstCm: number, chip: string, pressed: string[], animating: boolean, roles: boolean}>}
@@ -336,8 +358,8 @@ async function testManifest(browser, url) {
 function readTeamPlacement(page, teamId) {
   return page.evaluate(async (id) => {
     const base = new URL('.', document.baseURI).href;
-    const { computeTeamTargets } = await import(`${base}src/formation-transition.js`);
-    const { TEAMS } = await import(`${base}src/config.js`);
+    const { computeTeamTargets } = await import(`${base}src/formation-transition.mjs`);
+    const { TEAMS } = await import(`${base}src/config.mjs`);
     const app = window.__footballSimulator;
     const formation = app.board.getFormation(id);
     const targets = computeTeamTargets(formation, TEAMS[id].attacksPositiveX);
@@ -397,7 +419,7 @@ function isInFormation(state, expected) {
  */
 function installAimTools() {
   /** Éléments d'interface qui reçoivent les touchers. */
-  const ui = 'button, .toolbar, .formation-panel, .notice';
+  const ui = 'button, .ui-surface, .notice';
   window.__aim = {
     async context() {
       const THREE = await import('three');
@@ -420,10 +442,13 @@ function installAimTools() {
       const raycaster = new THREE.Raycaster(origin, world.clone().sub(origin).normalize());
       return raycaster.intersectObjects(app.tacticalView.hitboxes, false)[0]?.object.parent ?? null;
     },
-    async player(teamId) {
+    async player(teamId, exclude = []) {
       const context = await this.context();
       const { THREE, app } = context;
       for (const player of app.pitchGroup.getObjectByName(`team-${teamId}`).children) {
+        if (exclude.includes(player.userData.number)) {
+          continue;
+        }
         const head = player.localToWorld(new THREE.Vector3(0, 0.03, 0));
         const screen = this.toScreen(context, head);
         if (screen.usable && this.firstHit(context, head) === player) {
@@ -795,7 +820,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
       record(label('parcours complet'), 'ignoré', 'émulateur indisponible (réseau ?)');
       return;
     }
-    const table = await page.evaluate(async () => (await import(new URL('src/dev-xr-emulation.js', document.baseURI).href)).VIRTUAL_TABLE);
+    const table = await page.evaluate(async () => (await import(new URL('src/dev-xr-emulation.mjs', document.baseURI).href)).VIRTUAL_TABLE);
 
     /**
      * Oriente le téléphone émulé : inclinaison vers le bas, puis rotation vers la gauche, en degrés.
@@ -810,7 +835,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
       window.__footballSimulator.xrDevice.quaternion.set(cy * sp, sy * cp, -sy * sp, cy * cp);
     }, [pitchDown, yawLeft]);
 
-    /** Attend un état de la pose du terrain (src/ar-surface.js). */
+    /** Attend un état de la pose du terrain (src/ar-surface.mjs). */
     const waitForPlacementState = (state) => page.waitForFunction(
       (expected) => window.__footballSimulator.placement?.state === expected, state, { timeout: 15000 },
     );
@@ -829,7 +854,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
     /** Pose du terrain et du réticule, dans l'espace local-floor. */
     const readPlacement = () => page.evaluate(async () => {
       const THREE = await import('three');
-      const { BOARD_LENGTH, BOARD_WIDTH } = await import(new URL('src/config.js', document.baseURI).href);
+      const { BOARD_LENGTH, BOARD_WIDTH } = await import(new URL('src/config.mjs', document.baseURI).href);
       const app = window.__footballSimulator;
       const reticle = app.scene.getObjectByName('reticle');
       app.pitchGroup.updateWorldMatrix(true, false);
@@ -1000,14 +1025,15 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         const rotation = await page.evaluate(() => (window.__footballSimulator.pitchGroup.rotation.y * 180) / Math.PI);
         return [gap < 2 && sceneGap < 0.01, `visé (${spot.x} ; ${spot.z}) sur le terrain tourné de ${rotation.toFixed(1)}°, placé à ${gap.toFixed(3)} mm`];
       }],
-      ['flèche de passe en AR : aperçu guidé par la source d\'entrée, puis « Annuler »', async () => {
+      ['flèche de passe en AR : départ au ballon, aperçu guidé par la source d\'entrée, puis « Annuler »', async () => {
         await page.click('[data-mode="pass"]');
-        const start = await page.evaluate(() => window.__aim.spot([[-0.1, 0.05], [-0.05, 0.1], [0, 0.12], [-0.15, 0.12]]));
+        const ball = await page.evaluate(() => window.__aim.ball());
+        const start = await page.evaluate(() => window.__footballSimulator.board.getBallPosition());
         const end = await page.evaluate(() => window.__aim.spot([[0.12, -0.08], [0.15, 0.1], [0.08, 0.15], [0.2, 0]]));
-        if (!start || !end) {
-          return [false, 'points de la flèche cachés'];
+        if (!ball || !end) {
+          return [false, 'ballon ou arrivée cachés'];
         }
-        await page.mouse.click(start.sx, start.sy);
+        await page.mouse.click(ball.x, ball.y);
         await page.waitForFunction(() => window.__footballSimulator.interaction.state === 'arrow-end', null, { timeout: 5000 });
         await page.mouse.move(end.sx, end.sy);
         await page.waitForFunction(() => window.__footballSimulator.pitchGroup.getObjectByName('arrow-preview').visible, null, { timeout: 5000 });
@@ -1049,7 +1075,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
       ['séquence animée en AR sur le terrain tourné : lecture dans le repère du terrain, terrain toujours ancré', async () => {
         const toggleVisible = await page.evaluate(() => !document.getElementById('sequence-toggle').hidden);
         const { start, to } = await page.evaluate(async () => {
-          const { AddKeyframeCommand, MovePlayerCommand } = await import(new URL('src/commands.js', document.baseURI).href);
+          const { AddKeyframeCommand, MovePlayerCommand } = await import(new URL('src/commands.mjs', document.baseURI).href);
           const app = window.__footballSimulator;
           app.history.execute(new AddKeyframeCommand({ sequence: app.sequence, board: app.board }));
           const from = app.board.getPlayerPosition('red', 10);
@@ -1083,6 +1109,24 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         const anchored = JSON.stringify(after.pose) === JSON.stringify(before.pose) && after.placed && middle.placed;
         return [toggleVisible && between && exact && anchored,
           `bouton « Séquence » visible : ${toggleVisible}, à mi-lecture entre les deux images : ${between}, fin exacte : ${exact}, pose du terrain inchangée et ancrée : ${anchored}`];
+      }],
+      ['interface AR étroite et en paysage : outils et sortie accessibles, panneaux défilants', async () => {
+        const layouts = [];
+        try {
+          for (const [width, height] of [[320, 568], [568, 320]]) {
+            await page.setViewportSize({ width, height });
+            await page.click('#formations-toggle');
+            layouts.push(await page.evaluate(readControlsLayout));
+            await page.click('#sequence-toggle');
+            layouts.push(await page.evaluate(readControlsLayout));
+            await page.click('#sequence-toggle');
+          }
+        } finally {
+          await page.setViewportSize(DESKTOP.viewport);
+        }
+        const failures = layouts.flatMap((layout) => layout.failures);
+        return [failures.length === 0 && layouts.every((layout) => !layout.overflow),
+          `320 × 568 et 568 × 320 ; commandes masquées ou trop petites : ${failures.join(', ') || 'aucune'}`];
       }],
       ['regard hors de la table : pas de réticule, et un toucher ne pose rien', async () => {
         await page.click('#move-pitch');
@@ -1301,20 +1345,19 @@ async function testTacticalBoard(browser, url) {
           && JSON.stringify(after.snapshot) === JSON.stringify(before.snapshot) && after.selection?.number === target.number;
         return [ok, `aide : « ${after.hint} », sélection gardée : n° ${after.selection?.number}`];
       }],
-      ['flèche de passe : deux clics, aperçu au survol, flèche 3D accrochée au joueur', async () => {
+      ['flèche de passe : départ au ballon, aperçu au survol, arrivée au point visé', async () => {
         await page.click('[data-mode="pass"]');
-        const from = await page.evaluate(() => window.__aim.player('blue'));
-        await page.mouse.click(from.x, from.y);
-        const spot = await page.evaluate(() => window.__aim.spot([[0.1, 0.12], [0.15, -0.15], [0.05, 0.19], [0.2, 0.1]]));
+        const ball = await page.evaluate(() => window.__aim.ball());
+        await page.mouse.click(ball.x, ball.y);
+        const spot = await page.evaluate(() => window.__aim.spot([[0.1, 0.12], [0.15, -0.15], [0.05, 0.18], [0.2, 0.1]]));
         await page.mouse.move(spot.sx, spot.sy);
         await page.waitForFunction(() => window.__footballSimulator.pitchGroup.getObjectByName('arrow-preview').visible, null, { timeout: 5000 });
         await page.mouse.click(spot.sx, spot.sy);
         const state = await readTactics(page);
         const [arrow] = state.snapshot.arrows;
-        const start = state.snapshot.players[`blue:${from.number}`];
-        const ok = state.arrowMeshes === 1 && arrow?.kind === 'pass' && gapMm(arrow.from, start) === 0 && gapMm(arrow.to, spot) < 1
+        const ok = state.arrowMeshes === 1 && arrow?.kind === 'pass' && gapMm(arrow.from, state.snapshot.ball) === 0 && gapMm(arrow.to, spot) < 1
           && state.state === 'arrow-start';
-        return [ok, `départ accroché au n° ${from.number}, arrivée à ${gapMm(arrow.to, spot).toFixed(3)} mm du point visé, flèches 3D : ${state.arrowMeshes}`];
+        return [ok, `départ au ballon, arrivée à ${gapMm(arrow.to, spot).toFixed(3)} mm du point visé, flèches 3D : ${state.arrowMeshes}`];
       }],
       ['changement de formation annulé : le joueur déplacé à la main retrouve sa place exacte', async () => {
         await page.click('[data-mode="move"]');
@@ -1333,7 +1376,9 @@ async function testTacticalBoard(browser, url) {
       }],
       ['« Réinitialiser » : état de départ, et « Annuler » rétablit tout', async () => {
         const before = await readTactics(page);
-        await page.click('[data-action="reset"]');
+        await page.click('[data-action="reset"]'); // arme la confirmation
+        await page.waitForTimeout(450);
+        await page.click('[data-action="reset"]'); // confirme
         const sceneGap = await settledSceneGapMm(page);
         const reset = await readTactics(page);
         await page.click('[data-action="undo"]');
@@ -1428,7 +1473,7 @@ async function testSequencePlayback(browser, url) {
     const { page, errors } = await openApp(context, `${url}?debug`);
     /** Déplace un objet par une commande annulable, comme un geste de l'utilisateur. */
     const move = (teamId, number, to) => page.evaluate(async ([team, n, target]) => {
-      const { MoveBallCommand, MovePlayerCommand } = await import(new URL('src/commands.js', document.baseURI).href);
+      const { MoveBallCommand, MovePlayerCommand } = await import(new URL('src/commands.mjs', document.baseURI).href);
       const app = window.__footballSimulator;
       app.history.execute(team === 'ball'
         ? new MoveBallCommand({ board: app.board, to: target })
@@ -1518,10 +1563,10 @@ async function testSequencePlayback(browser, url) {
 
 /**
  * Service Worker à version de contenu (sprint 6). Un nouveau déploiement est simulé par le
- * serveur : main.js utilise une nouvelle exportation de config.js, et config.js répond lentement.
+ * serveur : main.mjs utilise une nouvelle exportation de config.mjs, et config.mjs répond lentement.
  * 1. Rechargement : la page doit rester sur une seule version, cohérente (avec un réseau d'abord
- *    et un délai d'attente, main.js arrivait neuf et config.js ancien : le démarrage échouait).
- * 2. Nouveau sw.js : la nouvelle version s'installe d'un bloc, l'avis s'affiche, et après
+ *    et un délai d'attente, main.mjs arrivait neuf et config.mjs ancien : le démarrage échouait).
+ * 2. Nouveau sw.mjs : la nouvelle version s'installe d'un bloc, l'avis s'affiche, et après
  *    « Recharger » toute la page est de la nouvelle version.
  * 3. Hors-ligne ensuite : la nouvelle version se lance.
  * @param {import('playwright-core').Browser} browser
@@ -1555,19 +1600,19 @@ async function testShellVersioning(browser) {
     const source = async (file) => readFile(path.join(REPO_ROOT, file), 'utf8');
     const steps = [
       ['nouveau déploiement sur réseau lent : la page reste sur une seule version, cohérente', async () => {
-        server.setOverride('src/config.js', `${await source('src/config.js')}\nexport const DEPLOY_MARKER = 'B';\n`);
-        server.setOverride('src/main.js', `${await source('src/main.js')}\nimport { DEPLOY_MARKER } from './config.js';\nwindow.__deployMarker = DEPLOY_MARKER;\n`);
-        server.setLatency(5000, { only: ['src/config.js'] });
+        server.setOverride('src/config.mjs', `${await source('src/config.mjs')}\nexport const DEPLOY_MARKER = 'B';\n`);
+        server.setOverride('src/main.mjs', `${await source('src/main.mjs')}\nimport { DEPLOY_MARKER } from './config.mjs';\nwindow.__deployMarker = DEPLOY_MARKER;\n`);
+        server.setLatency(5000, { only: ['src/config.mjs'] });
         const before = errors.length;
         await reload();
         const state = await read();
         const ok = state.ready && !state.failed && state.marker === null && errors.length === before && state.caches.length === 1;
         return [ok, `prête : ${state.ready}, version : ${state.marker ?? 'A'}, erreurs : ${errors.slice(before, before + 2).join(' | ') || 'aucune'}`];
       }],
-      ['nouveau sw.js : la version B s\'installe d\'un bloc, avis affiché, puis rechargement en version B', async () => {
-        const sw = await source('sw.js');
+      ['nouveau sw.mjs : la version B s\'installe d\'un bloc, avis affiché, puis rechargement en version B', async () => {
+        const sw = await source('sw.mjs');
         const next = sw.replace(/const SHELL_VERSION = '[^']*';/, "const SHELL_VERSION = 'deploiement-b';");
-        server.setOverride('sw.js', next === sw ? `${sw}\n// déploiement B\n` : next);
+        server.setOverride('sw.mjs', next === sw ? `${sw}\n// déploiement B\n` : next);
         await reload();
         await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.update());
         await page.waitForSelector('#update-notice:not([hidden])', { timeout: 30000 });
@@ -1632,6 +1677,465 @@ async function testDiagnostics(browser, url) {
 }
 
 /**
+ * Règles des flèches dans la vraie page (docs/regles-des-fleches.md) : chaque action impossible est
+ * refusée avant d'exister, avec un aperçu rouge et une raison ; rien de refusé n'entre dans
+ * l'historique ; le départ est marqué, l'annulation se fait par Échap ou par le bouton
+ * « Abandonner » ; un double clic involontaire ne crée ni n'annule rien ; les raccourcis clavier
+ * choisissent l'outil, annulent et rétablissent.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Tests de bout en bout — règles des flèches et clavier
+ */
+async function testArrowRules(browser, url) {
+  /** Nom d'une étape dans le bilan. */
+  const label = (step) => `Règles des flèches (vue 3D) : ${step}`;
+  const context = await browser.newContext(DESKTOP);
+  try {
+    await context.addInitScript(recordCanvasContexts);
+    await context.addInitScript(installAimTools);
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    /** Visibilité et couleur des repères de l'aperçu. */
+    const markers = () => page.evaluate(() => {
+      const group = window.__footballSimulator.pitchGroup;
+      const preview = group.getObjectByName('arrow-preview');
+      return {
+        origin: group.getObjectByName('pass-origin-0').visible,
+        preview: preview.visible,
+        previewColor: preview.children[0].material.color.getHex(),
+        end: group.getObjectByName('arrow-end').visible,
+        receiver: group.getObjectByName('receiver-ring').visible,
+        cancelShown: !document.getElementById('cancel-draft').hidden,
+        cancelText: document.getElementById('cancel-draft').textContent.trim(),
+      };
+    });
+    /** Attend que l'aperçu soit dessiné (tâche de la boucle de rendu). */
+    const previewDrawn = () => page.waitForFunction(() => window.__footballSimulator.pitchGroup.getObjectByName('arrow-preview').visible, null, { timeout: 5000 });
+    const invalidColor = 0xff5a4f;
+    const steps = [
+      ['passe depuis un joueur sans le ballon : refusée avant toute action, avec sa raison ; rien dans l\'historique', async () => {
+        await page.click('[data-mode="pass"]');
+        await page.waitForFunction(() => window.__footballSimulator.pitchGroup.getObjectByName('pass-origin-0').visible, null, { timeout: 5000 });
+        const player = await page.evaluate(() => window.__aim.player('blue'));
+        await page.mouse.click(player.x, player.y);
+        const state = await readTactics(page);
+        const ok = state.feedback === 'invalid' && state.hint.includes('Une passe part du ballon') && state.state === 'arrow-start'
+          && !state.canUndo && state.snapshot.arrows.length === 0;
+        return [ok, `n° ${player.number} : « ${state.hint} », historique vide : ${!state.canUndo}, départs marqués : ${(await markers()).origin}`];
+      }],
+      ['départ au ballon, puis arrivée hors des lignes : aperçu rouge, refus expliqué, le départ reste posé', async () => {
+        const ball = await page.evaluate(() => window.__aim.ball());
+        await page.mouse.click(ball.x, ball.y);
+        // Les repères suivent l'état à l'image suivante (tâche de la boucle de rendu).
+        await page.waitForFunction(() => !window.__footballSimulator.pitchGroup.getObjectByName('pass-origin-0').visible, null, { timeout: 5000 });
+        const started = await markers();
+        const outside = await page.evaluate(() => window.__aim.spot([[0.311, 0.05], [0.311, -0.05], [0.311, 0.12], [-0.311, 0.05]]));
+        if (!outside) {
+          return [false, 'aucun point de la bande de gazon visible'];
+        }
+        await page.mouse.move(outside.sx, outside.sy);
+        await previewDrawn();
+        const preview = await markers();
+        await page.mouse.click(outside.sx, outside.sy);
+        const state = await readTactics(page);
+        const ok = started.cancelShown && started.cancelText === 'Abandonner le tracé' && !started.origin
+          && preview.previewColor === invalidColor && preview.end && state.feedback === 'invalid'
+          && state.hint.includes('hors du terrain') && state.state === 'arrow-end' && state.snapshot.arrows.length === 0;
+        return [ok, `aperçu : #${preview.previewColor.toString(16)}, « ${state.hint} », départ gardé : ${state.state === 'arrow-end'}`];
+      }],
+      ['Échap abandonne le tracé, et le bouton « Abandonner » disparaît', async () => {
+        await page.keyboard.press('Escape');
+        const state = await readTactics(page);
+        const shown = await markers();
+        return [state.state === 'arrow-start' && !shown.cancelShown && state.hint === 'Tracé abandonné.', `état : ${state.state}, « ${state.hint} »`];
+      }],
+      ['passe du porteur vers un adversaire : refusée ; vers un partenaire : receveur entouré, flèche accrochée à lui', async () => {
+        await page.evaluate(async () => {
+          const { MoveBallCommand } = await import(new URL('src/commands.mjs', document.baseURI).href);
+          const app = window.__footballSimulator;
+          const nine = app.board.getPlayerPosition('blue', 9);
+          app.history.execute(new MoveBallCommand({ board: app.board, to: { x: nine.x + 0.016, z: nine.z } }));
+        });
+        await waitForFormationsSettled(page);
+        const ball = await page.evaluate(() => window.__aim.ball());
+        await page.mouse.click(ball.x, ball.y);
+        const started = await readTactics(page);
+        const red = await page.evaluate(() => window.__aim.player('red'));
+        await page.mouse.click(red.x, red.y);
+        const refused = await readTactics(page);
+        const mate = await page.evaluate(() => window.__aim.player('blue', [9]));
+        await page.mouse.move(mate.x, mate.y);
+        await previewDrawn();
+        const hovered = await markers();
+        await page.mouse.click(mate.x, mate.y);
+        const state = await readTactics(page);
+        const [arrow] = state.snapshot.arrows;
+        const ok = started.hint.startsWith('Passe du n° 9 des Bleus') && refused.feedback === 'invalid' && refused.hint.includes('adversaire')
+          && hovered.receiver && state.feedback === 'success' && state.hint === `Passe vers le n° ${mate.number} des Bleus tracée.`
+          && gapMm(arrow.to, state.snapshot.players[`blue:${mate.number}`]) === 0 && gapMm(arrow.from, state.snapshot.ball) === 0;
+        return [ok, `« ${refused.hint} » puis « ${state.hint} »`];
+      }],
+      ['double clic involontaire sur le ballon : un seul départ, pas d\'annulation', async () => {
+        const ball = await page.evaluate(() => window.__aim.ball());
+        await page.mouse.dblclick(ball.x, ball.y);
+        const state = await readTactics(page);
+        await page.keyboard.press('Escape');
+        return [state.state === 'arrow-end', `état après le double clic : ${state.state}`];
+      }],
+      ['touche C : course ; depuis le ballon, refusée ; depuis un joueur, tracée', async () => {
+        await page.keyboard.press('c');
+        const pressed = await page.evaluate(() => document.querySelector('[data-mode="run"]').getAttribute('aria-pressed'));
+        const ball = await page.evaluate(() => window.__aim.ball());
+        await page.mouse.click(ball.x, ball.y);
+        const refused = await readTactics(page);
+        const runner = await page.evaluate(() => window.__aim.player('red'));
+        await page.mouse.click(runner.x, runner.y);
+        const spot = await page.evaluate(() => window.__aim.spot([[-0.2, 0.1], [-0.15, -0.12], [-0.22, 0.16], [-0.1, 0.17]]));
+        await page.mouse.click(spot.sx, spot.sy);
+        const state = await readTactics(page);
+        const run = state.snapshot.arrows.find(({ kind }) => kind === 'run');
+        const ok = pressed === 'true' && refused.hint.includes('Une course part d’un joueur') && run
+          && gapMm(run.from, state.snapshot.players[`red:${runner.number}`]) === 0 && gapMm(run.to, spot) < 1;
+        return [ok, `refus : « ${refused.hint} » ; course du n° ${runner.number} des Rouges tracée : ${Boolean(run)}`];
+      }],
+      ['clavier : Ctrl+Z annule, Ctrl+Y rétablit, D revient à « Déplacer »', async () => {
+        const before = (await readTactics(page)).snapshot.arrows.length;
+        await page.keyboard.press('Control+z');
+        const undone = (await readTactics(page)).snapshot.arrows.length;
+        await page.keyboard.press('Control+y');
+        const redone = (await readTactics(page)).snapshot.arrows.length;
+        await page.keyboard.press('d');
+        const mode = (await readTactics(page)).mode;
+        return [before === 2 && undone === 1 && redone === 2 && mode === 'move', `flèches : ${before} → ${undone} → ${redone}, outil : ${mode}`];
+      }],
+      ['toujours rendu en WebGPU, sans contexte WebGL, et sans erreur dans la console', async () => {
+        const contexts = await page.evaluate(() => window.__canvasContexts);
+        const webgl = contexts.filter((type) => WEBGL_CONTEXTS.includes(type));
+        return [webgl.length === 0 && contexts.includes('webgpu') && errors.length === 0, `erreurs : ${errors.slice(0, 2).join(' | ') || 'aucune'}`];
+      }],
+    ];
+    await runSteps(steps, label);
+  } catch (error) {
+    record(label('parcours complet'), 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Interface sur téléphone (390 × 844, tactile) : aide au premier lancement, bandeau compact et
+ * terrain entier visible au-dessus de la barre d'outils, visée au doigt (appui, glissé,
+ * relâchement), confirmation de la réinitialisation. Les gestes passent par de vrais événements
+ * tactiles de Chrome (protocole CDP), pas par des événements fabriqués dans la page.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Tests de bout en bout — interface sur téléphone
+ */
+async function testMobileInterface(browser, url) {
+  /** Nom d'une étape dans le bilan. */
+  const label = (step) => `Interface sur téléphone (390 × 844) : ${step}`;
+  const context = await browser.newContext(MOBILE);
+  try {
+    await context.addInitScript(installAimTools);
+    const { page, errors } = await openApp(context, `${url}?debug`, { onboarding: true });
+    const touch = await context.newCDPSession(page);
+    /** Geste tactique réel : appui, glissé éventuel, relâchement. */
+    const press = (type, x, y) => touch.send('Input.dispatchTouchEvent', {
+      type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1, radiusX: 6, radiusY: 6, force: 1 }],
+    });
+    const steps = [
+      ['aide au premier lancement : ouverte à la première visite, fermée par « Commencer », pas rouverte au rechargement, rouverte par « ? »', async () => {
+        const first = await page.evaluate(() => !document.getElementById('onboarding').hidden);
+        await page.tap('#onboarding-close');
+        const closed = await page.evaluate(() => document.getElementById('onboarding').hidden);
+        await page.reload();
+        await page.waitForSelector('body.is-ready', { timeout: 20000 });
+        const afterReload = await page.evaluate(() => document.getElementById('onboarding').hidden);
+        await page.tap('#help-toggle');
+        const reopened = await page.evaluate(() => !document.getElementById('onboarding').hidden
+          && document.getElementById('help-toggle').getAttribute('aria-expanded') === 'true');
+        await page.tap('#help-toggle');
+        return [first && closed && afterReload && reopened, `première visite : ${first}, fermée : ${closed}, absente au rechargement : ${afterReload}, rouverte : ${reopened}`];
+      }],
+      ['bandeau supérieur compact ; terrain entier et 22 joueurs visibles entre le bandeau et l\'aide', async () => {
+        const layout = await page.evaluate(async () => {
+          const context = await window.__aim.context();
+          const { THREE, app } = context;
+          const top = document.querySelector('.topbar').getBoundingClientRect().bottom;
+          const bottom = document.querySelector('.status-line').getBoundingClientRect().top;
+          const { PITCH_LENGTH, PITCH_WIDTH } = await import(new URL('src/config.mjs', document.baseURI).href);
+          const corners = [[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([sx, sz]) => app.pitchGroup.localToWorld(new THREE.Vector3((sx * PITCH_LENGTH) / 2, 0, (sz * PITCH_WIDTH) / 2)));
+          const players = ['blue', 'red'].flatMap((teamId) => app.pitchGroup.getObjectByName(`team-${teamId}`).children.map((player) => player.localToWorld(new THREE.Vector3(0, 0.03, 0))));
+          const outside = [...corners, ...players].map((world) => window.__aim.toScreen(context, world)).filter(({ y }) => y < top || y > bottom).length;
+          return { top: Math.round(top), bottom: Math.round(bottom), outside };
+        });
+        return [layout.top <= 100 && layout.outside === 0, `bandeau jusqu'à ${layout.top} px, aide à ${layout.bottom} px, points cachés : ${layout.outside} sur 26`];
+      }],
+      ['joueur touché, puis visée au doigt : aperçu sous le doigt, qui suit le glissé ; relâché, le joueur y va', async () => {
+        const target = await page.evaluate(() => window.__aim.player('red'));
+        await page.touchscreen.tap(target.x, target.y);
+        const selected = await readTactics(page);
+        const [a, b] = await page.evaluate(async () => [
+          await window.__aim.spot([[0.2, -0.12], [0.22, 0.12], [0.15, -0.16]]),
+          await window.__aim.spot([[0.08, 0.15], [0.05, -0.15], [0.1, 0.12]]),
+        ]);
+        await press('touchStart', a.sx, a.sy);
+        await page.waitForFunction(() => window.__footballSimulator.pitchGroup.getObjectByName('move-destination').visible, null, { timeout: 5000 });
+        for (let step = 1; step <= 6; step += 1) {
+          await press('touchMove', a.sx + ((b.sx - a.sx) * step) / 6, a.sy + ((b.sy - a.sy) * step) / 6);
+        }
+        await page.waitForTimeout(100);
+        const ghost = await page.evaluate(() => {
+          const marker = window.__footballSimulator.pitchGroup.getObjectByName('move-destination');
+          return { visible: marker.visible, x: marker.position.x, z: marker.position.z };
+        });
+        await press('touchEnd');
+        await settledSceneGapMm(page);
+        const state = await readTactics(page);
+        const placed = state.snapshot.players[`red:${target.number}`];
+        const ok = selected.selection?.number === target.number && ghost.visible && gapMm(ghost, b) < 1 && gapMm(placed, b) < 1
+          && state.selection === null;
+        return [ok, `aperçu à ${gapMm(ghost, b).toFixed(3)} mm du doigt, n° ${target.number} placé à ${gapMm(placed, b).toFixed(3)} mm`];
+      }],
+      ['« Réinitialiser » : un toucher arme « Confirmer ? » sans rien effacer ; un second toucher réinitialise', async () => {
+        await page.tap('[data-action="reset"]');
+        const armed = await page.evaluate(() => {
+          const button = document.querySelector('[data-action="reset"]');
+          return { armed: button.dataset.armed === 'true', text: button.textContent.trim(), initial: window.__footballSimulator.board.isInInitialState() };
+        });
+        await page.waitForTimeout(450);
+        await page.tap('[data-action="reset"]');
+        const state = await readTactics(page);
+        await page.tap('[data-action="undo"]');
+        const undone = await readTactics(page);
+        const ok = armed.armed && armed.text === 'Confirmer ?' && !armed.initial && state.initial && !undone.initial && errors.length === 0;
+        return [ok, `armé : « ${armed.text} », rien effacé : ${!armed.initial} ; confirmé : ${state.initial} ; annulé : ${!undone.initial}`];
+      }],
+    ];
+    await runSteps(steps, label);
+  } catch (error) {
+    record(label('parcours complet'), 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Mesure les commandes permanentes dans la page, y compris leur visibilité réelle au centre.
+ * Les boutons des panneaux peuvent défiler ; la barre d'outils et la sortie AR doivent rester visibles.
+ * @returns {{failures: string[], overflow: boolean}}
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Tests de bout en bout — accessibilité des commandes
+ */
+function readControlsLayout() {
+  const failures = [...document.querySelectorAll('.topbar button, .dock button, .status-line button, #onboarding-close')]
+    .filter((button) => button.getClientRects().length)
+    .filter((button) => {
+      const rect = button.getBoundingClientRect();
+      const center = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      return rect.x < 0 || rect.y < 0 || rect.right > innerWidth + 1 || rect.bottom > innerHeight + 1
+        || rect.width < 38 || rect.height < 38 || !button.contains(center);
+    }).map((button) => button.id || button.textContent.trim());
+  return { failures, overflow: document.documentElement.scrollWidth > innerWidth };
+}
+
+/**
+ * Régression des écrans courts : vraie fermeture de l'aide, accès aux deux panneaux sans
+ * clic fabriqué, commandes toujours à l'écran, et cadrage des joueurs hors des commandes.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Tests de bout en bout — mise en page adaptative
+ */
+async function testResponsivePanels(browser, url) {
+  for (const [width, height] of [[320, 568], [360, 740], [390, 844], [568, 320], [740, 360], [844, 390], [1280, 800]]) {
+    const name = `Interface ${width} × ${height} : aide, panneaux, commandes accessibles et 26 points du terrain visibles`;
+    const context = await browser.newContext({ viewport: { width, height }, hasTouch: true, isMobile: true });
+    try {
+      await context.addInitScript(installAimTools);
+      const { page, errors } = await openApp(context, `${url}?debug`, { onboarding: true });
+      const layouts = [await page.evaluate(readControlsLayout)];
+      await page.tap('#onboarding-close'); // Chrome défile jusqu'au bouton si nécessaire.
+      await page.tap('#reset-view');
+      /** Compte les quatre coins et 22 joueurs que l'aide du geste pourrait couvrir. */
+      const hiddenPoints = () => page.evaluate(async () => {
+        const context = await window.__aim.context();
+        const { THREE, app } = context;
+        const { PITCH_LENGTH, PITCH_WIDTH } = await import(new URL('src/config.mjs', document.baseURI).href);
+        const top = document.querySelector('.topbar').getBoundingClientRect().bottom;
+        const bottom = document.querySelector('.status-line').getBoundingClientRect().top;
+        const corners = [-1, 1].flatMap((sx) => [-1, 1].map((sz) => app.pitchGroup.localToWorld(new THREE.Vector3(sx * PITCH_LENGTH / 2, 0, sz * PITCH_WIDTH / 2))));
+        const players = ['blue', 'red'].flatMap((id) => app.pitchGroup.getObjectByName(`team-${id}`).children.map((player) => player.localToWorld(new THREE.Vector3(0, 0.03, 0))));
+        return [...corners, ...players].map((world) => window.__aim.toScreen(context, world))
+          .filter(({ x, y }) => x < 0 || x > innerWidth || y < top || y > bottom).length;
+      });
+      let points = await hiddenPoints();
+      const player = await page.evaluate(() => window.__aim.player('blue'));
+      await page.touchscreen.tap(player.x, player.y);
+      const selection = await readTactics(page);
+      points += await hiddenPoints();
+      layouts.push(await page.evaluate(readControlsLayout));
+      await page.getByRole('button', { name: 'Désélectionner', exact: true }).tap();
+      await page.tap('[data-mode="pass"]');
+      const ball = await page.evaluate(() => window.__aim.ball());
+      await page.touchscreen.tap(ball.x, ball.y);
+      const draft = await readTactics(page);
+      points += await hiddenPoints();
+      layouts.push(await page.evaluate(readControlsLayout));
+      await page.getByRole('button', { name: 'Abandonner le tracé', exact: true }).tap();
+      for (const selector of ['#formations-toggle', '#sequence-toggle', '#sequence-toggle', '#help-toggle']) {
+        await page.tap(selector);
+        layouts.push(await page.evaluate(readControlsLayout));
+      }
+      await page.tap('#onboarding-close');
+      await page.keyboard.press('p');
+      const selected = await page.getAttribute('[data-mode="pass"]', 'aria-pressed');
+      const failures = layouts.flatMap((layout) => layout.failures);
+      const ok = failures.length === 0 && layouts.every((layout) => !layout.overflow)
+        && points === 0 && selection.state === 'selected' && draft.state === 'arrow-end'
+        && selected === 'true' && errors.length === 0;
+      record(name, ok ? 'ok' : 'échec', `commandes : ${failures.join(', ') || 'visibles'}, points cachés : ${points}/78 (repos, sélection, passe) ; erreurs : ${errors.length}`);
+    } catch (error) {
+      record(name, 'échec', error.message.split('\n')[0]);
+    } finally {
+      await context.close();
+    }
+  }
+}
+
+/**
+ * Modules .mjs dans la vraie page : chaque script de l'application est un .mjs servi en
+ * text/javascript ; les seuls .js chargés sont ceux de three.js (src/vendor).
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Tests de bout en bout — migration .mjs
+ */
+async function testModuleLoading(browser, url) {
+  const name = 'Modules .mjs : chaque script de l\'application est un .mjs en text/javascript ; seuls ceux de three.js restent en .js';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const scripts = [];
+    context.on('response', (response) => {
+      const { pathname } = new URL(response.url());
+      if (/\.m?js$/.test(pathname)) {
+        scripts.push({ pathname, type: response.headers()['content-type'] ?? '' });
+      }
+    });
+    const { errors } = await openApp(context, url);
+    const firstParty = scripts.filter(({ pathname }) => !pathname.includes('/src/vendor/'));
+    const wrongType = scripts.filter(({ type }) => !type.startsWith('text/javascript'));
+    const notMjs = firstParty.filter(({ pathname }) => !pathname.endsWith('.mjs'));
+    const ok = firstParty.length >= 38 && notMjs.length === 0 && wrongType.length === 0 && errors.length === 0;
+    record(name, ok ? 'ok' : 'échec', `${firstParty.length} modules .mjs, ${scripts.length - firstParty.length} fichiers de three.js ; hors .mjs : ${notMjs.map(({ pathname }) => pathname).join(', ') || 'aucun'}`);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/** Dernière version de main avant la migration en .mjs : elle enregistrait sw.js (PR #14). */
+const PRE_MJS_COMMIT = 'f7da74f';
+
+/**
+ * Passage d'une application installée avant la migration (sw.js) à la nouvelle (sw.mjs). La
+ * version d'avant est tirée de git (PRE_MJS_COMMIT) et servie ; la page est mise en cache par son
+ * Service Worker. Puis la nouvelle version est déployée à la même adresse : la vérification de mise
+ * à jour trouve le script de migration sw.js, la page est rechargée en nouvelle version, sw.mjs
+ * prend le relais, l'ancien cache disparaît, et l'application se relance hors-ligne. Ignoré si git
+ * ou ce commit sont absents (dépôt cloné sans historique).
+ * @param {import('playwright-core').Browser} browser
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Tests de bout en bout — PWA (migration sw.js → sw.mjs)
+ */
+async function testServiceWorkerMigration(browser) {
+  /** Nom d'une étape dans le bilan. */
+  const label = (step) => `PWA, migration de sw.js vers sw.mjs : ${step}`;
+  let oldRoot;
+  try {
+    oldRoot = await mkdtemp(path.join(os.tmpdir(), 'football-simulator-avant-mjs-'));
+    const archive = path.join(oldRoot, 'version.tar');
+    execFileSync('git', ['archive', '--format=tar', '-o', archive, PRE_MJS_COMMIT], { cwd: REPO_ROOT, stdio: 'ignore' });
+    // Chemin relatif : le tar de Git lirait « C: » comme un hôte distant.
+    execFileSync('tar', ['-xf', 'version.tar'], { cwd: oldRoot, stdio: 'ignore' });
+  } catch (error) {
+    record(label('version d\'avant indisponible'), 'ignoré', `git archive ${PRE_MJS_COMMIT} : ${error.message.split('\n')[0]}`);
+    if (oldRoot) {
+      await rm(oldRoot, { recursive: true, force: true });
+    }
+    return;
+  }
+  let server = await startServer({ root: oldRoot });
+  const port = Number(new URL(server.url).port);
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const { page } = await openApp(context, `${server.url}?debug`);
+    /** État de la page : version, Service Worker et caches. */
+    const read = () => page.evaluate(async () => ({
+      ready: document.body.classList.contains('is-ready'),
+      module: document.querySelector('script[type="module"]')?.getAttribute('src') ?? null,
+      controller: navigator.serviceWorker.controller?.scriptURL ?? null,
+      registrations: (await navigator.serviceWorker.getRegistrations()).map((registration) => registration.active?.scriptURL ?? null),
+      caches: (await caches.keys()).filter((name) => name.startsWith('football-simulator-')),
+    }));
+    const steps = [
+      ['ancienne version installée : sw.js contrôle la page, son cache est en place', async () => {
+        await page.waitForFunction(() => navigator.serviceWorker.controller !== null, null, { timeout: 20000 });
+        const state = await read();
+        const ok = state.module === 'src/main.js' && state.controller?.endsWith('/sw.js') && state.caches.length === 1;
+        return [ok, `page : ${state.module}, Service Worker : ${state.controller}, caches : ${state.caches.join(', ')}`];
+      }],
+      ['nouvelle version déployée : sw.js de migration, rechargement, puis sw.mjs en module', async () => {
+        let navigations = 0;
+        // Une boucle de rechargement ne doit pas survivre au remplacement de l'enregistrement.
+        page.on('framenavigated', (frame) => { if (frame === page.mainFrame()) navigations += 1; });
+        await server.close();
+        server = await startServer({ port });
+        await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.update()).catch(() => {});
+        await page.waitForFunction(
+          () => document.querySelector('script[type="module"]')?.getAttribute('src') === 'src/main.mjs'
+            && document.body.classList.contains('is-ready') && navigator.serviceWorker.controller?.scriptURL.endsWith('/sw.mjs'),
+          null, { timeout: 45000, polling: 250 },
+        );
+        await page.waitForFunction(async () => (await caches.keys()).filter((name) => name.startsWith('football-simulator-')).length === 1, null, { timeout: 15000 });
+        const state = await read();
+        const version = readShellVersion();
+        const afterMigration = navigations;
+        await page.evaluate(async () => (await navigator.serviceWorker.getRegistration()).update());
+        await page.waitForTimeout(1000);
+        const ok = state.registrations.length === 1 && state.registrations[0].endsWith('/sw.mjs')
+          && state.caches.length === 1 && state.caches[0] === `football-simulator-${version}`
+          && afterMigration === 1 && navigations === afterMigration;
+        return [ok, `Service Worker : ${state.controller}, enregistrements : ${state.registrations.length}, rechargements : ${navigations}, cache : ${state.caches.join(', ')}`];
+      }],
+      ['hors-ligne après la migration : la nouvelle version se lance depuis le cache de sw.mjs', async () => {
+        await context.setOffline(true);
+        await page.reload().catch(() => {});
+        const ready = await page.waitForSelector('body.is-ready', { timeout: 20000 }).then(() => true).catch(() => false);
+        const state = ready ? await read() : null;
+        await context.setOffline(false);
+        return [ready && state.module === 'src/main.mjs', `prête hors-ligne : ${ready}, page : ${state?.module}`];
+      }],
+    ];
+    await runSteps(steps, label);
+  } catch (error) {
+    record(label('parcours complet'), 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+    await server.close();
+    await rm(oldRoot, { recursive: true, force: true });
+  }
+}
+
+/**
  * Lance tous les tests, affiche le bilan et renvoie un code de sortie non nul en cas d'échec.
  * @responsable Bilel Khlif
  * @date 2026-11-09
@@ -1650,9 +2154,14 @@ async function main() {
     await testReducedMotion(browser, root.url);
     await testTacticalBoard(browser, root.url);
     await testTacticalMobile(browser, root.url);
+    await testArrowRules(browser, root.url);
+    await testMobileInterface(browser, root.url);
+    await testResponsivePanels(browser, root.url);
+    await testModuleLoading(browser, root.url);
     await testDiagnostics(browser, root.url);
     await testSequencePlayback(browser, root.url);
     await testShellVersioning(browser);
+    await testServiceWorkerMigration(browser);
     await testWebGpuRendering(browser, root.url);
     await testWithoutWebGpu(browser, root.url);
     await testWebGlTestMode(browser, root.url);

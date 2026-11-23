@@ -23,9 +23,25 @@
   - bonus BF9 : une action animée pas à pas, par images clés, avec lecture, pause et vitesse ;
   - rendu **WebGPU sans repli WebGL**, optimisé pour le mobile : joueurs instanciés, 115 → 55 appels de dessin ;
   - application installable, utilisable hors-ligne, mise à jour d'un bloc.
-- **Testé.** 261 tests automatisés sur PC : 182 unitaires et 79 de bout en bout, dont le parcours AR complet en émulation. Sur téléphone : AR testée le 12 novembre 2026 sur deux téléphones Android. Le 14 novembre, l'AR rendue en WebGPU fonctionne sur le TECNO POVA 6 Pro 5G ; le Galaxy S10e sous Android 9 refuse WebGPU, et tout y fonctionne en mode test WebGL. Restent à mesurer sur téléphone : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde ([recette](docs/recette.md)).
+- **Après l'évaluation.** Flèches vérifiées avant toute action : une passe part du ballon, une course d'un joueur, l'arrivée reste entre les lignes ([règles](docs/regles-des-fleches.md)). Interface refondue : outils à icônes, aperçu rouge des actions impossibles, visée au doigt, aide au premier lancement, raccourcis clavier ([ergonomie](docs/ergonomie.md)). Modules JavaScript en `.mjs`, Service Worker en module ([migration](docs/migration-mjs.md)).
+- **Testé.** 330 tests automatisés sur PC : 226 unitaires et 104 de bout en bout, dont le parcours AR complet en émulation. Sur téléphone : AR testée le 12 novembre 2026 sur deux téléphones Android. Le 14 novembre, l'AR rendue en WebGPU fonctionne sur le TECNO POVA 6 Pro 5G ; le Galaxy S10e sous Android 9 refuse WebGPU, et tout y fonctionne en mode test WebGL. Restent à mesurer sur téléphone : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde ([recette](docs/recette.md)).
+
+> Cette branche académique n’est pas encore publiée sur le site de `main` : fusion réservée à l’approbation de Bilel Khlif. La PR #15 reste indépendante ; voir la [note d’intégration future](docs/integration-future-visualiseur.md). Les [propositions d’attribution](docs/attribution-proposee.md) sont à relire ; `ATTRIBUTION.md` reste inchangé.
 
 ## Aperçu
+
+<table>
+  <tr>
+    <td width="72%"><img src="docs/images/ux-apres-passe-bureau.jpg" alt="Interface actuelle : passe du n° 9 des Bleus vers le n° 7, receveur entouré, barre d'outils à icônes"></td>
+    <td width="28%"><img src="docs/images/ux-apres-mobile.jpg" alt="Interface actuelle sur téléphone : terrain entier au-dessus de la barre d'outils, joueur sélectionné, bouton Désélectionner"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Interface actuelle : la passe part du ballon, le receveur est entouré, l'aperçu devient rouge si l'action est impossible</sub></td>
+    <td align="center"><sub>Sur téléphone : outils à icônes, terrain entier visible</sub></td>
+  </tr>
+</table>
+
+Les captures suivantes datent des sprints, avant les retours de l'évaluation.
 
 <table>
   <tr>
@@ -103,7 +119,7 @@ Livrables de fin de projet (cahier §5.2 et §5.4) :
 
 L'application dessine sa scène avec **WebGPU**, l'API graphique moderne du web, par three.js r187. **Il n'y a aucun repli sur WebGL.**
 
-- `WebGPURenderer` de three.js bascule tout seul sur WebGL 2 quand WebGPU manque. Notre moteur de rendu (`src/webgpu.js`) est construit sans cette bascule : la classe de base `Renderer`, le seul backend `WebGPUBackend`, et `getFallback: null`.
+- `WebGPURenderer` de three.js bascule tout seul sur WebGL 2 quand WebGPU manque. Notre moteur de rendu (`src/webgpu.mjs`) est construit sans cette bascule : la classe de base `Renderer`, le seul backend `WebGPUBackend`, et `getFallback: null`.
 - Sans WebGPU, un message remplace le terrain : « Football Simulator a besoin de WebGPU… ». Le badge du rendu passe à « WebGPU indisponible ».
 - Les matériaux de la scène sont traduits en WGSL, le langage de shaders de WebGPU. Le réticule de l'AR est écrit en TSL : il pulse grâce à un calcul fait sur le processeur graphique.
 - En AR, la session est rendue en WebGPU elle aussi, par la liaison WebXR/WebGPU (`XRGPUBinding`). Chrome la propose encore derrière un réglage. Sur Android : `chrome://flags/#webxr-webgpu-binding` → « Enabled ». Sans ce réglage, l'application l'explique et propose de copier l'adresse.
@@ -120,7 +136,7 @@ Le détail est dans [docs/sprint-3.md](docs/sprint-3.md#3-rendu-webgpu-sans-repl
 
 ## La boucle de rendu
 
-Chaque image affichée sort d'une même fonction, la **boucle de rendu** (`src/render-loop.js`), que `main.js` confie à three.js par `renderer.setAnimationLoop`. Ce qui change entre la vue 3D et l'AR, c'est **qui la cadence** :
+Chaque image affichée sort d'une même fonction, la **boucle de rendu** (`src/render-loop.mjs`), que `main.mjs` confie à three.js par `renderer.setAnimationLoop`. Ce qui change entre la vue 3D et l'AR, c'est **qui la cadence** :
 
 - **Hors AR**, l'écran : three.js l'appelle par `window.requestAnimationFrame`, environ 60 fois par seconde.
 - **En AR**, la session WebXR : à l'entrée en AR, three.js arrête sa propre horloge et passe à `XRSession.requestAnimationFrame`. Chaque appel reçoit alors un `XRFrame` : la pose du téléphone, les surfaces détectées et les ancres, valables pendant cet appel seulement.
@@ -176,11 +192,11 @@ Une image en AR, pas à pas :
 | --- | --- | --- |
 | 1 | Navigateur | La session appelle three.js avec l'image WebXR (`XRFrame`) |
 | 2 | three.js | Pose du téléphone (`getViewerPose`), caméra XR, texture WebGPU de la vue (`getViewSubImage`) |
-| 3 | `render-loop.js` | La cible de rendu de three.js passe à une couche, car un téléphone n'a qu'une vue (correctif expliqué dans [sprint-3.md](docs/sprint-3.md#5-une-vue-ou-deux--la-cible-de-rendu-xr-de-threejs-r187)) |
-| 4 | `ar-surface.js` | Hit test : le réticule suit la surface visée ; après un toucher, le terrain y est posé et une ancre est créée ; ensuite, le terrain suit son ancre |
-| 4 bis | `formation-transition.js` | Après un changement de formation ou un déplacement à la main, chaque joueur avance d'un pas vers sa nouvelle place, sur le terrain posé |
-| 4 ter | `xr-input.js`, `tactical-view.js` | Pendant le tracé d'une flèche, l'aperçu suit le rayon de la source d'entrée (`targetRaySpace`) ; l'anneau suit le joueur sélectionné |
-| 4 quater | `sequence-player.js`, `players.js` | Pendant la lecture d'une séquence, joueurs et ballon prennent leur place interpolée, selon le temps écoulé ; puis les matrices des joueurs qui ont bougé sont recopiées dans les maillages instanciés (sprint 6) |
+| 3 | `render-loop.mjs` | La cible de rendu de three.js passe à une couche, car un téléphone n'a qu'une vue (correctif expliqué dans [sprint-3.md](docs/sprint-3.md#5-une-vue-ou-deux--la-cible-de-rendu-xr-de-threejs-r187)) |
+| 4 | `ar-surface.mjs` | Hit test : le réticule suit la surface visée ; après un toucher, le terrain y est posé et une ancre est créée ; ensuite, le terrain suit son ancre |
+| 4 bis | `formation-transition.mjs` | Après un changement de formation ou un déplacement à la main, chaque joueur avance d'un pas vers sa nouvelle place, sur le terrain posé |
+| 4 ter | `xr-input.mjs`, `tactical-view.mjs` | Pendant le tracé d'une flèche, l'aperçu suit le rayon de la source d'entrée (`targetRaySpace`) ; l'anneau suit le joueur sélectionné |
+| 4 quater | `sequence-player.mjs`, `players.mjs` | Pendant la lecture d'une séquence, joueurs et ballon prennent leur place interpolée, selon le temps écoulé ; puis les matrices des joueurs qui ont bougé sont recopiées dans les maillages instanciés (sprint 6) |
 | 5 | three.js | `renderer.render` : une passe de rendu de la scène et une passe de conversion des couleurs, soumises par `device.queue.submit` |
 | 6 | Système | La couche de projection est superposée à l'image de la caméra et affichée |
 
@@ -188,15 +204,20 @@ Deux règles en découlent. Rien de WebXR ne s'utilise hors de la boucle : c'est
 
 ## Interaction tactique (sprint 5)
 
-La barre d'outils, sous le terrain, réunit trois modes et l'historique :
+La barre d'outils, sous le terrain, réunit trois outils et l'historique :
 
-| Bouton | Geste | Résultat |
+| Bouton (touche) | Geste | Résultat |
 | --- | --- | --- |
-| Déplacer | Toucher un joueur ou le ballon, puis une place du terrain | L'objet sélectionné (anneau doré) y glisse ; toucher à nouveau l'objet annule la sélection |
-| Passe | Toucher le départ, puis l'arrivée | Flèche pleine, dorée : le trajet du ballon |
-| Course | Toucher le départ, puis l'arrivée | Flèche en tirets, blanche : le déplacement d'un joueur |
-| Annuler, Rétablir | — | Défait ou refait la dernière action, formations comprises |
-| Réinitialiser | — | Formations de départ, joueurs à leurs places, ballon au centre, sans flèche ; « Annuler » le rétablit |
+| Déplacer (D) | Toucher un joueur ou le ballon, puis une place du plateau | L'objet sélectionné (anneau doré) y glisse ; toucher à nouveau l'objet annule la sélection |
+| Passe (P) | Toucher le ballon ou son porteur, puis un partenaire ou un espace libre | Flèche pleine, dorée : le trajet du ballon |
+| Course (C) | Toucher un joueur, puis son point d'arrivée | Flèche en tirets, blanche : le déplacement d'un joueur |
+| Annuler (Ctrl+Z), Rétablir (Ctrl+Y) | — | Défait ou refait la dernière action, formations comprises |
+| Réinitialiser | Deux touchers : « Confirmer ? » | Formations de départ, joueurs à leurs places, ballon au centre, sans flèche ; « Annuler » le rétablit |
+| Abandonner (Échap) | — | Abandonne la sélection ou le tracé en cours |
+
+**Règles des flèches.** Elles sont vérifiées avant toute action : une passe part du ballon, de son porteur ou de la fin d'une passe déjà tracée ; une course part d'un joueur ; l'arrivée reste entre les lignes ; ni flèche trop courte, ni doublon, ni passe vers un adversaire du porteur. Un aperçu doré ou blanc devient **rouge** quand le toucher serait refusé, et le bandeau d'aide dit pourquoi. Rien de refusé n'entre dans l'historique. Passes longues, en retrait, centres et courses croisées restent possibles : aucune règle du football n'est inventée ([docs/regles-des-fleches.md](docs/regles-des-fleches.md)).
+
+**Au doigt**, quand une destination est attendue, le doigt posé montre l'aperçu, le glisser le déplace, le relâcher valide ; la vue tourne alors à deux doigts. C'est le même geste qu'en AR ([docs/ergonomie.md](docs/ergonomie.md)).
 
 Un même calcul sert partout. Le toucher devient un **rayon** : depuis la caméra et à travers le point touché hors AR, depuis le `targetRaySpace` de la source d'entrée WebXR en AR. Ce rayon est confronté aux zones de sélection des joueurs, puis au plan du gazon. Le point trouvé est ramené dans le repère du terrain : le résultat ne dépend ni de la place ni de l'orientation de l'ancre. Chaque action est une **commande** annulable (patron Command), et la scène suit le tableau tactique (patron Observer). Une place hors du terrain est refusée, avec un message dans le bandeau d'aide.
 
@@ -223,19 +244,20 @@ Cette mesure compare deux versions dans les mêmes conditions ; elle ne remplace
 | Élément | Rôle |
 | --- | --- |
 | `manifest.json` | Nom, icônes (dont une « maskable » pour Android), affichage sans barre d'adresse, identifiant stable et deux captures pour la fenêtre d'installation |
-| `sw.js` | Service Worker : met en cache les 48 entrées de l'application (`APP_SHELL`), pour un lancement hors-ligne après une première visite |
+| `sw.mjs` | Service Worker, enregistré en module : met en cache les 51 entrées de l'application (`APP_SHELL`), pour un lancement hors-ligne après une première visite |
+| `sw.js` | Script de migration : fait passer une installation antérieure à `sw.mjs` ([docs/migration-mjs.md](docs/migration-mjs.md)) |
 | Bouton « Installer l'application » | Apparaît quand le navigateur propose l'installation ; disparaît une fois l'application installée |
 | Avis « Nouvelle version installée » | Propose de recharger quand une nouvelle version du Service Worker prend le relais |
 | Badge « Hors-ligne » | S'affiche quand le réseau est coupé |
 
 Depuis le sprint 6, la page ne mélange jamais deux versions :
 
-- **Coquille à version de contenu.** `SHELL_VERSION`, dans `sw.js`, est une empreinte SHA-256 du contenu des fichiers de l'application, recalculée par `npm run shell-version`. Un fichier modifié change donc `sw.js`, et le navigateur installe la nouvelle version.
-- **Installation d'un bloc.** Les 48 entrées sont téléchargées ensemble, sans le cache HTTP du navigateur, dans un cache propre à la version : tout ou rien.
+- **Coquille à version de contenu.** `SHELL_VERSION`, dans `sw.mjs`, est une empreinte SHA-256 du contenu des fichiers de l'application, recalculée par `npm run shell-version`. Un fichier modifié change donc `sw.mjs`, et le navigateur installe la nouvelle version.
+- **Installation d'un bloc.** Les 51 entrées sont téléchargées ensemble, sans le cache HTTP du navigateur, dans un cache propre à la version : tout ou rien.
 - **Cache d'abord** pour ces fichiers : l'application se lance aussitôt, même sur un réseau lent ou coupé, et toujours en une seule version. La nouvelle version s'applique par « Recharger ».
 - Les autres requêtes (module de l'émulateur) passent par le réseau d'abord, avec repli sur le cache après 3 secondes.
 
-Un test unitaire vérifie que tout fichier chargé par l'application est dans `APP_SHELL`, et que `SHELL_VERSION` correspond au contenu. Le détail, avec le test qui faisait échouer l'ancien Service Worker : [docs/sprint-6.md](docs/sprint-6.md#6-pwa--une-seule-version-à-la-fois).
+Un test unitaire vérifie que tout fichier chargé par l'application est dans `APP_SHELL`, et que `SHELL_VERSION` correspond au contenu. Depuis la migration en `.mjs`, `sw.js` reste à son adresse comme script de migration : une application installée avant la migration ne vérifie que cette adresse ; elle passe ainsi à `sw.mjs` sans rester bloquée sur l'ancienne version. Un test de bout en bout rejoue ce passage depuis la version évaluée. Le détail, avec le test qui faisait échouer l'ancien Service Worker : [docs/sprint-6.md](docs/sprint-6.md#6-pwa--une-seule-version-à-la-fois).
 
 Pour installer l'application :
 
@@ -297,7 +319,7 @@ python -m http.server 8080     # ou bien, puis ouvrir http://localhost:8080
 
 ### Tester l'AR sur PC
 
-Ajouter `?iwer` à l'adresse, par exemple `http://127.0.0.1:8080/?iwer`. L'émulateur IWER simule l'appareil, et le badge affiche « AR émulée (IWER) ». Le module `src/dev-xr-emulation.js` lui ajoute ce qu'IWER n'émule pas : la liaison WebXR/WebGPU, et une table virtuelle pour le hit test.
+Ajouter `?iwer` à l'adresse, par exemple `http://127.0.0.1:8080/?iwer`. L'émulateur IWER simule l'appareil, et le badge affiche « AR émulée (IWER) ». Le module `src/dev-xr-emulation.mjs` lui ajoute ce qu'IWER n'émule pas : la liaison WebXR/WebGPU, et une table virtuelle pour le hit test.
 
 - « Entrer en AR » ouvre une session `immersive-ar` rendue en WebGPU : le réticule doré apparaît sur la table virtuelle.
 - Un clic sur la scène simule le toucher : le terrain se pose sur la table et s'ancre. « Déplacer le terrain » le retire, « Quitter l'AR » ramène la vue 3D.
@@ -339,10 +361,10 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 ```bash
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
-npm run test:unit   # 182 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
-npm run test:e2e    # 79 vérifications dans Chrome, sans interface
+npm run test:unit   # 226 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
+npm run test:e2e    # 104 vérifications dans Chrome, sans interface
 npm run bench       # mesure des performances (sprint 6), hors de npm test : 1 à 2 minutes
-npm run shell-version  # recalcule SHELL_VERSION dans sw.js après une modification de l'application
+npm run shell-version  # recalcule SHELL_VERSION dans sw.mjs après une modification de l'application
 ```
 
 Les tests de bout en bout couvrent :
@@ -358,60 +380,64 @@ Les tests de bout en bout couvrent :
 
 Les tests unitaires vérifient aussi la documentation du code : chaque fonction, classe et membre de classe porte un en-tête avec son responsable, sa date et son rôle, et chaque fichier renvoie à ATTRIBUTION.md ([convention](docs/convention-de-documentation.md)).
 
-Résultat le 16 novembre 2026 : 182 tests unitaires et 79 vérifications de bout en bout, tous réussis. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-6.md](docs/sprint-6.md#7-tests), [docs/sprint-5.md](docs/sprint-5.md#10-tests), [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
+Résultat le 23 novembre 2026, après les retours de l'évaluation : 226 tests unitaires et 104 vérifications de bout en bout, tous réussis, aucun cas ignoré. Les nouveaux tests couvrent les règles des flèches (sans moteur de rendu, puis dans la page), le terrain tourné et incliné, le double toucher, l'annulation pendant un tracé, le clavier, la visée au doigt avec de vrais gestes tactiles, sept mises en page de 320 × 568 à 1280 × 800, dont trois en paysage court, les modules `.mjs` et le passage d'une installation `sw.js` à `sw.mjs`, hors-ligne compris. Résultat du 16 novembre 2026 : 182 et 79, tous réussis. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-6.md](docs/sprint-6.md#7-tests), [docs/sprint-5.md](docs/sprint-5.md#10-tests), [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
 
 ## Arborescence
 
 ```text
 ├── index.html             Page, carte d'import (three.js WebGPU) et interface superposée
 ├── manifest.json          Manifeste de la PWA
-├── sw.js                  Service Worker : coquille à version de contenu, hors-ligne
+├── sw.mjs                 Service Worker (module) : coquille à version de contenu, hors-ligne
+├── sw.js                  Script de migration des installations antérieures vers sw.mjs
 ├── package.json           Commandes npm start, npm test, test:unit, test:e2e, bench et shell-version
 ├── ATTRIBUTION.md         Origine des ressources et usage de l'IA
 ├── src/
-│   ├── main.js            Point d'entrée : assemble la scène, l'AR et la PWA
-│   ├── webgpu.js          Moteur de rendu WebGPU, sans repli WebGL (sprint 3)
-│   ├── webgl-test-mode.js Mode test WebGL, avec ?webgl seulement : pas un repli
-│   ├── config.js          Dimensions, échelle, équipes et couleurs
-│   ├── scene.js           Moteur de rendu, caméra, lumières, contrôles, pitchGroup
-│   ├── pitch.js           Terrain : plateau, gazon, lignes et buts
-│   ├── formations.js      Formations 4-4-2, 4-3-3, 3-5-2 et 4-2-3-1 (Strategy)
-│   ├── tactics-board.js   Formation en place de chaque équipe (Observer, sprint 4)
-│   ├── formation-panel.js Boutons de formation, créés depuis les stratégies (sprint 4)
-│   ├── formation-transition.js  Joueurs qui rejoignent leurs places (sprint 4)
-│   ├── players.js         Fabrique de joueurs (Factory), maillages instanciés par équipe (sprint 6)
-│   ├── team.js            Placement d'une équipe, et changement de formation
-│   ├── ball.js            Ballon
-│   ├── xr-support.js      Détection de l'AR et badge d'état
-│   ├── xr-session.js      Session AR immersive rendue en WebGPU, reliée à three.js
-│   ├── events.js          Émetteur d'événements (Observer)
-│   ├── ar-view.js         Passage entre la vue 3D et la vue AR, réticule, pose du terrain
-│   ├── ar-surface.js      Hit test, toucher, ancre : le terrain sur la table (sprint 3)
-│   ├── ar-placement.js    Calculs de pose du terrain (surface, ou devant l'utilisateur)
-│   ├── reticle.js         Réticule de visée, matériau en TSL (sprint 3)
-│   ├── render-loop.js     Boucle de rendu, en 3D comme en AR
-│   ├── dev-emulator.js    Émulateur IWER, en développement seulement
-│   ├── dev-xr-emulation.js  Liaison WebGPU et hit test émulés, avec ?iwer seulement
-│   ├── pwa.js             Service Worker, installation, nouvelle version, hors-ligne
-│   ├── raycasting.js      Rayons (caméra, WebXR), zones de sélection, plan du terrain (sprint 5)
-│   ├── tactical-interaction.js  Machine à états : sélection, déplacement, flèches
-│   ├── commands.js        Commandes annulables et historique (Command)
-│   ├── tactical-view.js   La scène suit le tableau tactique (Observer)
-│   ├── tactical-arrows.js Flèches de passe et de course en 3D, et leur aperçu
-│   ├── tactical-toolbar.js  Barre d'outils et bandeau d'aide
-│   ├── pointer-input.js   Souris et doigt hors AR
-│   ├── xr-input.js        Touchers en AR (targetRaySpace)
-│   ├── diagnostics.js     Mode diagnostic (?diagnostics) : images par seconde, temps CPU, rendu
-│   ├── tactical-sequence.js  Images clés de la séquence animée (sprint 6, BF9)
-│   ├── sequence-player.js Lecture de la séquence : temps écoulé, interpolation, vitesse
-│   ├── sequence-panel.js  Panneau de la séquence
-│   ├── styles.css         Styles de l'interface
-│   └── vendor/three-r187/ three.js r187, build WebGPU (licence MIT)
+│   ├── main.mjs                 Point d'entrée : assemble la scène, l'AR et la PWA
+│   ├── webgpu.mjs               Moteur de rendu WebGPU, sans repli WebGL (sprint 3)
+│   ├── webgl-test-mode.mjs      Mode test WebGL, avec ?webgl seulement : pas un repli
+│   ├── config.mjs               Dimensions, échelle, équipes et couleurs
+│   ├── scene.mjs                Moteur de rendu, caméra, lumières, contrôles, pitchGroup
+│   ├── pitch.mjs                Terrain : plateau, gazon, lignes et buts
+│   ├── formations.mjs           Formations 4-4-2, 4-3-3, 3-5-2 et 4-2-3-1 (Strategy)
+│   ├── tactics-board.mjs        État tactique : formations, places, ballon, flèches (Observer)
+│   ├── arrow-rules.mjs          Règles des flèches, fonctions pures sans three.js
+│   ├── formation-panel.mjs      Boutons de formation, créés depuis les stratégies (sprint 4)
+│   ├── formation-transition.mjs Joueurs qui rejoignent leurs places (sprint 4)
+│   ├── players.mjs              Fabrique de joueurs (Factory), maillages instanciés par équipe (sprint 6)
+│   ├── team.mjs                 Placement d'une équipe, et changement de formation
+│   ├── ball.mjs                 Ballon
+│   ├── xr-support.mjs           Détection de l'AR et badge d'état
+│   ├── xr-session.mjs           Session AR immersive rendue en WebGPU, reliée à three.js
+│   ├── events.mjs               Émetteur d'événements (Observer)
+│   ├── ar-view.mjs              Passage entre la vue 3D et la vue AR, réticule, pose du terrain
+│   ├── ar-surface.mjs           Hit test, toucher, ancre : le terrain sur la table (sprint 3)
+│   ├── ar-placement.mjs         Calculs de pose du terrain (surface, ou devant l'utilisateur)
+│   ├── reticle.mjs              Réticule de visée, matériau en TSL (sprint 3)
+│   ├── render-loop.mjs          Boucle de rendu, en 3D comme en AR
+│   ├── dev-emulator.mjs         Émulateur IWER, en développement seulement
+│   ├── dev-xr-emulation.mjs     Liaison WebGPU et hit test émulés, avec ?iwer seulement
+│   ├── pwa.mjs                  Service Worker, installation, nouvelle version, hors-ligne
+│   ├── raycasting.mjs           Rayons (caméra, WebXR), zones de sélection, plan du terrain (sprint 5)
+│   ├── tactical-interaction.mjs Machine à états : sélection, déplacement, flèches
+│   ├── commands.mjs             Commandes annulables et historique (Command)
+│   ├── tactical-view.mjs        La scène suit le tableau tactique (Observer)
+│   ├── tactical-arrows.mjs      Flèches de passe et de course en 3D, et leur aperçu
+│   ├── tactical-toolbar.mjs     Barre d'outils, bandeau d'aide, confirmation de la réinitialisation
+│   ├── keyboard-shortcuts.mjs   Raccourcis clavier : D, P, C, Échap, Ctrl+Z, Ctrl+Y
+│   ├── onboarding.mjs           Aide au premier lancement
+│   ├── pointer-input.mjs        Souris et doigt hors AR, visée au doigt
+│   ├── xr-input.mjs             Touchers en AR (targetRaySpace)
+│   ├── diagnostics.mjs          Mode diagnostic (?diagnostics) : images par seconde, temps CPU, rendu
+│   ├── tactical-sequence.mjs    Images clés de la séquence animée (sprint 6, BF9)
+│   ├── sequence-player.mjs      Lecture de la séquence : temps écoulé, interpolation, vitesse
+│   ├── sequence-panel.mjs       Panneau de la séquence
+│   ├── styles.css               Styles de l'interface
+│   └── vendor/three-r187/       three.js r187, build WebGPU (licence MIT)
 ├── tests/
 │   ├── serve.mjs          Serveur local (npm start), aussi utilisé par les tests
 │   ├── run-tests.mjs      Tests de bout en bout dans Chrome (npm run test:e2e)
 │   ├── benchmark.mjs      Mesure des performances (npm run bench, sprint 6)
-│   ├── shell-version.mjs  Empreinte de la coquille, écrite dans sw.js (npm run shell-version)
+│   ├── shell-version.mjs  Empreinte de la coquille, écrite dans sw.mjs (npm run shell-version)
 │   └── unit/              Tests unitaires (npm run test:unit) et carte d'import pour Node.js
 ├── assets/
 │   ├── icons/             Icônes de l'application
@@ -420,6 +446,11 @@ Résultat le 16 novembre 2026 : 182 tests unitaires et 79 vérifications de bout
     ├── guide-du-code.md   Explication du code, fichier par fichier
     ├── architecture.md    Modules, graphe de scène, repère et mise en cache
     ├── convention-de-documentation.md  En-têtes des fonctions : responsable, date, rôle
+    ├── regles-des-fleches.md  Règles des flèches tactiques, vérifiées avant toute action
+    ├── ergonomie.md       Interface : problèmes relevés, changements, captures avant et après
+    ├── attribution-proposee.md  Ajouts factuels proposés à la relecture de l’équipe
+    ├── integration-future-visualiseur.md  Imports partagés et référence de recherche différée
+    ├── migration-mjs.md   Modules en .mjs, exceptions, passage de sw.js à sw.mjs
     ├── sprint-1.md        Compte rendu du sprint 1
     ├── sprint-2.md        Compte rendu du sprint 2 : session AR
     ├── sprint-3.md        Compte rendu du sprint 3 : surface réelle, WebGPU, PWA
@@ -447,7 +478,8 @@ Issues du cahier des charges (§7) :
 - des noms explicites : `pitchGroup`, `currentFormation`, `hitTestSource`, `selectedPlayer` ;
 - une branche par fonctionnalité, fusionnée dans `main` après relecture ;
 - des commits fréquents, et chaque push laisse l'application fonctionnelle ;
-- tout nouveau fichier de l'application est ajouté à `APP_SHELL` dans `sw.js`, et toute modification de l'application est suivie de `npm run shell-version` ; `npm test` vérifie les deux.
+- les modules JavaScript du projet portent l'extension `.mjs` ([migration](docs/migration-mjs.md)) ;
+- tout nouveau fichier de l'application est ajouté à `APP_SHELL` dans `sw.mjs`, et toute modification de l'application est suivie de `npm run shell-version` ; `npm test` vérifie les deux.
 
 ## Équipe
 

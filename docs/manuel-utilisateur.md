@@ -2,6 +2,8 @@
 
 Football Simulator pose un mini-terrain de football en 3D sur votre table, à travers la caméra de votre téléphone. Vous y placez deux équipes, déplacez les joueurs et le ballon, tracez des passes et des courses, puis animez l'action. Tout se fait d'un doigt, sans compte ni installation obligatoire.
 
+> Ce manuel décrit la branche d’amélioration du 23 novembre 2026, à publier après fusion autorisée. Les images nommées `sprint*` restent des illustrations historiques : leurs anciens boutons diffèrent de l’interface actuelle. Les captures `ux-*` montrent la nouvelle interface.
+>
 > Les captures de ce manuel sont prises sur un ordinateur, avec l'émulateur de réalité augmentée : le fond y est sombre. Sur un téléphone, l'image de la caméra remplace ce fond, et le terrain apparaît sur votre vraie table.
 
 **Sommaire**
@@ -39,6 +41,8 @@ Pour l'AR, choisissez une table bien éclairée, avec un peu de texture : bois, 
 
 2. Facultatif : touchez « Installer l'application », ou menu ⋮ → « Installer l'application ». L'icône « Football Sim » apparaît sur l'écran d'accueil, et l'application s'ouvre ensuite sans barre d'adresse.
 
+Une installation antérieure à la migration `.mjs` a besoin d’une connexion pour recevoir la nouvelle version ; elle peut se recharger une fois automatiquement. Attendez que la nouvelle interface soit prête avant de repasser hors-ligne.
+
 Après une première ouverture, l'application se lance aussi **sans réseau** : le badge « Hors-ligne » s'affiche alors. Quand une nouvelle version est publiée, l'avis « Nouvelle version installée. » apparaît : touchez « Recharger ».
 
 ## 3. Activer l'AR de Chrome (une seule fois)
@@ -71,27 +75,43 @@ Tournez autour de la table : vous voyez la tactique sous tous les angles, et le 
 
 ## 5. Choisir les formations
 
-Touchez **« Formations »** : une ligne de boutons par équipe, 4-4-2, 4-3-3, 3-5-2 et 4-2-3-1. Les joueurs rejoignent leurs nouvelles places en glissant. La formation de chaque équipe est rappelée en haut à droite.
+Touchez **« Formations »**, ou la pastille d'une équipe en haut de l'écran : une ligne de boutons par équipe, 4-4-2, 4-3-3, 3-5-2 et 4-2-3-1. Les joueurs rejoignent leurs nouvelles places en glissant. La formation de chaque équipe est rappelée sur sa pastille.
 
 ![Le panneau des formations sur le terrain posé : Bleus en 4-4-2, Rouges en 4-3-3](images/sprint4-ar-formations.jpg)
 
 ## 6. Déplacer un joueur ou le ballon
 
-Le mode **« Déplacer »** est actif au départ.
+L'outil **« Déplacer »** (icône en croix) est actif au départ.
 
 1. **Touchez un joueur.** Un anneau doré l'entoure, et l'aide indique par exemple « Le n° 9 des Bleus sélectionné : touchez sa nouvelle place. »
-2. **Touchez sa nouvelle place** sur le terrain : il y glisse.
+2. **Touchez sa nouvelle place** sur le terrain : il y glisse. Vous pouvez aussi **laisser le doigt posé** : un anneau montre la place visée, vert sur le plateau, rouge en dehors ; glissez le doigt pour l'ajuster, puis relâchez.
 
-Le ballon se déplace de la même façon. Pour annuler une sélection, touchez à nouveau l'objet sélectionné ; pour en choisir un autre, touchez-le directement. Un toucher hors du terrain est refusé : « Hors du terrain : touchez une place sur le plateau. »
+Le ballon se déplace de la même façon. Pour annuler une sélection, touchez à nouveau l'objet sélectionné, ou **« Désélectionner »** à côté de l'aide ; pour en choisir un autre, touchez-le directement. Sur un très petit écran, le bouton d’abandon prend la forme d’une **croix ×**, aussi pendant un tracé. Un toucher hors du plateau est refusé : « Hors du terrain : touchez une place sur le plateau. » Tant qu'un joueur est sélectionné, la vue tourne à deux doigts.
 
 ## 7. Tracer une passe ou une course
 
-| Bouton | Flèche | Sens |
-| --- | --- | --- |
-| « Passe » | Pleine et dorée | Le trajet du ballon |
-| « Course » | En tirets et blanche | Le déplacement d'un joueur |
+| Bouton | Flèche | Sens | Départ | Arrivée |
+| --- | --- | --- | --- | --- |
+| « Passe » | Pleine et dorée | Le trajet du ballon | Le ballon, son porteur, ou l’arrivée d’une passe déjà tracée | Un partenaire, un espace libre, ou la fin d'une course |
+| « Course » | En tirets et blanche | Le déplacement d'un joueur | Le joueur qui court | Un point du terrain |
 
-Touchez le point de départ, puis le point d'arrivée. Un départ ou une arrivée sur un joueur s'accroche à lui : la flèche relie exactement deux joueurs. Une flèche trop courte est refusée : « Flèche trop courte : touchez un point plus loin. » Touchez « Déplacer » pour revenir aux déplacements.
+**Une passe**, pas à pas :
+
+1. Touchez **« Passe »**. Des anneaux dorés pulsés marquent d'où une passe peut partir : le ballon, et la fin des passes déjà tracées.
+2. Touchez **le ballon** ou son porteur. L'aide nomme le passeur, par exemple « Passe du n° 9 des Bleus : touchez un partenaire ou un espace libre. »
+3. Visez l'arrivée : à la souris en survolant, au doigt en le laissant posé. L'aperçu suit ; le receveur est entouré. **L'aperçu devient rouge** si l'arrivée est impossible.
+4. Touchez, ou relâchez le doigt : la passe est tracée. Pour enchaîner, touchez le receveur, puis le joueur suivant.
+
+**Une course** : touchez **« Course »**, le joueur qui court, puis son point d'arrivée.
+
+Ce qui est refusé, avec un message en rouge et sans rien enregistrer :
+
+- une passe qui ne part ni du ballon, ni de son porteur, ni d’une arrivée de passe déjà tracée ; une course qui ne part pas d'un joueur ;
+- une arrivée hors des lignes du terrain ;
+- une passe du porteur vers un adversaire ;
+- une flèche trop courte, ou identique à une flèche déjà tracée.
+
+Passes longues, en retrait, centres et courses croisées restent possibles. Pour abandonner un tracé : touchez de nouveau son départ, ou **« Abandonner le tracé »** à côté de l'aide. Touchez « Déplacer » pour revenir aux déplacements. Le détail des règles : [regles-des-fleches.md](regles-des-fleches.md).
 
 ![Une passe dorée du n° 6 au n° 11 des Bleus, une course en tirets blancs, le n° 9 sélectionné avec un anneau doré, et la barre d'outils](images/sprint5-tactique.jpg)
 
@@ -99,7 +119,9 @@ Touchez le point de départ, puis le point d'arrivée. Un départ ou une arrivé
 
 - **« Annuler »** défait la dernière action : déplacement, flèche, formation, image clé de la séquence.
 - **« Rétablir »** refait l'action annulée.
-- **« Réinitialiser »** remet les formations de départ, les joueurs à leurs places, le ballon au centre, et retire les flèches. « Annuler » rétablit tout.
+- **« Réinitialiser »** remet les formations de départ, les joueurs à leurs places, le ballon au centre, et retire les flèches. Le bouton demande une confirmation : il devient « Confirmer ? » ; touchez-le une seconde fois après au moins 0,4 s, dans les 4 s. Un double toucher immédiat ne confirme pas. « Annuler » rétablit tout ensuite.
+
+Annuler, rétablir ou réinitialiser pendant un tracé l'abandonne : son départ a pu bouger.
 
 ## 9. Animer une action
 
@@ -139,10 +161,22 @@ Touchez **« Quitter l'AR »**, ou le bouton retour du téléphone. Vous retrouv
 
 Sur ordinateur, sur iPhone, ou avant d'entrer en AR, le terrain s'affiche en 3D. Les mêmes outils y fonctionnent, à la souris ou au doigt. Glissez pour tourner la vue, pincez ou utilisez la molette pour zoomer ; « Recentrer » ramène la vue de départ.
 
+À la première visite, une carte « Bienvenue » résume les outils ; le bouton **« ? »**, en haut à droite, la rouvre. Sur écran court, son texte et les panneaux défilent au-dessus de l’aide du geste et des outils ; « Commencer » reste visible. En paysage, les outils occupent deux rangées. Fermez les panneaux pour retrouver tout le terrain, puis « Recentrer » si vous avez tourné ou zoomé la vue.
+
+Au clavier :
+
+| Touche | Action |
+| --- | --- |
+| D, P, C | Outils Déplacer, Passe, Course |
+| Échap | Abandonner la sélection ou le tracé, fermer un panneau |
+| Ctrl+Z (Cmd+Z sur Mac) | Annuler |
+| Ctrl+Y, ou Ctrl+Maj+Z | Rétablir |
+| Tab, puis Entrée ou Espace | Atteindre et activer chaque bouton |
+
 <table>
   <tr>
-    <td width="72%"><img src="images/app-desktop.jpg" alt="Vue 3D sur ordinateur : terrain, Bleus en 4-3-3, Rouges en 4-4-2"></td>
-    <td width="28%"><img src="images/app-mobile.png" alt="Vue 3D sur téléphone, en portrait"></td>
+    <td width="72%"><img src="images/ux-apres-passe-bureau.jpg" alt="Interface actuelle sur ordinateur : passe en cours et outils à icônes"></td>
+    <td width="28%"><img src="images/ux-apres-mobile.jpg" alt="Vue 3D sur téléphone, en portrait"></td>
   </tr>
   <tr>
     <td align="center"><sub>Sur ordinateur</sub></td>
