@@ -148,6 +148,7 @@ body[data-xr="active"] .onboarding {
 
 /* ---- Bandeau supérieur ---- */
 .topbar {
+  flex-shrink: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -291,6 +292,28 @@ body[data-xr="active"] .onboarding {
   flex-direction: column;
   align-items: stretch;
   gap: var(--gap);
+  min-height: 0;
+}
+
+/* Le contenu long peut défiler sans pousser les outils sous le bord de l'écran. */
+.bottombar__panels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+}
+
+.bottombar__panels > *,
+.bottombar > .status-line,
+.dock {
+  flex-shrink: 0;
+}
+
+.bottombar__panels:not(:has(> :not([hidden]))) {
+  display: none;
 }
 
 /* Aide de l'étape en cours : laisse passer les touchers vers le terrain, sauf son bouton. */
@@ -429,6 +452,8 @@ body[data-xr="active"] .onboarding {
 
 .onboarding .button {
   justify-self: end;
+  position: sticky;
+  bottom: 0;
 }
 
 .icon--move {
@@ -877,6 +902,23 @@ body.is-ready .loader {
 /* ---- Très petits écrans (moins de 380 px) : la couleur de l'équipe seule devant ses formations ;
    son nom reste lu par les lecteurs d'écran (aria-label de la ligne). ---- */
 @media (max-width: 379px) {
+  /* L'intitulé reste lu par les lecteurs d'écran ; la croix libère la largeur de l'aide du geste. */
+  .chip-button {
+    flex: none;
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .chip-button [data-cancel-label] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   .formation-row {
     grid-template-columns: 1.2rem;
   }
@@ -898,6 +940,11 @@ body.is-ready .loader {
   }
 
   .bottombar {
+    align-items: center;
+  }
+
+  .bottombar__panels {
+    width: 100%;
     align-items: center;
   }
 
@@ -962,6 +1009,62 @@ body.is-ready .loader {
 
   .sequence-panel .tool {
     justify-content: center;
+  }
+}
+
+/* ---- Téléphone en paysage : deux rangées d'outils et un bandeau supérieur sur une ligne. ---- */
+@media (orientation: landscape) and (max-height: 500px) {
+  .topbar {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .brand {
+    display: none;
+  }
+
+  .status {
+    padding: 4px 6px;
+    font-size: 0.64rem;
+  }
+
+  .team-chip {
+    min-height: 38px;
+    padding: 0 6px;
+    font-size: 0.72rem;
+  }
+
+  .dock {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .toolbar {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .toolbar__group {
+    display: contents;
+  }
+
+  .dock .actions {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .tool,
+  .dock .actions .button {
+    flex: 1 1 0;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 52px;
+    padding: 5px 4px;
+    gap: 3px;
+    font-size: 0.76rem;
   }
 }
 

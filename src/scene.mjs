@@ -12,8 +12,9 @@ import { createWebGlTestRenderer, RENDER_MODES } from './webgl-test-mode.mjs';
 
 /**
  * Part de l'écran où le plateau est cadré, en coordonnées normalisées (1 = bord de l'écran) :
- * entre le bandeau supérieur et la barre d'outils, plus haute sur un téléphone en portrait. La
- * fenêtre ne dépend que de l'orientation : le cadrage est le même avant et après une session AR.
+ * entre le bandeau supérieur et la barre d'outils, plus haute sur un téléphone en portrait.
+ * Ces valeurs servent de repli ; dans la page, les dimensions réelles des commandes réservent
+ * leur place, y compris sur un téléphone étroit ou en paysage.
  */
 export const FRAMING_WINDOWS = Object.freeze({
   portrait: Object.freeze({ x: 0.92, top: 0.7, bottom: -0.38 }),
@@ -29,7 +30,8 @@ export const FRAMING_WINDOWS = Object.freeze({
  * @role Scène 3D — cadrage de la caméra
  */
 export function framingWindow(camera) {
-  return camera.aspect < 1 ? FRAMING_WINDOWS.portrait : FRAMING_WINDOWS.landscape;
+  return camera.userData.framingWindow
+    ?? (camera.aspect < 1 ? FRAMING_WINDOWS.portrait : FRAMING_WINDOWS.landscape);
 }
 
 /**
@@ -44,6 +46,19 @@ export function framingWindow(camera) {
  * @role Scène 3D — cadrage de la caméra
  */
 export function applyFramingOffset(camera, width, height) {
+  const topbar = document.querySelector('.topbar');
+  const dock = document.querySelector('.dock');
+  const status = document.querySelector('.status-line');
+  if (topbar && dock && status && width > 0 && height > 0) {
+    const overlayStyle = getComputedStyle(document.getElementById('overlay'));
+    const gap = parseFloat(getComputedStyle(document.querySelector('.bottombar')).gap) || 0;
+    const topPx = topbar.getBoundingClientRect().bottom + gap;
+    const bottomPx = height - parseFloat(overlayStyle.paddingBottom)
+      - dock.getBoundingClientRect().height - status.getBoundingClientRect().height - gap * 2;
+    camera.userData.framingWindow = {
+      x: 0.92, top: 1 - (topPx * 2) / height, bottom: 1 - (bottomPx * 2) / height,
+    };
+  }
   const { top, bottom } = framingWindow(camera);
   if (width > 0 && height > 0) {
     camera.setViewOffset(width, height, 0, ((top + bottom) / 2) * (height / 2), width, height);
@@ -241,6 +256,18 @@ export async function createSceneContext(container, { renderMode = RENDER_MODES.
     }
   };
   window.addEventListener('resize', resize);
+
+  // Les états AR/PWA peuvent changer la place occupée par les commandes. Le texte d'aide
+  // et les panneaux ne déclenchent pas ce recadrage : choisir un joueur ne fait pas sauter la vue.
+  const framingObserver = new ResizeObserver(() => {
+    if (!renderer.xr.isPresenting) {
+      resize();
+      resetView();
+    }
+  });
+  for (const element of document.querySelectorAll('.topbar, .dock')) {
+    framingObserver.observe(element);
+  }
 
   return { renderer, scene, camera, controls, pitchGroup, table, resetView, resize };
 }

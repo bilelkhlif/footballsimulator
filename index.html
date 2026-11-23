@@ -106,6 +106,8 @@
          « Déplacer le terrain » et « Quitter l'AR » remplacent « Recentrer » et « Entrer en AR »,
          et les outils n'apparaissent qu'une fois le terrain posé. -->
     <footer class="bottombar">
+      <!-- Les panneaux défilent sur les écrans courts ; l'aide du geste et les outils restent accessibles. -->
+      <div class="bottombar__panels">
       <!-- Aide au premier lancement (src/onboarding.mjs) : non modale, rouverte par « ? ». -->
       <section id="onboarding" class="onboarding ui-surface" aria-labelledby="onboarding-title" hidden>
         <h2 id="onboarding-title" class="onboarding__title">Bienvenue sur le tableau tactique</h2>
@@ -119,15 +121,6 @@
         <button id="onboarding-close" class="button" type="button">Commencer</button>
       </section>
 
-      <!-- Aide de l'étape en cours et retour du dernier geste ; bouton pour abandonner la sélection
-           ou le tracé en cours, visible seulement quand il y en a un. -->
-      <div class="status-line">
-        <svg class="icon status-line__icon" aria-hidden="true"><use href="#i-info"/></svg>
-        <p id="hint" class="hint" role="status" aria-live="polite">Glissez pour tourner, pincez pour zoomer.</p>
-        <button id="cancel-draft" class="chip-button ui-surface" type="button" aria-keyshortcuts="Escape" hidden>
-          <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg><span data-cancel-label>Abandonner</span>
-        </button>
-      </div>
       <p id="ar-message" class="notice" role="alert" hidden></p>
       <p id="update-notice" class="notice notice--info" role="status" hidden>
         Nouvelle version installée.
@@ -151,6 +144,17 @@
           <button class="tool" type="button" data-speed="2" aria-pressed="false">2×</button>
           <button class="tool" type="button" data-sequence="clear" disabled>Effacer</button>
         </div>
+      </div>
+      </div>
+
+      <!-- Aide de l'étape en cours et retour du dernier geste ; bouton pour abandonner la sélection
+           ou le tracé en cours, visible seulement quand il y en a un. -->
+      <div class="status-line">
+        <svg class="icon status-line__icon" aria-hidden="true"><use href="#i-info"/></svg>
+        <p id="hint" class="hint" role="status" aria-live="polite">Glissez pour tourner, pincez pour zoomer.</p>
+        <button id="cancel-draft" class="chip-button ui-surface" type="button" aria-keyshortcuts="Escape" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg><span data-cancel-label>Abandonner</span>
+        </button>
       </div>
 
       <!-- Barre d'outils : l'outil (déplacer, passe, course), l'historique (annuler, rétablir,

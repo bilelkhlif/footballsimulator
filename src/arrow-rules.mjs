@@ -27,8 +27,8 @@ import { ARROW_KINDS, isOnBoard, isOnPitch, MIN_ARROW_LENGTH, sameArrowPath } fr
 
 /**
  * Rayon de possession : un joueur à moins de 2,5 cm du ballon (environ 4,4 m sur un vrai terrain,
- * moins de deux zones de sélection de pion) en est le porteur. Ses pions étant agrandis pour rester
- * sélectionnables, le ballon ne peut pas être posé plus près de lui.
+ * moins de deux zones de sélection de pion) en est le porteur. C'est une convention de sélection
+ * adaptée aux pions agrandis ; elle n'impose aucune distance minimale entre le ballon et un joueur.
  */
 export const POSSESSION_RADIUS = 0.025;
 
@@ -208,15 +208,17 @@ export function passOrigins(state) {
  * @param {ReturnType<typeof readTacticalState>} state
  * @param {{x: number, z: number}} point
  * @param {number} radius
+ * @param {(origin: object) => boolean} [accept] départs permis pour l'objet touché
  * @returns {{x: number, z: number, source: string}|null}
  * @responsable Bilel Khlif
  * @date 2026-11-23
  * @role Règles des flèches — départs d'une passe
  */
-function nearestOrigin(state, point, radius) {
+function nearestOrigin(state, point, radius, accept = () => true) {
   let nearest = null;
   let best = radius;
   for (const origin of passOrigins(state)) {
+    if (!accept(origin)) continue;
     const gap = distance(origin, point);
     if (gap <= best) {
       best = gap;
@@ -281,7 +283,11 @@ export function resolveArrowStart({ kind, target, point }, state) {
   }
   if (target?.type === 'player') {
     const position = targetPosition(target, state);
-    const origin = position ? nearestOrigin(state, position, POSSESSION_RADIUS) : null;
+    const carrier = findCarrier(state, state.ball);
+    // Le rayon de proximité ne transforme pas un second joueur en porteur du même ballon.
+    // Les arrivées de passes restent des départs indépendants pour les enchaînements.
+    const origin = position ? nearestOrigin(state, position, POSSESSION_RADIUS,
+      (candidate) => candidate.source !== 'ball' || sameTarget(target, carrier)) : null;
     return origin
       ? { ok: true, start: { x: origin.x, z: origin.z }, actor: { ...target }, passer: { type: 'player', teamId: target.teamId, number: target.number } }
       : refuse(ARROW_REASONS.PASS_NEEDS_BALL);

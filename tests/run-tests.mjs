@@ -1110,6 +1110,24 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         return [toggleVisible && between && exact && anchored,
           `bouton « Séquence » visible : ${toggleVisible}, à mi-lecture entre les deux images : ${between}, fin exacte : ${exact}, pose du terrain inchangée et ancrée : ${anchored}`];
       }],
+      ['interface AR étroite et en paysage : outils et sortie accessibles, panneaux défilants', async () => {
+        const layouts = [];
+        try {
+          for (const [width, height] of [[320, 568], [568, 320]]) {
+            await page.setViewportSize({ width, height });
+            await page.click('#formations-toggle');
+            layouts.push(await page.evaluate(readControlsLayout));
+            await page.click('#sequence-toggle');
+            layouts.push(await page.evaluate(readControlsLayout));
+            await page.click('#sequence-toggle');
+          }
+        } finally {
+          await page.setViewportSize(DESKTOP.viewport);
+        }
+        const failures = layouts.flatMap((layout) => layout.failures);
+        return [failures.length === 0 && layouts.every((layout) => !layout.overflow),
+          `320 × 568 et 568 × 320 ; commandes masquées ou trop petites : ${failures.join(', ') || 'aucune'}`];
+      }],
       ['regard hors de la table : pas de réticule, et un toucher ne pose rien', async () => {
         await page.click('#move-pitch');
         await aim(0); // regard horizontal : le rayon ne rencontre aucune surface
@@ -1906,6 +1924,91 @@ async function testMobileInterface(browser, url) {
 }
 
 /**
+ * Mesure les commandes permanentes dans la page, y compris leur visibilité réelle au centre.
+ * Les boutons des panneaux peuvent défiler ; la barre d'outils et la sortie AR doivent rester visibles.
+ * @returns {{failures: string[], overflow: boolean}}
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Tests de bout en bout — accessibilité des commandes
+ */
+function readControlsLayout() {
+  const failures = [...document.querySelectorAll('.topbar button, .dock button, .status-line button, #onboarding-close')]
+    .filter((button) => button.getClientRects().length)
+    .filter((button) => {
+      const rect = button.getBoundingClientRect();
+      const center = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      return rect.x < 0 || rect.y < 0 || rect.right > innerWidth + 1 || rect.bottom > innerHeight + 1
+        || rect.width < 38 || rect.height < 38 || !button.contains(center);
+    }).map((button) => button.id || button.textContent.trim());
+  return { failures, overflow: document.documentElement.scrollWidth > innerWidth };
+}
+
+/**
+ * Régression des écrans courts : vraie fermeture de l'aide, accès aux deux panneaux sans
+ * clic fabriqué, commandes toujours à l'écran, et cadrage des joueurs hors des commandes.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Tests de bout en bout — mise en page adaptative
+ */
+async function testResponsivePanels(browser, url) {
+  for (const [width, height] of [[320, 568], [360, 740], [390, 844], [568, 320], [740, 360], [844, 390], [1280, 800]]) {
+    const name = `Interface ${width} × ${height} : aide, panneaux, commandes accessibles et 26 points du terrain visibles`;
+    const context = await browser.newContext({ viewport: { width, height }, hasTouch: true, isMobile: true });
+    try {
+      await context.addInitScript(installAimTools);
+      const { page, errors } = await openApp(context, `${url}?debug`, { onboarding: true });
+      const layouts = [await page.evaluate(readControlsLayout)];
+      await page.tap('#onboarding-close'); // Chrome défile jusqu'au bouton si nécessaire.
+      await page.tap('#reset-view');
+      /** Compte les quatre coins et 22 joueurs que l'aide du geste pourrait couvrir. */
+      const hiddenPoints = () => page.evaluate(async () => {
+        const context = await window.__aim.context();
+        const { THREE, app } = context;
+        const { PITCH_LENGTH, PITCH_WIDTH } = await import(new URL('src/config.mjs', document.baseURI).href);
+        const top = document.querySelector('.topbar').getBoundingClientRect().bottom;
+        const bottom = document.querySelector('.status-line').getBoundingClientRect().top;
+        const corners = [-1, 1].flatMap((sx) => [-1, 1].map((sz) => app.pitchGroup.localToWorld(new THREE.Vector3(sx * PITCH_LENGTH / 2, 0, sz * PITCH_WIDTH / 2))));
+        const players = ['blue', 'red'].flatMap((id) => app.pitchGroup.getObjectByName(`team-${id}`).children.map((player) => player.localToWorld(new THREE.Vector3(0, 0.03, 0))));
+        return [...corners, ...players].map((world) => window.__aim.toScreen(context, world))
+          .filter(({ x, y }) => x < 0 || x > innerWidth || y < top || y > bottom).length;
+      });
+      let points = await hiddenPoints();
+      const player = await page.evaluate(() => window.__aim.player('blue'));
+      await page.touchscreen.tap(player.x, player.y);
+      const selection = await readTactics(page);
+      points += await hiddenPoints();
+      layouts.push(await page.evaluate(readControlsLayout));
+      await page.getByRole('button', { name: 'Désélectionner', exact: true }).tap();
+      await page.tap('[data-mode="pass"]');
+      const ball = await page.evaluate(() => window.__aim.ball());
+      await page.touchscreen.tap(ball.x, ball.y);
+      const draft = await readTactics(page);
+      points += await hiddenPoints();
+      layouts.push(await page.evaluate(readControlsLayout));
+      await page.getByRole('button', { name: 'Abandonner le tracé', exact: true }).tap();
+      for (const selector of ['#formations-toggle', '#sequence-toggle', '#sequence-toggle', '#help-toggle']) {
+        await page.tap(selector);
+        layouts.push(await page.evaluate(readControlsLayout));
+      }
+      await page.tap('#onboarding-close');
+      await page.keyboard.press('p');
+      const selected = await page.getAttribute('[data-mode="pass"]', 'aria-pressed');
+      const failures = layouts.flatMap((layout) => layout.failures);
+      const ok = failures.length === 0 && layouts.every((layout) => !layout.overflow)
+        && points === 0 && selection.state === 'selected' && draft.state === 'arrow-end'
+        && selected === 'true' && errors.length === 0;
+      record(name, ok ? 'ok' : 'échec', `commandes : ${failures.join(', ') || 'visibles'}, points cachés : ${points}/78 (repos, sélection, passe) ; erreurs : ${errors.length}`);
+    } catch (error) {
+      record(name, 'échec', error.message.split('\n')[0]);
+    } finally {
+      await context.close();
+    }
+  }
+}
+
+/**
  * Modules .mjs dans la vraie page : chaque script de l'application est un .mjs servi en
  * text/javascript ; les seuls .js chargés sont ceux de three.js (src/vendor).
  * @param {import('playwright-core').Browser} browser
@@ -1991,6 +2094,9 @@ async function testServiceWorkerMigration(browser) {
         return [ok, `page : ${state.module}, Service Worker : ${state.controller}, caches : ${state.caches.join(', ')}`];
       }],
       ['nouvelle version déployée : sw.js de migration, rechargement, puis sw.mjs en module', async () => {
+        let navigations = 0;
+        // Une boucle de rechargement ne doit pas survivre au remplacement de l'enregistrement.
+        page.on('framenavigated', (frame) => { if (frame === page.mainFrame()) navigations += 1; });
         await server.close();
         server = await startServer({ port });
         await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.update()).catch(() => {});
@@ -2002,9 +2108,13 @@ async function testServiceWorkerMigration(browser) {
         await page.waitForFunction(async () => (await caches.keys()).filter((name) => name.startsWith('football-simulator-')).length === 1, null, { timeout: 15000 });
         const state = await read();
         const version = readShellVersion();
+        const afterMigration = navigations;
+        await page.evaluate(async () => (await navigator.serviceWorker.getRegistration()).update());
+        await page.waitForTimeout(1000);
         const ok = state.registrations.length === 1 && state.registrations[0].endsWith('/sw.mjs')
-          && state.caches.length === 1 && state.caches[0] === `football-simulator-${version}`;
-        return [ok, `Service Worker : ${state.controller}, enregistrements : ${state.registrations.length}, cache : ${state.caches.join(', ')}`];
+          && state.caches.length === 1 && state.caches[0] === `football-simulator-${version}`
+          && afterMigration === 1 && navigations === afterMigration;
+        return [ok, `Service Worker : ${state.controller}, enregistrements : ${state.registrations.length}, rechargements : ${navigations}, cache : ${state.caches.join(', ')}`];
       }],
       ['hors-ligne après la migration : la nouvelle version se lance depuis le cache de sw.mjs', async () => {
         await context.setOffline(true);
@@ -2046,6 +2156,7 @@ async function main() {
     await testTacticalMobile(browser, root.url);
     await testArrowRules(browser, root.url);
     await testMobileInterface(browser, root.url);
+    await testResponsivePanels(browser, root.url);
     await testModuleLoading(browser, root.url);
     await testDiagnostics(browser, root.url);
     await testSequencePlayback(browser, root.url);

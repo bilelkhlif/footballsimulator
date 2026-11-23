@@ -116,6 +116,19 @@ test('départ d\'une passe refusé : un joueur sans le ballon, ou le gazon loin 
   assert.equal(grass.reason, ARROW_REASONS.PASS_NEEDS_BALL);
 });
 
+test('deux joueurs proches du ballon : seul le porteur retenu commence la passe, les enchaînements restent permis', () => {
+  const state = createState();
+  state.players.find(({ teamId, number }) => teamId === 'red' && number === 10).x = 0.02;
+  state.players.find(({ teamId, number }) => teamId === 'red' && number === 10).z = 0;
+  assert.deepEqual(findCarrier(state, state.ball), on('blue', 9));
+  assert.equal(resolveArrowStart({ kind: PASS, target: on('red', 10), point: null }, state).reason, ARROW_REASONS.PASS_NEEDS_BALL);
+  assert.equal(resolveArrowStart({ kind: PASS, target: on('blue', 9), point: null }, state).ok, true);
+  // Un autre départ permis reste utilisable même si le ballon est plus près du joueur touché.
+  state.arrows.push({ id: 1, kind: PASS, from: { x: -0.12, z: 0 }, to: { x: 0.043, z: 0 } });
+  const chained = resolveArrowStart({ kind: PASS, target: on('red', 10), point: null }, state);
+  assert.deepEqual([chained.ok, chained.start], [true, { x: 0.043, z: 0 }]);
+});
+
 test('départ d\'une course : seulement un joueur ; le ballon, le gazon ou un rayon perdu sont refusés', () => {
   const state = createState();
   const run = resolveArrowStart({ kind: RUN, target: on('blue', 7), point: null }, state);
@@ -194,7 +207,7 @@ test('passe enchaînée : elle part de l\'arrivée d\'une passe déjà tracée, 
   assert.deepEqual([bySpace.ok, bySpace.start], [true, { x: 0.1, z: 0.12 }]);
 });
 
-test('passe dans la course d\'un partenaire : l\'arrivée s\'accroche à la fin de la course', () => {
+test('passe vers une fin de course : accrochage géométrique, sans déduire l\'équipe du coureur', () => {
   const state = createState([{ id: 1, kind: RUN, from: { x: 0.2, z: -0.15 }, to: { x: 0.27, z: -0.02 } }]);
   const pass = draw(state, PASS, { target: { type: 'ball' } }, { point: { x: 0.265, z: -0.025 } });
   assert.deepEqual([pass.ok, pass.end, pass.snappedTo], [true, { x: 0.27, z: -0.02 }, 'run']);
