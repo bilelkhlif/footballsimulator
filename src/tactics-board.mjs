@@ -8,12 +8,15 @@
  * Un joueur est reconnu par son équipe et son numéro de maillot.
  *
  * C'est le sujet du patron Observer : chaque changement émet un événement, et la scène
- * (src/tactical-view.js) comme l'interface y répondent. Les actions de l'utilisateur ne le modifient
- * pas directement : elles passent par des commandes (src/commands.js, patron Command), qui savent
+ * (src/tactical-view.mjs) comme l'interface y répondent. Les actions de l'utilisateur ne le modifient
+ * pas directement : elles passent par des commandes (src/commands.mjs, patron Command), qui savent
  * s'annuler grâce aux instantanés (snapshot, captureTeam) que le tableau fournit.
  *
- * Le tableau refuse tout état incohérent : une place hors du plateau ou une flèche trop courte lève
- * une erreur avant toute modification.
+ * Le tableau refuse tout état incohérent : une place hors du plateau, une flèche dont l'arrivée sort
+ * des lignes du terrain, trop courte, aux coordonnées invalides, ou identique à une flèche déjà
+ * tracée lève une erreur avant toute modification. C'est la dernière garde : l'interface applique
+ * avant elle les règles complètes des flèches (src/arrow-rules.mjs, docs/regles-des-fleches.md), et
+ * une flèche refusée n'entre jamais dans l'historique.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -330,8 +333,11 @@ export class TacticsBoard extends EventEmitter {
   }
 
   /**
-   * Ajoute une flèche. Ses deux extrémités doivent être sur le plateau, à au moins 2 cm l'une de
-   * l'autre. Un identifiant est attribué, sauf s'il est fourni (rétablissement d'une flèche annulée).
+   * Ajoute une flèche. Son départ doit être sur le plateau (un joueur ou le ballon peut se trouver
+   * sur la bande de gazon, pour une touche par exemple), son arrivée sur le terrain, lignes
+   * comprises, à au moins 2 cm du départ, et elle ne doit pas doubler une flèche du même type
+   * (DUPLICATE_TOLERANCE). Un identifiant est attribué, sauf s'il est fourni (rétablissement d'une
+   * flèche annulée).
    * @param {{kind: string, from: {x: number, z: number}, to: {x: number, z: number}, id?: number}} arrow
    * @returns {{id: number, kind: string, from: {x: number, z: number}, to: {x: number, z: number}}}
    *   la flèche ajoutée
@@ -344,14 +350,20 @@ export class TacticsBoard extends EventEmitter {
     if (!Object.values(ARROW_KINDS).includes(kind)) {
       throw new RangeError(`Type de flèche inconnu : ${kind}`);
     }
-    if (!isOnBoard(from) || !isOnBoard(to)) {
-      throw new RangeError('Flèche hors du plateau');
+    if (!isOnBoard(from)) {
+      throw new RangeError('Départ de la flèche hors du plateau');
+    }
+    if (!isOnPitch(to)) {
+      throw new RangeError('Arrivée de la flèche hors du terrain');
     }
     if (Math.hypot(to.x - from.x, to.z - from.z) < MIN_ARROW_LENGTH) {
       throw new RangeError('Flèche trop courte');
     }
     if (id !== undefined && this.#arrows.some((arrow) => arrow.id === id)) {
       throw new RangeError(`Flèche déjà présente : ${id}`);
+    }
+    if (this.#arrows.some((arrow) => sameArrowPath(arrow, { kind, from, to }))) {
+      throw new RangeError('Flèche identique à une flèche déjà tracée');
     }
     const arrow = { id: id ?? this.#nextArrowId, kind, from: copyPosition(from), to: copyPosition(to) };
     this.#nextArrowId = Math.max(this.#nextArrowId, arrow.id + 1);

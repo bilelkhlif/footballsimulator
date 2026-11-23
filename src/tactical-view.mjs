@@ -13,14 +13,20 @@
  * transition sans saut, et les autres joueurs la terminent.
  *
  * À chaque image (update), l'anneau de sélection suit l'objet sélectionné, même pendant son
- * déplacement, et l'aperçu de la flèche en cours suit le point survolé, sans rien allouer.
+ * déplacement, et l'aperçu de la destination suit le point survolé, sans rien allouer. Depuis les
+ * règles des flèches (docs/regles-des-fleches.md), l'aperçu montre le jugement du toucher à venir :
+ * aux couleurs de la flèche et cerclé à l'arrivée s'il est valide, rouge s'il est refusé ; le
+ * receveur d'une passe est entouré. En mode passe, avant le départ, des anneaux pulsés marquent
+ * les départs possibles (le ballon, l'arrivée des passes déjà tracées). En mode déplacer, un anneau
+ * montre la place visée.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import * as THREE from 'three';
 import { assignFormationRoles } from './team.mjs';
-import { ARROW_STYLES, ArrowLayer, ArrowPreview } from './tactical-arrows.mjs';
+import { ARROW_STYLES, ArrowLayer, ArrowPreview, INVALID_COLOR } from './tactical-arrows.mjs';
 import { TRANSITION_DURATION_MS } from './formation-transition.mjs';
+import { passOrigins } from './arrow-rules.mjs';
 
 /** Durée d'un déplacement à la main, en millisecondes. */
 export const MOVE_DURATION_MS = 350;
@@ -28,8 +34,20 @@ export const MOVE_DURATION_MS = 350;
 /** Couleur de l'anneau de sélection : l'or de l'interface. */
 const SELECTION_COLOR = 0xe3a81a;
 
+/** Couleur de la place visée par un déplacement valide. */
+const DESTINATION_COLOR = 0x9ed3ae;
+
 /** Hauteur des repères au-dessus du gazon, en mètres. */
 const MARKER_HEIGHT = 0.0013;
+
+/** Nombre maximal de départs de passe marqués à la fois (le ballon et les passes tracées). */
+const MAX_ORIGIN_MARKERS = 8;
+
+/** Période de la pulsation des départs de passe, en millisecondes. */
+const PULSE_PERIOD_MS = 1200;
+
+/** Aucun départ de passe à marquer. */
+const NO_ORIGINS = Object.freeze([]);
 
 /**
  * Vue de la tactique dans la scène 3D.
@@ -55,10 +73,17 @@ export class TacticalView {
   #preview;
   #ring;
   #startMarker;
+  #endMarker;
+  #receiverRing;
+  #ghost;
+  #originMarkers = [];
   #interaction = null;
   #selectedObject = null;
   #draftStart = null;
   #draftKind = null;
+  #showOrigins = false;
+  #originsState = null;
+  #origins = NO_ORIGINS;
   #unsubscribers = [];
 
   /**
@@ -104,6 +129,19 @@ export class TacticalView {
     this.#preview = new ArrowPreview(pitchGroup);
     this.#ring = this.#createMarker(new THREE.RingGeometry(0.0115, 0.0155, 40), SELECTION_COLOR, 'selection-ring');
     this.#startMarker = this.#createMarker(new THREE.CircleGeometry(0.0055, 24), ARROW_STYLES.pass.color, 'arrow-start');
+    this.#endMarker = this.#createMarker(new THREE.RingGeometry(0.0045, 0.0072, 32), ARROW_STYLES.pass.color, 'arrow-end');
+    this.#receiverRing = this.#createMarker(new THREE.RingGeometry(0.0125, 0.0158, 40), ARROW_STYLES.pass.color, 'receiver-ring');
+    this.#ghost = this.#createMarker(new THREE.RingGeometry(0.008, 0.0105, 36), DESTINATION_COLOR, 'move-destination');
+    const originGeometry = new THREE.RingGeometry(0.0085, 0.0105, 36);
+    originGeometry.rotateX(-Math.PI / 2);
+    const originMaterial = new THREE.MeshBasicMaterial({ color: ARROW_STYLES.pass.color, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
+    for (let index = 0; index < MAX_ORIGIN_MARKERS; index += 1) {
+      const marker = new THREE.Mesh(originGeometry, originMaterial);
+      marker.name = `pass-origin-${index}`;
+      marker.visible = false;
+      pitchGroup.add(marker);
+      this.#originMarkers.push(marker);
+    }
 
     this.#unsubscribers.push(
       board.on('change', ({ type }) => this.sync(type)),
@@ -162,10 +200,11 @@ export class TacticalView {
    */
   bindInteraction(interaction) {
     this.#interaction = interaction;
-    this.#unsubscribers.push(interaction.on('statechange', ({ mode, selection, arrowStart }) => {
+    this.#unsubscribers.push(interaction.on('statechange', ({ mode, state, selection, arrowStart }) => {
       this.#selectedObject = this.objectFor(selection);
       this.#draftStart = arrowStart;
       this.#draftKind = mode;
+      this.#showOrigins = mode === 'pass' && state === 'arrow-start';
       if (arrowStart) {
         this.#startMarker.material.color.setHex(ARROW_STYLES[mode]?.color ?? ARROW_STYLES.pass.color);
       }
@@ -207,30 +246,97 @@ export class TacticalView {
   }
 
   /**
-   * Travail d'une image : anneau de sélection, départ et aperçu de la flèche en cours.
+   * Travail d'une image : anneau de sélection, départs de passe possibles, départ, aperçu jugé de
+   * la flèche en cours et de son receveur, place visée par un déplacement.
+   * @param {number} [time] temps de la boucle de rendu, en millisecondes (pulsation des départs)
    * @responsable Bilel Khlif
    * @date 2026-11-15
    * @role Scène 3D — vue tactique (observateur du tableau tactique)
    */
-  update() {
+  update(time = 0) {
     const selected = this.#selectedObject;
     this.#ring.visible = Boolean(selected);
     if (selected) {
       this.#ring.position.set(selected.position.x, MARKER_HEIGHT, selected.position.z);
       this.#ring.scale.setScalar(selected === this.#ball ? 0.6 : 1);
     }
+    this.#updateOrigins(time);
+    const hover = this.#interaction?.hoverPoint ?? null;
+    const verdict = hover ? this.#interaction.hoverVerdict : null;
+    this.#updateMoveGhost(selected, hover, verdict);
+
     const start = this.#draftStart;
     this.#startMarker.visible = Boolean(start);
-    if (!start) {
+    this.#receiverRing.visible = false;
+    if (!start || !hover || verdict?.cancel) {
       this.#preview.hide();
+      this.#endMarker.visible = false;
+      if (start) {
+        this.#startMarker.position.set(start.x, MARKER_HEIGHT, start.z);
+      }
       return;
     }
     this.#startMarker.position.set(start.x, MARKER_HEIGHT, start.z);
-    const hover = this.#interaction?.hoverPoint ?? null;
-    if (hover) {
-      this.#preview.update(start, hover, this.#draftKind);
-    } else {
-      this.#preview.hide();
+    const valid = verdict?.valid ?? true;
+    const color = valid ? (ARROW_STYLES[this.#draftKind]?.color ?? ARROW_STYLES.pass.color) : INVALID_COLOR;
+    this.#preview.update(start, hover, this.#draftKind, { valid });
+    this.#endMarker.visible = true;
+    this.#endMarker.position.set(hover.x, MARKER_HEIGHT + 0.0001, hover.z);
+    this.#endMarker.material.color.setHex(color);
+    const receiver = valid ? this.objectFor(verdict?.receiver ?? null) : null;
+    if (receiver) {
+      this.#receiverRing.visible = true;
+      this.#receiverRing.position.set(receiver.position.x, MARKER_HEIGHT, receiver.position.z);
+      this.#receiverRing.material.color.setHex(color);
+    }
+  }
+
+  /**
+   * Anneaux pulsés aux départs possibles d'une passe, tant qu'une passe n'est pas commencée.
+   * @param {number} time
+   * @responsable Bilel Khlif
+   * @date 2026-11-23
+   * @role Scène 3D — vue tactique : départs possibles d'une passe
+   */
+  #updateOrigins(time) {
+    let origins = NO_ORIGINS;
+    if (this.#showOrigins && this.#interaction) {
+      // L'état des règles ne change qu'avec le tableau : départs recalculés seulement alors.
+      const state = this.#interaction.rulesState;
+      if (state !== this.#originsState) {
+        this.#originsState = state;
+        this.#origins = passOrigins(state);
+      }
+      origins = this.#origins;
+    }
+    const pulse = 1 + 0.18 * Math.sin((time / PULSE_PERIOD_MS) * Math.PI * 2);
+    for (let index = 0; index < this.#originMarkers.length; index += 1) {
+      const marker = this.#originMarkers[index];
+      const origin = origins[index];
+      marker.visible = Boolean(origin);
+      if (origin) {
+        marker.position.set(origin.x, MARKER_HEIGHT, origin.z);
+        marker.scale.setScalar(pulse);
+      }
+    }
+  }
+
+  /**
+   * Place visée par un déplacement : anneau vert si valide, rouge hors du plateau.
+   * @param {THREE.Object3D|null} selected objet sélectionné
+   * @param {THREE.Vector3|null} hover point survolé
+   * @param {{valid: boolean}|null} verdict jugement de l'aperçu
+   * @responsable Bilel Khlif
+   * @date 2026-11-23
+   * @role Scène 3D — vue tactique : aperçu d'un déplacement
+   */
+  #updateMoveGhost(selected, hover, verdict) {
+    const show = Boolean(selected && hover && !this.#draftStart);
+    this.#ghost.visible = show;
+    if (show) {
+      this.#ghost.position.set(hover.x, MARKER_HEIGHT, hover.z);
+      this.#ghost.scale.setScalar(selected === this.#ball ? 0.6 : 1);
+      this.#ghost.material.color.setHex(verdict?.valid ? DESTINATION_COLOR : INVALID_COLOR);
     }
   }
 
@@ -247,9 +353,15 @@ export class TacticalView {
     this.#unsubscribers.length = 0;
     this.#arrowLayer.dispose();
     this.#preview.dispose();
-    for (const marker of [this.#ring, this.#startMarker]) {
+    for (const marker of [this.#ring, this.#startMarker, this.#endMarker, this.#receiverRing, this.#ghost]) {
       marker.geometry.dispose();
       marker.material.dispose();
+      marker.removeFromParent();
+    }
+    const [first] = this.#originMarkers;
+    first.geometry.dispose();
+    first.material.dispose();
+    for (const marker of this.#originMarkers) {
       marker.removeFromParent();
     }
   }

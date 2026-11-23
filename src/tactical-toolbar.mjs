@@ -13,24 +13,28 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { ResetBoardCommand } from './commands.mjs';
-import { INTERACTION_STATES, selectionLabel } from './tactical-interaction.mjs';
+import { describeDraft, INTERACTION_STATES, selectionLabel } from './tactical-interaction.mjs';
 
 /** Durée d'affichage d'un retour dans le bandeau d'aide, en millisecondes. */
 export const FEEDBACK_DURATION_MS = 2500;
 
-/** Nom des modes de flèche dans l'aide. */
-const ARROW_NAMES = Object.freeze({ pass: 'Passe', run: 'Course' });
+/** Aide au premier toucher d'une flèche : d'où elle peut partir (docs/regles-des-fleches.md). */
+const ARROW_START_HINTS = Object.freeze({
+  pass: 'Passe : touchez le ballon ou son porteur (anneaux dorés).',
+  run: 'Course : touchez le joueur qui court.',
+});
 
 /**
  * Texte d'aide pour l'état courant de l'interaction.
- * @param {{mode: string, state: string, selection: object|null}} interaction état (statechange)
+ * @param {{mode: string, state: string, selection: object|null, draft?: object|null}} interaction
+ *   état (statechange)
  * @param {{inAr?: boolean}} [options] vrai en AR, où l'on ne fait pas tourner la vue au doigt
  * @returns {string} aide, vide si l'interaction est coupée
  * @responsable Bilel Khlif
  * @date 2026-11-15
  * @role Interface HTML — aide de l'interaction tactique
  */
-export function describeGuidance({ mode, state, selection }, { inAr = false } = {}) {
+export function describeGuidance({ mode, state, selection, draft = null }, { inAr = false } = {}) {
   switch (state) {
     case INTERACTION_STATES.IDLE:
       return inAr
@@ -41,9 +45,9 @@ export function describeGuidance({ mode, state, selection }, { inAr = false } = 
       return `${name.charAt(0).toUpperCase()}${name.slice(1)} sélectionné : touchez sa nouvelle place.`;
     }
     case INTERACTION_STATES.ARROW_START:
-      return `${ARROW_NAMES[mode]} : touchez le point de départ, sur un joueur ou sur le gazon.`;
+      return ARROW_START_HINTS[mode] ?? '';
     case INTERACTION_STATES.ARROW_END:
-      return `${ARROW_NAMES[mode]} : touchez le point d’arrivée.`;
+      return draft ? describeDraft(draft) : 'Touchez le point d’arrivée.';
     default:
       return '';
   }

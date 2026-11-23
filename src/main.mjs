@@ -316,7 +316,7 @@ function guidanceFor(arState, interaction) {
     return PLACEMENT_HINTS[placement.state] ?? AR_HINT;
   }
   return describeGuidance(
-    { mode: interaction.mode, state: interaction.state, selection: interaction.selection },
+    { mode: interaction.mode, state: interaction.state, selection: interaction.selection, draft: interaction.draft },
     { inAr: Boolean(placement) },
   );
 }

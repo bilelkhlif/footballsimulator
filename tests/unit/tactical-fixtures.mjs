@@ -63,12 +63,14 @@ export function createClock() {
  * @param {object} [options]
  * @param {{x: number, y: number, z: number}} [options.position] position de pitchGroup
  * @param {THREE.Euler} [options.rotation] orientation de pitchGroup
+ * @param {() => number} [options.now] horloge de l'interaction (touchers répétés) ; par défaut, une
+ *   seconde passe entre deux lectures : deux touchers de test ne sont jamais un double toucher
  * @returns {object} tableau, historique, scène, vue, interaction, animateur et horloge
  * @responsable Bilel Khlif
  * @date 2026-11-15
  * @role Tests unitaires (sprint 5) — montage du test
  */
-export function createTacticalFixture({ position = null, rotation = null } = {}) {
+export function createTacticalFixture({ position = null, rotation = null, now = null } = {}) {
   const restoreDocument = installFakeDocument();
   try {
     const clock = createClock();
@@ -96,7 +98,10 @@ export function createTacticalFixture({ position = null, rotation = null } = {})
       board, pitchGroup, teamGroups, teams: TEAMS, ball, animator,
       moveDuration: MOVE_DURATION_MS, formationDuration: TRANSITION_DURATION_MS,
     });
-    const interaction = new TacticalInteraction({ board, history, pitchGroup, getHitboxes: () => view.hitboxes });
+    let tapTime = 0;
+    const interaction = new TacticalInteraction({
+      board, history, pitchGroup, getHitboxes: () => view.hitboxes, now: now ?? (() => { tapTime += 1000; return tapTime; }),
+    });
     view.bindInteraction(interaction);
     scene.updateMatrixWorld(true);
     return { board, history, animator, clock, scene, pitchGroup, teamGroups, ball, view, interaction };

@@ -43,8 +43,16 @@ test('aide : ce qu\'il faut faire dans chaque état, en vue 3D et en AR', () => 
     'Le n° 9 des Rouges sélectionné : touchez sa nouvelle place.',
   );
   assert.equal(describeGuidance({ mode: 'move', state: 'selected', selection: { type: 'ball' } }), 'Le ballon sélectionné : touchez sa nouvelle place.');
-  assert.match(describeGuidance({ mode: 'pass', state: 'arrow-start' }), /^Passe : touchez le point de départ/);
-  assert.match(describeGuidance({ mode: 'run', state: 'arrow-end' }), /^Course : touchez le point d’arrivée/);
+  assert.match(describeGuidance({ mode: 'pass', state: 'arrow-start' }), /^Passe : touchez le ballon ou son porteur/);
+  assert.equal(describeGuidance({ mode: 'run', state: 'arrow-start' }), 'Course : touchez le joueur qui court.');
+  assert.equal(
+    describeGuidance({ mode: 'run', state: 'arrow-end', draft: { kind: 'run', actor: { type: 'player', teamId: 'red', number: 7 }, passer: null } }),
+    'Course du n° 7 des Rouges : touchez son point d’arrivée.',
+  );
+  assert.equal(
+    describeGuidance({ mode: 'pass', state: 'arrow-end', draft: { kind: 'pass', actor: { type: 'ball' }, passer: null } }),
+    'Passe depuis le ballon : touchez un partenaire ou un espace libre.',
+  );
   assert.equal(describeGuidance({ mode: 'move', state: 'disabled' }), '');
 });
 

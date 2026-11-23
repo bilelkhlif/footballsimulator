@@ -23,6 +23,9 @@ export const ARROW_STYLES = Object.freeze({
   run: Object.freeze({ color: 0xffffff, dashed: true, label: 'Course' }),
 });
 
+/** Couleur d'un aperçu refusé par les règles des flèches (src/arrow-rules.mjs). */
+export const INVALID_COLOR = 0xff5a4f;
+
 /** Dimensions des flèches, en mètres. */
 export const ARROW_DIMENSIONS = Object.freeze({
   shaftWidth: 0.0045,
@@ -191,6 +194,7 @@ export class ArrowPreview {
   #shaft;
   #head;
   #material;
+  #valid = true;
 
   /**
    * @param {THREE.Object3D} parent groupe racine du terrain (pitchGroup)
@@ -234,15 +238,17 @@ export class ArrowPreview {
   }
 
   /**
-   * Affiche l'aperçu de « from » à « to », sans rien allouer.
+   * Affiche l'aperçu de « from » à « to », sans rien allouer : aux couleurs de la flèche si elle est
+   * valide, en rouge plus opaque si les règles la refusent.
    * @param {{x: number, z: number}} from départ, dans le repère du terrain
    * @param {{x: number, z: number}} to point survolé, dans le repère du terrain
    * @param {string} kind type de flèche (ARROW_STYLES)
+   * @param {{valid?: boolean}} [options]
    * @responsable Bilel Khlif
    * @date 2026-11-15
    * @role Scène 3D — flèches tactiques (aperçu)
    */
-  update(from, to, kind) {
+  update(from, to, kind, { valid = true } = {}) {
     const length = Math.hypot(to.x - from.x, to.z - from.z);
     if (length < 1e-4) {
       this.hide();
@@ -254,8 +260,21 @@ export class ArrowPreview {
     this.#head.position.x = length - head;
     this.#head.scale.setScalar(head / headLength);
     placeArrow(this.#group, from, to, height + 0.0001);
-    this.#material.color.setHex(ARROW_STYLES[kind]?.color ?? ARROW_STYLES.pass.color);
+    this.#material.color.setHex(valid ? (ARROW_STYLES[kind]?.color ?? ARROW_STYLES.pass.color) : INVALID_COLOR);
+    this.#material.opacity = valid ? 0.55 : 0.75;
+    this.#valid = valid;
     this.#group.visible = true;
+  }
+
+  /**
+   * Vrai si l'aperçu affiché est jugé valide.
+   * @returns {boolean}
+   * @responsable Bilel Khlif
+   * @date 2026-11-23
+   * @role Scène 3D — flèches tactiques (aperçu)
+   */
+  get valid() {
+    return this.#valid;
   }
 
   /**

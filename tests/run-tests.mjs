@@ -1000,14 +1000,15 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         const rotation = await page.evaluate(() => (window.__footballSimulator.pitchGroup.rotation.y * 180) / Math.PI);
         return [gap < 2 && sceneGap < 0.01, `visé (${spot.x} ; ${spot.z}) sur le terrain tourné de ${rotation.toFixed(1)}°, placé à ${gap.toFixed(3)} mm`];
       }],
-      ['flèche de passe en AR : aperçu guidé par la source d\'entrée, puis « Annuler »', async () => {
+      ['flèche de passe en AR : départ au ballon, aperçu guidé par la source d\'entrée, puis « Annuler »', async () => {
         await page.click('[data-mode="pass"]');
-        const start = await page.evaluate(() => window.__aim.spot([[-0.1, 0.05], [-0.05, 0.1], [0, 0.12], [-0.15, 0.12]]));
+        const ball = await page.evaluate(() => window.__aim.ball());
+        const start = await page.evaluate(() => window.__footballSimulator.board.getBallPosition());
         const end = await page.evaluate(() => window.__aim.spot([[0.12, -0.08], [0.15, 0.1], [0.08, 0.15], [0.2, 0]]));
-        if (!start || !end) {
-          return [false, 'points de la flèche cachés'];
+        if (!ball || !end) {
+          return [false, 'ballon ou arrivée cachés'];
         }
-        await page.mouse.click(start.sx, start.sy);
+        await page.mouse.click(ball.x, ball.y);
         await page.waitForFunction(() => window.__footballSimulator.interaction.state === 'arrow-end', null, { timeout: 5000 });
         await page.mouse.move(end.sx, end.sy);
         await page.waitForFunction(() => window.__footballSimulator.pitchGroup.getObjectByName('arrow-preview').visible, null, { timeout: 5000 });
@@ -1301,20 +1302,19 @@ async function testTacticalBoard(browser, url) {
           && JSON.stringify(after.snapshot) === JSON.stringify(before.snapshot) && after.selection?.number === target.number;
         return [ok, `aide : « ${after.hint} », sélection gardée : n° ${after.selection?.number}`];
       }],
-      ['flèche de passe : deux clics, aperçu au survol, flèche 3D accrochée au joueur', async () => {
+      ['flèche de passe : départ au ballon, aperçu au survol, arrivée au point visé', async () => {
         await page.click('[data-mode="pass"]');
-        const from = await page.evaluate(() => window.__aim.player('blue'));
-        await page.mouse.click(from.x, from.y);
-        const spot = await page.evaluate(() => window.__aim.spot([[0.1, 0.12], [0.15, -0.15], [0.05, 0.19], [0.2, 0.1]]));
+        const ball = await page.evaluate(() => window.__aim.ball());
+        await page.mouse.click(ball.x, ball.y);
+        const spot = await page.evaluate(() => window.__aim.spot([[0.1, 0.12], [0.15, -0.15], [0.05, 0.18], [0.2, 0.1]]));
         await page.mouse.move(spot.sx, spot.sy);
         await page.waitForFunction(() => window.__footballSimulator.pitchGroup.getObjectByName('arrow-preview').visible, null, { timeout: 5000 });
         await page.mouse.click(spot.sx, spot.sy);
         const state = await readTactics(page);
         const [arrow] = state.snapshot.arrows;
-        const start = state.snapshot.players[`blue:${from.number}`];
-        const ok = state.arrowMeshes === 1 && arrow?.kind === 'pass' && gapMm(arrow.from, start) === 0 && gapMm(arrow.to, spot) < 1
+        const ok = state.arrowMeshes === 1 && arrow?.kind === 'pass' && gapMm(arrow.from, state.snapshot.ball) === 0 && gapMm(arrow.to, spot) < 1
           && state.state === 'arrow-start';
-        return [ok, `départ accroché au n° ${from.number}, arrivée à ${gapMm(arrow.to, spot).toFixed(3)} mm du point visé, flèches 3D : ${state.arrowMeshes}`];
+        return [ok, `départ au ballon, arrivée à ${gapMm(arrow.to, spot).toFixed(3)} mm du point visé, flèches 3D : ${state.arrowMeshes}`];
       }],
       ['changement de formation annulé : le joueur déplacé à la main retrouve sa place exacte', async () => {
         await page.click('[data-mode="move"]');
