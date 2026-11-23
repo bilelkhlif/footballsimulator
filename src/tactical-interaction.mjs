@@ -32,7 +32,7 @@
  */
 import * as THREE from 'three';
 import { EventEmitter } from './events.mjs';
-import { intersectPitchPlane, pickTarget } from './raycasting.mjs';
+import { findTargetOnRay, intersectPitchPlane, pickTarget } from './raycasting.mjs';
 import { ARROW_KINDS, BALL_MARGIN, clampToBoard, isOnBoard, PLAYER_MARGIN } from './tactics-board.mjs';
 import {
   readTacticalState, resolveArrowEnd, resolveArrowStart, sameTarget, targetLabel,
@@ -478,7 +478,14 @@ export class TacticalInteraction extends EventEmitter {
   #tapInArrowMode(raycaster) {
     const { target, point } = this.#aim(raycaster);
     if (!this.#draft) {
-      const decision = resolveArrowStart({ kind: this.#mode, target, point }, this.rulesState);
+      let decision = resolveArrowStart({ kind: this.#mode, target, point }, this.rulesState);
+      // Vu de côté (AR, téléphone près de la table), un joueur peut cacher le ballon : si l'objet
+      // le plus proche ne peut pas commencer la passe et que le rayon traverse aussi le ballon,
+      // c'est le ballon qui était visé.
+      if (!decision.ok && this.#mode === INTERACTION_MODES.PASS && target?.type !== 'ball'
+        && findTargetOnRay(raycaster, this.#getHitboxes(), (object) => object.userData?.type === 'ball')) {
+        decision = resolveArrowStart({ kind: this.#mode, target: { type: 'ball' }, point }, this.rulesState);
+      }
       if (!decision.ok) {
         return this.#feedback('invalid', 'invalid', decision.message);
       }

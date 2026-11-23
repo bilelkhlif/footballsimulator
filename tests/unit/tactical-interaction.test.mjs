@@ -368,3 +368,21 @@ test('statechange décrit l\'état pour l\'interface, à chaque changement', () 
   gestures.tapPlayer('blue', 3);
   assert.deepEqual(states, ['move:selected', 'move:idle', 'run:arrow-start', 'run:arrow-end']);
 });
+
+test('passe vue de côté : le ballon caché derrière un joueur sans ballon reste le départ ; en mode déplacer, le joueur devant est sélectionné', () => {
+  const fixture = createTacticalFixture();
+  const { board, interaction } = fixture;
+  board.setPlayerPosition('blue', 9, { x: -0.05, z: 0 }); // devant le ballon, à 5 cm : pas son porteur
+  fixture.scene.updateMatrixWorld(true);
+  const raycaster = new THREE.Raycaster();
+  const eye = pitchPointToWorld(fixture.pitchGroup, -0.09, 0, 0.012); // téléphone bas, juste derrière le n° 9
+  const ballCenter = fixture.ball.getWorldPosition(new THREE.Vector3());
+
+  assert.equal(interaction.handleTap(aimRay(raycaster, eye, ballCenter)).action, 'select');
+  assert.deepEqual(interaction.selection, { type: 'player', teamId: 'blue', number: 9 }, 'le joueur devant le ballon intercepte le rayon');
+  interaction.cancel();
+
+  interaction.setMode(INTERACTION_MODES.PASS);
+  assert.equal(interaction.handleTap(aimRay(raycaster, eye, ballCenter)).action, 'arrow-start');
+  assert.deepEqual(interaction.arrowStart, board.getBallPosition(), 'départ au ballon, pas refusé');
+});

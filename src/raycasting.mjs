@@ -106,6 +106,26 @@ export function pickTarget(raycaster, hitboxes) {
 }
 
 /**
+ * Indique si le rayon traverse la zone de sélection d'un objet donné, même derrière d'autres zones
+ * (le ballon caché par un joueur, vu de côté en AR).
+ * @param {THREE.Raycaster} raycaster
+ * @param {THREE.Object3D[]} hitboxes zones de sélection, enfants directs de leur joueur ou du ballon
+ * @param {(object: THREE.Object3D) => boolean} accept objet recherché (le joueur ou le ballon)
+ * @returns {THREE.Object3D|null} l'objet trouvé sur le rayon, ou null
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Raycasting — sélection des joueurs et du ballon
+ */
+export function findTargetOnRay(raycaster, hitboxes, accept) {
+  const intersections = scratch.intersections;
+  intersections.length = 0;
+  raycaster.intersectObjects(hitboxes, false, intersections);
+  const found = intersections.find(({ object }) => accept(object.parent))?.object.parent ?? null;
+  intersections.length = 0;
+  return found;
+}
+
+/**
  * Point où le rayon rencontre le plan du gazon, dans le repère du terrain.
  *
  * Le plan passe par l'origine de pitchGroup, de normale n = son axe Y en coordonnées monde. Le
