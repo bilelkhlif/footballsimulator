@@ -79,6 +79,55 @@ export async function getTracking(id, fetcher = fetch) {
 }
 
 /**
+ * En-tête d'une analyse stockée par fenêtres ; null si l'ancien serveur ne le propose pas.
+ * @param {string} id
+ * @param {typeof fetch} [fetcher]
+ * @returns {Promise<object|null>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Visualiseur de match — client de l'API d'analyse (lecture par fenêtres)
+ */
+export async function getTrackingManifest(id, fetcher = fetch) {
+  const response = await fetcher(`api/analyses/${encodeURIComponent(id)}/manifest`, { cache: 'no-store' });
+  if (response.status === 404 || response.status === 405) {
+    return null;
+  }
+  return readJson(response);
+}
+
+/**
+ * Images et trajectoires d'une fenêtre horodatée, avec ses images voisines aux bornes.
+ * @param {string} id
+ * @param {number} from début en secondes
+ * @param {number} to fin en secondes
+ * @param {{selectedId?: number|null, signal?: AbortSignal, fetcher?: typeof fetch}} [options]
+ * @returns {Promise<object>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Visualiseur de match — client de l'API d'analyse (lecture par fenêtres)
+ */
+export async function getTrackingWindow(id, from, to, { selectedId = null, signal, fetcher = fetch } = {}) {
+  const query = new URLSearchParams({ from: String(from), to: String(to) });
+  if (selectedId !== null) {
+    query.set('selected', String(selectedId));
+  }
+  return readJson(await fetcher(`api/analyses/${encodeURIComponent(id)}/frames?${query}`, { signal, cache: 'no-store' }));
+}
+
+/**
+ * Reprend une analyse interrompue depuis son dernier segment validé.
+ * @param {string} id
+ * @param {typeof fetch} [fetcher]
+ * @returns {Promise<object>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Visualiseur de match — reprise des analyses
+ */
+export async function resumeAnalysis(id, fetcher = fetch) {
+  return readJson(await fetcher(`api/analyses/${encodeURIComponent(id)}/resume`, { method: 'POST' }));
+}
+
+/**
  * Adresse de la vidéo source d'une analyse, lisible par un élément <video> (lecture partielle).
  * @param {string} id
  * @returns {string}
@@ -141,7 +190,7 @@ export async function waitForAnalysis(id, onStatus, { fetcher = fetch, interval 
   for (;;) {
     const status = await getAnalysis(id, fetcher);
     onStatus(status);
-    if (status.status === 'done' || status.status === 'failed' || signal?.aborted) {
+    if (['done', 'failed', 'interrupted'].includes(status.status) || signal?.aborted) {
       return status;
     }
     await new Promise((resolve) => setTimeout(resolve, interval));

@@ -13,12 +13,14 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { formatSpeed, distanceCovered, teamCentroids, velocityAt } from './analytics.js';
-import { getHealth, getTracking, listAnalyses, uploadVideo, videoUrl, waitForAnalysis } from './api-client.js';
+import { getAnalysis, getHealth, getTracking, getTrackingManifest, getTrackingWindow,
+  listAnalyses, resumeAnalysis, uploadVideo, videoUrl, waitForAnalysis } from './api-client.js';
 import { applyHomography, AutoPlacer, candidateRects, scoreRegions, WEIGHTS } from './auto-placement.js';
 import { OverlayFrame } from './overlay-frame.js';
 import { OverlayPitch } from './overlay-pitch.js';
 import { describeCalibration, formatNumber, formatShare, formatTime } from './format.js';
 import { TrackingStore } from './tracking-store.js';
+import { PagedTrackingStore } from './paged-tracking-store.mjs';
 import { boxToDisplay, containRect, VideoAnnotations } from './video-annotations.js';
 
 /** Durée des traces, en secondes. */
@@ -68,6 +70,10 @@ class MatchVisualizer {
     this.store = null;
     this.overlay = null;
     this.selectedId = null;
+    this.openGeneration = 0;
+    this.manifestTimer = null;
+    this.lastWindowCheck = 0;
+    this.currentAnalysis = null;
     /** Instant de la dernière image présentée (requestVideoFrameCallback), ou null avant la première. */
     this.mediaTime = null;
     this.lastSample = null;
@@ -139,11 +145,13 @@ class MatchVisualizer {
     const analyses = await listAnalyses().catch(() => []);
     select.replaceChildren(new Option('Analyses précédentes…', ''));
     for (const analysis of analyses) {
-      const label = analysis.status === 'done' ? analysis.name : `${analysis.name} (${analysis.status === 'failed' ? 'échec' : 'en cours'})`;
+      const states = { failed: 'échec', interrupted: 'interrompue', queued: 'en attente', running: 'en cours' };
+      const label = analysis.status === 'done' ? analysis.name : `${analysis.name} (${states[analysis.status] ?? 'réception'})`;
       const option = new Option(label, analysis.id);
-      option.disabled = analysis.status !== 'done';
+      option.disabled = ['receiving', 'queued'].includes(analysis.status);
       select.append(option);
     }
+    select.value = this.currentAnalysis ?? '';
   }
 
   /**
@@ -168,50 +176,170 @@ class MatchVisualizer {
    * @role Visualiseur de match — application
    */
   async analyse(file) {
+    const generation = ++this.openGeneration;
+    clearTimeout(this.manifestTimer);
+    this.store?.dispose?.();
+    this.store = null;
+    this.currentAnalysis = null;
+    byId('resume-analysis').hidden = true;
     this.#showVideo(URL.createObjectURL(file), null);
     try {
       const job = await uploadVideo(file, (fraction) => this.setStatus(`Téléversement : ${formatShare(fraction)}`));
+      await this.refreshList();
+      let previewPending = null;
       const final = await waitForAnalysis(job.id, (status) => {
+        if (generation !== this.openGeneration) {
+          return;
+        }
         const progress = status.progress;
         const share = progress?.fraction === null || progress?.fraction === undefined ? '' : ` ${formatShare(progress.fraction)}`;
         this.setStatus(status.status === 'queued' ? 'En attente d\'analyse…' : `Analyse${share} : ${progress?.message ?? status.status}`);
+        if (status.status === 'running' && !this.store && !previewPending) {
+          previewPending = getTrackingManifest(job.id).then(async (manifest) => {
+            if (manifest?.storage.frameCount && generation === this.openGeneration) {
+              await this.refreshList();
+              await this.openAnalysis(job.id, { keepVideo: true, expectedGeneration: generation, manifest });
+            }
+          }).catch(() => {
+            // Le premier segment n'est pas encore lisible ; l'état suivant permettra un nouvel essai.
+          }).finally(() => { previewPending = null; });
+        }
       });
+      if (generation !== this.openGeneration) {
+        return;
+      }
       if (final.status !== 'done') {
         throw new Error(final.error ?? 'Analyse impossible.');
       }
+      await previewPending;
       await this.refreshList();
-      await this.openAnalysis(job.id, { keepVideo: true });
+      if (generation !== this.openGeneration) {
+        return;
+      }
+      if (this.currentAnalysis === job.id && this.store instanceof PagedTrackingStore) {
+        this.setStatus(`Analyse terminée : ${file.name}`);
+      } else {
+        await this.openAnalysis(job.id, { keepVideo: true });
+      }
     } catch (error) {
-      this.setStatus(error.message, 'error');
+      if (generation === this.openGeneration) {
+        this.setStatus(error.message, 'error');
+      }
     }
   }
 
   /**
-   * Ouvre une analyse terminée : document de suivi, vidéo, équipes, qualité.
+   * Ouvre une analyse complète ou partielle : fenêtre de suivi, vidéo, équipes, qualité.
    * @param {string} id
-   * @param {{keepVideo?: boolean}} [options] garder la vidéo locale déjà affichée
+   * @param {{keepVideo?: boolean, expectedGeneration?: number|null, manifest?: object|null}} [options]
    * @responsable Bilel Khlif
    * @date 2026-11-17
    * @role Visualiseur de match — application
    */
-  async openAnalysis(id, { keepVideo = false } = {}) {
+  async openAnalysis(id, { keepVideo = false, expectedGeneration = null, manifest: providedManifest = null } = {}) {
+    if (expectedGeneration !== null && expectedGeneration !== this.openGeneration) {
+      return;
+    }
+    const generation = expectedGeneration ?? ++this.openGeneration;
+    clearTimeout(this.manifestTimer);
     try {
       this.setStatus('Chargement de l\'analyse…');
-      const tracking = await getTracking(id);
-      this.store = TrackingStore.fromDocument(tracking);
+      const manifest = providedManifest ?? await getTrackingManifest(id);
+      const tracking = manifest ?? await getTracking(id);
+      if (generation !== this.openGeneration) {
+        return;
+      }
+      this.store?.dispose?.();
+      this.store = manifest
+        ? new PagedTrackingStore(manifest, (from, to, options) => getTrackingWindow(id, from, to, options))
+        : TrackingStore.fromDocument(tracking);
+      this.currentAnalysis = id;
       this.selectedId = null;
       this.placer.reset();
       this.overlay?.setTeams(this.store.teams);
       if (!keepVideo || !this.video.src) {
         this.#showVideo(videoUrl(id), id);
       }
+      this.video.dataset.analysis = id;
+      if (manifest) {
+        await this.store.ensureTime(keepVideo ? this.video.currentTime : 0);
+        if (generation !== this.openGeneration) {
+          return;
+        }
+      }
       byId('analysis-select').value = id;
       this.#renderQuality();
       this.layout();
       this.setStatus(`Analyse ouverte : ${tracking.source.name}`);
+      byId('resume-analysis').hidden = true;
+      if (manifest && !manifest.complete) {
+        this.#refreshManifest(id, generation);
+      }
     } catch (error) {
-      this.setStatus(error.message, 'error');
+      if (generation === this.openGeneration) {
+        this.setStatus(error.message, 'error');
+      }
     }
+  }
+
+  /**
+   * Suit les segments d'une analyse ouverte sans télécharger ses images déjà consultées.
+   * @param {string} id
+   * @param {number} generation
+   * @responsable Bilel Khlif
+   * @date 2026-11-23
+   * @role Visualiseur de match — progression des analyses longues
+   */
+  async #refreshManifest(id, generation) {
+    try {
+      const [manifest, status] = await Promise.all([getTrackingManifest(id), getAnalysis(id)]);
+      if (generation !== this.openGeneration || !(this.store instanceof PagedTrackingStore)) {
+        return;
+      }
+      if (manifest) {
+        this.store.updateManifest(manifest);
+        this.overlay?.setTeams(this.store.teams);
+        this.#renderQuality();
+      }
+      byId('resume-analysis').hidden = !status.resumable || !['failed', 'interrupted'].includes(status.status);
+      if (status.status === 'running' || status.status === 'queued') {
+        this.setStatus(status.progress?.message ?? "Analyse en cours ; les segments publiés sont consultables.");
+      } else if (status.status !== 'done') {
+        this.setStatus(status.error ?? 'Analyse interrompue.', 'error');
+      } else {
+        this.setStatus(`Analyse terminée : ${this.store.source.name}`);
+      }
+      if (manifest?.complete) {
+        await this.refreshList();
+        return;
+      }
+    } catch (error) {
+      if (generation === this.openGeneration) {
+        this.setStatus(error.message, 'error');
+      }
+    }
+    if (generation === this.openGeneration) {
+      this.manifestTimer = setTimeout(() => this.#refreshManifest(id, generation), 3000);
+    }
+  }
+
+  /**
+   * Demande la fenêtre courante sans bloquer le rendu, même pendant un déplacement rapide.
+   * @param {number} time
+   * @responsable Bilel Khlif
+   * @date 2026-11-23
+   * @role Visualiseur de match — chargement asynchrone
+   */
+  #ensureWindow(time) {
+    const store = this.store;
+    if (!(store instanceof PagedTrackingStore)) {
+      return;
+    }
+    store.ensureTime(time, { selectedId: this.selectedId }).catch((error) => {
+      if (this.store === store) {
+        this.setStatus(`Chargement du suivi : ${error.message}`, 'error');
+      }
+    });
   }
 
   /**
@@ -240,6 +368,7 @@ class MatchVisualizer {
    */
   select(id) {
     this.selectedId = id === this.selectedId ? null : id;
+    this.#ensureWindow(this.video.currentTime);
     this.lastPanelUpdate = 0;
   }
 
@@ -301,7 +430,13 @@ class MatchVisualizer {
     const time = this.mediaTime ?? (snap ? Math.floor(this.video.currentTime * fps + 1e-3) / fps : this.video.currentTime);
     if (!this.store) {
       this.annotations.draw({ objects: [], ball: null }, { content: this.content, source: { width: 1, height: 1 }, teamColor: () => null, selectedId: null });
+      this.overlay?.update({ frame: null, objects: [], ball: null }, { selectedId: null,
+        velocities: new Map(), histories: new Map(), showTrails: false, showArrows: false, centroids: new Map() });
       return;
+    }
+    if (performance.now() - this.lastWindowCheck > 150) {
+      this.lastWindowCheck = performance.now();
+      this.#ensureWindow(time);
     }
     const sample = this.store.sample(time);
     const histories = this.store.histories(time - TRAIL_SECONDS, time);
@@ -401,7 +536,7 @@ class MatchVisualizer {
       return;
     }
     const history = this.store.history(this.selectedId, track?.firstTime ?? 0, this.lastSample.time);
-    const team = object?.team ?? track?.team ?? null;
+    const team = object ? object.team : track?.team ?? null;
     const color = team === null ? null : this.store.teamColor(team);
     byId('sel-id').textContent = String(this.selectedId);
     byId('sel-role').textContent = ROLE_LABELS[object?.role ?? track?.role] ?? '—';
@@ -410,7 +545,9 @@ class MatchVisualizer {
     byId('sel-visible').textContent = object ? `oui (détection ${formatShare(object.confidence)})` : 'non, à cet instant';
     byId('sel-position').textContent = object?.pitch ? `x ${formatNumber(object.pitch[0])} m, y ${formatNumber(object.pitch[1])} m` : 'indisponible';
     byId('sel-speed').textContent = formatSpeed(velocities.get(this.selectedId)?.speed ?? null);
-    byId('sel-distance').textContent = `${formatNumber(distanceCovered(history), 0)} m mesurés`;
+    const distance = this.store instanceof PagedTrackingStore
+      ? this.store.distanceAt(this.selectedId, this.lastSample.time) : distanceCovered(history);
+    byId('sel-distance').textContent = distance === null ? 'indisponible à cet instant' : `${formatNumber(distance, 0)} m mesurés`;
     byId('sel-span').textContent = track ? `${formatTime(track.firstTime)} – ${formatTime(track.lastTime)} (${track.observations} images)` : '—';
   }
 
@@ -424,8 +561,12 @@ class MatchVisualizer {
     const metrics = this.store.metrics ?? {};
     const { detection = {}, tracking = {}, calibration = {}, positions = {}, teams = {}, processing = {} } = metrics;
     const analysis = this.store.analysis ?? {};
+    byId('tracking-availability').textContent = this.store instanceof PagedTrackingStore
+      ? (this.store.complete ? 'Analyse terminée. ' : 'Analyse incomplète. ')
+        + `Suivi disponible jusqu'à ${formatTime(this.store.storage.availableUntil)}. `
+        + (this.store.storage.frameCount ? '' : 'Aucun segment publié pour le moment.') : '';
     const rows = [
-      ['Images analysées', `${detection.frames ?? this.store.frames.length} (${formatNumber(analysis.fps)} images/s)`],
+      ['Images analysées', `${detection.frames ?? this.store.storage?.frameCount ?? this.store.frames.length} (${formatNumber(analysis.fps)} images/s)`],
       ['Calibration réussie', `${formatShare(calibration.calibratedShare)} des images`],
       ["Erreur d'ajustement", `${formatNumber(calibration.medianFitErrorPx)} px, ${formatNumber(calibration.medianFitErrorM, 2)} m (médianes, optimistes)`],
       ['Erreur hors échantillon', `${formatNumber(calibration.medianHoldoutErrorPx)} px, ${formatNumber(calibration.medianHoldoutErrorM, 2)} m `
@@ -483,11 +624,24 @@ class MatchVisualizer {
    * @date 2026-11-17
    * @role Visualiseur de match — interface
    */
-  step(direction) {
+  async step(direction) {
     if (!this.store) {
       return;
     }
     this.video.pause();
+    const store = this.store;
+    const time = this.video.currentTime;
+    if (store instanceof PagedTrackingStore) {
+      try {
+        await store.ensureTime(time, { selectedId: this.selectedId });
+      } catch (error) {
+        this.setStatus(error.message, 'error');
+        return;
+      }
+      if (store !== this.store || this.video.currentTime !== time || !store.sample(time).frame) {
+        return;
+      }
+    }
     const index = this.store.indexAt(this.video.currentTime + (direction > 0 ? 1e-3 : -1e-3));
     const target = this.store.frames[Math.min(Math.max(index + (direction > 0 ? 1 : 0), 0), this.store.frames.length - 1)];
     if (target) {
@@ -515,6 +669,24 @@ class MatchVisualizer {
       this.select(this.annotations.pick(event.clientX - rect.left, event.clientY - rect.top));
     });
     this.video.addEventListener('loadedmetadata', () => this.layout());
+    this.video.addEventListener('seeking', () => this.#ensureWindow(this.video.currentTime));
+    byId('resume-analysis').addEventListener('click', async () => {
+      const id = this.currentAnalysis;
+      if (!id) {
+        return;
+      }
+      byId('resume-analysis').disabled = true;
+      try {
+        await resumeAnalysis(id);
+        this.setStatus('Reprise en attente ; les segments validés sont conservés.');
+        byId('resume-analysis').hidden = true;
+        await this.refreshList();
+      } catch (error) {
+        this.setStatus(error.message, 'error');
+      } finally {
+        byId('resume-analysis').disabled = false;
+      }
+    });
     byId('play').addEventListener('click', () => (this.video.paused ? this.video.play() : this.video.pause()));
     byId('seek').addEventListener('input', (event) => { this.video.currentTime = Number(event.target.value); });
     byId('speed').addEventListener('change', (event) => { this.video.playbackRate = Number(event.target.value); });
@@ -590,6 +762,9 @@ class MatchVisualizer {
       overlay: this.lastUpdate,
       webgpu: this.overlay?.usesWebGpu ?? false,
       teams: this.store?.teams ?? [],
+      loadedFrames: this.store?.frames.length ?? 0,
+      window: this.store?.window ?? null,
+      complete: this.store?.complete ?? true,
     };
   }
 }

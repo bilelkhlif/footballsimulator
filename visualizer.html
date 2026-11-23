@@ -37,6 +37,7 @@
     <select id="analysis-select" class="vz-select" aria-label="Analyses précédentes">
       <option value="">Analyses précédentes…</option>
     </select>
+    <button id="resume-analysis" class="vz-button" type="button" hidden>Reprendre l'analyse</button>
     <p id="job-status" class="vz-status" role="status" aria-live="polite"></p>
   </header>
 
@@ -103,6 +104,7 @@
         <h2>Image affichée</h2>
         <p id="frame-calibration" class="vz-muted">Aucune analyse ouverte.</p>
         <p id="frame-counts" class="vz-muted"></p>
+        <p id="tracking-availability" class="vz-muted" role="status"></p>
       </section>
       <section class="vz-card">
         <h2>Qualité de l'analyse</h2>

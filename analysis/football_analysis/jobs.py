@@ -1,9 +1,10 @@
 """File des analyses : une vidéo téléversée devient un travail, traité par un seul fil d'exécution.
 
 Un seul travail à la fois : le GPU est la ressource rare. Chaque travail a son dossier
-(data/jobs/<id>/) avec la vidéo source, son état (status.json) et, à la fin, son document de suivi
-(tracking.json). Au redémarrage du serveur, un travail resté « en cours » est déclaré interrompu ;
-un travail encore en file, dont la vidéo est arrivée entière, est remis en file.
+(data/jobs/<id>/) avec la vidéo source, son état (status.json) et sa base incrémentale
+(tracking.sqlite). Les anciens tracking.json restent lisibles. Au redémarrage, une analyse
+interrompue avec une base peut être reprise explicitement ; les téléversements en attente sont
+remis en file. Aucun travail GPU n'est ajouté deux fois à la file.
 
 Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
 """
@@ -24,7 +25,7 @@ from typing import Any, Callable
 JOB_ID = re.compile(r"^\d{8}-\d{6}-[0-9a-f]{6}$")
 
 #: États successifs d'un travail.
-STATUSES = ("queued", "running", "done", "failed")
+STATUSES = ("queued", "running", "done", "interrupted", "failed")
 
 
 def _now() -> str:
@@ -159,7 +160,8 @@ class JobStore:
 
         Un travail en file, dont la vidéo est arrivée et a été vérifiée, est rendu pour être relancé
         (défaut constaté : un téléversement complet était perdu au redémarrage). Un travail en cours
-        est déclaré interrompu, sans relance : s'il a fait tomber le serveur, il le referait.
+        avec une base est déclaré interrompu, avec reprise explicite proposée. Sans base,
+        il reste déclaré en échec, comme les anciens traitements non récupérables.
         Un téléversement inachevé est déclaré interrompu.
 
         @responsable Bilel Khlif
@@ -170,9 +172,21 @@ class JobStore:
         for status in sorted(self.list(), key=lambda s: s["createdAt"]):
             if status["status"] == "queued" and status.get("video"):
                 resubmit.append(status["id"])
+            elif status["status"] == "running" and self.database(status["id"]).is_file():
+                self.update(status["id"], status="interrupted", resumable=True,
+                            error="Analyse interrompue ; les segments validés peuvent être repris.")
             elif status["status"] in ("receiving", "queued", "running"):
                 self.update(status["id"], status="failed", error="Analyse interrompue par l'arrêt du serveur.")
         return resubmit
+
+    def database(self, job_id: str) -> Path:
+        """Chemin du suivi incrémental, séparé des anciens documents JSON.
+
+        @responsable Bilel Khlif
+        @date 2026-11-23
+        @role Analyse vidéo — stockage des analyses longues
+        """
+        return self.directory(job_id) / "tracking.sqlite"
 
 
 class AnalysisWorker(threading.Thread):
@@ -183,7 +197,7 @@ class AnalysisWorker(threading.Thread):
     @role Analyse vidéo — file des analyses (traitement)
     """
 
-    def __init__(self, store: JobStore, analyse: Callable[..., dict[str, Any]]):
+    def __init__(self, store: JobStore, analyse: Callable[..., dict[str, Any]], chunked: bool = False):
         """Prépare le fil de traitement.
 
         Args:
@@ -197,18 +211,26 @@ class AnalysisWorker(threading.Thread):
         super().__init__(name="analysis-worker", daemon=True)
         self.store = store
         self.analyse = analyse
+        self.chunked = chunked
         self.jobs: queue.Queue[str] = queue.Queue()
+        self._pending: set[str] = set()
+        self._submission_lock = threading.Lock()
 
-    def submit(self, job_id: str) -> None:
+    def submit(self, job_id: str) -> bool:
         """Met un travail en file.
 
         @responsable Bilel Khlif
         @date 2026-11-17
         @role Analyse vidéo — file des analyses (traitement)
         """
-        self.store.update(job_id, status="queued", progress={"stage": "file", "fraction": None,
-                                                              "message": "En attente d'analyse"})
-        self.jobs.put(job_id)
+        with self._submission_lock:
+            if job_id in self._pending:
+                return False
+            self._pending.add(job_id)
+            self.store.update(job_id, status="queued", progress={"stage": "file", "fraction": None,
+                                                                  "message": "En attente d'analyse"})
+            self.jobs.put(job_id)
+            return True
 
     def run(self) -> None:
         """Boucle de traitement : un travail après l'autre, sans fin.
@@ -218,7 +240,13 @@ class AnalysisWorker(threading.Thread):
         @role Analyse vidéo — file des analyses (traitement)
         """
         while True:
-            self.process(self.jobs.get())
+            job_id = self.jobs.get()
+            try:
+                self.process(job_id)
+            finally:
+                with self._submission_lock:
+                    self._pending.discard(job_id)
+                self.jobs.task_done()
 
     def process(self, job_id: str) -> None:
         """Analyse un travail ; écrit son document de suivi ou son erreur.
@@ -227,19 +255,25 @@ class AnalysisWorker(threading.Thread):
         @date 2026-11-17
         @role Analyse vidéo — file des analyses (traitement)
         """
-        status = self.store.update(job_id, status="running", startedAt=_now())
+        status = self.store.update(job_id, status="running", startedAt=_now(), error=None)
 
         def report(stage: str, fraction: float | None, message: str) -> None:
             """Recopie la progression dans l'état du travail."""
             self.store.update(job_id, progress={"stage": stage, "fraction": fraction, "message": message})
 
         try:
-            document = self.analyse(self.store.source(job_id), report, status["name"])
-            temporary = self.store.tracking(job_id).with_suffix(".tmp")
-            temporary.write_text(json.dumps(document, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-            os.replace(temporary, self.store.tracking(job_id))
+            if self.chunked:
+                document = self.analyse(self.store.source(job_id), self.store.database(job_id), report, status["name"])
+                if document.get("complete") is not True:
+                    raise ValueError("Analyse incomplète : aucune fin de traitement validée.")
+            else:
+                document = self.analyse(self.store.source(job_id), report, status["name"])
+                temporary = self.store.tracking(job_id).with_suffix(".tmp")
+                temporary.write_bytes(json.dumps(document, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+                os.replace(temporary, self.store.tracking(job_id))
             self.store.update(job_id, status="done", finishedAt=_now(), metrics=document.get("metrics"),
-                              limitations=document.get("limitations"), progress=None)
+                              limitations=document.get("limitations"), progress=None, resumable=False)
         except Exception as error:  # l'erreur est rapportée à l'utilisateur, le fil continue
             traceback.print_exc()
-            self.store.update(job_id, status="failed", finishedAt=_now(), error=str(error) or type(error).__name__)
+            self.store.update(job_id, status="failed", finishedAt=_now(), error=str(error) or type(error).__name__,
+                              resumable=self.chunked and self.store.database(job_id).is_file())

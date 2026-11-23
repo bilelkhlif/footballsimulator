@@ -28,18 +28,47 @@ const FPS = 25;
  * @date 2026-11-17
  * @role Tests de bout en bout du visualiseur — outillage
  */
-async function mockAnalysisApi(page) {
-  const tracking = await readFile(path.join(FIXTURE_DIR, 'match-synthetique.tracking.json'), 'utf8');
-  const video = await readFile(path.join(FIXTURE_DIR, 'match-synthetique.webm'));
-  const status = { id: FIXTURE_ID, name: 'match-synthetique.webm', status: 'done', createdAt: '2026-11-17T00:00:00+00:00' };
+async function mockAnalysisApi(page, { long = false, complete = true, availableUntil = null, legacy = false } = {}) {
+  const prefix = long ? 'fenetres-synthetiques' : 'match-synthetique';
+  const tracking = await readFile(path.join(FIXTURE_DIR, `${prefix}.tracking.json`), 'utf8');
+  const document = JSON.parse(tracking);
+  const video = await readFile(path.join(FIXTURE_DIR, `${prefix}.webm`));
+  const status = { id: FIXTURE_ID, name: `${prefix}.webm`, status: complete ? 'done' : 'running', createdAt: '2026-11-17T00:00:00+00:00' };
+  const state = { status, windows: [], exportReads: 0, resumes: 0, delay: 0,
+    manifest: { ...document, frames: undefined, tracks: [], complete,
+      storage: { kind: 'sqlite', availableUntil: availableUntil ?? document.frames.at(-1).time,
+        frameCount: document.frames.filter((frame) => frame.time <= (availableUntil ?? Infinity)).length, revision: 1 } } };
   await page.route('**/api/**', async (route) => {
-    const { pathname } = new URL(route.request().url());
+    const { pathname, searchParams } = new URL(route.request().url());
     if (pathname.endsWith('/api/health')) {
       await route.fulfill({ json: { ok: true, device: 'test', missingModels: [] } });
     } else if (pathname.endsWith('/api/analyses')) {
-      await route.fulfill({ json: [status] });
+      await route.fulfill(route.request().method() === 'POST'
+        ? { status: 202, json: status } : { json: [status] });
     } else if (pathname.endsWith(`/api/analyses/${FIXTURE_ID}/tracking`)) {
+      state.exportReads += 1;
       await route.fulfill({ body: tracking, contentType: 'application/json' });
+    } else if (pathname.endsWith(`/api/analyses/${FIXTURE_ID}/manifest`)) {
+      await route.fulfill(legacy ? { status: 404, json: { error: 'ancien format' } } : { json: state.manifest });
+    } else if (pathname.endsWith(`/api/analyses/${FIXTURE_ID}/frames`)) {
+      const from = Number(searchParams.get('from'));
+      const to = Number(searchParams.get('to'));
+      const available = document.frames.filter((frame) => frame.time <= state.manifest.storage.availableUntil);
+      const before = available.findLast((frame) => frame.time < from);
+      const after = available.find((frame) => frame.time > to);
+      const frames = [before, ...available.filter((frame) => frame.time >= from && frame.time <= to), after].filter(Boolean);
+      const ids = new Set(frames.flatMap((frame) => frame.objects.map((object) => object.id)));
+      ids.add(Number(searchParams.get('selected')));
+      state.windows.push({ from, to, count: frames.length });
+      if (state.delay) {
+        await new Promise((resolve) => setTimeout(resolve, state.delay));
+      }
+      await route.fulfill({ json: { from, to, frames, tracks: document.tracks.filter((track) => ids.has(track.id)) } });
+    } else if (pathname.endsWith(`/api/analyses/${FIXTURE_ID}/resume`)) {
+      state.resumes += 1;
+      status.status = 'running';
+      status.resumable = false;
+      await route.fulfill({ status: 202, json: status });
     } else if (pathname.endsWith(`/api/analyses/${FIXTURE_ID}/video`)) {
       // Lecture partielle, comme le vrai serveur : sans elle, Chrome juge la vidéo non navigable.
       const match = /bytes=(\d*)-(\d*)/.exec(route.request().headers().range ?? '');
@@ -56,6 +85,83 @@ async function mockAnalysisApi(page) {
       await route.fulfill({ status: 404, json: { error: 'inconnu' } });
     }
   });
+  return state;
+}
+
+/**
+ * Vérifie la lecture par fenêtres, l'affichage des trous et la reprise, dans Chrome réel.
+ * @param {import('playwright-core').Page} page
+ * @param {string} url
+ * @param {Function} record
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Tests du visualiseur — analyses longues
+ */
+async function testWindowedLoading(page, url, record) {
+  await page.unroute('**/api/**');
+  const full = await mockAnalysisApi(page, { long: true });
+  await page.goto(`${url}visualizer.html?analyse=${FIXTURE_ID}`);
+  await page.waitForFunction(() => window.__matchVisualizer?.snapshot().webgpu && window.__matchVisualizer?.store?.frames.length);
+  full.delay = 180;
+  const pending = await seekToFrame(page, 750);
+  record('Visualiseur : déplacement éloigné sans conserver les anciennes annotations',
+    pending.objects.length === 0 || pending.analysedTime >= 29.9 ? 'ok' : 'échec',
+    `${pending.objects.length} annotations, image analysée ${pending.analysedTime}, lecteur ${pending.currentTime.toFixed(2)} s`);
+  await page.waitForFunction(() => window.__matchVisualizer.snapshot().sampleTime >= 30
+    && window.__matchVisualizer.snapshot().objects.length > 0);
+  const distant = await page.evaluate(() => window.__matchVisualizer.snapshot());
+  record('Visualiseur : lecture par fenêtres, sans export complet, après déplacement à 30 s',
+    full.exportReads === 0 && full.windows.length >= 2 && distant.loadedFrames <= 215 && distant.window.from >= 25 ? 'ok' : 'échec',
+    `${distant.loadedFrames} images chargées, ${full.windows.length} requêtes de fenêtres`);
+  await seekToFrame(page, 450);
+  await seekToFrame(page, 100);
+  await page.waitForFunction(() => window.__matchVisualizer.snapshot().window?.to < 20
+    && window.__matchVisualizer.snapshot().objects.length > 0);
+  record('Visualiseur : déplacement rapide aller-retour, données du dernier instant demandé',
+    await page.evaluate(() => window.__matchVisualizer.snapshot().window.to < 20) ? 'ok' : 'échec');
+
+  await page.unroute('**/api/**');
+  const partial = await mockAnalysisApi(page, { long: true, complete: false, availableUntil: 12 });
+  await page.goto(`${url}visualizer.html?analyse=${FIXTURE_ID}`);
+  await page.waitForFunction(() => window.__matchVisualizer?.snapshot().webgpu && window.__matchVisualizer.store?.frames.length);
+  await seekToFrame(page, 650);
+  const unavailable = await page.evaluate(() => window.__matchVisualizer.snapshot());
+  record('Visualiseur : analyse incomplète signalée, aucune position inventée dans la partie future',
+    unavailable.objects.length === 0 && /incomplète/.test(await page.textContent('#tracking-availability')) ? 'ok' : 'échec');
+  partial.status.status = 'interrupted';
+  partial.status.resumable = true;
+  await page.evaluate((id) => window.__matchVisualizer.openAnalysis(id, { keepVideo: true }), FIXTURE_ID);
+  await page.waitForSelector('#resume-analysis', { state: 'visible' });
+  await page.click('#resume-analysis');
+  partial.manifest.complete = true;
+  partial.manifest.storage.availableUntil = 35.92;
+  partial.manifest.storage.revision += 1;
+  partial.status.status = 'done';
+  await page.waitForFunction(() => window.__matchVisualizer.snapshot().complete
+    && window.__matchVisualizer.snapshot().objects.length > 0, null, { timeout: 10000 });
+  record('Visualiseur : reprise explicite et chargement des nouveaux segments sans recharger la vidéo',
+    partial.resumes === 1 && partial.exportReads === 0 && /terminée/.test(await page.textContent('#tracking-availability')) ? 'ok' : 'échec');
+
+  await page.unroute('**/api/**');
+  const upload = await mockAnalysisApi(page, { complete: false, availableUntil: 2 });
+  await page.locator('#upload-input').setInputFiles(path.join(FIXTURE_DIR, 'match-synthetique.webm'));
+  await page.waitForFunction(() => window.__matchVisualizer.store?.complete === false
+    && window.__matchVisualizer.store?.frames.length > 0
+    && document.getElementById('match-video').src.startsWith('blob:'));
+  record('Visualiseur : le téléversement ouvre automatiquement les premiers segments disponibles',
+    upload.exportReads === 0 && upload.windows.length > 0 ? 'ok' : 'échec');
+  upload.manifest.complete = true;
+  upload.manifest.storage.availableUntil = 3.92;
+  upload.manifest.storage.revision += 1;
+  upload.status.status = 'done';
+  await page.waitForFunction(() => window.__matchVisualizer.store?.complete === true, null, { timeout: 10000 });
+
+  await page.unroute('**/api/**');
+  const legacy = await mockAnalysisApi(page, { legacy: true });
+  await page.goto(`${url}visualizer.html?analyse=${FIXTURE_ID}`);
+  await page.waitForFunction(() => window.__matchVisualizer?.snapshot().webgpu && window.__matchVisualizer.store?.frames.length);
+  record('Visualiseur : anciennes analyses JSON encore lisibles',
+    legacy.exportReads === 1 && (await page.evaluate(() => window.__matchVisualizer.snapshot())).window === null ? 'ok' : 'échec');
 }
 
 /**
@@ -344,6 +450,7 @@ export async function testMatchVisualizer(browser, url, record, recordCanvasCont
       `panneau en (${Math.round(placed.panel.x)}, ${Math.round(placed.panel.y)})`);
 
     record('Visualiseur : aucune erreur dans la console', errors.length === 0 ? 'ok' : 'échec', errors.slice(0, 3).join(' | '));
+    await testWindowedLoading(page, url, record);
   } catch (error) {
     record('Visualiseur : scénario complet', 'échec', error.message.split('\n')[0]);
   } finally {

@@ -13,9 +13,11 @@ import unittest
 import urllib.error
 import urllib.request
 from pathlib import Path
+from unittest.mock import patch
 
 from football_analysis.jobs import AnalysisWorker, JobStore
 from football_analysis.server import VisualizerServer, parse_range
+from football_analysis.chunk_storage import ChunkStore
 
 VIDEO_BYTES = bytes(range(256)) * 40
 
@@ -63,6 +65,7 @@ class ServerTest(unittest.TestCase):
         root = Path(self.directory.name)
         (root / "src").mkdir()
         (root / "src" / "app.js").write_text("export {};", encoding="utf-8")
+        (root / "src" / "window.mjs").write_bytes(b"export {};\n")
         for name in ("visualizer.html", "index.html", "sw.js", "ATTRIBUTION.md"):
             (root / name).write_text("<!doctype html>", encoding="utf-8")
         self.store = JobStore(root / "jobs")
@@ -166,6 +169,8 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(self.request("/visualizer.html")[0], 200)
         status, headers, _ = self.request("/src/app.js")
         self.assertEqual((status, headers["Content-Type"]), (200, "text/javascript; charset=utf-8"))
+        status, headers, _ = self.request("/src/window.mjs")
+        self.assertEqual((status, headers["Content-Type"]), (200, "text/javascript; charset=utf-8"))
         for path in ("/index.html", "/sw.js", "/ATTRIBUTION.md", "/src/../ATTRIBUTION.md", "/jobs/x", "/api/analyses/../x"):
             self.assertEqual(self.request(path)[0], 404, path)
 
@@ -179,6 +184,44 @@ class ServerTest(unittest.TestCase):
         self.assertEqual(self.request("/api/analyses/20260101-000000-abcdef")[0], 404)
         self.assertEqual(self.request("/api/analyses/..%2F..%2Fsecret")[0], 404)
 
+    def test_incremental_manifest_window_incomplete_export_and_resume(self):
+        """Les résultats partiels sont lisibles ; l'export complet et la reprise sont explicites.
+
+        @responsable Bilel Khlif
+        @date 2026-11-23
+        @role Tests de l'analyse vidéo — API incrémentale
+        """
+        job_id, source = self.store.create("long.mp4", ".mp4")
+        source.write_bytes(VIDEO_BYTES)
+        fixture = Path(__file__).resolve().parents[2] / "tests/fixtures/visualizer/match-synthetique.tracking.json"
+        document = json.loads(fixture.read_bytes())
+        header = {key: document[key] for key in ("format", "version", "source", "analysis", "pitch")}
+        with ChunkStore(self.store.database(job_id), header) as database:
+            database.commit_raw(0, document["frames"][:20], [], {"seq": 0})
+            database.publish(0, document["frames"][:20])
+            self.store.update(job_id, status="running", video={"fps": 25})
+            status, headers, body = self.request(f"/api/analyses/{job_id}/manifest")
+            self.assertEqual(status, 200)
+            self.assertEqual(headers["Cache-Control"], "no-store")
+            self.assertFalse(json.loads(body)["complete"])
+            self.assertEqual(json.loads(body)["storage"]["frameCount"], 20)
+            status, _, body = self.request(f"/api/analyses/{job_id}/frames?from=0.5&to=1&selected=7")
+            self.assertEqual(status, 200)
+            self.assertGreater(len(json.loads(body)["frames"]), 0)
+            self.assertEqual(self.request(f"/api/analyses/{job_id}/frames?from=0&to=31")[0], 400)
+            self.assertEqual(self.request(f"/api/analyses/{job_id}/frames?from=nan&to=2")[0], 400)
+            self.assertEqual(self.request(f"/api/analyses/{job_id}/tracking")[0], 409)
+            self.assertEqual(self.request(f"/api/analyses/{job_id}/resume", data=b"", method="POST")[0], 409)
+            self.store.recover()
+            self.assertEqual(self.store.get(job_id)["status"], "interrupted")
+            with patch.object(self.server.worker, "submit") as submit:
+                self.assertEqual(self.request(f"/api/analyses/{job_id}/resume", data=b"", method="POST")[0], 202)
+                submit.assert_called_once_with(job_id)
+            database.finish(header, {"teams": document["teams"], "tracks": document["tracks"]})
+            status, _, body = self.request(f"/api/analyses/{job_id}/tracking")
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(body)["frames"], document["frames"][:20])
+
 
 class RecoveryTest(unittest.TestCase):
     """Reprise des travaux après un arrêt du serveur.
@@ -187,6 +230,21 @@ class RecoveryTest(unittest.TestCase):
     @date 2026-11-17
     @role Tests de l'analyse vidéo — serveur
     """
+
+    def test_same_job_cannot_be_submitted_twice(self):
+        """Deux demandes de reprise ne créent pas deux tâches GPU pour la même analyse.
+
+        @responsable Bilel Khlif
+        @date 2026-11-23
+        @role Tests de l'analyse vidéo — file sans doublon
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            store = JobStore(Path(directory))
+            job_id, _ = store.create("a.mp4", ".mp4")
+            worker = AnalysisWorker(store, fake_analyse)
+            self.assertTrue(worker.submit(job_id))
+            self.assertFalse(worker.submit(job_id))
+            self.assertEqual(worker.jobs.qsize(), 1)
 
     def test_queued_upload_survives_a_restart(self):
         """En file et vidéo vérifiée : relancé ; en cours ou inachevé : déclaré interrompu.

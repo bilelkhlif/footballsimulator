@@ -1,0 +1,822 @@
+{
+  "date": "2026-11-23",
+  "baselineCommit": "1734b8b85aa403a763a43eb430ca28c4e1c8091c",
+  "metricDefinitions": {
+    "analysedFramesPerSecond": "Images analysées divisées par le temps de l'étape images, hors modèles et équipes.",
+    "pipelineFramesPerSecond": "Images analysées divisées par la somme modèles + images + équipes.",
+    "endToEndFramesPerSecond": "Ancien nom présent dans les passages enregistrés ; même périmètre modèles + images + équipes. Le code final utilise pipelineFramesPerSecond.",
+    "processingSeconds": "Somme modèles + images + équipes ; hors lancement de Python, empreintes initiales, mesures finales et export facultatif.",
+    "peakRamMb": "Pic de RSS échantillonné du processus, en Mio.",
+    "peakGpuMb": "Maximum alloué par PyTorch, en Mio ; pas la mémoire totale du pilote.",
+    "storageSynthetic": "Génération et stockage sans modèle ; aucune mesure de précision ou de débit d'inférence football."
+  },
+  "hardware": {
+    "gpu": "NVIDIA GeForce RTX 2050",
+    "gpuMemoryMiB": 4096
+  },
+  "realPipelineRuns": [
+    {
+      "name": "roboflow-dfl-573e61_0",
+      "sourceSha256": "ed1038048d56e86c2eac93394344aadcd45df26a01e158c5dd55cd6409104685",
+      "baselineMeasurementDate": "2026-11-23",
+      "baselineProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.87,
+          "frames": 150.67,
+          "teams": 69.09
+        },
+        "videoSeconds": 30.0,
+        "processingSeconds": 221.63,
+        "slowdown": 7.39,
+        "analysedFrames": 375,
+        "analysedFramesPerSecond": 2.49,
+        "peakRamMb": 2636,
+        "peakGpuMb": 627
+      },
+      "candidateProcessing": {
+        "analysedFrames": 375,
+        "analysedFramesPerSecond": 2.83,
+        "device": "cuda:0",
+        "endToEndFramesPerSecond": 1.94,
+        "peakGpuMb": 627,
+        "peakRamMb": 2643,
+        "processingSeconds": 193.57,
+        "seconds": {
+          "frames": 132.56,
+          "models": 1.48,
+          "teams": 59.53
+        },
+        "slowdown": 6.45,
+        "videoFramesPerSecond": 25.0,
+        "videoSeconds": 30.0
+      },
+      "baselineResultBytes": 1453447,
+      "candidateDatabaseBytes": 1196032,
+      "baselineAudit": {
+        "labelled": 61,
+        "correct": 61,
+        "wrong": 0,
+        "unknown": 0,
+        "excluded": 2,
+        "permutation": 0
+      },
+      "candidateAuditWithExactBoxMatching": {
+        "labelled": 61,
+        "correct": 61,
+        "wrong": 0,
+        "unknown": 0,
+        "excluded": 2,
+        "permutation": 0
+      },
+      "unmatchedAuditBoxes": 0,
+      "sameSourceIndicesAndTimes": true,
+      "pyavPtsComparedFrames": 375,
+      "maxTimestampDifferenceToPyAvSeconds": 0.0,
+      "cutsSeconds": [],
+      "constantFrameRate": true,
+      "timestamps": "container",
+      "baselineTracks": 33,
+      "candidateTracks": 33,
+      "changedFramesOutsideTeamAndDistance": 0
+    },
+    {
+      "name": "montage-coupures-2e57b9",
+      "sourceSha256": "060446fcad6885348398dd95a1b8486c270234335dae3bf2026b93e141d100b6",
+      "baselineMeasurementDate": "2026-11-17",
+      "baselineProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.64,
+          "frames": 120.77,
+          "teams": 74.06
+        },
+        "videoSeconds": 24.0,
+        "processingSeconds": 196.46,
+        "slowdown": 8.19,
+        "analysedFrames": 300,
+        "analysedFramesPerSecond": 2.48,
+        "peakRamMb": 2624,
+        "peakGpuMb": 627
+      },
+      "candidateProcessing": {
+        "analysedFrames": 300,
+        "analysedFramesPerSecond": 2.47,
+        "device": "cuda:0",
+        "endToEndFramesPerSecond": 1.55,
+        "peakGpuMb": 627,
+        "peakRamMb": 2643,
+        "processingSeconds": 193.14,
+        "seconds": {
+          "frames": 121.25,
+          "models": 1.98,
+          "teams": 69.91
+        },
+        "slowdown": 8.05,
+        "videoFramesPerSecond": 25.0,
+        "videoSeconds": 24.0
+      },
+      "baselineResultBytes": 1002734,
+      "candidateDatabaseBytes": 1687552,
+      "baselineAudit": {
+        "labelled": 51,
+        "correct": 51,
+        "wrong": 0,
+        "unknown": 0,
+        "excluded": 2,
+        "permutation": 1
+      },
+      "candidateAuditWithExactBoxMatching": {
+        "labelled": 51,
+        "correct": 51,
+        "wrong": 0,
+        "unknown": 0,
+        "excluded": 2,
+        "permutation": 1
+      },
+      "unmatchedAuditBoxes": 0,
+      "sameSourceIndicesAndTimes": true,
+      "pyavPtsComparedFrames": 300,
+      "maxTimestampDifferenceToPyAvSeconds": 0.0,
+      "cutsSeconds": [
+        8.0,
+        16.0
+      ],
+      "constantFrameRate": true,
+      "timestamps": "container",
+      "baselineTracks": 73,
+      "candidateTracks": 73
+    },
+    {
+      "name": "test-vfr-2e57b9",
+      "sourceSha256": "8467131f8f51f103e2593958fd2fb55504fad34758e790bde135f71221d18a08",
+      "baselineMeasurementDate": "2026-11-17",
+      "baselineProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.76,
+          "frames": 76.02,
+          "teams": 57.79
+        },
+        "videoSeconds": 10.021,
+        "processingSeconds": 135.58,
+        "slowdown": 13.53,
+        "analysedFrames": 167,
+        "analysedFramesPerSecond": 2.2,
+        "peakRamMb": 2640,
+        "peakGpuMb": 627
+      },
+      "candidateProcessing": {
+        "analysedFrames": 167,
+        "analysedFramesPerSecond": 2.55,
+        "device": "cuda:0",
+        "endToEndFramesPerSecond": 1.37,
+        "peakGpuMb": 627,
+        "peakRamMb": 2665,
+        "processingSeconds": 121.98,
+        "seconds": {
+          "frames": 65.43,
+          "models": 1.58,
+          "teams": 54.97
+        },
+        "slowdown": 12.17,
+        "videoFramesPerSecond": 16.437,
+        "videoSeconds": 10.021
+      },
+      "baselineResultBytes": 637094,
+      "candidateDatabaseBytes": 724992,
+      "baselineAudit": {
+        "labelled": 41,
+        "correct": 37,
+        "wrong": 0,
+        "unknown": 4,
+        "excluded": 0,
+        "permutation": 1
+      },
+      "candidateAuditWithExactBoxMatching": {
+        "labelled": 41,
+        "correct": 37,
+        "wrong": 0,
+        "unknown": 4,
+        "excluded": 0,
+        "permutation": 1
+      },
+      "unmatchedAuditBoxes": 0,
+      "sameSourceIndicesAndTimes": true,
+      "pyavPtsComparedFrames": 167,
+      "maxTimestampDifferenceToPyAvSeconds": 0.0,
+      "cutsSeconds": [],
+      "constantFrameRate": false,
+      "timestamps": "container",
+      "baselineTracks": 32,
+      "candidateTracks": 26
+    }
+  ],
+  "storageSynthetic": [
+    {
+      "kind": "synthetic-storage-only",
+      "mode": "json",
+      "videoSeconds": 180,
+      "analysedFrames": 2250,
+      "sourceFps": 25,
+      "analysisFps": 12.5,
+      "wallSeconds": 0.575,
+      "initialRamMb": 28.87,
+      "peakRamMb": 74.8,
+      "outputBytes": 7691610
+    },
+    {
+      "kind": "synthetic-storage-only",
+      "mode": "json",
+      "videoSeconds": 5400,
+      "analysedFrames": 67500,
+      "sourceFps": 25,
+      "analysisFps": 12.5,
+      "wallSeconds": 24.276,
+      "initialRamMb": 28.92,
+      "peakRamMb": 1279.6,
+      "outputBytes": 230901941
+    },
+    {
+      "kind": "synthetic-storage-only",
+      "mode": "sqlite",
+      "videoSeconds": 180,
+      "analysedFrames": 2250,
+      "sourceFps": 25,
+      "analysisFps": 12.5,
+      "wallSeconds": 3.054,
+      "initialRamMb": 29.37,
+      "peakRamMb": 41.38,
+      "outputBytes": 2801664
+    },
+    {
+      "kind": "synthetic-storage-only",
+      "mode": "sqlite",
+      "videoSeconds": 5400,
+      "analysedFrames": 67500,
+      "sourceFps": 25,
+      "analysisFps": 12.5,
+      "wallSeconds": 128.741,
+      "initialRamMb": 28.98,
+      "peakRamMb": 49.6,
+      "outputBytes": 82665472
+    }
+  ],
+  "teamAuditFrozenTracks": {
+    "kind": "real-video-classification-on-frozen-tracks",
+    "date": "2026-11-23",
+    "annotationsSha256": "836d3b4ebe67b5133417c87ba60a64248eb8234decfd649866c76049fec098fa",
+    "videos": [
+      {
+        "name": "roboflow-dfl-2e57b9_0",
+        "sourceSha256": "7788719b32b944e42d8f1024fb4802f681bc2053d6301218a5bff6705b549f96",
+        "baseline": {
+          "labelled": 59,
+          "correct": 57,
+          "wrong": 2,
+          "unknown": 0,
+          "excluded": 2,
+          "permutation": 0
+        },
+        "candidate": {
+          "labelled": 59,
+          "correct": 57,
+          "wrong": 2,
+          "unknown": 0,
+          "excluded": 2,
+          "permutation": 0
+        },
+        "classificationSeconds": 69.33
+      },
+      {
+        "name": "roboflow-dfl-2e57b9_0-720p30",
+        "sourceSha256": "b260692f030cf1a27ef4a7792af6fa10dc85bc885670eada969f0c9354290e78",
+        "baseline": {
+          "labelled": 58,
+          "correct": 52,
+          "wrong": 0,
+          "unknown": 6,
+          "excluded": 1,
+          "permutation": 0
+        },
+        "candidate": {
+          "labelled": 58,
+          "correct": 52,
+          "wrong": 0,
+          "unknown": 6,
+          "excluded": 1,
+          "permutation": 0
+        },
+        "classificationSeconds": 15.37
+      },
+      {
+        "name": "test-vfr-2e57b9",
+        "sourceSha256": "8467131f8f51f103e2593958fd2fb55504fad34758e790bde135f71221d18a08",
+        "baseline": {
+          "labelled": 41,
+          "correct": 37,
+          "wrong": 0,
+          "unknown": 4,
+          "excluded": 0,
+          "permutation": 1
+        },
+        "candidate": {
+          "labelled": 41,
+          "correct": 37,
+          "wrong": 0,
+          "unknown": 4,
+          "excluded": 0,
+          "permutation": 1
+        },
+        "classificationSeconds": 11.51
+      },
+      {
+        "name": "montage-coupures-2e57b9",
+        "sourceSha256": "060446fcad6885348398dd95a1b8486c270234335dae3bf2026b93e141d100b6",
+        "baseline": {
+          "labelled": 51,
+          "correct": 51,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 2,
+          "permutation": 1
+        },
+        "candidate": {
+          "labelled": 51,
+          "correct": 51,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 2,
+          "permutation": 1
+        },
+        "classificationSeconds": 22.44
+      },
+      {
+        "name": "roboflow-dfl-573e61_0",
+        "sourceSha256": "ed1038048d56e86c2eac93394344aadcd45df26a01e158c5dd55cd6409104685",
+        "baseline": {
+          "labelled": 61,
+          "correct": 61,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 2,
+          "permutation": 0
+        },
+        "candidate": {
+          "labelled": 61,
+          "correct": 61,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 2,
+          "permutation": 0
+        },
+        "classificationSeconds": 13.62
+      },
+      {
+        "name": "roboflow-dfl-0bfacc_0",
+        "sourceSha256": "43d342c78fbb40e522f48ab378fbee83b5b880d35c056836e0d493ec2b15ee51",
+        "baseline": {
+          "labelled": 58,
+          "correct": 58,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 1,
+          "permutation": 1
+        },
+        "candidate": {
+          "labelled": 58,
+          "correct": 58,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 1,
+          "permutation": 1
+        },
+        "classificationSeconds": 17.29
+      },
+      {
+        "name": "roboflow-dfl-121364_0",
+        "sourceSha256": "4f3ef60e27f925f2462b725c85fc30e983e27345ce52dad158148e265011f842",
+        "baseline": {
+          "labelled": 59,
+          "correct": 55,
+          "wrong": 1,
+          "unknown": 3,
+          "excluded": 0,
+          "permutation": 1
+        },
+        "candidate": {
+          "labelled": 59,
+          "correct": 55,
+          "wrong": 1,
+          "unknown": 3,
+          "excluded": 0,
+          "permutation": 1
+        },
+        "classificationSeconds": 15.35
+      },
+      {
+        "name": "roboflow-dfl-08fd33_0",
+        "sourceSha256": "07886454cec2e859edb69b1bef5a3013fed54b887d9b8c5d563619bb511c1766",
+        "baseline": {
+          "labelled": 59,
+          "correct": 59,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 0,
+          "permutation": 1
+        },
+        "candidate": {
+          "labelled": 59,
+          "correct": 59,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 0,
+          "permutation": 1
+        },
+        "classificationSeconds": 13.58
+      }
+    ],
+    "baselineTotals": {
+      "labelled": 446,
+      "correct": 430,
+      "wrong": 3,
+      "unknown": 13
+    },
+    "candidateTotals": {
+      "labelled": 446,
+      "correct": 430,
+      "wrong": 3,
+      "unknown": 13
+    },
+    "strictPerClipGateFailures": [],
+    "fitSeconds": 30.0
+  },
+  "teamAuditShortWarmupExperiment": {
+    "kind": "real-video-classification-on-frozen-tracks",
+    "date": "2026-11-23",
+    "fitSeconds": 10.0,
+    "annotationsSha256": "836d3b4ebe67b5133417c87ba60a64248eb8234decfd649866c76049fec098fa",
+    "videos": [
+      {
+        "name": "roboflow-dfl-2e57b9_0",
+        "sourceSha256": "7788719b32b944e42d8f1024fb4802f681bc2053d6301218a5bff6705b549f96",
+        "baseline": {
+          "labelled": 59,
+          "correct": 57,
+          "wrong": 2,
+          "unknown": 0,
+          "excluded": 2,
+          "permutation": 0
+        },
+        "candidate": {
+          "labelled": 59,
+          "correct": 57,
+          "wrong": 0,
+          "unknown": 2,
+          "excluded": 2,
+          "permutation": 1
+        },
+        "classificationSeconds": 70.71
+      },
+      {
+        "name": "roboflow-dfl-2e57b9_0-720p30",
+        "sourceSha256": "b260692f030cf1a27ef4a7792af6fa10dc85bc885670eada969f0c9354290e78",
+        "baseline": {
+          "labelled": 58,
+          "correct": 52,
+          "wrong": 0,
+          "unknown": 6,
+          "excluded": 1,
+          "permutation": 0
+        },
+        "candidate": {
+          "labelled": 58,
+          "correct": 54,
+          "wrong": 0,
+          "unknown": 4,
+          "excluded": 1,
+          "permutation": 0
+        },
+        "classificationSeconds": 16.99
+      },
+      {
+        "name": "test-vfr-2e57b9",
+        "sourceSha256": "8467131f8f51f103e2593958fd2fb55504fad34758e790bde135f71221d18a08",
+        "baseline": {
+          "labelled": 41,
+          "correct": 37,
+          "wrong": 0,
+          "unknown": 4,
+          "excluded": 0,
+          "permutation": 1
+        },
+        "candidate": {
+          "labelled": 41,
+          "correct": 37,
+          "wrong": 0,
+          "unknown": 4,
+          "excluded": 0,
+          "permutation": 1
+        },
+        "classificationSeconds": 9.25
+      },
+      {
+        "name": "montage-coupures-2e57b9",
+        "sourceSha256": "060446fcad6885348398dd95a1b8486c270234335dae3bf2026b93e141d100b6",
+        "baseline": {
+          "labelled": 51,
+          "correct": 51,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 2,
+          "permutation": 1
+        },
+        "candidate": {
+          "labelled": 51,
+          "correct": 51,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 2,
+          "permutation": 0
+        },
+        "classificationSeconds": 27.6
+      },
+      {
+        "name": "roboflow-dfl-573e61_0",
+        "sourceSha256": "ed1038048d56e86c2eac93394344aadcd45df26a01e158c5dd55cd6409104685",
+        "baseline": {
+          "labelled": 61,
+          "correct": 61,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 2,
+          "permutation": 0
+        },
+        "candidate": {
+          "labelled": 61,
+          "correct": 60,
+          "wrong": 0,
+          "unknown": 1,
+          "excluded": 2,
+          "permutation": 0
+        },
+        "classificationSeconds": 24.11
+      },
+      {
+        "name": "roboflow-dfl-0bfacc_0",
+        "sourceSha256": "43d342c78fbb40e522f48ab378fbee83b5b880d35c056836e0d493ec2b15ee51",
+        "baseline": {
+          "labelled": 58,
+          "correct": 58,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 1,
+          "permutation": 1
+        },
+        "candidate": {
+          "labelled": 58,
+          "correct": 58,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 1,
+          "permutation": 1
+        },
+        "classificationSeconds": 22.98
+      },
+      {
+        "name": "roboflow-dfl-121364_0",
+        "sourceSha256": "4f3ef60e27f925f2462b725c85fc30e983e27345ce52dad158148e265011f842",
+        "baseline": {
+          "labelled": 59,
+          "correct": 55,
+          "wrong": 1,
+          "unknown": 3,
+          "excluded": 0,
+          "permutation": 1
+        },
+        "candidate": {
+          "labelled": 59,
+          "correct": 57,
+          "wrong": 0,
+          "unknown": 2,
+          "excluded": 0,
+          "permutation": 1
+        },
+        "classificationSeconds": 22.56
+      },
+      {
+        "name": "roboflow-dfl-08fd33_0",
+        "sourceSha256": "07886454cec2e859edb69b1bef5a3013fed54b887d9b8c5d563619bb511c1766",
+        "baseline": {
+          "labelled": 59,
+          "correct": 59,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 0,
+          "permutation": 1
+        },
+        "candidate": {
+          "labelled": 59,
+          "correct": 59,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 0,
+          "permutation": 1
+        },
+        "classificationSeconds": 23.51
+      }
+    ],
+    "baselineTotals": {
+      "labelled": 446,
+      "correct": 430,
+      "wrong": 3,
+      "unknown": 13
+    },
+    "candidateTotals": {
+      "labelled": 446,
+      "correct": 433,
+      "wrong": 0,
+      "unknown": 13
+    },
+    "strictPerClipGateFailures": [
+      "roboflow-dfl-2e57b9_0",
+      "roboflow-dfl-573e61_0"
+    ],
+    "after10SecondsOnly": [
+      {
+        "name": "roboflow-dfl-2e57b9_0",
+        "baseline": {
+          "labelled": 39,
+          "correct": 39,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 1,
+          "permutation": 0
+        },
+        "candidate": {
+          "labelled": 39,
+          "correct": 37,
+          "wrong": 0,
+          "unknown": 2,
+          "excluded": 1,
+          "permutation": 1
+        }
+      },
+      {
+        "name": "roboflow-dfl-2e57b9_0-720p30",
+        "baseline": {
+          "labelled": 39,
+          "correct": 35,
+          "wrong": 0,
+          "unknown": 4,
+          "excluded": 1,
+          "permutation": 0
+        },
+        "candidate": {
+          "labelled": 39,
+          "correct": 35,
+          "wrong": 0,
+          "unknown": 4,
+          "excluded": 1,
+          "permutation": 0
+        }
+      },
+      {
+        "name": "montage-coupures-2e57b9",
+        "baseline": {
+          "labelled": 32,
+          "correct": 32,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 1,
+          "permutation": 1
+        },
+        "candidate": {
+          "labelled": 32,
+          "correct": 32,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 1,
+          "permutation": 0
+        }
+      },
+      {
+        "name": "roboflow-dfl-573e61_0",
+        "baseline": {
+          "labelled": 41,
+          "correct": 41,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 1,
+          "permutation": 0
+        },
+        "candidate": {
+          "labelled": 41,
+          "correct": 40,
+          "wrong": 0,
+          "unknown": 1,
+          "excluded": 1,
+          "permutation": 0
+        }
+      },
+      {
+        "name": "roboflow-dfl-0bfacc_0",
+        "baseline": {
+          "labelled": 39,
+          "correct": 39,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 1,
+          "permutation": 1
+        },
+        "candidate": {
+          "labelled": 39,
+          "correct": 39,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 1,
+          "permutation": 1
+        }
+      },
+      {
+        "name": "roboflow-dfl-121364_0",
+        "baseline": {
+          "labelled": 40,
+          "correct": 38,
+          "wrong": 0,
+          "unknown": 2,
+          "excluded": 0,
+          "permutation": 1
+        },
+        "candidate": {
+          "labelled": 40,
+          "correct": 38,
+          "wrong": 0,
+          "unknown": 2,
+          "excluded": 0,
+          "permutation": 1
+        }
+      },
+      {
+        "name": "roboflow-dfl-08fd33_0",
+        "baseline": {
+          "labelled": 39,
+          "correct": 39,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 0,
+          "permutation": 1
+        },
+        "candidate": {
+          "labelled": 39,
+          "correct": 39,
+          "wrong": 0,
+          "unknown": 0,
+          "excluded": 0,
+          "permutation": 1
+        }
+      }
+    ],
+    "after10SecondsTotals": {
+      "baseline": {
+        "labelled": 269,
+        "correct": 263,
+        "wrong": 0,
+        "unknown": 6
+      },
+      "candidate": {
+        "labelled": 269,
+        "correct": 260,
+        "wrong": 0,
+        "unknown": 9
+      }
+    }
+  },
+  "teamAuditAnnotationsSha256": "836d3b4ebe67b5133417c87ba60a64248eb8234decfd649866c76049fec098fa",
+  "tests": {
+    "python": {
+      "passed": 68,
+      "failed": 0
+    },
+    "node": {
+      "passed": 204,
+      "failed": 0
+    },
+    "browser": {
+      "passed": 101,
+      "skipped": 0,
+      "failed": 0,
+      "visualizerChecks": 22,
+      "arChecks": 79,
+      "playback": "Visualiseur : synchronisation en lecture (écart entre image affichée et image annotée)  (133 images peintes, 133 identiques, écart maximal 0 image(s))"
+    },
+    "firstFullBrowserAttempt": {
+      "passed": 69,
+      "skipped": 16,
+      "failed": 5
+    },
+    "serviceWorkerVersion": "0cabdc0abc04da44",
+    "serviceWorkerCheck": "passed"
+  },
+  "documentation": "docs/analyse-incrementale.md"
+}

@@ -5,6 +5,8 @@ Ce dossier analyse une vidéo de match : il détecte et suit les joueurs, les cl
 - Composants réutilisés, licences et choix : [docs/opensource-research.md](../docs/opensource-research.md).
 - Architecture, format des données et résultats mesurés : [docs/visualiseur-match.md](../docs/visualiseur-match.md).
 - Équipes sous soleil et ombre : [recherche et variantes comparées](../docs/equipes-lumiere-recherche.md).
+- Segments, reprise, mémoire et migration `.mjs` : [analyse incrémentale](../docs/analyse-incrementale.md).
+- Références sportives étudiées : [recherche et licences](../docs/sports-analytics-references.md).
 
 L'application AR (index.html) n'en dépend pas : elle reste une PWA statique, publiée sur GitHub Pages. Le visualiseur, lui, a besoin de ce serveur, sur l'ordinateur qui fait l'analyse.
 
@@ -40,12 +42,14 @@ Sans GPU NVIDIA, remplacez `cu121` par `cpu`. La dernière commande télécharge
 # Visualiseur de match : http://127.0.0.1:8765/visualizer.html (calcul : cuda:0)
 ```
 
-Téléversez une vidéo (MP4, WebM, MOV, MKV…) : l'analyse se fait en arrière-plan, sa progression s'affiche, puis la vidéo s'ouvre avec ses annotations et le terrain 3D. Les analyses terminées restent dans la liste « Analyses précédentes ». Le navigateur doit pouvoir lire la vidéo : H.264 ou VP9 conviennent à Chrome et Edge.
+Téléversez une vidéo (MP4, WebM, MOV, MKV…) : l'analyse se fait en arrière-plan et les premiers segments disponibles s'ouvrent automatiquement. Le terrain 3D reste superposé à la vidéo. La page indique la partie déjà analysée ; les équipes arrivent dans une seconde passe. Les analyses interrompues restent consultables et disposent d'un bouton de reprise. Le navigateur doit pouvoir lire la vidéo : H.264 ou VP9 conviennent à Chrome et Edge.
 
 **Ligne de commande.** La même analyse, sans interface :
 
 ```powershell
-.venv\Scripts\python -m football_analysis analyse match.mp4 -o match.tracking.json
+.venv\Scripts\python -m football_analysis analyse match.mp4 -o match.tracking.sqlite --chunk-seconds 10
+# Rejouer la même commande reprend la base avec les mêmes options.
+# Une sortie .json conserve aussi une base .sqlite et exporte le document séquentiellement.
 ```
 
 | Option | Effet |
@@ -55,6 +59,9 @@ Téléversez une vidéo (MP4, WebM, MOV, MKV…) : l'analyse se fait en arrière
 | `--no-ball-model` | Sans le modèle dédié au ballon : plus rapide, ballon moins souvent trouvé |
 | `--device cpu` | Force le processeur |
 | `--max-seconds 20` | N'analyse que le début |
+| `--chunk-seconds 10` | Segments de 0,5 à 30 s ; mémoire indépendante de la durée totale |
+| `--team-fit-seconds 30` | Réserve initiale des équipes sur 1 à 120 s, bornée à 512 images de maillots |
+| `serve --jobs data/jobs-test` | Dossier distinct pour un essai isolé, sans relancer les anciennes vidéos en file |
 
 ## Ce qui est mesuré, et ce qui ne l'est pas
 
@@ -74,6 +81,6 @@ Quand la calibration échoue, aucune position n'est donnée sur le terrain pour 
 .venv\Scripts\python -m unittest discover -s tests
 ```
 
-55 tests, sans GPU ni poids : le contrat de données, la calibration (homographies synthétiques, erreur hors échantillon), l'horodatage à cadence variable, les équipes, le cadrage des maillots, les lots d'extraction, le chargement évité sur les vidéos trop pauvres en images de joueurs, le suivi, les coupures de plan, les mesures, le protocole d'audit, le serveur et la documentation du code. Les tests de l'interface sont dans `npm test` (tests/visualizer-tests.mjs et tests/unit/visualizer.test.mjs).
+Les tests fonctionnent sans GPU ni poids. Ils couvrent le contrat, les modèles simulés, les maillots, les transactions, les interruptions et reprises sans doublon, les coupures, les horodatages VFR, les bornes mémoire, les mesures et l'API. Les tests du navigateur sont dans `npm test`, avec lecture par fenêtres et interactions du terrain 3D. Les [résultats datés](../docs/validation-incrementale-2026-11-23.json) distinguent ces fixtures des contrôles sur vidéos réelles.
 
 L'[audit interne des équipes](validation/README.md) conserve les annotations textuelles de 446 observations lisibles, leurs vidéos de référence et un script de comparaison avant/après. Les vidéos et les résultats complets restent dans `data/`, hors du dépôt.

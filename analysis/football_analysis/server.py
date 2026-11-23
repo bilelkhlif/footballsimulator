@@ -9,6 +9,9 @@ API (JSON) :
 - GET  /api/analyses : liste des analyses ;
 - GET  /api/analyses/<id> : état et progression d'une analyse ;
 - GET  /api/analyses/<id>/tracking : document de suivi (contract.py) ;
+- GET  /api/analyses/<id>/manifest : en-tête et disponibilité, sans images ;
+- GET  /api/analyses/<id>/frames?from=0&to=17 : fenêtre horodatée de trente secondes au plus ;
+- POST /api/analyses/<id>/resume : reprise explicite d'une analyse interrompue ;
 - GET  /api/analyses/<id>/video : vidéo source, avec lecture partielle (Range) pour l'avance rapide.
 
 Pages : visualizer.html et les dossiers src/ et assets/ du dépôt. Le serveur ne sert ni index.html,
@@ -25,6 +28,7 @@ import json
 import mimetypes
 import re
 import shutil
+import sqlite3
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -32,6 +36,7 @@ from typing import Any, Callable
 from urllib.parse import parse_qs, unquote, urlsplit
 
 from .jobs import AnalysisWorker, JobStore
+from .chunk_storage import ChunkStore
 
 #: Extensions vidéo acceptées et leur type MIME.
 VIDEO_TYPES = {
@@ -42,6 +47,7 @@ VIDEO_TYPES = {
 #: Types des fichiers statiques : fixés ici, car Windows associe parfois .js à text/plain.
 STATIC_TYPES = {
     ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
+    ".mjs": "text/javascript; charset=utf-8",
     ".css": "text/css; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml",
     ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp", ".woff2": "font/woff2",
 }
@@ -52,7 +58,7 @@ STATIC_PREFIXES = ("/visualizer.html", "/src/", "/assets/")
 #: Taille maximale d'une vidéo téléversée, en octets (4 Go).
 MAX_UPLOAD_BYTES = 4 * 2 ** 30
 
-ROUTE = re.compile(r"^/api/analyses/(?P<id>[^/]+)(?:/(?P<part>tracking|video))?$")
+ROUTE = re.compile(r"^/api/analyses/(?P<id>[^/]+)(?:/(?P<part>tracking|video|manifest|frames|resume))?$")
 
 
 def parse_range(header: str | None, size: int) -> tuple[int, int] | None:
@@ -252,10 +258,57 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif match["part"] == "video":
             source = store.source(match["id"])
             self.send_file(source, VIDEO_TYPES.get(source.suffix.lower(), "application/octet-stream"), allow_range=True)
+        elif match["part"] in ("manifest", "frames", "tracking") and store.database(match["id"]).is_file():
+            self.get_chunked(match["id"], match["part"])
+        elif match["part"] != "tracking":
+            self.send_error_json(HTTPStatus.NOT_FOUND, "Lecture par fenêtres indisponible pour cette ancienne analyse.")
         elif status["status"] != "done" or not store.tracking(match["id"]).is_file():
             self.send_error_json(HTTPStatus.CONFLICT, "Analyse pas encore terminée.")
         else:
             self.send_file(store.tracking(match["id"]), "application/json; charset=utf-8")
+
+    def get_chunked(self, job_id: str, part: str) -> None:
+        """Sert un manifeste, une fenêtre bornée ou un export JSON séquentiel.
+
+        @responsable Bilel Khlif
+        @date 2026-11-23
+        @role Analyse vidéo — API des analyses longues
+        """
+        try:
+            database = ChunkStore(self.server.store.database(job_id))
+        except (ValueError, sqlite3.DatabaseError):
+            self.send_error_json(HTTPStatus.CONFLICT, "Résultats en cours d'initialisation ou base incompatible.")
+            return
+        with database:
+            if part == "manifest":
+                self.send_json(database.manifest())
+            elif part == "frames":
+                query = parse_qs(urlsplit(self.path).query)
+                try:
+                    start, end = float(query["from"][0]), float(query["to"][0])
+                    selected = int(query["selected"][0]) if "selected" in query else None
+                    if selected is not None and selected < 1:
+                        raise ValueError("Identifiant de sélection invalide.")
+                    payload = database.window(start, end, selected)
+                except (KeyError, ValueError, OverflowError) as error:
+                    self.send_error_json(HTTPStatus.BAD_REQUEST, f"Fenêtre invalide : {error}")
+                    return
+                self.send_json(payload)
+            elif not database.manifest()["complete"]:
+                self.send_error_json(HTTPStatus.CONFLICT, "Analyse pas encore terminée ; les fenêtres publiées restent disponibles.")
+            else:
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Connection", "close")
+                self.end_headers()
+                if self.command == "HEAD":
+                    return
+                try:
+                    for block in database.iter_document():
+                        self.wfile.write(block)
+                except (ConnectionResetError, BrokenPipeError, ConnectionAbortedError):
+                    return
 
     def get_static(self, path: str) -> None:
         """Sert une page ou un module du visualiseur, sans sortir des dossiers autorisés.
@@ -281,6 +334,19 @@ class RequestHandler(BaseHTTPRequestHandler):
         @role Analyse vidéo — serveur (téléversement)
         """
         parts = urlsplit(self.path)
+        match = ROUTE.match(parts.path)
+        if match and match["part"] == "resume":
+            status = self.server.store.get(match["id"])
+            if status is None:
+                self.send_error_json(HTTPStatus.NOT_FOUND, "Analyse introuvable.")
+            elif status["status"] not in ("failed", "interrupted") or not status.get("resumable"):
+                self.send_error_json(HTTPStatus.CONFLICT, "Cette analyse ne peut pas être reprise dans son état actuel.")
+            else:
+                if self.server.worker.submit(match["id"]) is False:
+                    self.send_error_json(HTTPStatus.CONFLICT, "Cette analyse est déjà en file.")
+                else:
+                    self.send_json(self.server.store.get(match["id"]), HTTPStatus.ACCEPTED)
+            return
         if parts.path != "/api/analyses":
             self.send_error_json(HTTPStatus.NOT_FOUND, "Adresse inconnue.")
             return

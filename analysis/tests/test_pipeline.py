@@ -60,6 +60,18 @@ class FrameClockTest(unittest.TestCase):
         self.assertEqual(times, [0.0, 0.04, 0.08])
         self.assertEqual(clock.summary()["timestamps"], "frame-index")
 
+    def test_broken_vfr_timestamp_never_moves_backwards(self):
+        """Un horodatage manquant après une séquence lente conserve un temps monotone.
+
+        @responsable Bilel Khlif
+        @date 2026-11-23
+        @role Tests de l'analyse vidéo — repli d'horodatage
+        """
+        clock = FrameClock(fps=25)
+        times = [clock.tick(index, ms) for index, ms in enumerate([0, 120, 240, float("nan"), 0])]
+        self.assertEqual(times, [0, .12, .24, .27999999999999997, .31999999999999995])
+        self.assertEqual(clock.summary()["timestamps"], "frame-index")
+
 
 if __name__ == "__main__":
     unittest.main()

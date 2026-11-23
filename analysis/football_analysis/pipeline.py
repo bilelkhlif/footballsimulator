@@ -16,6 +16,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+import math
 from typing import Any, Callable
 
 import cv2
@@ -59,6 +60,8 @@ class AnalysisOptions:
     team_backbone: str = "siglip"
     max_seconds: float | None = None
     seed: int = 0
+    chunk_seconds: float = 10.0
+    team_fit_seconds: float = 30.0
 
 
 def probe_video(path: Path) -> dict[str, Any]:
@@ -243,10 +246,11 @@ class FrameClock:
         @role Analyse vidéo — lecture de la vidéo (horodatage)
         """
         candidate = position_ms / 1000.0
-        valid = candidate >= 0 and (self.last is None or candidate > self.last) and not (index > 0 and candidate == 0)
+        valid = math.isfinite(candidate) and candidate >= 0 and (self.last is None or candidate > self.last) and not (index > 0 and candidate == 0)
         if not valid:
             self.container = False
-        time = candidate if valid and self.container else index / self.fps
+        time = candidate if valid and self.container else max(index / self.fps,
+            0.0 if self.last is None else self.last + 1 / self.fps)
         if self.last is not None:
             self.worst_jitter = max(self.worst_jitter, abs(time - self.last - 1 / self.fps))
         self.last = time
@@ -262,7 +266,7 @@ class FrameClock:
         """
         return {
             "timestamps": "container" if self.container else "frame-index",
-            "constantFrameRate": self.worst_jitter <= 0.25 / self.fps,
+            "constantFrameRate": self.container and self.worst_jitter <= 0.25 / self.fps,
             "duration": None if self.last is None else round(self.last + 1 / self.fps, 3),
             "frameCount": self.count,
         }
