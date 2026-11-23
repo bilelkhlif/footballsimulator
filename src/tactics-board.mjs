@@ -20,10 +20,19 @@
 import { EventEmitter } from './events.mjs';
 import { getFormation } from './formations.mjs';
 import { computeTeamTargets } from './formation-transition.mjs';
-import { BALL_RADIUS, BOARD_LENGTH, BOARD_WIDTH, PLAYER_SIZE, TEAMS } from './config.mjs';
+import { BALL_RADIUS, BOARD_LENGTH, BOARD_WIDTH, PITCH_LENGTH, PITCH_WIDTH, PLAYER_SIZE, TEAMS } from './config.mjs';
 
 /** Demi-longueur et demi-largeur du plateau (terrain et bande de gazon), en mètres. */
 export const BOARD_HALF_EXTENTS = Object.freeze({ x: BOARD_LENGTH / 2, z: BOARD_WIDTH / 2 });
+
+/** Demi-longueur et demi-largeur du terrain, lignes de touche et de but comprises, en mètres. */
+export const PITCH_HALF_EXTENTS = Object.freeze({ x: PITCH_LENGTH / 2, z: PITCH_WIDTH / 2 });
+
+/** Tolérance au bord du terrain : un point posé sur une ligne est sur le terrain (1 mm). */
+export const LINE_TOLERANCE = 0.001;
+
+/** Distance sous laquelle deux extrémités de flèche sont confondues (doublon), en mètres (5 mm). */
+export const DUPLICATE_TOLERANCE = 0.005;
 
 /** Marge d'un joueur au bord du plateau : son socle (1,4 fois le rayon du pion) reste dessus. */
 export const PLAYER_MARGIN = PLAYER_SIZE.radius * 1.4;
@@ -53,6 +62,37 @@ export function isOnBoard(position, margin = 0) {
   return Number.isFinite(position?.x) && Number.isFinite(position?.z)
     && Math.abs(position.x) <= BOARD_HALF_EXTENTS.x - margin + EPSILON
     && Math.abs(position.z) <= BOARD_HALF_EXTENTS.z - margin + EPSILON;
+}
+
+/**
+ * Indique si un point est sur le terrain : entre les lignes de touche et de but, lignes comprises.
+ * La bande de gazon autour des lignes n'en fait pas partie.
+ * @param {{x: number, z: number}} position point dans le repère du terrain
+ * @param {number} [tolerance] marge au-delà des lignes, en mètres
+ * @returns {boolean} faux aussi pour des coordonnées non finies (NaN, infini)
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Logique métier — limites du terrain (règles des flèches)
+ */
+export function isOnPitch(position, tolerance = LINE_TOLERANCE) {
+  return Number.isFinite(position?.x) && Number.isFinite(position?.z)
+    && Math.abs(position.x) <= PITCH_HALF_EXTENTS.x + tolerance
+    && Math.abs(position.z) <= PITCH_HALF_EXTENTS.z + tolerance;
+}
+
+/**
+ * Indique si deux flèches ont le même type et le même tracé, à DUPLICATE_TOLERANCE près.
+ * @param {{kind: string, from: {x: number, z: number}, to: {x: number, z: number}}} a
+ * @param {{kind: string, from: {x: number, z: number}, to: {x: number, z: number}}} b
+ * @returns {boolean}
+ * @responsable Bilel Khlif
+ * @date 2026-11-23
+ * @role Logique métier — doublons de flèches (règles des flèches)
+ */
+export function sameArrowPath(a, b) {
+  return a.kind === b.kind
+    && Math.hypot(a.from.x - b.from.x, a.from.z - b.from.z) <= DUPLICATE_TOLERANCE
+    && Math.hypot(a.to.x - b.to.x, a.to.z - b.to.z) <= DUPLICATE_TOLERANCE;
 }
 
 /**
