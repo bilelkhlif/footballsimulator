@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/xr-session.js, sans casque ni téléphone : le navigateur (navigator.xr),
+ * Tests unitaires de src/xr-session.mjs, sans casque ni téléphone : le navigateur (navigator.xr),
  * la session WebXR et le gestionnaire XR de three.js sont remplacés par des doublures qui
  * reproduisent leur comportement documenté. Depuis le sprint 3, la session est rendue en WebGPU.
  *
@@ -7,7 +7,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ArSession, AR_ERROR_REASONS, RENDERING_APIS } from '../../src/xr-session.js';
+import { ArSession, AR_ERROR_REASONS, RENDERING_APIS } from '../../src/xr-session.mjs';
 
 /** Fonctionnalités accordées par un téléphone Android avec la liaison WebXR/WebGPU. */
 const GRANTED_FEATURES = ['local-floor', 'webgpu', 'hit-test', 'anchors', 'viewer', 'local'];
@@ -17,7 +17,7 @@ const GRANTED_FEATURES = ['local-floor', 'webgpu', 'hit-test', 'anchors', 'viewe
  * @param {{failReferenceSpace?: boolean}} [options]
  * @responsable Bilel Khlif
  * @date 2026-11-10
- * @role Tests unitaires (src/xr-session.js) — doublure
+ * @role Tests unitaires (src/xr-session.mjs) — doublure
  */
 function createFakeSession({ failReferenceSpace = false } = {}) {
   const endListeners = [];
@@ -46,7 +46,7 @@ function createFakeSession({ failReferenceSpace = false } = {}) {
  * @param {{failSetSession?: boolean, webgl?: boolean}} [options] webgl : backend WebGL (mode test)
  * @responsable Bilel Khlif
  * @date 2026-11-10
- * @role Tests unitaires (src/xr-session.js) — doublure
+ * @role Tests unitaires (src/xr-session.mjs) — doublure
  */
 function createFakeRenderer({ failSetSession = false, webgl = false } = {}) {
   const listeners = new Map();
@@ -102,7 +102,7 @@ function createFakeRenderer({ failSetSession = false, webgl = false } = {}) {
  * @param {{supported?: boolean, rejectWith?: Error}} [options]
  * @responsable Bilel Khlif
  * @date 2026-11-10
- * @role Tests unitaires (src/xr-session.js) — doublure
+ * @role Tests unitaires (src/xr-session.mjs) — doublure
  */
 function createFakeXr(session, { supported = true, rejectWith = null } = {}) {
   return {
@@ -123,7 +123,7 @@ function createFakeXr(session, { supported = true, rejectWith = null } = {}) {
  * @param {object} options options d'ArSession
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/xr-session.js) — montage du test
+ * @role Tests unitaires (src/xr-session.mjs) — montage du test
  */
 function createArSession(options) {
   return new ArSession({ hasGpuBinding: () => true, ...options });
@@ -134,7 +134,7 @@ function createArSession(options) {
  * @param {ArSession} arSession
  * @responsable Bilel Khlif
  * @date 2026-11-10
- * @role Tests unitaires (src/xr-session.js) — outil de vérification
+ * @role Tests unitaires (src/xr-session.mjs) — outil de vérification
  */
 function recordEvents(arSession) {
   const events = [];

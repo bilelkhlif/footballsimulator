@@ -1,23 +1,23 @@
 /**
- * Tests unitaires de src/commands.js (sprint 5, patron Command) : chaque commande s'exécute, s'annule
+ * Tests unitaires de src/commands.mjs (sprint 5, patron Command) : chaque commande s'exécute, s'annule
  * et se rétablit exactement ; l'historique garde, oublie et notifie comme prévu.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TacticsBoard } from '../../src/tactics-board.js';
+import { TacticsBoard } from '../../src/tactics-board.mjs';
 import {
   AddArrowCommand, ChangeFormationCommand, Command, CommandHistory, MoveBallCommand, MovePlayerCommand, ResetBoardCommand,
-} from '../../src/commands.js';
-import { DEFAULT_FORMATIONS } from '../../src/config.js';
+} from '../../src/commands.mjs';
+import { DEFAULT_FORMATIONS } from '../../src/config.mjs';
 
 /**
  * Tableau du scénario de démonstration et historique vide.
  * @returns {{board: TacticsBoard, history: CommandHistory}}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/commands.js) — montage du test
+ * @role Tests unitaires (src/commands.mjs) — montage du test
  */
 function createSetup() {
   return { board: new TacticsBoard(DEFAULT_FORMATIONS), history: new CommandHistory() };

@@ -12,8 +12,8 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { ResetBoardCommand } from './commands.js';
-import { INTERACTION_STATES, selectionLabel } from './tactical-interaction.js';
+import { ResetBoardCommand } from './commands.mjs';
+import { INTERACTION_STATES, selectionLabel } from './tactical-interaction.mjs';
 
 /** Durée d'affichage d'un retour dans le bandeau d'aide, en millisecondes. */
 export const FEEDBACK_DURATION_MS = 2500;
@@ -103,9 +103,9 @@ export function createHintController(element, {
  * Relie la barre d'outils à l'interaction, à l'historique et au tableau.
  * @param {object} options
  * @param {HTMLElement} options.root barre d'outils (#tactical-toolbar)
- * @param {import('./tactical-interaction.js').TacticalInteraction} options.interaction
- * @param {import('./commands.js').CommandHistory} options.history
- * @param {import('./tactics-board.js').TacticsBoard} options.board
+ * @param {import('./tactical-interaction.mjs').TacticalInteraction} options.interaction
+ * @param {import('./commands.mjs').CommandHistory} options.history
+ * @param {import('./tactics-board.mjs').TacticsBoard} options.board
  * @param {(feedback: {kind: string, message: string}) => void} [options.onFeedback] retour d'une action
  * @returns {{modeButtons: HTMLButtonElement[], undoButton: HTMLButtonElement,
  *   redoButton: HTMLButtonElement, resetButton: HTMLButtonElement}}

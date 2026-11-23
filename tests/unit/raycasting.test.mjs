@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/raycasting.js (sprint 5) : rayon depuis la caméra et depuis une pose WebXR,
+ * Tests unitaires de src/raycasting.mjs (sprint 5) : rayon depuis la caméra et depuis une pose WebXR,
  * sélection des joueurs et du ballon par leurs zones de sélection, plan du gazon et passage du
  * repère monde au repère du terrain, pour un terrain déplacé et tourné par son ancre.
  *
@@ -10,9 +10,9 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {
   intersectPitchPlane, pickTarget, pitchToWorld, pointerToNdc, setRayFromCamera, setRayFromXrPose, worldToPitch,
-} from '../../src/raycasting.js';
+} from '../../src/raycasting.mjs';
 import { aimRay, createTacticalFixture, playerObject } from './tactical-fixtures.mjs';
-import { PLAYER_SIZE, TEAMS } from '../../src/config.js';
+import { PLAYER_SIZE, TEAMS } from '../../src/config.mjs';
 
 /** Hauteur du dessus de la zone de sélection d'un joueur, en mètres (voir PlayerFactory). */
 const HITBOX_TOP = PLAYER_SIZE.height * 1.5;
@@ -32,7 +32,7 @@ const ANCHOR_POSES = [
  * @returns {boolean}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/raycasting.js) — outil de vérification
+ * @role Tests unitaires (src/raycasting.mjs) — outil de vérification
  */
 function near(a, b, tolerance = 1e-9) {
   return Math.abs(a - b) <= tolerance;
@@ -46,7 +46,7 @@ function near(a, b, tolerance = 1e-9) {
  * @returns {{position: THREE.Vector3, orientation: THREE.Quaternion}}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/raycasting.js) — doublure
+ * @role Tests unitaires (src/raycasting.mjs) — doublure
  */
 function xrPoseToward(from, to) {
   const direction = to.clone().sub(from).normalize();

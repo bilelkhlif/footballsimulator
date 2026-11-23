@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/formations.js (patron Strategy) : chaque formation enregistrée respecte
+ * Tests unitaires de src/formations.mjs (patron Strategy) : chaque formation enregistrée respecte
  * le critère du cahier « 11 joueurs bien placés » (§4.3), et une nouvelle stratégie s'ajoute sans
  * toucher au reste du code.
  *
@@ -9,8 +9,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   FORMATIONS, FormationStrategy, getFormation, toPitchCoordinates,
-} from '../../src/formations.js';
-import { PITCH_LENGTH, PITCH_WIDTH, PLAYER_SIZE, REAL_PITCH } from '../../src/config.js';
+} from '../../src/formations.mjs';
+import { PITCH_LENGTH, PITCH_WIDTH, PLAYER_SIZE, REAL_PITCH } from '../../src/config.mjs';
 
 /** Rayon du rond central, en mètres réels (lois du jeu). */
 const CENTER_CIRCLE_RADIUS = 9.15;

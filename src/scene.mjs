@@ -6,9 +6,9 @@
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { BOARD_LENGTH, BOARD_THICKNESS, BOARD_WIDTH, SCENE_COLORS } from './config.js';
-import { createWebGpuRenderer } from './webgpu.js';
-import { createWebGlTestRenderer, RENDER_MODES } from './webgl-test-mode.js';
+import { BOARD_LENGTH, BOARD_THICKNESS, BOARD_WIDTH, SCENE_COLORS } from './config.mjs';
+import { createWebGpuRenderer } from './webgpu.mjs';
+import { createWebGlTestRenderer, RENDER_MODES } from './webgl-test-mode.mjs';
 
 /**
  * Part de l'écran que le plateau peut occuper lors du cadrage, en coordonnées
@@ -23,14 +23,14 @@ const BOARD_CORNERS = [-1, 1].flatMap((sx) => [-1, 1].flatMap((sz) => [0, -BOARD
 
 /**
  * Crée le moteur de rendu et insère son canvas dans le conteneur : WebGPU, sauf si l'adresse
- * demande le mode test WebGL (?webgl, src/webgl-test-mode.js), réservé aux tests.
+ * demande le mode test WebGL (?webgl, src/webgl-test-mode.mjs), réservé aux tests.
  * Le fond transparent (alpha) sert à superposer la scène à la caméra en AR. WebXR est activé
  * avant l'initialisation : pendant une session AR immersive, three.js pilote lui-même la
  * caméra (position du téléphone) et la boucle de rendu (cadence de la session).
  * @param {HTMLElement} container élément qui reçoit le canvas
  * @param {string} renderMode une valeur de RENDER_MODES
  * @returns {Promise<import('three/webgpu').Renderer>}
- * @throws {import('./webgpu.js').WebGpuUnavailableError} si WebGPU est absent : aucun repli WebGL
+ * @throws {import('./webgpu.mjs').WebGpuUnavailableError} si WebGPU est absent : aucun repli WebGL
  * @responsable Bilel Khlif
  * @date 2026-11-05
  * @role Rendu — choix du moteur (WebGPU, ou mode test WebGL sur demande)

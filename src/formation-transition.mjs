@@ -10,7 +10,7 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { toPitchCoordinates } from './formations.js';
+import { toPitchCoordinates } from './formations.mjs';
 
 /** Durée d'une transition de formation, en millisecondes. */
 export const TRANSITION_DURATION_MS = 700;
@@ -29,7 +29,7 @@ export function easeInOutCubic(t) {
 
 /**
  * Places d'une équipe dans une formation, dans le repère du terrain.
- * @param {import('./formations.js').FormationStrategy} formation
+ * @param {import('./formations.mjs').FormationStrategy} formation
  * @param {boolean} attacksPositiveX sens d'attaque de l'équipe
  * @returns {Map<number, {x: number, z: number, role: string}>} numéro → place et poste
  * @responsable Bilel Khlif

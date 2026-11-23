@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/tactics-board.js : formation en place de chaque équipe, et événement
+ * Tests unitaires de src/tactics-board.mjs : formation en place de chaque équipe, et événement
  * formationchange (patron Observer). Depuis le sprint 5 : places des joueurs et du ballon, limites
  * du plateau, flèches, instantanés et réinitialisation.
  *
@@ -9,16 +9,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ARROW_KINDS, BOARD_HALF_EXTENTS, clampToBoard, isOnBoard, PLAYER_MARGIN, TacticsBoard,
-} from '../../src/tactics-board.js';
-import { FORMATIONS } from '../../src/formations.js';
-import { computeTeamTargets } from '../../src/formation-transition.js';
+} from '../../src/tactics-board.mjs';
+import { FORMATIONS } from '../../src/formations.mjs';
+import { computeTeamTargets } from '../../src/formation-transition.mjs';
 
 /**
  * Crée un tableau tactique avec les formations du scénario de démonstration, et enregistre ses
  * événements.
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/tactics-board.js) — montage du test
+ * @role Tests unitaires (src/tactics-board.mjs) — montage du test
  */
 function createBoard() {
   const board = new TacticsBoard({ blue: '4-3-3', red: '4-4-2' });

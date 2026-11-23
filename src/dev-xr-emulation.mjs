@@ -1,6 +1,6 @@
 /**
  * Compléments de l'émulateur IWER pour le sprint 3 : développement et tests sur PC uniquement.
- * Ce module n'est chargé qu'avec ?iwer (voir src/dev-emulator.js) ; il n'est ni mis en cache par
+ * Ce module n'est chargé qu'avec ?iwer (voir src/dev-emulator.mjs) ; il n'est ni mis en cache par
  * le Service Worker ni utilisé sur téléphone.
  *
  * IWER 2.7.0 émule une session immersive-ar, mais ni la liaison WebXR/WebGPU (XRGPUBinding),

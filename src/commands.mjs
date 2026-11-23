@@ -2,9 +2,9 @@
  * Patron Command (cahier §3.4, sprint 5) : chaque action de l'utilisateur est un objet qui sait
  * s'exécuter et s'annuler (BF8, « Annuler la dernière action »).
  *
- * Les commandes ne modifient que le tableau tactique (src/tactics-board.js) : elles ignorent la
- * scène 3D, qui suit le tableau (patron Observer, src/tactical-view.js), et les gestes de
- * l'utilisateur, traduits en commandes par src/tactical-interaction.js. L'exécution est donc
+ * Les commandes ne modifient que le tableau tactique (src/tactics-board.mjs) : elles ignorent la
+ * scène 3D, qui suit le tableau (patron Observer, src/tactical-view.mjs), et les gestes de
+ * l'utilisateur, traduits en commandes par src/tactical-interaction.mjs. L'exécution est donc
  * séparée du rendu et de la saisie.
  *
  * Une annulation rétablit l'état tactique exact d'avant la commande : les places voulues de
@@ -13,8 +13,8 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { EventEmitter } from './events.js';
-import { TEAMS } from './config.js';
+import { EventEmitter } from './events.mjs';
+import { TEAMS } from './config.mjs';
 
 /** Nombre maximal d'actions gardées pour l'annulation. */
 export const HISTORY_LIMIT = 100;
@@ -86,7 +86,7 @@ export class MovePlayerCommand extends Command {
 
   /**
    * @param {object} options
-   * @param {import('./tactics-board.js').TacticsBoard} options.board
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board
    * @param {string} options.teamId
    * @param {number} options.number numéro du maillot
    * @param {{x: number, z: number}} options.to nouvelle place, dans le repère du terrain
@@ -149,7 +149,7 @@ export class MoveBallCommand extends Command {
 
   /**
    * @param {object} options
-   * @param {import('./tactics-board.js').TacticsBoard} options.board
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board
    * @param {{x: number, z: number}} options.to nouvelle place, dans le repère du terrain
    * @responsable Bilel Khlif
    * @date 2026-11-15
@@ -209,7 +209,7 @@ export class AddArrowCommand extends Command {
 
   /**
    * @param {object} options
-   * @param {import('./tactics-board.js').TacticsBoard} options.board
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board
    * @param {{kind: string, from: {x: number, z: number}, to: {x: number, z: number}}} options.arrow
    *   type (ARROW_KINDS) et extrémités, dans le repère du terrain
    * @responsable Bilel Khlif
@@ -283,7 +283,7 @@ export class ChangeFormationCommand extends Command {
 
   /**
    * @param {object} options
-   * @param {import('./tactics-board.js').TacticsBoard} options.board
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board
    * @param {string} options.teamId
    * @param {string} options.formation nom de la formation, par exemple « 4-4-2 »
    * @responsable Bilel Khlif
@@ -349,7 +349,7 @@ export class ResetBoardCommand extends Command {
 
   /**
    * @param {object} options
-   * @param {import('./tactics-board.js').TacticsBoard} options.board
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board
    * @responsable Bilel Khlif
    * @date 2026-11-15
    * @role Logique métier — patron Command : réinitialisation du terrain
@@ -410,8 +410,8 @@ export class AddKeyframeCommand extends Command {
 
   /**
    * @param {object} options
-   * @param {import('./tactical-sequence.js').TacticalSequence} options.sequence
-   * @param {import('./tactics-board.js').TacticsBoard} options.board
+   * @param {import('./tactical-sequence.mjs').TacticalSequence} options.sequence
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board
    * @responsable Bilel Khlif
    * @date 2026-11-16
    * @role Logique métier — patron Command : séquence animée (BF9)
@@ -468,7 +468,7 @@ export class ClearSequenceCommand extends Command {
   #keyframes = null;
 
   /**
-   * @param {{sequence: import('./tactical-sequence.js').TacticalSequence}} options
+   * @param {{sequence: import('./tactical-sequence.mjs').TacticalSequence}} options
    * @responsable Bilel Khlif
    * @date 2026-11-16
    * @role Logique métier — patron Command : séquence animée (BF9)

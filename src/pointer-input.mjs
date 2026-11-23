@@ -7,12 +7,12 @@
  * guide l'aperçu d'une flèche en cours de tracé.
  *
  * Pendant une session AR, cette saisie se tait : c'est la session WebXR qui transmet les touchers
- * (src/xr-input.js). Le rayon et les coordonnées normalisées sont réutilisés d'un geste à l'autre.
+ * (src/xr-input.mjs). Le rayon et les coordonnées normalisées sont réutilisés d'un geste à l'autre.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import * as THREE from 'three';
-import { pointerToNdc, setRayFromCamera } from './raycasting.js';
+import { pointerToNdc, setRayFromCamera } from './raycasting.mjs';
 
 /** Déplacement maximal du pointeur pendant un tap, en pixels CSS. */
 export const TAP_MAX_DISTANCE_PX = 8;
@@ -55,7 +55,7 @@ export class PointerInput {
    * @param {HTMLElement} options.element canvas du moteur de rendu
    * @param {THREE.Camera} options.camera caméra de la vue 3D
    * @param {THREE.Raycaster} options.raycaster rayon réutilisé
-   * @param {import('./tactical-interaction.js').TacticalInteraction} options.interaction
+   * @param {import('./tactical-interaction.mjs').TacticalInteraction} options.interaction
    * @param {() => boolean} [options.isPresenting] vrai pendant une session AR
    * @responsable Bilel Khlif
    * @date 2026-11-15

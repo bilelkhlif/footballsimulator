@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/tactical-view.js et src/tactical-arrows.js (sprint 5) : la scène suit le
+ * Tests unitaires de src/tactical-view.mjs et src/tactical-arrows.mjs (sprint 5) : la scène suit le
  * tableau tactique, y compris quand un déplacement à la main croise une transition de formation ou
  * quand une transition interrompue est annulée ; les flèches 3D restent dans le repère du terrain
  * et leurs ressources sont libérées.
@@ -10,11 +10,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { createTacticalFixture, playerObject } from './tactical-fixtures.mjs';
-import { AddArrowCommand, ChangeFormationCommand, MovePlayerCommand, ResetBoardCommand } from '../../src/commands.js';
-import { computeTeamTargets, TRANSITION_DURATION_MS } from '../../src/formation-transition.js';
-import { MOVE_DURATION_MS } from '../../src/tactical-view.js';
-import { ARROW_DIMENSIONS } from '../../src/tactical-arrows.js';
-import { FORMATIONS } from '../../src/formations.js';
+import { AddArrowCommand, ChangeFormationCommand, MovePlayerCommand, ResetBoardCommand } from '../../src/commands.mjs';
+import { computeTeamTargets, TRANSITION_DURATION_MS } from '../../src/formation-transition.mjs';
+import { MOVE_DURATION_MS } from '../../src/tactical-view.mjs';
+import { ARROW_DIMENSIONS } from '../../src/tactical-arrows.mjs';
+import { FORMATIONS } from '../../src/formations.mjs';
 
 /**
  * Fait avancer l'horloge puis les déplacements d'une durée donnée.
@@ -22,7 +22,7 @@ import { FORMATIONS } from '../../src/formations.js';
  * @param {number} ms
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/tactical-view.js) — outil de vérification
+ * @role Tests unitaires (src/tactical-view.mjs) — outil de vérification
  */
 function advance(fixture, ms) {
   fixture.clock.advance(ms);
@@ -34,7 +34,7 @@ function advance(fixture, ms) {
  * @param {ReturnType<typeof createTacticalFixture>} fixture
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/tactical-view.js) — outil de vérification
+ * @role Tests unitaires (src/tactical-view.mjs) — outil de vérification
  */
 function assertSceneMatchesBoard(fixture) {
   for (const [teamId, group] of Object.entries(fixture.teamGroups)) {

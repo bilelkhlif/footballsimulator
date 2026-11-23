@@ -14,7 +14,7 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import * as THREE from 'three';
-import { PLAYER_SIZE } from './config.js';
+import { PLAYER_SIZE } from './config.mjs';
 
 /** Résolution de la texture d'un numéro, en pixels. */
 const LABEL_TEXTURE_SIZE = 128;

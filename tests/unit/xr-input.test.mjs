@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/xr-input.js (sprint 5) : destination d'un toucher en AR, rayon lu dans le
+ * Tests unitaires de src/xr-input.mjs (sprint 5) : destination d'un toucher en AR, rayon lu dans le
  * targetRaySpace de la source d'entrée (et non dans la pose du téléphone), aperçu guidé à chaque
  * image, et fin de session.
  *
@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { routeXrSelect, SELECT_ROUTES, XrTacticalInput } from '../../src/xr-input.js';
+import { routeXrSelect, SELECT_ROUTES, XrTacticalInput } from '../../src/xr-input.mjs';
 
 const REFERENCE_SPACE = { type: 'local-floor' };
 const TARGET_RAY_SPACE = { type: 'target-ray' };
@@ -31,7 +31,7 @@ const VIEWER_POSE = { transform: { position: { x: 0, y: 1.35, z: 0 }, orientatio
  * @returns {object}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/xr-input.js) — doublure
+ * @role Tests unitaires (src/xr-input.mjs) — doublure
  */
 function createFakeInteraction({ wantsHover = false } = {}) {
   return {
@@ -54,7 +54,7 @@ function createFakeInteraction({ wantsHover = false } = {}) {
  * @returns {object}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/xr-input.js) — doublure
+ * @role Tests unitaires (src/xr-input.mjs) — doublure
  */
 function createFakeFrame(poses) {
   return {
@@ -76,7 +76,7 @@ function createFakeFrame(poses) {
  * @returns {XrTacticalInput}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/xr-input.js) — montage du test
+ * @role Tests unitaires (src/xr-input.mjs) — montage du test
  */
 function createInput(interaction, inputSources = [{ targetRaySpace: TARGET_RAY_SPACE }]) {
   return new XrTacticalInput({

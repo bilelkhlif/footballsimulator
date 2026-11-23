@@ -16,11 +16,11 @@
  *
  * Le module signale le cycle de vie par des événements (patron Observer) : sessionstart,
  * sessionend et sessionerror. Il ne connaît ni l'interface HTML ni les objets de la scène :
- * c'est main.js qui s'abonne et met à jour l'affichage.
+ * c'est main.mjs qui s'abonne et met à jour l'affichage.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { EventEmitter } from './events.js';
+import { EventEmitter } from './events.mjs';
 
 /** Mode de session demandé au navigateur. */
 const SESSION_MODE = 'immersive-ar';
@@ -33,7 +33,7 @@ const WEBGPU_FEATURE = 'webgpu';
 
 /**
  * API de rendu de la session : WebGPU ; WebGL seulement en mode test (?webgl dans l'adresse,
- * src/webgl-test-mode.js), réservé aux tests et jamais choisi comme repli.
+ * src/webgl-test-mode.mjs), réservé aux tests et jamais choisi comme repli.
  */
 export const RENDERING_APIS = Object.freeze({ WEBGPU: 'webgpu', WEBGL: 'webgl' });
 
@@ -133,7 +133,7 @@ export class ArSession extends EventEmitter {
 
   /**
    * @param {object} options
-   * @param {import('./webgpu.js').WebGpuOnlyRenderer} options.renderer moteur de rendu WebGPU,
+   * @param {import('./webgpu.mjs').WebGpuOnlyRenderer} options.renderer moteur de rendu WebGPU,
    *   avec renderer.xr.enabled
    * @param {XRSystem} [options.xr] système WebXR ; par défaut navigator.xr, lu au moment de l'entrée
    *   en AR, car l'émulateur IWER le remplace après le chargement de la page

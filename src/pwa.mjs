@@ -2,7 +2,7 @@
  * Application installable (PWA, cahier §2.3 et §3.3) : Service Worker, installation,
  * nouvelle version et état du réseau.
  *
- * - Le Service Worker (sw.js) met l'application en cache pour qu'elle se lance hors-ligne.
+ * - Le Service Worker (sw.mjs) met l'application en cache pour qu'elle se lance hors-ligne.
  * - Le bouton « Installer l'application » apparaît quand le navigateur propose l'installation
  *   (événement beforeinstallprompt, Chrome et Edge) ; il disparaît une fois l'application installée.
  * - Quand une nouvelle version du Service Worker prend le relais, un message propose de recharger.
@@ -10,26 +10,44 @@
  *
  * Le navigateur n'accepte un Service Worker qu'en HTTPS, ou sur localhost.
  *
+ * Depuis la migration en modules .mjs (docs/migration-mjs.md), le Service Worker est sw.mjs,
+ * enregistré comme module (type « module »). L'enregistrement remplace, pour la même portée, celui
+ * de l'ancien sw.js : le navigateur installe sw.mjs à sa place.
+ *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 
+/** Adresse du Service Worker, relative à la page : la racine de l'application. */
+export const SERVICE_WORKER_URL = './sw.mjs';
+
 /**
- * Enregistre le Service Worker situé à la racine de l'application.
- * Son emplacement fixe sa portée : il contrôle toutes les pages du dossier.
+ * Enregistre le Service Worker situé à la racine de l'application, comme module ES.
+ * Son emplacement fixe sa portée : il contrôle toutes les pages du dossier. Un navigateur qui
+ * refuse les Service Workers en module (TypeError) l'enregistre en script classique : sw.mjs
+ * n'importe rien, il s'exécute de la même façon dans les deux cas.
+ * @param {ServiceWorkerContainer} [container] remplacé dans les tests
  * @returns {Promise<ServiceWorkerRegistration|null>}
  * @responsable Bilel Khlif
  * @date 2026-11-05
  * @role PWA — enregistrement du Service Worker
  */
-export async function registerServiceWorker() {
-  if (!('serviceWorker' in navigator) || !window.isSecureContext) {
+export async function registerServiceWorker(container = globalThis.navigator?.serviceWorker) {
+  if (!container || !globalThis.isSecureContext) {
     return null;
   }
   try {
-    return await navigator.serviceWorker.register('./sw.js');
+    return await container.register(SERVICE_WORKER_URL, { type: 'module' });
   } catch (error) {
-    console.warn('Service Worker non enregistré :', error);
-    return null;
+    if (!(error instanceof TypeError)) {
+      console.warn('Service Worker non enregistré :', error);
+      return null;
+    }
+    try {
+      return await container.register(SERVICE_WORKER_URL, { type: 'classic' });
+    } catch (classicError) {
+      console.warn('Service Worker non enregistré :', classicError);
+      return null;
+    }
   }
 }
 

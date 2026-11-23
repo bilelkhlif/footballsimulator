@@ -34,7 +34,7 @@
   </script>
 
   <!-- Point d'entrée JavaScript (module, exécuté après l'analyse de la page) -->
-  <script type="module" src="src/main.js"></script>
+  <script type="module" src="src/main.mjs"></script>
 </head>
 <body>
   <!-- Zone de rendu 3D : le canvas WebGPU de three.js y est inséré -->
@@ -57,7 +57,7 @@
     </header>
 
     <!-- Mode diagnostic (sprint 5) : masqué par défaut, affiché avec ?diagnostics dans l'adresse,
-         aussi en AR (DOM Overlay). Rempli deux fois par seconde par src/diagnostics.js. -->
+         aussi en AR (DOM Overlay). Rempli deux fois par seconde par src/diagnostics.mjs. -->
     <aside id="diagnostics" class="diagnostics" aria-label="Diagnostic des performances" hidden>
       <dl>
         <div><dt>Images/s</dt><dd data-field="fps">–</dd></div>
@@ -83,10 +83,10 @@
         <button id="reload-app" class="button button--small" type="button">Recharger</button>
       </p>
       <!-- Panneau des formations (sprint 4) : une ligne de boutons par équipe, créée par
-           src/formation-panel.js à partir des formations enregistrées. -->
+           src/formation-panel.mjs à partir des formations enregistrées. -->
       <div id="formation-panel" class="formation-panel" hidden></div>
       <!-- Panneau de la séquence animée (sprint 6, bonus BF9) : images clés, lecture, vitesse ; relié
-           par src/sequence-panel.js. En AR, il n'apparaît qu'une fois le terrain posé. -->
+           par src/sequence-panel.mjs. En AR, il n'apparaît qu'une fois le terrain posé. -->
       <div id="sequence-panel" class="sequence-panel" role="group" aria-label="Séquence animée" hidden>
         <p class="sequence-panel__status" data-sequence="status" aria-live="polite"></p>
         <div class="sequence-panel__row sequence-panel__row--3">
@@ -102,7 +102,7 @@
         </div>
       </div>
       <!-- Barre d'outils tactique (sprint 5) : le mode (déplacer, passe, course), puis l'historique
-           (annuler, rétablir, réinitialiser), reliés par src/tactical-toolbar.js. En AR, elle
+           (annuler, rétablir, réinitialiser), reliés par src/tactical-toolbar.mjs. En AR, elle
            n'apparaît qu'une fois le terrain posé. -->
       <div id="tactical-toolbar" class="toolbar" role="toolbar" aria-label="Outils tactiques">
         <div class="toolbar__group" role="group" aria-label="Mode">

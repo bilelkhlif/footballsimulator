@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import {
   BOARD_LENGTH, BOARD_THICKNESS, BOARD_WIDTH, PITCH_LENGTH, PITCH_RUNOFF, PITCH_SCALE, REAL_PITCH, SCENE_COLORS,
-} from './config.js';
+} from './config.mjs';
 
 /** Mesures réglementaires utilisées pour le tracé, en mètres réels. */
 const MARKINGS = Object.freeze({

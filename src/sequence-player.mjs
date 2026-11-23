@@ -23,8 +23,8 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { EventEmitter } from './events.js';
-import { easeInOutCubic } from './formation-transition.js';
+import { EventEmitter } from './events.mjs';
+import { easeInOutCubic } from './formation-transition.mjs';
 
 /** États de la lecture. */
 export const PLAYBACK_STATES = Object.freeze({ STOPPED: 'stopped', PLAYING: 'playing', PAUSED: 'paused' });
@@ -58,8 +58,8 @@ export class SequencePlayer extends EventEmitter {
 
   /**
    * @param {object} options
-   * @param {import('./tactical-sequence.js').TacticalSequence} options.sequence
-   * @param {import('./tactics-board.js').TacticsBoard} options.board ses changements arrêtent la lecture
+   * @param {import('./tactical-sequence.mjs').TacticalSequence} options.sequence
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board ses changements arrêtent la lecture
    * @param {{returnToBoard: () => void}} options.view vue tactique : la scène y rejoint le tableau
    * @param {{clear: () => void}} options.animator déplacements en cours, interrompus au lancement
    * @param {Array<{object: object, key: string}>} options.targets joueurs (clé « équipe:numéro ») et

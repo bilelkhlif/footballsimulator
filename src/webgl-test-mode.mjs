@@ -1,7 +1,7 @@
 /**
  * Mode test WebGL : un rendu WebGL 2, réservé aux tests, sur demande explicite (?webgl).
  *
- * Ce n'est pas un repli. Le rendu de l'application est WebGPU, sans repli (src/webgpu.js) :
+ * Ce n'est pas un repli. Le rendu de l'application est WebGPU, sans repli (src/webgpu.mjs) :
  * quand WebGPU manque, l'application affiche un message, et rien ne bascule vers WebGL.
  * Ce mode sert seulement à tester l'application, AR comprise, sur un appareil dont le
  * navigateur bloque WebGPU : par exemple un Galaxy S10e sous Android 9, où Chrome 138 refuse

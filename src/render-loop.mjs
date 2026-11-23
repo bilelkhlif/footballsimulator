@@ -56,9 +56,9 @@ export function matchXrTargetToViews(renderer) {
  * @param {import('three').Scene} context.scene
  * @param {import('three').Camera} context.camera
  * @param {{update: () => void}} context.controls contrôles d'orbite
- * @param {{update: () => void}} [context.animator] déplacements de joueurs (src/formation-transition.js)
+ * @param {{update: () => void}} [context.animator] déplacements de joueurs (src/formation-transition.mjs)
  * @param {() => ({update: (frame: XRFrame) => void}|null)} context.getArPlacement renvoie la pose
- *   du terrain de la session en cours (src/ar-surface.js), ou null hors session
+ *   du terrain de la session en cours (src/ar-surface.mjs), ou null hors session
  * @param {Array<{update: (time: number, frame?: XRFrame) => void, beforeFrame?: (time: number) => void, afterRender?: (time: number) => void}>} [context.tasks]
  *   tâches de chaque image (sprint 5) : update est appelée dans l'ordre après les déplacements et
  *   avant le rendu ; afterRender, si elle existe, juste après le rendu. three.js remet à zéro ses

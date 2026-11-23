@@ -10,7 +10,7 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { BOARD_THICKNESS } from './config.js';
+import { BOARD_THICKNESS } from './config.mjs';
 
 /** Distance horizontale entre le téléphone et le centre du terrain placé devant lui, en mètres. */
 export const PLACEMENT_DISTANCE = 0.9;

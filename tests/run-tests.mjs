@@ -135,8 +135,8 @@ async function testFormations(browser, url) {
     const { page } = await openApp(context, url);
     const issues = await page.evaluate(async () => {
       const base = new URL('.', location.href).href;
-      const { FORMATIONS } = await import(`${base}src/formations.js`);
-      const { PITCH_LENGTH, PITCH_WIDTH, PLAYER_SIZE } = await import(`${base}src/config.js`);
+      const { FORMATIONS } = await import(`${base}src/formations.mjs`);
+      const { PITCH_LENGTH, PITCH_WIDTH, PLAYER_SIZE } = await import(`${base}src/config.mjs`);
       const tokenDiameter = PLAYER_SIZE.radius * 2.8; // socle du pion : rayon 1,4 × celui du corps
       const found = [];
       for (const [label, formation] of Object.entries(FORMATIONS)) {
@@ -325,7 +325,7 @@ async function testManifest(browser, url) {
 
 /**
  * Lit la formation en place d'une équipe et l'écart, en centimètres, entre ses joueurs et les
- * places de cette formation (src/formation-transition.js). Page ouverte avec ?debug.
+ * places de cette formation (src/formation-transition.mjs). Page ouverte avec ?debug.
  * @param {import('playwright-core').Page} page
  * @param {string} teamId 'blue' ou 'red'
  * @returns {Promise<{formation: string, worstCm: number, chip: string, pressed: string[], animating: boolean, roles: boolean}>}
@@ -336,8 +336,8 @@ async function testManifest(browser, url) {
 function readTeamPlacement(page, teamId) {
   return page.evaluate(async (id) => {
     const base = new URL('.', document.baseURI).href;
-    const { computeTeamTargets } = await import(`${base}src/formation-transition.js`);
-    const { TEAMS } = await import(`${base}src/config.js`);
+    const { computeTeamTargets } = await import(`${base}src/formation-transition.mjs`);
+    const { TEAMS } = await import(`${base}src/config.mjs`);
     const app = window.__footballSimulator;
     const formation = app.board.getFormation(id);
     const targets = computeTeamTargets(formation, TEAMS[id].attacksPositiveX);
@@ -795,7 +795,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
       record(label('parcours complet'), 'ignoré', 'émulateur indisponible (réseau ?)');
       return;
     }
-    const table = await page.evaluate(async () => (await import(new URL('src/dev-xr-emulation.js', document.baseURI).href)).VIRTUAL_TABLE);
+    const table = await page.evaluate(async () => (await import(new URL('src/dev-xr-emulation.mjs', document.baseURI).href)).VIRTUAL_TABLE);
 
     /**
      * Oriente le téléphone émulé : inclinaison vers le bas, puis rotation vers la gauche, en degrés.
@@ -810,7 +810,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
       window.__footballSimulator.xrDevice.quaternion.set(cy * sp, sy * cp, -sy * sp, cy * cp);
     }, [pitchDown, yawLeft]);
 
-    /** Attend un état de la pose du terrain (src/ar-surface.js). */
+    /** Attend un état de la pose du terrain (src/ar-surface.mjs). */
     const waitForPlacementState = (state) => page.waitForFunction(
       (expected) => window.__footballSimulator.placement?.state === expected, state, { timeout: 15000 },
     );
@@ -829,7 +829,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
     /** Pose du terrain et du réticule, dans l'espace local-floor. */
     const readPlacement = () => page.evaluate(async () => {
       const THREE = await import('three');
-      const { BOARD_LENGTH, BOARD_WIDTH } = await import(new URL('src/config.js', document.baseURI).href);
+      const { BOARD_LENGTH, BOARD_WIDTH } = await import(new URL('src/config.mjs', document.baseURI).href);
       const app = window.__footballSimulator;
       const reticle = app.scene.getObjectByName('reticle');
       app.pitchGroup.updateWorldMatrix(true, false);
@@ -1049,7 +1049,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
       ['séquence animée en AR sur le terrain tourné : lecture dans le repère du terrain, terrain toujours ancré', async () => {
         const toggleVisible = await page.evaluate(() => !document.getElementById('sequence-toggle').hidden);
         const { start, to } = await page.evaluate(async () => {
-          const { AddKeyframeCommand, MovePlayerCommand } = await import(new URL('src/commands.js', document.baseURI).href);
+          const { AddKeyframeCommand, MovePlayerCommand } = await import(new URL('src/commands.mjs', document.baseURI).href);
           const app = window.__footballSimulator;
           app.history.execute(new AddKeyframeCommand({ sequence: app.sequence, board: app.board }));
           const from = app.board.getPlayerPosition('red', 10);
@@ -1428,7 +1428,7 @@ async function testSequencePlayback(browser, url) {
     const { page, errors } = await openApp(context, `${url}?debug`);
     /** Déplace un objet par une commande annulable, comme un geste de l'utilisateur. */
     const move = (teamId, number, to) => page.evaluate(async ([team, n, target]) => {
-      const { MoveBallCommand, MovePlayerCommand } = await import(new URL('src/commands.js', document.baseURI).href);
+      const { MoveBallCommand, MovePlayerCommand } = await import(new URL('src/commands.mjs', document.baseURI).href);
       const app = window.__footballSimulator;
       app.history.execute(team === 'ball'
         ? new MoveBallCommand({ board: app.board, to: target })
@@ -1518,10 +1518,10 @@ async function testSequencePlayback(browser, url) {
 
 /**
  * Service Worker à version de contenu (sprint 6). Un nouveau déploiement est simulé par le
- * serveur : main.js utilise une nouvelle exportation de config.js, et config.js répond lentement.
+ * serveur : main.mjs utilise une nouvelle exportation de config.mjs, et config.mjs répond lentement.
  * 1. Rechargement : la page doit rester sur une seule version, cohérente (avec un réseau d'abord
- *    et un délai d'attente, main.js arrivait neuf et config.js ancien : le démarrage échouait).
- * 2. Nouveau sw.js : la nouvelle version s'installe d'un bloc, l'avis s'affiche, et après
+ *    et un délai d'attente, main.mjs arrivait neuf et config.mjs ancien : le démarrage échouait).
+ * 2. Nouveau sw.mjs : la nouvelle version s'installe d'un bloc, l'avis s'affiche, et après
  *    « Recharger » toute la page est de la nouvelle version.
  * 3. Hors-ligne ensuite : la nouvelle version se lance.
  * @param {import('playwright-core').Browser} browser
@@ -1555,19 +1555,19 @@ async function testShellVersioning(browser) {
     const source = async (file) => readFile(path.join(REPO_ROOT, file), 'utf8');
     const steps = [
       ['nouveau déploiement sur réseau lent : la page reste sur une seule version, cohérente', async () => {
-        server.setOverride('src/config.js', `${await source('src/config.js')}\nexport const DEPLOY_MARKER = 'B';\n`);
-        server.setOverride('src/main.js', `${await source('src/main.js')}\nimport { DEPLOY_MARKER } from './config.js';\nwindow.__deployMarker = DEPLOY_MARKER;\n`);
-        server.setLatency(5000, { only: ['src/config.js'] });
+        server.setOverride('src/config.mjs', `${await source('src/config.mjs')}\nexport const DEPLOY_MARKER = 'B';\n`);
+        server.setOverride('src/main.mjs', `${await source('src/main.mjs')}\nimport { DEPLOY_MARKER } from './config.mjs';\nwindow.__deployMarker = DEPLOY_MARKER;\n`);
+        server.setLatency(5000, { only: ['src/config.mjs'] });
         const before = errors.length;
         await reload();
         const state = await read();
         const ok = state.ready && !state.failed && state.marker === null && errors.length === before && state.caches.length === 1;
         return [ok, `prête : ${state.ready}, version : ${state.marker ?? 'A'}, erreurs : ${errors.slice(before, before + 2).join(' | ') || 'aucune'}`];
       }],
-      ['nouveau sw.js : la version B s\'installe d\'un bloc, avis affiché, puis rechargement en version B', async () => {
-        const sw = await source('sw.js');
+      ['nouveau sw.mjs : la version B s\'installe d\'un bloc, avis affiché, puis rechargement en version B', async () => {
+        const sw = await source('sw.mjs');
         const next = sw.replace(/const SHELL_VERSION = '[^']*';/, "const SHELL_VERSION = 'deploiement-b';");
-        server.setOverride('sw.js', next === sw ? `${sw}\n// déploiement B\n` : next);
+        server.setOverride('sw.mjs', next === sw ? `${sw}\n// déploiement B\n` : next);
         await reload();
         await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.update());
         await page.waitForSelector('#update-notice:not([hidden])', { timeout: 30000 });

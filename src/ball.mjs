@@ -6,7 +6,7 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import * as THREE from 'three';
-import { BALL_HITBOX_RADIUS, BALL_RADIUS } from './config.js';
+import { BALL_HITBOX_RADIUS, BALL_RADIUS } from './config.mjs';
 
 /**
  * Crée le ballon, posé sur le point central du terrain, avec sa zone de sélection (« hitbox »).

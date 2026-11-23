@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/pointer-input.js (sprint 5) : un tap devient un rayon depuis la caméra, un
+ * Tests unitaires de src/pointer-input.mjs (sprint 5) : un tap devient un rayon depuis la caméra, un
  * glissé ou un pincement restent aux contrôles d'orbite, la souris guide l'aperçu, et la saisie se
  * tait pendant une session AR.
  *
@@ -8,14 +8,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { isTap, PointerInput, TAP_MAX_DISTANCE_PX, TAP_MAX_DURATION_MS } from '../../src/pointer-input.js';
+import { isTap, PointerInput, TAP_MAX_DISTANCE_PX, TAP_MAX_DURATION_MS } from '../../src/pointer-input.mjs';
 
 /**
  * Doublure du canvas : un EventTarget de 800 × 400 pixels.
  * @returns {EventTarget & {getBoundingClientRect: () => object}}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/pointer-input.js) — doublure
+ * @role Tests unitaires (src/pointer-input.mjs) — doublure
  */
 function createFakeCanvas() {
   const canvas = new EventTarget();
@@ -29,7 +29,7 @@ function createFakeCanvas() {
  * @returns {object}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/pointer-input.js) — doublure
+ * @role Tests unitaires (src/pointer-input.mjs) — doublure
  */
 function createFakeInteraction(wantsHover = false) {
   return {
@@ -52,7 +52,7 @@ function createFakeInteraction(wantsHover = false) {
  * @returns {Event}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/pointer-input.js) — doublure
+ * @role Tests unitaires (src/pointer-input.mjs) — doublure
  */
 function pointerEvent(type, { clientX = 400, clientY = 200, pointerId = 1, timeStamp = 0, pointerType = 'touch', button = 0 } = {}) {
   const event = new Event(type);
@@ -69,7 +69,7 @@ function pointerEvent(type, { clientX = 400, clientY = 200, pointerId = 1, timeS
  * @returns {{canvas: EventTarget, interaction: object, input: PointerInput, state: {presenting: boolean}}}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/pointer-input.js) — montage du test
+ * @role Tests unitaires (src/pointer-input.mjs) — montage du test
  */
 function createSetup({ wantsHover = false } = {}) {
   const canvas = createFakeCanvas();

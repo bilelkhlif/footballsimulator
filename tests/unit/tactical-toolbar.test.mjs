@@ -1,19 +1,19 @@
 /**
- * Tests unitaires de src/tactical-toolbar.js (sprint 5) : aide de chaque état de l'interaction, et
+ * Tests unitaires de src/tactical-toolbar.mjs (sprint 5) : aide de chaque état de l'interaction, et
  * bandeau d'aide qui montre un retour quelques instants avant de revenir à l'aide.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createHintController, describeGuidance, FEEDBACK_DURATION_MS } from '../../src/tactical-toolbar.js';
+import { createHintController, describeGuidance, FEEDBACK_DURATION_MS } from '../../src/tactical-toolbar.mjs';
 
 /**
  * Minuterie manuelle : les rappels ne partent que sur demande.
  * @returns {{setTimer: Function, clearTimer: Function, fire: () => void, pending: () => number}}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/tactical-toolbar.js) — doublure
+ * @role Tests unitaires (src/tactical-toolbar.mjs) — doublure
  */
 function createManualTimers() {
   const timers = new Map();

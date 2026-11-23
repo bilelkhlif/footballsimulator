@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/tactical-interaction.js (sprint 5) : la machine à états de l'interaction,
+ * Tests unitaires de src/tactical-interaction.mjs (sprint 5) : la machine à états de l'interaction,
  * avec de vrais rayons sur les vraies zones de sélection des joueurs et sur le plan du gazon, en
  * vue 3D et en AR sur un terrain déplacé et tourné par son ancre.
  *
@@ -9,10 +9,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { aimRay, createTacticalFixture, pitchPointToWorld, playerObject } from './tactical-fixtures.mjs';
-import { INTERACTION_MODES, INTERACTION_STATES } from '../../src/tactical-interaction.js';
-import { setRayFromXrPose } from '../../src/raycasting.js';
-import { BOARD_HALF_EXTENTS, PLAYER_MARGIN } from '../../src/tactics-board.js';
-import { PLAYER_SIZE } from '../../src/config.js';
+import { INTERACTION_MODES, INTERACTION_STATES } from '../../src/tactical-interaction.mjs';
+import { setRayFromXrPose } from '../../src/raycasting.mjs';
+import { BOARD_HALF_EXTENTS, PLAYER_MARGIN } from '../../src/tactics-board.mjs';
+import { PLAYER_SIZE } from '../../src/config.mjs';
 
 /** Hauteur du dessus de la zone de sélection d'un joueur, en mètres. */
 const HITBOX_TOP = PLAYER_SIZE.height * 1.5;
@@ -24,7 +24,7 @@ const HITBOX_TOP = PLAYER_SIZE.height * 1.5;
  * @returns {boolean}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/tactical-interaction.js) — outil de vérification
+ * @role Tests unitaires (src/tactical-interaction.mjs) — outil de vérification
  */
 function near(a, b) {
   return Math.abs(a - b) <= 1e-9;
@@ -38,7 +38,7 @@ function near(a, b) {
  * @returns {{tapPlayer: Function, tapBall: Function, tapPitch: Function, hoverPitch: Function}}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/tactical-interaction.js) — outil de vérification
+ * @role Tests unitaires (src/tactical-interaction.mjs) — outil de vérification
  */
 function createGestures(fixture, { xr = false } = {}) {
   const raycaster = new THREE.Raycaster();

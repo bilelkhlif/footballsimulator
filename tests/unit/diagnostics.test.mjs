@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/diagnostics.js (sprint 5) : images par seconde et durée moyenne d'une image
+ * Tests unitaires de src/diagnostics.mjs (sprint 5) : images par seconde et durée moyenne d'une image
  * sur une fenêtre fixe, reprise après un trou, panneau réécrit deux fois par seconde au plus, et
  * mode désactivé par défaut.
  *
@@ -7,14 +7,14 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DiagnosticsPanel, FrameStats, isDiagnosticsRequested, PANEL_INTERVAL_MS } from '../../src/diagnostics.js';
+import { DiagnosticsPanel, FrameStats, isDiagnosticsRequested, PANEL_INTERVAL_MS } from '../../src/diagnostics.mjs';
 
 /**
  * Doublure du panneau : six champs [data-field] qui comptent leurs réécritures.
  * @returns {{element: object, fields: Record<string, {textContent: string, writes: number}>}}
  * @responsable Bilel Khlif
  * @date 2026-11-15
- * @role Tests unitaires (src/diagnostics.js) — doublure
+ * @role Tests unitaires (src/diagnostics.mjs) — doublure
  */
 function createFakePanel() {
   const fields = {};

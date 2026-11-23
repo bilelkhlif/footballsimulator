@@ -6,7 +6,7 @@
  * casque Meta Quest 3 simulé, en vue unique comme un téléphone. Vérifié aux sprints 1 à 3 :
  * - une session immersive-ar s'ouvre, avec local-floor et les ancres ;
  * - IWER n'émule ni la liaison WebXR/WebGPU (XRGPUBinding) ni le hit test sans son module
- *   d'environnement synthétique : src/dev-xr-emulation.js les ajoute (sprint 3) ;
+ *   d'environnement synthétique : src/dev-xr-emulation.mjs les ajoute (sprint 3) ;
  * - le DOM Overlay n'est pas émulé : l'interface HTML reste au-dessus grâce à styles.css.
  *
  * Activation : ajouter ?iwer à l'adresse, par exemple http://localhost:8080/?iwer
@@ -14,7 +14,7 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { isImmersiveArSupported } from './xr-support.js';
+import { isImmersiveArSupported } from './xr-support.mjs';
 
 /** Version épinglée d'IWER (la 2.8.0, publiée la veille du sprint 1, n'a pas été retenue). */
 const IWER_MODULE_URL = 'https://cdn.jsdelivr.net/npm/iwer@2.7.0/build/iwer.module.js';
@@ -25,7 +25,7 @@ const EMULATOR_QUERY_PARAMETER = 'iwer';
 /**
  * Installe l'émulateur IWER si l'adresse le demande et que l'AR native est absente.
  * Doit être appelé avant toute autre utilisation de navigator.xr, et avant la création du moteur
- * de rendu (voir src/dev-xr-emulation.js).
+ * de rendu (voir src/dev-xr-emulation.mjs).
  * Chrome sur PC expose déjà un navigator.xr natif, mais sans AR : l'installation est
  * donc forcée, ce qui ne remplace jamais un navigateur capable d'AR (vérifié juste avant).
  * @returns {Promise<{xrDevice: object, setCanvas: (canvas: HTMLCanvasElement) => void}|null>}
@@ -42,9 +42,9 @@ export async function installEmulatorIfRequested() {
   }
   try {
     const { XRDevice, metaQuest3 } = await import(IWER_MODULE_URL);
-    const { installXrEmulationExtras } = await import('./dev-xr-emulation.js');
+    const { installXrEmulationExtras } = await import('./dev-xr-emulation.mjs');
     // L'appareil émulé annonce la fonctionnalité webgpu : IWER accepte alors la session
-    // demandée par src/xr-session.js, et dev-xr-emulation.js fournit XRGPUBinding.
+    // demandée par src/xr-session.mjs, et dev-xr-emulation.mjs fournit XRGPUBinding.
     const xrDevice = new XRDevice({
       ...metaQuest3,
       supportedFeatures: [...metaQuest3.supportedFeatures, 'webgpu'],

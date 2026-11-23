@@ -5,7 +5,7 @@
  * manque. L'application ne veut pas de ce repli : son moteur de rendu est construit ici à
  * partir de la classe de base Renderer, avec le seul backend WebGPU (WebGPUBackend) et sans
  * fonction de repli (getFallback: null). Si WebGPU manque, le démarrage échoue avec une cause
- * précise, que main.js affiche à la place du terrain.
+ * précise, que main.mjs affiche à la place du terrain.
  *
  * Le code du backend WebGL de three.js reste présent dans three.webgpu.js, mais rien ne
  * l'instancie : les tests de bout en bout vérifient qu'aucun contexte WebGL n'est créé.

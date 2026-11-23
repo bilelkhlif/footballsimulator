@@ -1,11 +1,11 @@
 /**
- * Tests unitaires de src/events.js : le patron Observer utilisé par la session AR.
+ * Tests unitaires de src/events.mjs : le patron Observer utilisé par la session AR.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { EventEmitter } from '../../src/events.js';
+import { EventEmitter } from '../../src/events.mjs';
 
 test('chaque observateur abonné reçoit le détail de l\'événement, et seulement de celui-là', () => {
   const emitter = new EventEmitter();

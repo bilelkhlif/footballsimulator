@@ -1,6 +1,6 @@
 /**
  * Détection de la réalité augmentée WebXR et affichage de son état dans l'interface.
- * La session immersive-ar est ouverte par src/xr-session.js. Sans AR, l'application
+ * La session immersive-ar est ouverte par src/xr-session.mjs. Sans AR, l'application
  * reste utilisable en vue 3D (ajustement issu de l'état de l'art).
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).

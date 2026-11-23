@@ -16,35 +16,35 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { Raycaster } from 'three';
-import { createSceneContext } from './scene.js';
-import { createPitch } from './pitch.js';
-import { PlayerFactory } from './players.js';
-import { createTeam } from './team.js';
-import { createBall } from './ball.js';
-import { DEFAULT_FORMATIONS, TEAMS } from './config.js';
-import { TacticsBoard } from './tactics-board.js';
-import { FormationAnimator, TRANSITION_DURATION_MS } from './formation-transition.js';
-import { createFormationPanel } from './formation-panel.js';
-import { ChangeFormationCommand, CommandHistory } from './commands.js';
-import { MOVE_DURATION_MS, TacticalView } from './tactical-view.js';
-import { TacticalInteraction } from './tactical-interaction.js';
-import { createHintController, createTacticalToolbar, describeGuidance } from './tactical-toolbar.js';
-import { PointerInput } from './pointer-input.js';
-import { routeXrSelect, SELECT_ROUTES, XrTacticalInput } from './xr-input.js';
-import { DiagnosticsPanel, isDiagnosticsRequested } from './diagnostics.js';
-import { TacticalSequence } from './tactical-sequence.js';
-import { SequencePlayer } from './sequence-player.js';
-import { createSequencePanel } from './sequence-panel.js';
-import { installEmulatorIfRequested } from './dev-emulator.js';
-import { isImmersiveArSupported, showXrStatus } from './xr-support.js';
-import { registerServiceWorker, setUpInstallButton, watchForUpdates, watchNetworkStatus } from './pwa.js';
-import { ArSession, AR_ERROR_REASONS, hasWebGpuXrBinding, RENDERING_APIS } from './xr-session.js';
-import { createArView } from './ar-view.js';
-import { SurfacePlacement } from './ar-surface.js';
-import { createReticle } from './reticle.js';
-import { createRenderLoop } from './render-loop.js';
-import { describeAdapter, WebGpuUnavailableError, WEBGPU_ERROR_REASONS } from './webgpu.js';
-import { getRequestedRenderMode, RENDER_MODES, WebGlTestModeUnavailableError } from './webgl-test-mode.js';
+import { createSceneContext } from './scene.mjs';
+import { createPitch } from './pitch.mjs';
+import { PlayerFactory } from './players.mjs';
+import { createTeam } from './team.mjs';
+import { createBall } from './ball.mjs';
+import { DEFAULT_FORMATIONS, TEAMS } from './config.mjs';
+import { TacticsBoard } from './tactics-board.mjs';
+import { FormationAnimator, TRANSITION_DURATION_MS } from './formation-transition.mjs';
+import { createFormationPanel } from './formation-panel.mjs';
+import { ChangeFormationCommand, CommandHistory } from './commands.mjs';
+import { MOVE_DURATION_MS, TacticalView } from './tactical-view.mjs';
+import { TacticalInteraction } from './tactical-interaction.mjs';
+import { createHintController, createTacticalToolbar, describeGuidance } from './tactical-toolbar.mjs';
+import { PointerInput } from './pointer-input.mjs';
+import { routeXrSelect, SELECT_ROUTES, XrTacticalInput } from './xr-input.mjs';
+import { DiagnosticsPanel, isDiagnosticsRequested } from './diagnostics.mjs';
+import { TacticalSequence } from './tactical-sequence.mjs';
+import { SequencePlayer } from './sequence-player.mjs';
+import { createSequencePanel } from './sequence-panel.mjs';
+import { installEmulatorIfRequested } from './dev-emulator.mjs';
+import { isImmersiveArSupported, showXrStatus } from './xr-support.mjs';
+import { registerServiceWorker, setUpInstallButton, watchForUpdates, watchNetworkStatus } from './pwa.mjs';
+import { ArSession, AR_ERROR_REASONS, hasWebGpuXrBinding, RENDERING_APIS } from './xr-session.mjs';
+import { createArView } from './ar-view.mjs';
+import { SurfacePlacement } from './ar-surface.mjs';
+import { createReticle } from './reticle.mjs';
+import { createRenderLoop } from './render-loop.mjs';
+import { describeAdapter, WebGpuUnavailableError, WEBGPU_ERROR_REASONS } from './webgpu.mjs';
+import { getRequestedRenderMode, RENDER_MODES, WebGlTestModeUnavailableError } from './webgl-test-mode.mjs';
 
 /** Réglage de Chrome qui active la liaison WebXR/WebGPU (Chrome 157, Android et Windows). */
 const WEBGPU_FLAG_URL = 'chrome://flags/#webxr-webgpu-binding';
@@ -70,7 +70,7 @@ const STARTUP_ERROR_MESSAGES = Object.freeze({
   'no-webgl': 'Le mode test WebGL demande WebGL 2, indisponible sur ce navigateur.',
 });
 
-/** Aide affichée en AR, selon l'état de la pose du terrain (src/ar-surface.js). */
+/** Aide affichée en AR, selon l'état de la pose du terrain (src/ar-surface.mjs). */
 const PLACEMENT_HINTS = Object.freeze({
   searching: 'Visez la table : un cercle doré apparaît sur la surface détectée.',
   surface: 'Touchez l’écran pour poser le terrain sur le cercle.',

@@ -8,12 +8,12 @@
  * Les joueurs sont placés dans leur moitié de terrain, comme au coup d'envoi.
  *
  * Ajouter une formation revient à écrire une sous-classe et à l'enregistrer dans FORMATIONS :
- * son bouton apparaît alors dans l'interface (src/formation-panel.js), et les tests la vérifient.
+ * son bouton apparaît alors dans l'interface (src/formation-panel.mjs), et les tests la vérifient.
  * Le 4-2-3-1, ajouté au sprint 4, en est l'exemple.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { PITCH_LENGTH, PITCH_WIDTH } from './config.js';
+import { PITCH_LENGTH, PITCH_WIDTH } from './config.mjs';
 
 /** Ligne du gardien, commune à toutes les formations. */
 const GOALKEEPER_LINE = Object.freeze({

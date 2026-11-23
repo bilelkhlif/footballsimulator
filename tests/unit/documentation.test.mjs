@@ -13,8 +13,11 @@ import { readdirSync, readFileSync } from 'node:fs';
 /** Racine du dépôt. */
 const ROOT = new URL('../../', import.meta.url);
 
-/** Dossiers contrôlés et fichiers retenus ; src/vendor (bibliothèques tierces) n'en fait pas partie. */
-const SCOPE = [['', /^sw\.js$/], ['src/', /\.js$/], ['tests/', /\.mjs$/], ['tests/unit/', /\.mjs$/]];
+/**
+ * Dossiers contrôlés et fichiers retenus ; src/vendor (bibliothèques tierces) n'en fait pas partie.
+ * À la racine : sw.mjs, le Service Worker, et sw.js, son script de migration (docs/migration-mjs.md).
+ */
+const SCOPE = [['', /^sw\.m?js$/], ['src/', /\.mjs$/], ['tests/', /\.mjs$/], ['tests/unit/', /\.mjs$/]];
 
 /** Fichiers sans fonction, dont l'en-tête renvoie aussi à ATTRIBUTION.md. */
 const OTHER_SOURCES = ['index.html', 'src/styles.css'];
@@ -177,8 +180,8 @@ test('chaque fonction, classe, membre de classe et gestionnaire porte @responsab
 
   // Le contrôle voit bien les unités du projet (premier niveau, membre de classe, gestionnaire).
   const names = units.map(({ where }) => where.replace(/:\d+ /, ' '));
-  for (const expected of ['src/render-loop.js createRenderLoop', 'src/tactics-board.js TacticsBoard.setFormation',
-    "sw.js addEventListener('fetch')", 'tests/unit/documentation.test.mjs findUnits']) {
+  for (const expected of ['src/render-loop.mjs createRenderLoop', 'src/tactics-board.mjs TacticsBoard.setFormation',
+    "sw.mjs addEventListener('fetch')", 'tests/unit/documentation.test.mjs findUnits']) {
     assert.ok(names.includes(expected), `unité non trouvée : ${expected}`);
   }
   assert.deepEqual(units.filter((unit) => unit.missing.length > 0)

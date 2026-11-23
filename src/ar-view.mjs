@@ -7,11 +7,11 @@
  * ancré, il suit la pose de son ancre. À la sortie, la vue 3D est restaurée telle qu'au départ.
  *
  * Ce module ne parle pas à WebXR : il reçoit des poses (position et orientation) et les applique
- * aux objets three.js. C'est src/ar-surface.js qui lit le hit test et les ancres.
+ * aux objets three.js. C'est src/ar-surface.mjs qui lit le hit test et les ancres.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { computePitchPlacement } from './ar-placement.js';
+import { computePitchPlacement } from './ar-placement.mjs';
 
 /**
  * Crée la vue AR de la scène.

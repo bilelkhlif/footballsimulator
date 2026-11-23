@@ -2,15 +2,15 @@
  * Panneau de la séquence animée (sprint 6, bonus BF9) : enregistrer des images clés, lire l'action,
  * la mettre en pause, la recommencer, changer de vitesse et effacer la séquence.
  *
- * Les images clés passent par des commandes annulables (src/commands.js) ; la lecture, par le
- * lecteur (src/sequence-player.js). Le panneau observe la séquence et le lecteur (patron
+ * Les images clés passent par des commandes annulables (src/commands.mjs) ; la lecture, par le
+ * lecteur (src/sequence-player.mjs). Le panneau observe la séquence et le lecteur (patron
  * Observer) : boutons actifs, libellé Lecture / Pause, vitesse marquée et état écrit en clair.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { AddKeyframeCommand, ClearSequenceCommand } from './commands.js';
-import { MAX_KEYFRAMES } from './tactical-sequence.js';
-import { PLAYBACK_STATES } from './sequence-player.js';
+import { AddKeyframeCommand, ClearSequenceCommand } from './commands.mjs';
+import { MAX_KEYFRAMES } from './tactical-sequence.mjs';
+import { PLAYBACK_STATES } from './sequence-player.mjs';
 
 /**
  * Vitesse écrite à la française : « 0,5× », « 1× », « 2× ».
@@ -52,10 +52,10 @@ export function describeSequence({ length, state, ended, step, steps, speed }) {
  * Relie le panneau de la séquence à la séquence, au lecteur et à l'historique.
  * @param {object} options
  * @param {HTMLElement} options.root panneau (#sequence-panel)
- * @param {import('./tactical-sequence.js').TacticalSequence} options.sequence
- * @param {import('./sequence-player.js').SequencePlayer} options.player
- * @param {import('./commands.js').CommandHistory} options.history
- * @param {import('./tactics-board.js').TacticsBoard} options.board
+ * @param {import('./tactical-sequence.mjs').TacticalSequence} options.sequence
+ * @param {import('./sequence-player.mjs').SequencePlayer} options.player
+ * @param {import('./commands.mjs').CommandHistory} options.history
+ * @param {import('./tactics-board.mjs').TacticsBoard} options.board
  * @param {(feedback: {kind: string, message: string}) => void} [options.onFeedback]
  * @returns {{buttons: Record<string, HTMLButtonElement>, speedButtons: HTMLButtonElement[]}}
  * @responsable Bilel Khlif

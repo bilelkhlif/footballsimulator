@@ -1,10 +1,10 @@
 /**
  * Interaction tactique (sprint 5, BF5 à BF7) : la machine à états qui transforme un rayon en action.
  *
- * Elle ne sait pas d'où vient le rayon : la souris ou le doigt hors AR (src/pointer-input.js), ou
- * une source d'entrée WebXR en AR (src/xr-input.js). Elle ne dessine rien : la scène lit son état
- * (src/tactical-view.js). Elle ne modifie pas le tableau elle-même : elle crée des commandes, que
- * l'historique exécute (src/commands.js, patron Command).
+ * Elle ne sait pas d'où vient le rayon : la souris ou le doigt hors AR (src/pointer-input.mjs), ou
+ * une source d'entrée WebXR en AR (src/xr-input.mjs). Elle ne dessine rien : la scène lit son état
+ * (src/tactical-view.mjs). Elle ne modifie pas le tableau elle-même : elle crée des commandes, que
+ * l'historique exécute (src/commands.mjs, patron Command).
  *
  * Modes et états :
  * - « move » : idle (rien de sélectionné) → toucher un joueur ou le ballon → selected → toucher une
@@ -25,13 +25,13 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import * as THREE from 'three';
-import { EventEmitter } from './events.js';
-import { intersectPitchPlane, pickTarget } from './raycasting.js';
+import { EventEmitter } from './events.mjs';
+import { intersectPitchPlane, pickTarget } from './raycasting.mjs';
 import {
   ARROW_KINDS, BALL_MARGIN, clampToBoard, isOnBoard, MIN_ARROW_LENGTH, PLAYER_MARGIN,
-} from './tactics-board.js';
-import { AddArrowCommand, MoveBallCommand, MovePlayerCommand } from './commands.js';
-import { TEAMS } from './config.js';
+} from './tactics-board.mjs';
+import { AddArrowCommand, MoveBallCommand, MovePlayerCommand } from './commands.mjs';
+import { TEAMS } from './config.mjs';
 
 /** Modes de l'interaction : déplacer, tracer une passe, tracer une course. */
 export const INTERACTION_MODES = Object.freeze({ MOVE: 'move', PASS: ARROW_KINDS.PASS, RUN: ARROW_KINDS.RUN });
@@ -120,8 +120,8 @@ export class TacticalInteraction extends EventEmitter {
 
   /**
    * @param {object} options
-   * @param {import('./tactics-board.js').TacticsBoard} options.board état tactique
-   * @param {import('./commands.js').CommandHistory} options.history exécute et garde les commandes
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board état tactique
+   * @param {import('./commands.mjs').CommandHistory} options.history exécute et garde les commandes
    * @param {THREE.Object3D} options.pitchGroup groupe racine du terrain
    * @param {() => THREE.Object3D[]} options.getHitboxes zones de sélection des joueurs et du ballon
    * @responsable Bilel Khlif
@@ -262,7 +262,7 @@ export class TacticalInteraction extends EventEmitter {
 
   /**
    * Traite un toucher (ou un clic), décrit par son rayon en coordonnées monde.
-   * @param {THREE.Raycaster} raycaster rayon orienté par src/pointer-input.js ou src/xr-input.js
+   * @param {THREE.Raycaster} raycaster rayon orienté par src/pointer-input.mjs ou src/xr-input.mjs
    * @returns {{action: string, message?: string}} action réalisée : « select », « deselect »,
    *   « move », « arrow-start », « arrow », « invalid » ou « none »
    * @responsable Bilel Khlif

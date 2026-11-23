@@ -8,15 +8,15 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import * as THREE from 'three';
-import { PlayerFactory } from '../../src/players.js';
-import { createTeam } from '../../src/team.js';
-import { createBall } from '../../src/ball.js';
-import { DEFAULT_FORMATIONS, TEAMS } from '../../src/config.js';
-import { TacticsBoard } from '../../src/tactics-board.js';
-import { CommandHistory } from '../../src/commands.js';
-import { FormationAnimator, TRANSITION_DURATION_MS } from '../../src/formation-transition.js';
-import { MOVE_DURATION_MS, TacticalView } from '../../src/tactical-view.js';
-import { TacticalInteraction } from '../../src/tactical-interaction.js';
+import { PlayerFactory } from '../../src/players.mjs';
+import { createTeam } from '../../src/team.mjs';
+import { createBall } from '../../src/ball.mjs';
+import { DEFAULT_FORMATIONS, TEAMS } from '../../src/config.mjs';
+import { TacticsBoard } from '../../src/tactics-board.mjs';
+import { CommandHistory } from '../../src/commands.mjs';
+import { FormationAnimator, TRANSITION_DURATION_MS } from '../../src/formation-transition.mjs';
+import { MOVE_DURATION_MS, TacticalView } from '../../src/tactical-view.mjs';
+import { TacticalInteraction } from '../../src/tactical-interaction.mjs';
 
 /**
  * Remplace document par un canvas 2D minimal le temps d'un test.

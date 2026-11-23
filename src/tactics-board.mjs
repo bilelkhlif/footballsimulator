@@ -17,10 +17,10 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { EventEmitter } from './events.js';
-import { getFormation } from './formations.js';
-import { computeTeamTargets } from './formation-transition.js';
-import { BALL_RADIUS, BOARD_LENGTH, BOARD_WIDTH, PLAYER_SIZE, TEAMS } from './config.js';
+import { EventEmitter } from './events.mjs';
+import { getFormation } from './formations.mjs';
+import { computeTeamTargets } from './formation-transition.mjs';
+import { BALL_RADIUS, BOARD_LENGTH, BOARD_WIDTH, PLAYER_SIZE, TEAMS } from './config.mjs';
 
 /** Demi-longueur et demi-largeur du plateau (terrain et bande de gazon), en mètres. */
 export const BOARD_HALF_EXTENTS = Object.freeze({ x: BOARD_LENGTH / 2, z: BOARD_WIDTH / 2 });
@@ -124,7 +124,7 @@ function samePosition(a, b) {
  * @role Logique métier — tableau tactique (sujet du patron Observer)
  */
 export class TacticsBoard extends EventEmitter {
-  /** @type {Map<string, import('./formations.js').FormationStrategy>} */
+  /** @type {Map<string, import('./formations.mjs').FormationStrategy>} */
   #formations = new Map();
 
   /** @type {Map<string, {x: number, z: number}>} place de chaque joueur, par clé équipe:numéro */
@@ -172,7 +172,7 @@ export class TacticsBoard extends EventEmitter {
   /**
    * Formation en place d'une équipe.
    * @param {string} teamId
-   * @returns {import('./formations.js').FormationStrategy}
+   * @returns {import('./formations.mjs').FormationStrategy}
    * @responsable Bilel Khlif
    * @date 2026-11-14
    * @role Logique métier — tableau tactique (sujet du patron Observer)
@@ -191,7 +191,7 @@ export class TacticsBoard extends EventEmitter {
    * formation demandée est déjà en place.
    * @param {string} teamId
    * @param {string} name nom d'une formation de FORMATIONS, par exemple « 4-4-2 »
-   * @returns {import('./formations.js').FormationStrategy} la formation précédente
+   * @returns {import('./formations.mjs').FormationStrategy} la formation précédente
    * @responsable Bilel Khlif
    * @date 2026-11-14
    * @role Logique métier — tableau tactique (sujet du patron Observer)

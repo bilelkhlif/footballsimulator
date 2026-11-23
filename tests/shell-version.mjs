@@ -1,8 +1,8 @@
 /**
- * Version de contenu de la coquille de l'application (sprint 6), écrite dans sw.js.
+ * Version de contenu de la coquille de l'application (sprint 6), écrite dans sw.mjs.
  *
  * SHELL_VERSION est une empreinte SHA-256 du contenu des fichiers de APP_SHELL. Quand l'un d'eux
- * change, l'empreinte change, donc sw.js aussi : le navigateur installe la nouvelle version
+ * change, l'empreinte change, donc sw.mjs aussi : le navigateur installe la nouvelle version
  * complète de l'application. Un test unitaire (tests/unit/service-worker.test.mjs) échoue si
  * l'empreinte écrite ne correspond plus au contenu.
  *
@@ -19,24 +19,24 @@ import { fileURLToPath } from 'node:url';
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
- * Lit la liste APP_SHELL de sw.js.
+ * Lit la liste APP_SHELL de sw.mjs.
  * @param {string} [root] racine du dépôt
- * @returns {string[]} chemins relatifs, par exemple « ./src/main.js »
+ * @returns {string[]} chemins relatifs, par exemple « ./src/main.mjs »
  * @responsable Bilel Khlif
  * @date 2026-11-16
  * @role PWA — version de contenu de la coquille
  */
 export function readAppShell(root = REPO_ROOT) {
-  const source = readFileSync(path.join(root, 'sw.js'), 'utf8');
+  const source = readFileSync(path.join(root, 'sw.mjs'), 'utf8');
   const list = source.match(/const APP_SHELL = \[([\s\S]*?)\];/);
   if (!list) {
-    throw new Error('APP_SHELL introuvable dans sw.js');
+    throw new Error('APP_SHELL introuvable dans sw.mjs');
   }
   return [...list[1].matchAll(/'([^']+)'/g)].map(([, file]) => file);
 }
 
 /**
- * Lit SHELL_VERSION dans sw.js.
+ * Lit SHELL_VERSION dans sw.mjs.
  * @param {string} [root]
  * @returns {string|null}
  * @responsable Bilel Khlif
@@ -44,7 +44,7 @@ export function readAppShell(root = REPO_ROOT) {
  * @role PWA — version de contenu de la coquille
  */
 export function readShellVersion(root = REPO_ROOT) {
-  return readFileSync(path.join(root, 'sw.js'), 'utf8').match(/const SHELL_VERSION = '([^']*)';/)?.[1] ?? null;
+  return readFileSync(path.join(root, 'sw.mjs'), 'utf8').match(/const SHELL_VERSION = '([^']*)';/)?.[1] ?? null;
 }
 
 /**
@@ -67,7 +67,7 @@ export function computeShellVersion(root = REPO_ROOT) {
 }
 
 /**
- * Écrit l'empreinte dans sw.js.
+ * Écrit l'empreinte dans sw.mjs.
  * @param {string} version
  * @param {string} [root]
  * @responsable Bilel Khlif
@@ -75,11 +75,11 @@ export function computeShellVersion(root = REPO_ROOT) {
  * @role PWA — version de contenu de la coquille
  */
 export function writeShellVersion(version, root = REPO_ROOT) {
-  const file = path.join(root, 'sw.js');
+  const file = path.join(root, 'sw.mjs');
   const source = readFileSync(file, 'utf8');
   const updated = source.replace(/const SHELL_VERSION = '[^']*';/, `const SHELL_VERSION = '${version}';`);
   if (updated === source && readShellVersion(root) !== version) {
-    throw new Error('SHELL_VERSION introuvable dans sw.js');
+    throw new Error('SHELL_VERSION introuvable dans sw.mjs');
   }
   writeFileSync(file, updated);
 }

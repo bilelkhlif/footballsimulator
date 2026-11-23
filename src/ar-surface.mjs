@@ -19,8 +19,8 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { EventEmitter } from './events.js';
-import { computeSurfacePlacement, yawToQuaternion } from './ar-placement.js';
+import { EventEmitter } from './events.mjs';
+import { computeSurfacePlacement, yawToQuaternion } from './ar-placement.mjs';
 
 /** États de la pose du terrain. */
 export const PLACEMENT_STATES = Object.freeze({
@@ -46,7 +46,7 @@ function deleteQuietly(anchor) {
 }
 
 /**
- * Pose du terrain pour une session AR. Une instance par session : main.js la crée à l'événement
+ * Pose du terrain pour une session AR. Une instance par session : main.mjs la crée à l'événement
  * sessionstart et l'arrête à sessionend.
  * @responsable Bilel Khlif
  * @date 2026-11-14
@@ -68,7 +68,7 @@ export class SurfacePlacement extends EventEmitter {
    * @param {object} options
    * @param {XRSession} options.session
    * @param {XRReferenceSpace} options.referenceSpace espace local-floor de la session
-   * @param {ReturnType<typeof import('./ar-view.js').createArView>} options.view vue AR de la scène
+   * @param {ReturnType<typeof import('./ar-view.mjs').createArView>} options.view vue AR de la scène
    * @param {(position: object, orientation: object) => XRRigidTransform} [options.createRigidTransform]
    *   fabrique de poses WebXR ; par défaut new XRRigidTransform, remplacée dans les tests
    * @responsable Bilel Khlif

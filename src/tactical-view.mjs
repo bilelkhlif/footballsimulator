@@ -18,9 +18,9 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import * as THREE from 'three';
-import { assignFormationRoles } from './team.js';
-import { ARROW_STYLES, ArrowLayer, ArrowPreview } from './tactical-arrows.js';
-import { TRANSITION_DURATION_MS } from './formation-transition.js';
+import { assignFormationRoles } from './team.mjs';
+import { ARROW_STYLES, ArrowLayer, ArrowPreview } from './tactical-arrows.mjs';
+import { TRANSITION_DURATION_MS } from './formation-transition.mjs';
 
 /** Durée d'un déplacement à la main, en millisecondes. */
 export const MOVE_DURATION_MS = 350;
@@ -63,7 +63,7 @@ export class TacticalView {
 
   /**
    * @param {object} options
-   * @param {import('./tactics-board.js').TacticsBoard} options.board état tactique observé
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board état tactique observé
    * @param {THREE.Object3D} options.pitchGroup groupe racine du terrain
    * @param {Record<string, THREE.Group>} options.teamGroups groupe de chaque équipe (createTeam)
    * @param {Record<string, {attacksPositiveX: boolean}>} options.teams équipes (config.TEAMS)
@@ -155,7 +155,7 @@ export class TacticalView {
 
   /**
    * Relie la vue à l'interaction : anneau de sélection, départ et aperçu des flèches.
-   * @param {import('./tactical-interaction.js').TacticalInteraction} interaction
+   * @param {import('./tactical-interaction.mjs').TacticalInteraction} interaction
    * @responsable Bilel Khlif
    * @date 2026-11-15
    * @role Scène 3D — vue tactique (observateur du tableau tactique)

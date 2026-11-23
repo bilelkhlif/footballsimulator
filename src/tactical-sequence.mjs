@@ -3,8 +3,8 @@
  * clés, chacune donnant la place des 22 joueurs et du ballon dans le repère du terrain.
  *
  * L'utilisateur place les joueurs, enregistre une image clé, les déplace, en enregistre une autre,
- * et ainsi de suite ; src/sequence-player.js joue ensuite l'action d'une image à la suivante. Les
- * images clés sont ajoutées et effacées par des commandes annulables (src/commands.js), comme les
+ * et ainsi de suite ; src/sequence-player.mjs joue ensuite l'action d'une image à la suivante. Les
+ * images clés sont ajoutées et effacées par des commandes annulables (src/commands.mjs), comme les
  * autres actions.
  *
  * Événement :
@@ -12,7 +12,7 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { EventEmitter } from './events.js';
+import { EventEmitter } from './events.mjs';
 
 /** Nombre maximal d'images clés d'une séquence. */
 export const MAX_KEYFRAMES = 12;

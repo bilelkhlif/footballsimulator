@@ -1,5 +1,5 @@
 /**
- * Tests unitaires des calculs de src/dev-xr-emulation.js : la table virtuelle de l'émulateur,
+ * Tests unitaires des calculs de src/dev-xr-emulation.mjs : la table virtuelle de l'émulateur,
  * qui remplace la vraie table pour le hit test sur PC. Depuis le sprint 5 : le rayon d'un clic, qui
  * part de la vue et passe par le point cliqué, comme le toucher d'un téléphone.
  *
@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {
   intersectVirtualTable, quaternionFromForward, rayDirectionThroughPixel, rotateByQuaternion, START_POSE, VIRTUAL_TABLE,
-} from '../../src/dev-xr-emulation.js';
+} from '../../src/dev-xr-emulation.mjs';
 
 const FORWARD = { x: 0, y: 0, z: -1 };
 
@@ -18,7 +18,7 @@ const FORWARD = { x: 0, y: 0, z: -1 };
  * Quaternion de la pose de départ : rotation autour de X, vers le bas.
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/dev-xr-emulation.js) — outil de vérification
+ * @role Tests unitaires (src/dev-xr-emulation.mjs) — outil de vérification
  */
 function startOrientation() {
   const halfAngle = -(START_POSE.pitchDownDegrees * Math.PI) / 360;
@@ -31,7 +31,7 @@ function startOrientation() {
  * @param {{x: number, y: number, z: number}} expected
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/dev-xr-emulation.js) — outil de vérification
+ * @role Tests unitaires (src/dev-xr-emulation.mjs) — outil de vérification
  */
 function assertPoint(actual, expected) {
   for (const axis of ['x', 'y', 'z']) {

@@ -5,18 +5,18 @@
  * ajoute son bouton, sans toucher à l'interface. Un clic demande le changement au tableau tactique ;
  * le panneau ne se met à jour qu'à l'événement formationchange (patron Observer). Il affiche donc
  * toujours la formation réellement en place, quelle que soit l'origine du changement : un bouton,
- * une annulation ou une réinitialisation (sprint 5). Depuis le sprint 5, main.js fait passer le
+ * une annulation ou une réinitialisation (sprint 5). Depuis le sprint 5, main.mjs fait passer le
  * clic par une commande (ChangeFormationCommand), pour qu'il soit annulable.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { FORMATIONS } from './formations.js';
+import { FORMATIONS } from './formations.mjs';
 
 /**
  * Remplit le panneau des formations et le relie au tableau tactique.
  * @param {object} options
  * @param {HTMLElement} options.root conteneur du panneau
- * @param {import('./tactics-board.js').TacticsBoard} options.board tableau tactique
+ * @param {import('./tactics-board.mjs').TacticsBoard} options.board tableau tactique
  * @param {Array<{id: string, label: string}>} options.teams équipes (config.TEAMS)
  * @param {Record<string, HTMLElement>} [options.chips] pastille de chaque équipe dans le bandeau
  *   supérieur, qui affiche sa formation

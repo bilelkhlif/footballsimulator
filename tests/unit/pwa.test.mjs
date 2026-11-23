@@ -1,5 +1,5 @@
 /**
- * Tests unitaires de src/pwa.js (sprint 3) : bouton d'installation, avis de nouvelle version et
+ * Tests unitaires de src/pwa.mjs (sprint 3) : bouton d'installation, avis de nouvelle version et
  * badge hors-ligne. window, navigator et les boutons sont remplacés par des doublures fondées sur
  * EventTarget, qui existe sous Node.js comme dans le navigateur.
  *
@@ -7,7 +7,7 @@
  */
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { setUpInstallButton, watchForUpdates, watchNetworkStatus } from '../../src/pwa.js';
+import { setUpInstallButton, watchForUpdates, watchNetworkStatus } from '../../src/pwa.mjs';
 
 /**
  * Remplace une variable globale (window, navigator) pour la durée d'un test.
@@ -15,7 +15,7 @@ import { setUpInstallButton, watchForUpdates, watchNetworkStatus } from '../../s
  * @param {object} value
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/pwa.js) — outil de vérification
+ * @role Tests unitaires (src/pwa.mjs) — outil de vérification
  */
 function setGlobal(name, value) {
   Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
@@ -26,7 +26,7 @@ function setGlobal(name, value) {
  * @param {{standalone?: boolean}} [options]
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/pwa.js) — doublure
+ * @role Tests unitaires (src/pwa.mjs) — doublure
  */
 function createFakeWindow({ standalone = false } = {}) {
   const fakeWindow = new EventTarget();
@@ -38,7 +38,7 @@ function createFakeWindow({ standalone = false } = {}) {
  * Doublure de bouton : événements et attribut hidden.
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/pwa.js) — doublure
+ * @role Tests unitaires (src/pwa.mjs) — doublure
  */
 function createFakeButton() {
   const button = new EventTarget();
@@ -51,7 +51,7 @@ function createFakeButton() {
  * @param {'accepted'|'dismissed'} outcome choix de l'utilisateur
  * @responsable Bilel Khlif
  * @date 2026-11-14
- * @role Tests unitaires (src/pwa.js) — doublure
+ * @role Tests unitaires (src/pwa.mjs) — doublure
  */
 function createInstallPrompt(outcome = 'accepted') {
   const event = new Event('beforeinstallprompt', { cancelable: true });
