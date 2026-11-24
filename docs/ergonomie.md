@@ -1,5 +1,8 @@
 # Ergonomie de l'interface : retours de l'évaluation
 
+> Historique du 23 novembre 2026. La nouvelle navigation par espaces, ses captures et ses
+> vérifications sont documentées dans [espaces-coaching.md](espaces-coaching.md).
+
 Ce document décrit les problèmes d'usage relevés dans la version évaluée (commit `f7da74f`), puis les changements apportés. Toutes les captures viennent de Chrome sur PC, en WebGPU ; « AR » désigne l'AR émulée par IWER. Aucune vérification sur téléphone réel n'est revendiquée ici : elles restent à faire (§5).
 
 ## 1. Problèmes relevés

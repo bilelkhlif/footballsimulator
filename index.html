@@ -59,107 +59,64 @@
     <symbol id="i-install" viewBox="0 0 24 24"><path d="M12 3v11.5M7.5 10 12 14.5 16.5 10M5 20h14"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5"/></symbol>
     <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.5v.5"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v9a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M21 21v-3a6 6 0 0 0-4-5.7"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="m9 3-1 3-3 1-2 3 2 2-1 3 2 3 3-1 2 4h3l1-3 3-1 2-3-2-2 1-3-2-3-3 1-2-3z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></symbol>
   </svg>
 
-  <!-- Zone de rendu 3D : le canvas WebGPU de three.js y est inséré -->
+  <!-- Une scène et un DOM Overlay : les espaces ne recréent jamais le terrain. -->
   <main id="scene-container" aria-label="Terrain de football en 3D"></main>
-
-  <!-- Interface superposée ; c'est la racine du DOM Overlay en AR -->
   <div id="overlay">
-    <!-- Bandeau supérieur : nom et état (AR, rendu, réseau), formations en place, aide.
-         Une pastille d'équipe ouvre le panneau des formations. -->
-    <header class="topbar">
-      <div class="topbar__start">
-        <p class="brand"><svg class="icon" aria-hidden="true"><use href="#i-logo"/></svg><span class="brand__name">Football Simulator</span></p>
-        <span id="xr-status" class="status" data-state="checking" role="status">Vérification de l’AR…</span>
-        <span id="gpu-status" class="status" data-state="checking">Démarrage de WebGPU…</span>
-        <span id="network-status" class="status" data-state="offline" hidden>Hors-ligne</span>
+    <nav id="workspace-nav" class="navigation ui-surface" aria-label="Espaces de travail">
+      <a class="navigation__brand" href="#scene-container" aria-label="Football Simulator, terrain"><svg class="icon" aria-hidden="true"><use href="#i-logo"/></svg></a>
+      <div class="navigation__primary">
+        <button id="home-toggle" class="nav-item ui-surface" type="button" data-workspace="home" aria-label="Accueil" aria-controls="workspace-panel" aria-expanded="false" data-tooltip="Accueil"><svg class="icon" aria-hidden="true"><use href="#i-home"/></svg><span class="nav-item__label">Accueil</span><span class="nav-item__short">Terrain</span></button>
+        <button id="formations-toggle" class="nav-item ui-surface" type="button" data-workspace="formations" aria-label="Équipes et formations" aria-controls="workspace-panel" aria-expanded="false" data-tooltip="Équipes et formations"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg><span class="nav-item__label">Équipes et formations</span><span class="nav-item__short">Équipes</span></button>
+        <button id="tactics-toggle" class="nav-item ui-surface" type="button" data-workspace="tactics" aria-label="Outils tactiques" aria-controls="workspace-panel" aria-expanded="false" data-tooltip="Outils tactiques"><svg class="icon" aria-hidden="true"><use href="#i-pass"/></svg><span class="nav-item__label">Outils tactiques</span><span class="nav-item__short">Tactique</span></button>
+        <button id="sequence-toggle" class="nav-item ui-surface" type="button" data-workspace="animation" aria-label="Animation et séquences" aria-controls="workspace-panel" aria-expanded="false" data-tooltip="Animation et séquences"><svg class="icon" aria-hidden="true"><use href="#i-sequence"/></svg><span class="nav-item__label">Animation et séquences</span><span class="nav-item__short">Séquences</span></button>
+        <button id="ar-toggle" class="nav-item ui-surface" type="button" data-workspace="ar" aria-label="Réalité augmentée" aria-controls="workspace-panel" aria-expanded="false" data-tooltip="Réalité augmentée"><svg class="icon" aria-hidden="true"><use href="#i-ar"/></svg><span class="nav-item__label">Réalité augmentée</span></button>
+        <button id="more-toggle" class="nav-item ui-surface" type="button" data-workspace="more" aria-label="Plus d’outils" aria-controls="workspace-panel" aria-expanded="false" data-tooltip="Plus d’outils"><svg class="icon" aria-hidden="true"><use href="#i-more"/></svg><span class="nav-item__label">Plus d’outils</span><span class="nav-item__short">Plus</span></button>
       </div>
+      <div class="navigation__bottom">
+        <span class="navigation__divider" aria-hidden="true"></span>
+        <button id="settings-toggle" class="nav-item ui-surface" type="button" data-workspace="settings" aria-label="Réglages et aide" aria-controls="workspace-panel" aria-expanded="false" data-tooltip="Réglages et aide"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-item__label">Réglages et aide</span></button>
+      </div>
+    </nav>
+
+    <header class="topbar">
+      <div class="topbar__start"><p class="eyebrow">FOOTBALL SIMULATOR</p><h1>Tableau tactique<span class="topbar__edition"> · AR</span></h1></div>
       <div class="topbar__end">
         <ul class="teams" aria-label="Formations en place">
-          <li><button class="team-chip team-chip--blue ui-surface" type="button" data-opens="formations" aria-controls="formation-panel" title="Changer la formation">Bleus <strong id="formation-blue" data-formation></strong></button></li>
-          <li><button class="team-chip team-chip--red ui-surface" type="button" data-opens="formations" aria-controls="formation-panel" title="Changer la formation">Rouges <strong id="formation-red" data-formation></strong></button></li>
+          <li><button class="team-chip team-chip--blue ui-surface" type="button" data-workspace="formations" aria-controls="workspace-panel" aria-expanded="false" title="Changer la formation des Bleus">Bleus <strong id="formation-blue" data-formation></strong></button></li>
+          <li><button class="team-chip team-chip--red ui-surface" type="button" data-workspace="formations" aria-controls="workspace-panel" aria-expanded="false" title="Changer la formation des Rouges">Rouges <strong id="formation-red" data-formation></strong></button></li>
         </ul>
-        <button id="help-toggle" class="icon-button ui-surface" type="button" aria-expanded="false" aria-controls="onboarding" aria-label="Aide" title="Aide">
-          <svg class="icon" aria-hidden="true"><use href="#i-help"/></svg>
-        </button>
+        <div class="connection-status"><span id="gpu-status" class="status" data-state="checking">Démarrage de WebGPU…</span><span id="xr-status" class="status" data-state="checking" role="status">Vérification de l’AR…</span><span id="network-status" class="status" data-state="offline" hidden>Hors-ligne</span></div>
       </div>
     </header>
 
-    <!-- Mode diagnostic (sprint 5) : masqué par défaut, affiché avec ?diagnostics dans l'adresse,
-         aussi en AR (DOM Overlay). Rempli deux fois par seconde par src/diagnostics.mjs. -->
-    <aside id="diagnostics" class="diagnostics" aria-label="Diagnostic des performances" hidden>
-      <dl>
-        <div><dt>Images/s</dt><dd data-field="fps">–</dd></div>
-        <div><dt>Image</dt><dd data-field="frame">–</dd></div>
-        <div><dt>CPU / image</dt><dd data-field="cpu">–</dd></div>
-        <div><dt>Rendu</dt><dd data-field="backend">–</dd></div>
-        <div><dt>Session XR</dt><dd data-field="xr">–</dd></div>
-        <div><dt>Appels de dessin</dt><dd data-field="calls">–</dd></div>
-        <div><dt>Triangles</dt><dd data-field="triangles">–</dd></div>
-        <div><dt>Mémoire GPU</dt><dd data-field="memory">–</dd></div>
-      </dl>
-    </aside>
+    <aside id="workspace-panel" class="workspace-panel ui-surface" aria-labelledby="workspace-title" hidden>
+      <header class="workspace-panel__header"><div><p class="eyebrow">ESPACE DE TRAVAIL</p><h2 id="workspace-title">Accueil · Terrain</h2></div><button class="icon-button" type="button" data-workspace-close aria-label="Fermer le panneau et revenir au terrain" title="Retour au terrain"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button></header>
+      <div class="workspace-panel__content">
+        <section data-workspace-panel="home" aria-label="Accueil" hidden>
+          <p class="panel-intro">Votre terrain, toutes vos idées.</p><p class="muted">Tournez la vue, placez vos joueurs et construisez votre prochaine action.</p>
+          <div class="summary-card"><h3>En place</h3><dl class="summary-list"><div><dt>Équipe bleue</dt><dd data-formation-summary="blue"></dd></div><div><dt>Équipe rouge</dt><dd data-formation-summary="red"></dd></div><div><dt>Flèches tactiques</dt><dd data-arrow-count>0</dd></div></dl></div>
+          <div class="summary-card"><h3>Sélection</h3><p data-selection-summary>Aucune sélection</p><p class="muted">Touchez un joueur ou le ballon sur le terrain pour afficher sa position.</p></div>
+          <button class="button button--secondary" type="button" data-workspace="tactics"><svg class="icon" aria-hidden="true"><use href="#i-pass"/></svg>Ouvrir les outils tactiques</button>
+          <p class="panel-note">Glissez pour tourner · molette ou pincement pour zoomer. Les commandes de vue restent au bord du terrain.</p>
+        </section>
 
-    <!-- Bandeau inférieur : aide de l'étape en cours, messages, panneaux, puis la barre d'outils.
-         « Entrer en AR » n'apparaît que si l'AR est disponible ; pendant une session,
-         « Déplacer le terrain » et « Quitter l'AR » remplacent « Recentrer » et « Entrer en AR »,
-         et les outils n'apparaissent qu'une fois le terrain posé. -->
-    <footer class="bottombar">
-      <!-- Les panneaux défilent sur les écrans courts ; l'aide du geste et les outils restent accessibles. -->
-      <div class="bottombar__panels">
-      <!-- Aide au premier lancement (src/onboarding.mjs) : non modale, rouverte par « ? ». -->
-      <section id="onboarding" class="onboarding ui-surface" aria-labelledby="onboarding-title" hidden>
-        <h2 id="onboarding-title" class="onboarding__title">Bienvenue sur le tableau tactique</h2>
-        <ol class="onboarding__steps">
-          <li><svg class="icon icon--move" aria-hidden="true"><use href="#i-move"/></svg><span><strong>Déplacer</strong> : touchez un joueur ou le ballon, puis sa nouvelle place.</span></li>
-          <li><svg class="icon icon--pass" aria-hidden="true"><use href="#i-pass"/></svg><span><strong>Passe</strong> : touchez le ballon ou son porteur, puis un partenaire ou un espace libre.</span></li>
-          <li><svg class="icon icon--run" aria-hidden="true"><use href="#i-run"/></svg><span><strong>Course</strong> : touchez un joueur, puis son point d’arrivée.</span></li>
-          <li><svg class="icon" aria-hidden="true"><use href="#i-undo"/></svg><span>L’aperçu devient <strong class="text-invalid">rouge</strong> quand une action est impossible. <strong>Annuler</strong> défait la dernière action.</span></li>
-        </ol>
-        <p class="onboarding__keys">Au clavier : D, P, C pour les outils ; Échap abandonne ; Ctrl+Z annule.</p>
-        <button id="onboarding-close" class="button" type="button">Commencer</button>
-      </section>
+        <section data-workspace-panel="formations" aria-label="Équipes et formations" hidden>
+          <p class="panel-intro">Chaque équipe, son organisation.</p><p class="muted">Choisissez une formation. Les joueurs rejoignent leurs places ; le changement reste annulable.</p>
+          <div id="formation-panel" class="formation-panel" hidden></div>
+          <details class="positions"><summary>Positions des 22 joueurs</summary><p class="muted">Coordonnées de la maquette, en mètres. Déplacez les joueurs directement sur le terrain.</p><table><caption class="sr-only">Positions actuelles des joueurs</caption><thead><tr><th scope="col">Joueur</th><th scope="col">x (m)</th><th scope="col">z (m)</th></tr></thead><tbody id="player-positions"></tbody></table></details>
+        </section>
 
-      <p id="ar-message" class="notice" role="alert" hidden></p>
-      <p id="update-notice" class="notice notice--info" role="status" hidden>
-        Nouvelle version installée.
-        <button id="reload-app" class="button button--small" type="button">Recharger</button>
-      </p>
-      <!-- Panneau des formations (sprint 4) : une ligne de boutons par équipe, créée par
-           src/formation-panel.mjs à partir des formations enregistrées. -->
-      <div id="formation-panel" class="formation-panel ui-surface" hidden></div>
-      <!-- Panneau de la séquence animée (sprint 6, bonus BF9) : images clés, lecture, vitesse ; relié
-           par src/sequence-panel.mjs. En AR, il n'apparaît qu'une fois le terrain posé. -->
-      <div id="sequence-panel" class="sequence-panel ui-surface" role="group" aria-label="Séquence animée" hidden>
-        <p class="sequence-panel__status" data-sequence="status" aria-live="polite"></p>
-        <div class="sequence-panel__row sequence-panel__row--3">
-          <button class="tool" type="button" data-sequence="keyframe">Image clé</button>
-          <button class="tool" type="button" data-sequence="play" disabled>Lecture</button>
-          <button class="tool" type="button" data-sequence="restart" disabled>Recommencer</button>
-        </div>
-        <div class="sequence-panel__row sequence-panel__row--4">
-          <button class="tool" type="button" data-speed="0.5" aria-pressed="false">0,5×</button>
-          <button class="tool" type="button" data-speed="1" aria-pressed="true">1×</button>
-          <button class="tool" type="button" data-speed="2" aria-pressed="false">2×</button>
-          <button class="tool" type="button" data-sequence="clear" disabled>Effacer</button>
-        </div>
-      </div>
-      </div>
-
-      <!-- Aide de l'étape en cours et retour du dernier geste ; bouton pour abandonner la sélection
-           ou le tracé en cours, visible seulement quand il y en a un. -->
-      <div class="status-line">
-        <svg class="icon status-line__icon" aria-hidden="true"><use href="#i-info"/></svg>
-        <p id="hint" class="hint" role="status" aria-live="polite">Glissez pour tourner, pincez pour zoomer.</p>
-        <button id="cancel-draft" class="chip-button ui-surface" type="button" aria-keyshortcuts="Escape" hidden>
-          <svg class="icon" aria-hidden="true"><use href="#i-close"/></svg><span data-cancel-label>Abandonner</span>
-        </button>
-      </div>
-
-      <!-- Barre d'outils : l'outil (déplacer, passe, course), l'historique (annuler, rétablir,
-           réinitialiser), reliés par src/tactical-toolbar.mjs, puis les actions de la vue. -->
-      <div class="dock ui-surface">
+        <section data-workspace-panel="tactics" aria-label="Outils tactiques" hidden>
+          <p class="panel-intro">Dessinez le prochain mouvement.</p><p class="muted">Choisissez un outil, puis intervenez sur le terrain.</p>
         <div id="tactical-toolbar" class="toolbar" role="toolbar" aria-label="Outils tactiques">
           <div class="toolbar__group toolbar__group--modes" role="group" aria-label="Outil">
             <button class="tool tool--move" type="button" data-mode="move" aria-pressed="true" aria-keyshortcuts="D" title="Déplacer un joueur ou le ballon (D)">
@@ -184,42 +141,86 @@
             </button>
           </div>
         </div>
-        <div class="actions" role="group" aria-label="Vue et panneaux">
-          <button id="formations-toggle" class="button button--secondary" type="button" aria-expanded="false" aria-controls="formation-panel">
-            <svg class="icon" aria-hidden="true"><use href="#i-formation"/></svg><span class="button__label">Formations</span>
-          </button>
-          <button id="sequence-toggle" class="button button--secondary" type="button" aria-expanded="false" aria-controls="sequence-panel">
-            <svg class="icon" aria-hidden="true"><use href="#i-sequence"/></svg><span class="button__label">Séquence</span>
-          </button>
-          <button id="copy-flag" class="button button--secondary" type="button" hidden>
-            <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span class="button__label">Copier l’adresse du réglage</span>
-          </button>
-          <button id="install-app" class="button button--secondary" type="button" hidden>
-            <svg class="icon" aria-hidden="true"><use href="#i-install"/></svg><span class="button__label">Installer</span>
-          </button>
-          <button id="reset-view" class="button button--secondary" type="button" title="Recentrer la vue sur le terrain">
-            <svg class="icon" aria-hidden="true"><use href="#i-recenter"/></svg><span class="button__label">Recentrer</span>
-          </button>
-          <button id="enter-ar" class="button button--primary" type="button" hidden>
-            <svg class="icon" aria-hidden="true"><use href="#i-ar"/></svg><span class="button__label">Entrer en AR</span>
-          </button>
-          <button id="move-pitch" class="button button--secondary" type="button" hidden>
-            <svg class="icon" aria-hidden="true"><use href="#i-lift"/></svg><span class="button__label">Déplacer le terrain</span>
-          </button>
-          <button id="exit-ar" class="button button--secondary" type="button" hidden>
-            <svg class="icon" aria-hidden="true"><use href="#i-exit"/></svg><span class="button__label">Quitter l’AR</span>
-          </button>
+
+          <div class="tool-guide"><h3>Un geste à la fois</h3><p><strong>Déplacer</strong> · un joueur ou le ballon, puis sa destination.</p><p><strong>Passe</strong> · le ballon ou son porteur, puis un partenaire ou un espace libre.</p><p><strong>Course</strong> · un joueur, puis son arrivée.</p><p class="muted">Un aperçu rouge explique une action refusée. Échap ou Abandonner annule le geste en cours.</p></div>
+        </section>
+
+        <section data-workspace-panel="animation" aria-label="Animation et séquences" hidden>
+          <p class="panel-intro">D’une position à une action.</p><p class="muted">Enregistrez les positions, déplacez les joueurs, puis ajoutez une autre image clé.</p>
+      <div id="sequence-panel" class="sequence-panel ui-surface" role="group" aria-label="Séquence animée">
+        <p class="sequence-panel__status" data-sequence="status" aria-live="polite"></p>
+        <div class="sequence-panel__row sequence-panel__row--3">
+          <button class="tool" type="button" data-sequence="keyframe">Image clé</button>
+          <button class="tool" type="button" data-sequence="play" disabled>Lecture</button>
+          <button class="tool" type="button" data-sequence="restart" disabled>Recommencer</button>
         </div>
+        <div class="sequence-panel__row sequence-panel__row--4">
+          <button class="tool" type="button" data-speed="0.5" aria-pressed="false">0,5×</button>
+          <button class="tool" type="button" data-speed="1" aria-pressed="true">1×</button>
+          <button class="tool" type="button" data-speed="2" aria-pressed="false">2×</button>
+          <button class="tool" type="button" data-sequence="clear" disabled>Effacer</button>
+        </div>
+          <p class="panel-note">La séquence et son historique sont conservés quand vous changez d’espace. Une modification du tableau arrête la lecture et retrouve la tactique.</p>
+        </section>
+
+        <section data-workspace-panel="ar" aria-label="Réalité augmentée" hidden>
+          <p class="panel-intro">Le terrain prend sa place.</p><p class="muted">La même tactique, posée sur une surface réelle.</p>
+          <div class="summary-card"><h3>Compatibilité de cet appareil</h3><p id="ar-capability" role="status">Vérification de l’AR…</p><p class="muted">L’entrée est proposée uniquement si WebXR et son rendu sont pris en charge. Autorisez la caméra lorsque le navigateur le demande.</p></div>
+          <button id="enter-ar" class="button button--primary" type="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-ar"/></svg><span class="button__label">Entrer en AR</span></button>
+          <button id="copy-flag" class="button button--secondary" type="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span class="button__label">Copier l’adresse du réglage</span></button>
+          <ol class="ar-guide"><li>Visez une table et attendez le réticule.</li><li>Touchez la surface pour poser le terrain.</li><li>Ouvrez vos outils pour travailler sur la tactique.</li></ol><p class="panel-note">« Déplacer le terrain » relance la pose. « Quitter l’AR » retrouve la vue 3D et conserve votre configuration.</p>
+        </section>
+
+        <section data-workspace-panel="more" aria-label="Plus d’outils" hidden>
+          <p class="panel-intro">Les outils en complément.</p>
+          <div class="overflow-links"><button class="button button--secondary" type="button" data-workspace="ar"><svg class="icon" aria-hidden="true"><use href="#i-ar"/></svg>Réalité augmentée</button><button class="button button--secondary" type="button" data-workspace="settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>Réglages et aide</button></div>
+          <div class="summary-card"><h3>Application et connexion</h3><p id="connection-summary" role="status">En ligne</p><p id="offline-cache-status" class="muted" role="status">Préparation de l’accès hors ligne…</p><button id="install-app" class="button button--secondary" type="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-install"/></svg><span class="button__label">Installer l’application</span></button><p class="panel-note">L’installation est proposée ici lorsque le navigateur la rend disponible.</p></div>
+          <div class="summary-card"><h3>Performances</h3><button id="diagnostics-toggle" class="button button--secondary" type="button" aria-pressed="false" aria-controls="diagnostics"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>Afficher les diagnostics</button><p class="panel-note">Images par seconde, temps de rendu et état de la session, sans recharger le terrain.</p></div>
+        </section>
+
+        <section data-workspace-panel="settings" aria-label="Réglages et aide" hidden>
+          <p class="panel-intro">Vos repères, à portée de main.</p><button id="help-toggle" class="button button--secondary" type="button" aria-expanded="false" aria-controls="onboarding"><svg class="icon" aria-hidden="true"><use href="#i-help"/></svg>Guide de prise en main</button>
+          <div class="onboarding-container">      <section id="onboarding" class="onboarding ui-surface" aria-labelledby="onboarding-title" hidden>
+        <h2 id="onboarding-title" class="onboarding__title">Bienvenue sur le tableau tactique</h2>
+        <ol class="onboarding__steps">
+          <li><svg class="icon icon--move" aria-hidden="true"><use href="#i-move"/></svg><span><strong>Déplacer</strong> : touchez un joueur ou le ballon, puis sa nouvelle place.</span></li>
+          <li><svg class="icon icon--pass" aria-hidden="true"><use href="#i-pass"/></svg><span><strong>Passe</strong> : touchez le ballon ou son porteur, puis un partenaire ou un espace libre.</span></li>
+          <li><svg class="icon icon--run" aria-hidden="true"><use href="#i-run"/></svg><span><strong>Course</strong> : touchez un joueur, puis son point d’arrivée.</span></li>
+          <li><svg class="icon" aria-hidden="true"><use href="#i-undo"/></svg><span>L’aperçu devient <strong class="text-invalid">rouge</strong> quand une action est impossible. <strong>Annuler</strong> défait la dernière action.</span></li>
+        </ol>
+        <p class="onboarding__keys">Au clavier : D, P, C pour les outils ; Échap abandonne ; Ctrl+Z annule.</p>
+        <button id="onboarding-close" class="button" type="button">Commencer</button>
+      </section></div>
+          <button class="button button--secondary rail-preference" type="button" data-expand-rail aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-panel"/></svg>Afficher les libellés du rail</button>
+          <h3>Raccourcis clavier</h3><dl class="shortcut-list"><div><dt>Déplacer</dt><dd><kbd>D</kbd></dd></div><div><dt>Passe</dt><dd><kbd>P</kbd></dd></div><div><dt>Course</dt><dd><kbd>C</kbd></dd></div><div><dt>Abandonner / fermer</dt><dd><kbd>Échap</kbd></dd></div><div><dt>Annuler</dt><dd><kbd>Ctrl Z</kbd></dd></div><div><dt>Rétablir</dt><dd><kbd>Ctrl Y</kbd> ou <kbd>Ctrl Maj Z</kbd></dd></div></dl><p class="panel-note">Sur Mac, utilisez Cmd à la place de Ctrl. Tab parcourt les commandes ; les flèches parcourent le rail.</p><p id="motion-preference" class="panel-note"></p>
+        </section>
       </div>
+      <button class="workspace-panel__back" type="button" data-workspace-close>Retour au terrain</button>
+    </aside>
+
+
+    <aside id="diagnostics" class="diagnostics" aria-label="Diagnostic des performances" hidden>
+      <dl>
+        <div><dt>Images/s</dt><dd data-field="fps">–</dd></div>
+        <div><dt>Image</dt><dd data-field="frame">–</dd></div>
+        <div><dt>CPU / image</dt><dd data-field="cpu">–</dd></div>
+        <div><dt>Rendu</dt><dd data-field="backend">–</dd></div>
+        <div><dt>Session XR</dt><dd data-field="xr">–</dd></div>
+        <div><dt>Appels de dessin</dt><dd data-field="calls">–</dd></div>
+        <div><dt>Triangles</dt><dd data-field="triangles">–</dd></div>
+        <div><dt>Mémoire GPU</dt><dd data-field="memory">–</dd></div>
+      </dl>
+    </aside>
+    <div class="global-notices"><p id="ar-message" class="notice" role="alert" hidden></p><p id="update-notice" class="notice notice--info" role="status" hidden>Nouvelle version installée.<button id="reload-app" class="button button--small" type="button">Recharger</button></p></div>
+
+    <footer class="bottombar">
+      <div class="pitch-meta"><button id="active-tool" class="active-tool ui-surface" type="button" data-workspace="tactics" aria-label="Ouvrir les outils tactiques"><svg class="icon" aria-hidden="true"><use href="#i-move"/></svg><span data-mode-summary>Déplacer</span></button><span class="selection-meta" data-selection-summary>Aucune sélection</span></div>
+      <div class="status-line"><p id="hint" class="hint" role="status" aria-live="polite">Glissez pour tourner, pincez pour zoomer.</p><button id="cancel-draft" class="chip-button ui-surface" type="button" aria-keyshortcuts="Escape" hidden><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg><span data-cancel-label>Abandonner</span></button></div>
+      <div class="view-controls ui-surface" role="group" aria-label="Commandes de vue"><button id="zoom-out" class="icon-button" type="button" aria-label="Dézoomer" title="Dézoomer"><svg class="icon" aria-hidden="true"><use href="#i-minus"/></svg></button><button id="zoom-in" class="icon-button" type="button" aria-label="Zoomer" title="Zoomer"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button><span class="view-controls__divider" aria-hidden="true"></span><button id="reset-view" class="icon-button" type="button" aria-label="Recentrer" title="Recentrer la vue sur le terrain"><svg class="icon" aria-hidden="true"><use href="#i-recenter"/></svg></button></div>
+      <div class="ar-session-actions" role="group" aria-label="Commandes de la session AR"><button id="move-pitch" class="button button--secondary" type="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-lift"/></svg><span class="button__label">Déplacer le terrain</span></button><button id="exit-ar" class="button button--secondary" type="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-exit"/></svg><span class="button__label">Quitter l’AR</span></button></div>
     </footer>
   </div>
-
-  <!-- Écran de chargement, masqué dès que la scène est prête ; message d'erreur si WebGPU manque -->
   <div id="loader" class="loader" role="status">Chargement du terrain…</div>
-
-  <!-- Message affiché si JavaScript est désactivé -->
-  <noscript>
-    <p class="noscript">Football Simulator a besoin de JavaScript pour afficher le terrain.</p>
-  </noscript>
+  <noscript><p class="noscript">Football Simulator a besoin de JavaScript pour afficher le terrain.</p></noscript>
 </body>
 </html>

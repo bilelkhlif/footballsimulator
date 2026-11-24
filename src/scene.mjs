@@ -47,14 +47,12 @@ export function framingWindow(camera) {
  */
 export function applyFramingOffset(camera, width, height) {
   const topbar = document.querySelector('.topbar');
-  const dock = document.querySelector('.dock');
-  const status = document.querySelector('.status-line');
-  if (topbar && dock && status && width > 0 && height > 0) {
-    const overlayStyle = getComputedStyle(document.getElementById('overlay'));
-    const gap = parseFloat(getComputedStyle(document.querySelector('.bottombar')).gap) || 0;
-    const topPx = topbar.getBoundingClientRect().bottom + gap;
-    const bottomPx = height - parseFloat(overlayStyle.paddingBottom)
-      - dock.getBoundingClientRect().height - status.getBoundingClientRect().height - gap * 2;
+  const footer = document.querySelector('.bottombar');
+  const container = document.getElementById('scene-container');
+  if (topbar && footer && container && width > 0 && height > 0) {
+    const bounds = container.getBoundingClientRect();
+    const topPx = Math.max(0, topbar.getBoundingClientRect().bottom - bounds.top + 16);
+    const bottomPx = Math.max(topPx + 40, Math.min(height, footer.getBoundingClientRect().top - bounds.top - 16));
     camera.userData.framingWindow = {
       x: 0.92, top: 1 - (topPx * 2) / height, bottom: 1 - (bottomPx * 2) / height,
     };
@@ -207,7 +205,7 @@ function createControls(camera, canvas) {
  * @param {{renderMode?: string}} [options] mode de rendu : WebGPU par défaut
  * @returns {Promise<{renderer: import('three/webgpu').Renderer, scene: THREE.Scene,
  *   camera: THREE.PerspectiveCamera, controls: OrbitControls, pitchGroup: THREE.Group,
- *   table: THREE.Mesh, resetView: () => void, resize: () => void}>}
+ *   table: THREE.Mesh, resetView: () => void, resize: () => void, zoomView: (factor: number) => void}>}
  * @responsable Bilel Khlif
  * @date 2026-11-05
  * @role Scène 3D — contexte de rendu de la vue hors AR
@@ -235,7 +233,7 @@ export async function createSceneContext(container, { renderMode = RENDER_MODES.
 
   // Un redimensionnement simple (barre d'adresse mobile) garde la vue choisie ;
   // seul un changement d'orientation recadre le terrain.
-  let wasPortrait = camera.aspect < 1;
+  let wasPortrait = window.innerWidth < window.innerHeight;
 
   /**
    * Adapte le rendu et la caméra à la taille du conteneur. Sans effet pendant une session AR :
@@ -249,7 +247,7 @@ export async function createSceneContext(container, { renderMode = RENDER_MODES.
     renderer.setSize(container.clientWidth, container.clientHeight);
     camera.aspect = container.clientWidth / container.clientHeight;
     applyFramingOffset(camera, container.clientWidth, container.clientHeight);
-    const isPortrait = camera.aspect < 1;
+    const isPortrait = window.innerWidth < window.innerHeight;
     if (isPortrait !== wasPortrait) {
       wasPortrait = isPortrait;
       resetView();
@@ -257,17 +255,45 @@ export async function createSceneContext(container, { renderMode = RENDER_MODES.
   };
   window.addEventListener('resize', resize);
 
-  // Les états AR/PWA peuvent changer la place occupée par les commandes. Le texte d'aide
-  // et les panneaux ne déclenchent pas ce recadrage : choisir un joueur ne fait pas sauter la vue.
+  /** Adapte la distance au nouvel espace libre en gardant la rotation et le pivot choisis. */
+  const fitCurrentView = () => {
+    const direction = camera.position.clone().sub(controls.target);
+    let distance = direction.length();
+    direction.normalize();
+    for (let step = 0; step < 60 && !boardFitsInView(camera) && distance < controls.maxDistance; step += 1) {
+      distance = Math.min(controls.maxDistance, distance * 1.04);
+      camera.position.copy(controls.target).addScaledVector(direction, distance);
+      camera.updateMatrixWorld();
+    }
+    controls.update();
+  };
+
+  // Un panneau réserve de la place au canvas. Le redimensionnement garde la rotation,
+  // la tactique et le tracé ; seul un changement d'orientation recadre la vue initiale.
+  let layoutFit = null;
   const framingObserver = new ResizeObserver(() => {
     if (!renderer.xr.isPresenting) {
+      // Quand seul l'espace réservé change, repart de la distance choisie par l'utilisateur.
+      // Une rotation, un panoramique ou un zoom manuel devient une nouvelle référence.
+      if (layoutFit && camera.position.distanceTo(layoutFit.fitted) < 0.00001
+        && controls.target.distanceTo(layoutFit.target) < 0.00001) camera.position.copy(layoutFit.chosen);
+      const chosen = camera.position.clone();
       resize();
-      resetView();
+      fitCurrentView();
+      layoutFit = { chosen, fitted: camera.position.clone(), target: controls.target.clone() };
     }
   });
-  for (const element of document.querySelectorAll('.topbar, .dock')) {
+  for (const element of document.querySelectorAll('#scene-container, .topbar, .bottombar')) {
     framingObserver.observe(element);
   }
 
-  return { renderer, scene, camera, controls, pitchGroup, table, resetView, resize };
+  /** Zoom de la vue 3D, dans les mêmes limites que la molette et le pincement. */
+  const zoomView = (factor) => {
+    if (renderer.xr.isPresenting) return;
+    const direction = camera.position.clone().sub(controls.target);
+    const distance = Math.max(controls.minDistance, Math.min(controls.maxDistance, direction.length() * factor));
+    camera.position.copy(controls.target).add(direction.normalize().multiplyScalar(distance));
+    controls.update();
+  };
+  return { renderer, scene, camera, controls, pitchGroup, table, resetView, resize, zoomView };
 }

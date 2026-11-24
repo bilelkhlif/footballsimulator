@@ -2,6 +2,11 @@
 
 > Les modules cités suivent les noms actuels `.mjs`. Les descriptions des étapes et les résultats datés restent historiques. Les retours du 23 novembre sont résumés dans l’[addendum](#10-retours-de-lévaluation-du-23-novembre).
 
+> La navigation du 24 novembre est décrite dans [espaces-coaching.md](espaces-coaching.md) :
+> inventaire, correspondance de toutes les commandes, contrôleur central, adaptation mobile et AR.
+> `workspace-controller.mjs` porte uniquement l'état d'interface ; `workspace-navigation.mjs`
+> relie les panneaux persistants aux objets métier existants.
+
 Ce guide explique tout le code du sprint 1, fichier par fichier, pour que chaque membre de l'équipe puisse le présenter, le modifier et répondre aux questions du jury. Compter 30 à 45 minutes de lecture, avec le code ouvert à côté.
 
 Le sprint 2 (session AR) a son propre document, [sprint-2.md](sprint-2.md), qui explique ses cinq nouveaux modules ; ce guide signale ce que le sprint 2 a changé dans le code du sprint 1.

@@ -11,6 +11,8 @@ Le rendu passe par **WebGPU**, avec three.js r187, **sans repli WebGL** : sans W
 | Fichier | Rôle | Patron |
 | --- | --- | --- |
 | `src/main.mjs` | Assemble la scène, les équipes, l'AR et la PWA, puis lance la boucle de rendu | |
+| `src/workspace-controller.mjs` | Espace actif, panneau ouvert, disponibilité avant la pose AR ; aucune donnée tactique | Observer (sujet) |
+| `src/workspace-navigation.mjs` | Rail, panneaux persistants, focus, Retour navigateur, résumés de sélection / positions, états AR et PWA | Observer |
 | `src/webgpu.mjs` | Moteur de rendu WebGPU sans repli WebGL (`WebGpuOnlyRenderer`), causes d'échec | |
 | `src/webgl-test-mode.mjs` | Mode test WebGL, seulement avec `?webgl` dans l'adresse : réservé aux tests, ce n'est pas un repli | |
 | `src/scene.mjs` | Moteur de rendu, caméra, lumières, contrôles d'orbite, groupe racine `pitchGroup` | |
@@ -51,6 +53,13 @@ Le rendu passe par **WebGPU**, avec three.js r187, **sans repli WebGL** : sans W
 | `src/config.mjs` | Constantes partagées : dimensions, échelle, équipes, couleurs | |
 
 Le patron Observer est en place depuis le sprint 2 : `main.mjs` s'abonne aux événements `sessionstart`, `sessionend` et `sessionerror` de la session AR, et depuis le sprint 3 à l'événement `statechange` de la pose du terrain.
+
+Les [sept espaces de coaching](espaces-coaching.md) partagent la même scène, le même tableau,
+le même historique et la même séquence. Le contrôleur ne connaît que des identifiants d'interface.
+Un changement d'espace masque et affiche des éléments existants : aucune copie du terrain,
+aucun nouvel abonnement métier et aucune nouvelle boucle de rendu. La racine `#overlay` reste
+la racine DOM Overlay de la session AR. Le canvas réserve la largeur du panneau, ou sa hauteur
+en portrait ; le cadrage s'adapte en gardant la rotation choisie.
 
 Depuis le sprint 5, une action de l'utilisateur suit toujours le même chemin, en quatre temps séparés :
 
@@ -104,6 +113,6 @@ Chaque joueur est un `THREE.Group` qui contient son numéro (sprite toujours tou
 | Coquille de l'application (`APP_SHELL` : page, code, styles, three.js, icônes, manifeste) | Installée d'un bloc dans le cache de sa version, puis cache d'abord | Une page ne mélange jamais deux versions, et se lance aussitôt, même sur un réseau lent ou coupé |
 | Autres requêtes de la même origine (module de l'émulateur, autres pages) | Réseau d'abord, repli sur le cache, ou après 3 secondes sans réponse | Sans effet sur l'application elle-même |
 
-Depuis le sprint 6, le cache s'appelle `football-simulator-<SHELL_VERSION>`. `SHELL_VERSION` est une empreinte SHA-256 du contenu des 51 entrées de `APP_SHELL` (50 fichiers et l'adresse racine `./`), écrite dans `sw.mjs` par `npm run shell-version` : un fichier modifié change `sw.mjs`, et le navigateur installe la nouvelle version, d'un bloc (`cache.addAll`, sans le cache HTTP). Le numéro `CACHE_VERSION`, incrémenté à la main jusqu'au sprint 5, n'existe plus. Deux règles, vérifiées par `npm test` : tout nouveau fichier de l'application est ajouté à `APP_SHELL`, et `SHELL_VERSION` est recalculée après chaque modification. Les modules de l'émulateur, chargés seulement avec `?iwer`, restent hors de la coquille.
+Depuis le sprint 6, le cache s'appelle `football-simulator-<SHELL_VERSION>`. `SHELL_VERSION` est une empreinte SHA-256 du contenu des entrées de `APP_SHELL`, y compris les deux modules de navigation, écrite dans `sw.mjs` par `npm run shell-version` : un fichier modifié change `sw.mjs`, et le navigateur installe la nouvelle version, d'un bloc (`cache.addAll`, sans le cache HTTP). Le numéro `CACHE_VERSION`, incrémenté à la main jusqu'au sprint 5, n'existe plus. Deux règles, vérifiées par `npm test` : tout nouveau fichier de l'application est ajouté à `APP_SHELL`, et `SHELL_VERSION` est recalculée après chaque modification. Les modules de l'émulateur, chargés seulement avec `?iwer`, restent hors de la coquille.
 
 Le fichier `sw.js` ne sert plus cette coquille : il migre les anciens enregistrements vers `sw.mjs`, sans gestionnaire `fetch`. Détail du cycle, des exceptions tierces et des limites de déploiement : [migration-mjs.md](migration-mjs.md).

@@ -2,7 +2,7 @@
  * Aide au premier lancement : une carte courte qui présente les trois outils et l'annulation.
  *
  * Elle s'ouvre seule à la première visite, hors AR, et se ferme par « Commencer », par Échap ou par
- * le bouton « ? ». Le bouton « ? » la rouvre à tout moment. Elle n'est pas modale : la scène reste
+ * le bouton du guide. Le guide peut être rouvert à tout moment. Il n'est pas modal : la scène reste
  * visible et utilisable autour. Une fois vue, elle ne revient pas seule : le navigateur le retient
  * (localStorage). Si le stockage est refusé (navigation privée, réglages), elle s'ouvre à chaque
  * visite plutôt que de casser le démarrage.
@@ -45,23 +45,25 @@ export function rememberOnboarding(storage) {
 }
 
 /**
- * Relie la carte d'aide, son bouton de fermeture et le bouton « ? ».
+ * Relie la carte d'aide, son bouton de fermeture et le bouton du guide.
  * @param {object} options
  * @param {HTMLElement} options.card carte d'aide (#onboarding)
  * @param {HTMLButtonElement} options.closeButton « Commencer »
- * @param {HTMLButtonElement} options.toggleButton bouton « ? » du bandeau supérieur
+ * @param {HTMLButtonElement} options.toggleButton bouton du guide dans Réglages et aide
  * @param {Storage|null} [options.storage] stockage local
  * @param {boolean} [options.showOnStart] ouvrir la carte si elle n'a jamais été vue
+ * @param {() => void} [options.onOpen] rend accessible l'espace qui contient la carte
  * @returns {{open: () => void, close: (options?: {restoreFocus?: boolean}) => void, readonly isOpen: boolean}}
  * @responsable Bilel Khlif
  * @date 2026-11-23
  * @role Interface HTML — aide au premier lancement
  */
-export function createOnboarding({ card, closeButton, toggleButton, storage = null, showOnStart = true }) {
+export function createOnboarding({ card, closeButton, toggleButton, storage = null, showOnStart = true, onOpen = () => {} }) {
   /** Montre ou cache la carte, et tient à jour l'état du bouton « ? ». */
   const setOpen = (open) => {
     card.hidden = !open;
     toggleButton.setAttribute('aria-expanded', String(open));
+    if (open) onOpen();
   };
   const controller = {
     get isOpen() {
@@ -78,7 +80,9 @@ export function createOnboarding({ card, closeButton, toggleButton, storage = nu
       setOpen(false);
       rememberOnboarding(storage);
       if (restoreFocus) {
-        toggleButton.focus?.({ preventScroll: true });
+        const target = typeof document !== 'undefined' && !toggleButton.getClientRects?.().length
+          ? document.getElementById('home-toggle') ?? toggleButton : toggleButton;
+        target.focus?.({ preventScroll: true });
       }
     },
   };

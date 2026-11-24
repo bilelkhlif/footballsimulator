@@ -50,6 +50,8 @@ import { createReticle } from './reticle.mjs';
 import { createRenderLoop } from './render-loop.mjs';
 import { describeAdapter, WebGpuUnavailableError, WEBGPU_ERROR_REASONS } from './webgpu.mjs';
 import { getRequestedRenderMode, RENDER_MODES, WebGlTestModeUnavailableError } from './webgl-test-mode.mjs';
+import { WorkspaceController } from './workspace-controller.mjs';
+import { createWorkspaceNavigation, createWorkspaceSummary, createWorkspaceStatus } from './workspace-navigation.mjs';
 
 /** Réglage de Chrome qui active la liaison WebXR/WebGPU (Chrome 157, Android et Windows). */
 const WEBGPU_FLAG_URL = 'chrome://flags/#webxr-webgpu-binding';
@@ -98,7 +100,7 @@ const PLACEMENT_LABELS = Object.freeze({
  * Éléments de l'interface où un toucher ne doit pas devenir un select WebXR (DOM Overlay) : boutons,
  * surfaces de l'interface (barre d'outils, panneaux, pastilles, aide) et avis.
  */
-const XR_UI_SELECTOR = 'button, .ui-surface, .notice';
+const XR_UI_SELECTOR = 'button, a, summary, .ui-surface, .notice, .workspace-panel';
 
 /** Libellé du bouton « Abandonner », selon ce qui est en cours. */
 const CANCEL_LABELS = Object.freeze({ selected: 'Désélectionner', 'arrow-end': 'Abandonner le tracé' });
@@ -185,7 +187,11 @@ async function init(renderMode) {
     board,
     teams: Object.values(TEAMS),
     chips: Object.fromEntries(Object.keys(TEAMS).map((id) => [id, document.getElementById(`formation-${id}`)])),
-    choose: (teamId, name) => history.execute(new ChangeFormationCommand({ board, teamId, formation: name })),
+    choose: (teamId, name) => {
+      if (history.execute(new ChangeFormationCommand({ board, teamId, formation: name }))) {
+        hint.flash(`${TEAMS[teamId].label} : formation ${name} appliquée.`, 'success');
+      }
+    },
   });
 
   // Interaction tactique (sprint 5) : un seul rayon, orienté par la souris, le doigt ou l'AR.
@@ -210,13 +216,12 @@ async function init(renderMode) {
     board,
     onFeedback: ({ kind, message }) => hint.flash(message, kind),
   });
-  document.getElementById('formations-toggle').addEventListener('click', () => {
-    setFormationPanelOpen(document.getElementById('formation-panel').hidden);
+  // Une seule navigation ; les composants restent liés aux mêmes objets métier.
+  const workspaces = new WorkspaceController();
+  const navigation = createWorkspaceNavigation({
+    root: document.getElementById('overlay'), controller: workspaces, onNavigate: toolbar.disarmReset,
   });
-  // Une pastille d'équipe du bandeau supérieur ouvre directement le panneau des formations.
-  for (const chip of document.querySelectorAll('[data-opens="formations"]')) {
-    chip.addEventListener('click', () => setFormationPanelOpen(document.getElementById('formation-panel').hidden));
-  }
+  createWorkspaceSummary({ root: document.getElementById('overlay'), board, interaction });
 
   // Bouton « Abandonner » : visible pendant une sélection ou un tracé, comme Échap.
   const cancelButton = document.getElementById('cancel-draft');
@@ -236,6 +241,7 @@ async function init(renderMode) {
     cancelButton.hidden = !label;
     if (label) {
       cancelLabel.textContent = label;
+      cancelButton.setAttribute('aria-label', label);
     }
     // Pendant le choix d'une destination, un doigt vise (src/pointer-input.mjs) : la rotation de
     // la vue passe aux gestes à deux doigts, qui gardent aussi le zoom.
@@ -250,6 +256,7 @@ async function init(renderMode) {
     closeButton: document.getElementById('onboarding-close'),
     toggleButton: document.getElementById('help-toggle'),
     storage: readLocalStorage(),
+    onOpen: () => workspaces.open('settings'),
   });
 
   // Raccourcis clavier : D, P, C, Échap, Ctrl+Z, Ctrl+Y.
@@ -262,8 +269,8 @@ async function init(renderMode) {
       },
       undo: toolbar.undo,
       redo: toolbar.redo,
-      // Échap : la confirmation en attente, puis le tracé, puis un panneau ouvert, puis l'aide.
-      cancel: () => toolbar.disarmReset() || cancelDraft() || closeOpenPanel() || closeOnboarding(onboarding),
+      // Échap : confirmation, geste, guide de prise en main, puis panneau de l'espace.
+      cancel: () => toolbar.disarmReset() || cancelDraft() || closeOnboarding(onboarding) || navigation.close(),
     },
   });
 
@@ -288,15 +295,14 @@ async function init(renderMode) {
     board,
     onFeedback: ({ kind, message }) => hint.flash(message, kind),
   });
-  document.getElementById('sequence-toggle').addEventListener('click', () => {
-    setSequencePanelOpen(document.getElementById('sequence-panel').hidden);
-  });
 
   // Réticule du hit test : en dehors du terrain, car il se déplace avant la pose.
   const reticle = createReticle();
   scene.add(reticle);
 
   document.getElementById('reset-view').addEventListener('click', resetView);
+  document.getElementById('zoom-in').addEventListener('click', () => sceneContext.zoomView(0.85));
+  document.getElementById('zoom-out').addEventListener('click', () => sceneContext.zoomView(1 / 0.85));
 
   // Vue AR : à la sortie, la taille du rendu et le cadrage de la vue 3D sont recalculés.
   const arView = createArView({
@@ -321,8 +327,8 @@ async function init(renderMode) {
   interaction.on('statechange', () => refreshGuidance());
   refreshGuidance({ force: true });
 
-  // Mode diagnostic, seulement avec ?diagnostics : images par seconde, rendu, session XR.
-  const diagnostics = isDiagnosticsRequested()
+  // Mode diagnostic à la demande : ?diagnostics ou l'espace Plus d'outils, sans rechargement.
+  let diagnostics = isDiagnosticsRequested()
     ? new DiagnosticsPanel({ element: document.getElementById('diagnostics'), renderer, getXrState: () => describeXrState(arState) })
     : null;
 
@@ -343,6 +349,20 @@ async function init(renderMode) {
   if (diagnostics) {
     tasks.push(diagnostics);
   }
+  const diagnosticsToggle = document.getElementById('diagnostics-toggle');
+  diagnosticsToggle.setAttribute('aria-pressed', String(Boolean(diagnostics)));
+  if (diagnostics) diagnosticsToggle.textContent = 'Masquer les diagnostics';
+  diagnosticsToggle.addEventListener('click', () => {
+    const element = document.getElementById('diagnostics');
+    if (!diagnostics) {
+      diagnostics = new DiagnosticsPanel({ element, renderer, getXrState: () => describeXrState(arState) });
+      tasks.push(diagnostics);
+    } else {
+      element.hidden = !element.hidden;
+    }
+    diagnosticsToggle.setAttribute('aria-pressed', String(!element.hidden));
+    diagnosticsToggle.textContent = element.hidden ? 'Afficher les diagnostics' : 'Masquer les diagnostics';
+  });
 
   // setAnimationLoop plutôt que requestAnimationFrame : la même boucle sert en session WebXR.
   await renderer.setAnimationLoop(createRenderLoop({
@@ -356,8 +376,9 @@ async function init(renderMode) {
   }));
   document.body.classList.add('is-ready');
   return {
-    sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, diagnostics, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding,
+    sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation,
+    get diagnostics() { return diagnostics; },
   };
 }
 
@@ -378,21 +399,6 @@ function readLocalStorage() {
 }
 
 /**
- * Ferme le panneau des formations ou de la séquence, s'il y en a un d'ouvert (touche Échap).
- * @returns {boolean} vrai si un panneau a été fermé
- * @responsable Bilel Khlif
- * @date 2026-11-23
- * @role Interface HTML — raccourcis clavier
- */
-function closeOpenPanel() {
-  const formationsOpen = !document.getElementById('formation-panel').hidden;
-  const sequenceOpen = !document.getElementById('sequence-panel').hidden;
-  setFormationPanelOpen(false);
-  setSequencePanelOpen(false);
-  return formationsOpen || sequenceOpen;
-}
-
-/**
  * Ferme l'aide au premier lancement si elle est ouverte (touche Échap), en rendant le focus au « ? ».
  * @param {ReturnType<typeof createOnboarding>} onboarding
  * @returns {boolean} vrai si l'aide a été fermée
@@ -401,7 +407,7 @@ function closeOpenPanel() {
  * @role Interface HTML — aide au premier lancement
  */
 function closeOnboarding(onboarding) {
-  if (!onboarding.isOpen) {
+  if (!onboarding.isOpen || !document.getElementById('onboarding').getClientRects().length) {
     return false;
   }
   onboarding.close({ restoreFocus: true });
@@ -447,37 +453,6 @@ function describeXrState(arState) {
 }
 
 /**
- * Ouvre ou ferme le panneau des formations, et tient à jour l'état du bouton « Formations ».
- * @param {boolean} open
- * @responsable Bilel Khlif
- * @date 2026-11-14
- * @role Interface HTML — ouverture du panneau des formations
- */
-function setFormationPanelOpen(open) {
-  if (open) {
-    setSequencePanelOpen(false); // un seul panneau ouvert : le bas de l'écran reste libre
-  }
-  document.getElementById('formation-panel').hidden = !open;
-  document.getElementById('formations-toggle').setAttribute('aria-expanded', String(open));
-}
-
-/**
- * Ouvre ou ferme le panneau de la séquence, et tient à jour l'état du bouton « Séquence ». Ouvrir
- * l'un des deux panneaux ferme l'autre.
- * @param {boolean} open
- * @responsable Bilel Khlif
- * @date 2026-11-16
- * @role Interface HTML — ouverture du panneau de la séquence (BF9)
- */
-function setSequencePanelOpen(open) {
-  if (open) {
-    setFormationPanelOpen(false);
-  }
-  document.getElementById('sequence-panel').hidden = !open;
-  document.getElementById('sequence-toggle').setAttribute('aria-expanded', String(open));
-}
-
-/**
  * Affiche l'explication du réglage WebXR/WebGPU de Chrome, avec un bouton pour copier son adresse
  * (une page web ne peut pas ouvrir chrome://flags elle-même).
  * @param {string} text message à afficher
@@ -501,20 +476,19 @@ function showFlagHelp(text) {
  * @param {string} renderMode une valeur de RENDER_MODES
  * @param {{interaction: TacticalInteraction, raycaster: Raycaster,
  *   hint: ReturnType<typeof createHintController>, refreshGuidance: (options?: {force?: boolean}) => void,
- *   onboarding?: ReturnType<typeof createOnboarding>}} tactics
+ *   onboarding?: ReturnType<typeof createOnboarding>, workspaces: WorkspaceController,
+ *   navigation: ReturnType<typeof createWorkspaceNavigation>}} tactics
  *   interaction tactique (sprint 5), son rayon, l'aide de l'étape et l'aide au premier lancement
  * @returns {ArSession}
  * @responsable Bilel Khlif
  * @date 2026-11-09
  * @role Orchestration — branchement de la session AR sur la scène et l'interface
  */
-function setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding }) {
+function setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding, workspaces, navigation }) {
   const overlay = document.getElementById('overlay');
   const enterButton = document.getElementById('enter-ar');
   const exitButton = document.getElementById('exit-ar');
   const moveButton = document.getElementById('move-pitch');
-  const formationsToggle = document.getElementById('formations-toggle');
-  const sequenceToggle = document.getElementById('sequence-toggle');
   const toolbar = document.getElementById('tactical-toolbar');
   const resetButton = document.getElementById('reset-view');
   const message = document.getElementById('ar-message');
@@ -541,19 +515,16 @@ function setUpArSession(sceneContext, arView, arState, renderMode, { interaction
   arSession.on('sessionstart', ({ session, referenceSpace }) => {
     arView.enter();
     onboarding?.close();
+    navigation.close();
+    workspaces.setUnavailable(['formations', 'tactics', 'animation']);
     const placement = new SurfacePlacement({ session, referenceSpace, view: arView });
     placement.on('statechange', ({ state }) => {
       document.body.dataset.placement = state;
       moveButton.hidden = state !== 'placed';
       // Formations et outils tactiques servent sur le terrain posé, pas pendant la visée.
       const pitchShown = placement.pitchReady;
-      formationsToggle.hidden = !pitchShown;
-      sequenceToggle.hidden = !pitchShown;
+      workspaces.setUnavailable(pitchShown ? [] : ['formations', 'tactics', 'animation']);
       toolbar.hidden = !pitchShown;
-      if (!pitchShown) {
-        setFormationPanelOpen(false);
-        setSequencePanelOpen(false);
-      }
       interaction.setEnabled(pitchShown);
       refreshGuidance({ force: true });
       if (pitchShown) {
@@ -569,11 +540,7 @@ function setUpArSession(sceneContext, arView, arState, renderMode, { interaction
     document.body.dataset.xr = 'active';
     enterButton.hidden = true;
     resetButton.hidden = true;
-    formationsToggle.hidden = true;
-    sequenceToggle.hidden = true;
     toolbar.hidden = true;
-    setFormationPanelOpen(false);
-    setSequencePanelOpen(false);
     exitButton.hidden = false;
     hint.setBase(AR_HINT, { force: true });
   });
@@ -594,8 +561,7 @@ function setUpArSession(sceneContext, arView, arState, renderMode, { interaction
     exitButton.hidden = true;
     moveButton.hidden = true;
     resetButton.hidden = false;
-    formationsToggle.hidden = false;
-    sequenceToggle.hidden = false;
+    workspaces.setUnavailable([]);
     toolbar.hidden = false;
     enterButton.hidden = false;
     enterButton.disabled = false;
@@ -743,6 +709,7 @@ function showStartupError(error, renderMode = RENDER_MODES.WEBGPU) {
  */
 async function start() {
   setUpPwa();
+  createWorkspaceStatus({ root: document.getElementById('overlay') });
   // WebGPU, sauf si l'adresse demande le mode test WebGL (?webgl), réservé aux tests.
   const renderMode = getRequestedRenderMode();
   // Avec ?iwer, l'émulateur s'installe avant le moteur de rendu : three.js vérifie la présence
@@ -756,11 +723,11 @@ async function start() {
     return;
   }
   const {
-    sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, diagnostics, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding,
+    sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation,
   } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
-  const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding });
+  const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding, workspaces, navigation });
   exposeForDebugging({
     ...sceneContext,
     renderMode,
@@ -771,7 +738,9 @@ async function start() {
     history,
     interaction,
     tacticalView,
-    diagnostics,
+    get diagnostics() { return context.diagnostics; },
+    workspaces,
+    navigation,
     sequence,
     sequencePlayer,
     teamMeshes,
