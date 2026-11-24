@@ -2,7 +2,7 @@
 
 Football Simulator pose un mini-terrain de football en 3D sur votre table, à travers la caméra de votre téléphone. Vous y placez deux équipes, déplacez les joueurs et le ballon, tracez des passes et des courses, puis animez l'action. Tout se fait d'un doigt, sans compte ni installation obligatoire.
 
-> Ce manuel décrit la branche d’amélioration du 23 novembre 2026, à publier après fusion autorisée. Les images nommées `sprint*` restent des illustrations historiques : leurs anciens boutons diffèrent de l’interface actuelle. Les captures `ux-*` montrent la nouvelle interface.
+> Ce manuel décrit les espaces de coaching du 24 novembre 2026, à publier après fusion autorisée. Les captures dans `images/sidebar/` montrent cette interface. Les images `sprint*` et `ux-*` illustrent les étapes précédentes ; leurs boutons diffèrent de la navigation actuelle.
 >
 > Les captures de ce manuel sont prises sur un ordinateur, avec l'émulateur de réalité augmentée : le fond y est sombre. Sur un téléphone, l'image de la caméra remplace ce fond, et le terrain apparaît sur votre vraie table.
 
@@ -39,11 +39,18 @@ Pour l'AR, choisissez une table bien éclairée, avec un peu de texture : bois, 
 
    <img src="images/qr-code.png" alt="QR code vers https://bilelkhlif.github.io/footballsimulator/" width="160">
 
-2. Facultatif : touchez « Installer l'application », ou menu ⋮ → « Installer l'application ». L'icône « Football Sim » apparaît sur l'écran d'accueil, et l'application s'ouvre ensuite sans barre d'adresse.
+2. Facultatif : ouvrez **Plus d'outils**, puis « Installer l'application » lorsque le navigateur le propose. Le menu d'installation du navigateur reste utilisable. L'icône « Football Sim » apparaît sur l'écran d'accueil, et l'application s'ouvre ensuite sans barre d'adresse.
 
 Une installation antérieure à la migration `.mjs` a besoin d’une connexion pour recevoir la nouvelle version ; elle peut se recharger une fois automatiquement. Attendez que la nouvelle interface soit prête avant de repasser hors-ligne.
 
 Après une première ouverture, l'application se lance aussi **sans réseau** : le badge « Hors-ligne » s'affiche alors. Quand une nouvelle version est publiée, l'avis « Nouvelle version installée. » apparaît : touchez « Recharger ».
+
+Les espaces se choisissent dans le rail à gauche. En portrait sur téléphone, cinq destinations
+occupent le bas de l'écran : **Accueil**, **Équipes**, **Tactique**, **Séquences**, **Plus**.
+**Plus** donne aussi accès à **Réalité augmentée** et **Réglages et aide**.
+Un seul panneau est ouvert à la fois. Sa croix le ferme ; son contenu défile indépendamment.
+Le terrain reste visible et interactif. Changer d'espace conserve les positions, les flèches,
+les images clés, l'historique et le geste en cours.
 
 ## 3. Activer l'AR de Chrome (une seule fois)
 
@@ -56,7 +63,7 @@ Sans ce réglage, l'application affiche le badge « AR : réglage WebGPU à acti
 
 ## 4. Poser le terrain sur la table
 
-1. Touchez **« Entrer en AR »** et autorisez l'accès à la caméra.
+1. Ouvrez **Réalité augmentée** et touchez **« Entrer en AR »**, si ce bouton est proposé. Autorisez l'accès à la caméra.
 2. Visez la table à environ 60 cm, en déplaçant lentement le téléphone. Un **cercle doré** apparaît sur la surface détectée.
 3. **Touchez l'écran** : le terrain se pose sur le cercle, sa longueur face à vous. Il reste accroché à la table.
 
@@ -75,18 +82,18 @@ Tournez autour de la table : vous voyez la tactique sous tous les angles, et le 
 
 ## 5. Choisir les formations
 
-Touchez **« Formations »**, ou la pastille d'une équipe en haut de l'écran : une ligne de boutons par équipe, 4-4-2, 4-3-3, 3-5-2 et 4-2-3-1. Les joueurs rejoignent leurs nouvelles places en glissant. La formation de chaque équipe est rappelée sur sa pastille.
+Ouvrez **Équipes et formations**, ou touchez la pastille d'une équipe en haut de l'écran. Quatre formations sont proposées par équipe : 4-4-2, 4-3-3, 3-5-2 et 4-2-3-1. Les joueurs rejoignent leurs nouvelles places en glissant. Le changement est confirmé dans l'aide du geste et reste annulable. La formation est rappelée sur la pastille de l'équipe. Dépliez « Positions des 22 joueurs » pour lire leurs coordonnées actuelles.
 
 ![Le panneau des formations sur le terrain posé : Bleus en 4-4-2, Rouges en 4-3-3](images/sprint4-ar-formations.jpg)
 
 ## 6. Déplacer un joueur ou le ballon
 
-L'outil **« Déplacer »** (icône en croix) est actif au départ.
+L'outil **« Déplacer »** (icône en croix) est actif au départ. Ses commandes se trouvent dans **Outils tactiques** ; le bouton du mode actif au bord du terrain ouvre aussi cet espace.
 
 1. **Touchez un joueur.** Un anneau doré l'entoure, et l'aide indique par exemple « Le n° 9 des Bleus sélectionné : touchez sa nouvelle place. »
 2. **Touchez sa nouvelle place** sur le terrain : il y glisse. Vous pouvez aussi **laisser le doigt posé** : un anneau montre la place visée, vert sur le plateau, rouge en dehors ; glissez le doigt pour l'ajuster, puis relâchez.
 
-Le ballon se déplace de la même façon. Pour annuler une sélection, touchez à nouveau l'objet sélectionné, ou **« Désélectionner »** à côté de l'aide ; pour en choisir un autre, touchez-le directement. Sur un très petit écran, le bouton d’abandon prend la forme d’une **croix ×**, aussi pendant un tracé. Un toucher hors du plateau est refusé : « Hors du terrain : touchez une place sur le plateau. » Tant qu'un joueur est sélectionné, la vue tourne à deux doigts.
+Le ballon se déplace de la même façon. Pour annuler une sélection, touchez à nouveau l'objet sélectionné, ou **« Désélectionner »** à côté de l'aide ; pour en choisir un autre, touchez-le directement. En paysage court, ce bouton porte le libellé compact **« Annuler »**, aussi pendant un tracé. Un toucher hors du plateau est refusé : « Hors du terrain : touchez une place sur le plateau. » Tant qu'un joueur est sélectionné, la vue tourne à deux doigts. L'espace Accueil rappelle l'objet sélectionné et ses coordonnées.
 
 ## 7. Tracer une passe ou une course
 
@@ -117,6 +124,8 @@ Passes longues, en retrait, centres et courses croisées restent possibles. Pour
 
 ## 8. Annuler, rétablir, réinitialiser
 
+Ces commandes se trouvent dans **Outils tactiques**. Les raccourcis restent disponibles dans tous les espaces.
+
 - **« Annuler »** défait la dernière action : déplacement, flèche, formation, image clé de la séquence.
 - **« Rétablir »** refait l'action annulée.
 - **« Réinitialiser »** remet les formations de départ, les joueurs à leurs places, le ballon au centre, et retire les flèches. Le bouton demande une confirmation : il devient « Confirmer ? » ; touchez-le une seconde fois après au moins 0,4 s, dans les 4 s. Un double toucher immédiat ne confirme pas. « Annuler » rétablit tout ensuite.
@@ -125,7 +134,7 @@ Annuler, rétablir ou réinitialiser pendant un tracé l'abandonne : son départ
 
 ## 9. Animer une action
 
-Touchez **« Séquence »**. Le principe est celui d'un dessin animé : vous enregistrez des **images clés**, et la lecture fait glisser les joueurs de l'une à l'autre.
+Ouvrez **Animation et séquences**. Le principe est celui d'un dessin animé : vous enregistrez des **images clés**, et la lecture fait glisser les joueurs de l'une à l'autre.
 
 1. Placez joueurs et ballon au départ de l'action, puis touchez **« Image clé »**.
 2. Déplacez des joueurs ou le ballon, puis **« Image clé »** à nouveau. Recommencez pour chaque temps de l'action, jusqu'à 12 images clés.
@@ -161,7 +170,11 @@ Touchez **« Quitter l'AR »**, ou le bouton retour du téléphone. Vous retrouv
 
 Sur ordinateur, sur iPhone, ou avant d'entrer en AR, le terrain s'affiche en 3D. Les mêmes outils y fonctionnent, à la souris ou au doigt. Glissez pour tourner la vue, pincez ou utilisez la molette pour zoomer ; « Recentrer » ramène la vue de départ.
 
-À la première visite, une carte « Bienvenue » résume les outils ; le bouton **« ? »**, en haut à droite, la rouvre. Sur écran court, son texte et les panneaux défilent au-dessus de l’aide du geste et des outils ; « Commencer » reste visible. En paysage, les outils occupent deux rangées. Fermez les panneaux pour retrouver tout le terrain, puis « Recentrer » si vous avez tourné ou zoomé la vue.
+À la première visite, **Réglages et aide** s'ouvre sur le guide « Bienvenue ». Le bouton
+**Guide de prise en main** le rouvre ensuite. Ce guide reste dans le panneau et défile avec lui ;
+il ne recouvre pas les commandes de vue. La croix ou **Retour au terrain** replie le panneau.
+Le bouton Retour du navigateur le replie aussi ; Avancer peut le rouvrir. Sur ordinateur,
+**Afficher les libellés du rail** développe la navigation pendant la session.
 
 Au clavier :
 
@@ -172,11 +185,12 @@ Au clavier :
 | Ctrl+Z (Cmd+Z sur Mac) | Annuler |
 | Ctrl+Y, ou Ctrl+Maj+Z | Rétablir |
 | Tab, puis Entrée ou Espace | Atteindre et activer chaque bouton |
+| Flèches, Début, Fin dans le rail | Déplacer le focus entre les espaces |
 
 <table>
   <tr>
-    <td width="72%"><img src="images/ux-apres-passe-bureau.jpg" alt="Interface actuelle sur ordinateur : passe en cours et outils à icônes"></td>
-    <td width="28%"><img src="images/ux-apres-mobile.jpg" alt="Vue 3D sur téléphone, en portrait"></td>
+    <td width="72%"><img src="images/sidebar/apres-formations-bureau.png" alt="Rail compact et panneau des formations à gauche du même terrain WebGPU"></td>
+    <td width="28%"><img src="images/sidebar/apres-formations-portrait.png" alt="Navigation basse et formations dans un panneau sous le terrain, en portrait émulé"></td>
   </tr>
   <tr>
     <td align="center"><sub>Sur ordinateur</sub></td>
@@ -186,7 +200,11 @@ Au clavier :
 
 ## 12. Mesurer la fluidité
 
-Ajoutez `?diagnostics` à l'adresse : `https://bilelkhlif.github.io/footballsimulator/?diagnostics`. Un panneau affiche les images par seconde, la durée d'une image, le temps de calcul par image, le rendu utilisé, l'état de la session AR, les appels de dessin, les triangles et la mémoire graphique, aussi pendant l'AR. L'application est fluide à partir de 30 images par seconde.
+Ouvrez **Plus d'outils**, puis **Afficher les diagnostics**, sans recharger le terrain.
+Le paramètre `?diagnostics` reste accepté. Un panneau affiche les images par seconde, la durée
+d'une image, le temps de calcul par image, le rendu utilisé, l'état de la session AR, les appels
+de dessin, les triangles et la mémoire graphique, aussi pendant l'AR. L'objectif du cahier est
+au moins 30 images par seconde ; une mesure sur PC ne valide pas cet objectif sur téléphone.
 
 <img src="images/sprint6-diagnostics.jpg" alt="Le panneau du mode diagnostic sur un écran de téléphone : images par seconde, durée d'une image, CPU par image, rendu WebGPU, session XR, appels de dessin, triangles, mémoire GPU" width="300">
 

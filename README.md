@@ -24,20 +24,21 @@
   - rendu **WebGPU sans repli WebGL**, optimisé pour le mobile : joueurs instanciés, 115 → 55 appels de dessin ;
   - application installable, utilisable hors-ligne, mise à jour d'un bloc.
 - **Après l'évaluation.** Flèches vérifiées avant toute action : une passe part du ballon, une course d'un joueur, l'arrivée reste entre les lignes ([règles](docs/regles-des-fleches.md)). Interface refondue : outils à icônes, aperçu rouge des actions impossibles, visée au doigt, aide au premier lancement, raccourcis clavier ([ergonomie](docs/ergonomie.md)). Modules JavaScript en `.mjs`, Service Worker en module ([migration](docs/migration-mjs.md)).
-- **Testé.** 330 tests automatisés sur PC : 226 unitaires et 104 de bout en bout, dont le parcours AR complet en émulation. Sur téléphone : AR testée le 12 novembre 2026 sur deux téléphones Android. Le 14 novembre, l'AR rendue en WebGPU fonctionne sur le TECNO POVA 6 Pro 5G ; le Galaxy S10e sous Android 9 refuse WebGPU, et tout y fonctionne en mode test WebGL. Restent à mesurer sur téléphone : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde ([recette](docs/recette.md)).
+- **Espaces de coaching.** Rail sombre compact et sept espaces fonctionnels : Accueil, Équipes et formations, Outils tactiques, Animation et séquences, Réalité augmentée, Plus d'outils, Réglages et aide. Une seule scène, un seul tableau et un seul historique sont conservés entre les espaces. Navigation basse en portrait, panneaux défilants et contrôles de vue persistants. L'[inventaire, l'architecture, les correspondances et les captures avant / après](docs/espaces-coaching.md) détaillent cette évolution.
+- **Testé.** 358 tests automatisés sur PC le 24 novembre 2026 : 229 unitaires et 129 de bout en bout, dont le parcours AR complet en émulation, tous réussis sans cas ignoré ([résultats](docs/espaces-coaching.md#vérification-et-limites)). Les anciens essais physiques du 12 et du 14 novembre concernent des versions précédentes : AR WebGPU sur TECNO POVA 6 Pro 5G, mode test WebGL sur Galaxy S10e. Cette nouvelle interface n'a pas été testée sur téléphone réel. Restent à mesurer : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde ([recette](docs/recette.md)).
 
-> Cette branche académique n’est pas encore publiée sur le site de `main` : fusion réservée à l’approbation de Bilel Khlif. La PR #15 reste indépendante ; voir la [note d’intégration future](docs/integration-future-visualiseur.md). Les [propositions d’attribution](docs/attribution-proposee.md) sont à relire ; `ATTRIBUTION.md` reste inchangé.
+> Les espaces de coaching de cette branche ne sont pas encore publiés sur le site de `main` : fusion réservée à une approbation explicite. La PR #15 reste indépendante ; voir la [note d’intégration future](docs/integration-future-visualiseur.md). `ATTRIBUTION.md` reste inchangé.
 
 ## Aperçu
 
 <table>
   <tr>
-    <td width="72%"><img src="docs/images/ux-apres-passe-bureau.jpg" alt="Interface actuelle : passe du n° 9 des Bleus vers le n° 7, receveur entouré, barre d'outils à icônes"></td>
-    <td width="28%"><img src="docs/images/ux-apres-mobile.jpg" alt="Interface actuelle sur téléphone : terrain entier au-dessus de la barre d'outils, joueur sélectionné, bouton Désélectionner"></td>
+    <td width="72%"><img src="docs/images/sidebar/apres-formations-bureau.png" alt="Rail sombre, panneau des formations et terrain WebGPU partagé sur ordinateur"></td>
+    <td width="28%"><img src="docs/images/sidebar/apres-formations-portrait.png" alt="Navigation basse et panneau des formations sous le terrain, en portrait émulé dans Chrome"></td>
   </tr>
   <tr>
-    <td align="center"><sub>Interface actuelle : la passe part du ballon, le receveur est entouré, l'aperçu devient rouge si l'action est impossible</sub></td>
-    <td align="center"><sub>Sur téléphone : outils à icônes, terrain entier visible</sub></td>
+    <td align="center"><sub>Un espace contextuel, sans créer un second terrain ni un second historique</sub></td>
+    <td align="center"><sub>Portrait émulé : cinq destinations et un panneau repliable</sub></td>
   </tr>
 </table>
 
@@ -361,13 +362,15 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 ```bash
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
-npm run test:unit   # 226 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
-npm run test:e2e    # 104 vérifications dans Chrome, sans interface
+npm run test:unit   # 229 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
+npm run test:e2e    # 129 vérifications dans Chrome, sans interface
 npm run bench       # mesure des performances (sprint 6), hors de npm test : 1 à 2 minutes
 npm run shell-version  # recalcule SHELL_VERSION dans sw.mjs après une modification de l'application
 ```
 
 Les tests de bout en bout couvrent :
+
+- les sept espaces, la conservation de l'état tactique et des images clés, les changements rapides, le clavier, le Retour navigateur, le cycle de vie des écouteurs et la navigation hors ligne ;
 
 - le chargement sans erreur, sur bureau, sur mobile et sous un sous-chemin comme sur GitHub Pages ;
 - les formations : règles de placement, changement par les boutons pour les deux équipes, transition animée, scénario de démonstration, et en AR sur le terrain posé ;
@@ -379,6 +382,11 @@ Les tests de bout en bout couvrent :
 - la séquence animée (sprint 6) : images clés, lecture exacte, pause, vitesse 2×, arrêt sur un changement du tableau, annulation ; en AR sur le terrain tourné, terrain toujours ancré ; et cinq entrées et sorties de l'AR de suite, sans fuite de ressources.
 
 Les tests unitaires vérifient aussi la documentation du code : chaque fonction, classe et membre de classe porte un en-tête avec son responsable, sa date et son rôle, et chaque fichier renvoie à ATTRIBUTION.md ([convention](docs/convention-de-documentation.md)).
+
+Les résultats du lot Espaces de coaching du 24 novembre sont dans le
+[compte rendu de validation](docs/espaces-coaching.md#vérification-et-limites).
+Parcours ciblés : `node tests/workspace-tests.mjs`. Captures comparables :
+`node tests/capture-workspaces.mjs`. Les profils mobiles et l'AR IWER restent des émulations sur PC.
 
 Résultat le 23 novembre 2026, après les retours de l'évaluation : 226 tests unitaires et 104 vérifications de bout en bout, tous réussis, aucun cas ignoré. Les nouveaux tests couvrent les règles des flèches (sans moteur de rendu, puis dans la page), le terrain tourné et incliné, le double toucher, l'annulation pendant un tracé, le clavier, la visée au doigt avec de vrais gestes tactiles, sept mises en page de 320 × 568 à 1280 × 800, dont trois en paysage court, les modules `.mjs` et le passage d'une installation `sw.js` à `sw.mjs`, hors-ligne compris. Résultat du 16 novembre 2026 : 182 et 79, tous réussis. Les erreurs introduites volontairement à chaque sprint ont été détectées. Pour utiliser Microsoft Edge : `BROWSER_CHANNEL=msedge npm test` (sous PowerShell : `$env:BROWSER_CHANNEL='msedge'; npm test`). Le détail est dans [docs/sprint-6.md](docs/sprint-6.md#7-tests), [docs/sprint-5.md](docs/sprint-5.md#10-tests), [docs/sprint-4.md](docs/sprint-4.md#8-tests), [docs/sprint-3.md](docs/sprint-3.md#12-tests) et le [guide du code](docs/guide-du-code.md#6-tests).
 
@@ -393,6 +401,8 @@ Résultat le 23 novembre 2026, après les retours de l'évaluation : 226 tests u
 ├── ATTRIBUTION.md         Origine des ressources et usage de l'IA
 ├── src/
 │   ├── main.mjs                 Point d'entrée : assemble la scène, l'AR et la PWA
+│   ├── workspace-controller.mjs Espace actif et disponibilité des panneaux, sans état tactique
+│   ├── workspace-navigation.mjs Rail, panneaux, clavier, Retour, résumés et états AR/PWA
 │   ├── webgpu.mjs               Moteur de rendu WebGPU, sans repli WebGL (sprint 3)
 │   ├── webgl-test-mode.mjs      Mode test WebGL, avec ?webgl seulement : pas un repli
 │   ├── config.mjs               Dimensions, échelle, équipes et couleurs
@@ -436,6 +446,9 @@ Résultat le 23 novembre 2026, après les retours de l'évaluation : 226 tests u
 ├── tests/
 │   ├── serve.mjs          Serveur local (npm start), aussi utilisé par les tests
 │   ├── run-tests.mjs      Tests de bout en bout dans Chrome (npm run test:e2e)
+│   ├── workspace-tests.mjs Parcours des espaces et du DOM Overlay, aussi exécutés par npm test
+│   ├── workspace-test-helpers.mjs Accès aux commandes par leurs vrais espaces et raycasting
+│   ├── capture-workspaces.mjs Captures avant / après dans les mêmes dimensions
 │   ├── benchmark.mjs      Mesure des performances (npm run bench, sprint 6)
 │   ├── shell-version.mjs  Empreinte de la coquille, écrite dans sw.mjs (npm run shell-version)
 │   └── unit/              Tests unitaires (npm run test:unit) et carte d'import pour Node.js

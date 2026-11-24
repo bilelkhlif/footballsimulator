@@ -17,6 +17,8 @@ import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { REPO_ROOT, startServer } from './serve.mjs';
 import { readShellVersion } from './shell-version.mjs';
+import { clickUi, tapUi, installAimTools, openWorkspace } from './workspace-test-helpers.mjs';
+import { runWorkspaceTests, verifyArWorkspaces } from './workspace-tests.mjs';
 
 /** Navigateur utilisé : Chrome par défaut. */
 const CHANNEL = process.env.BROWSER_CHANNEL ?? 'chrome';
@@ -63,6 +65,7 @@ const results = [];
  */
 function record(name, status, detail = '') {
   results.push({ name, status, detail });
+  if (process.env.TEST_PROGRESS) console.log(`${status} ${name}${detail ? ` : ${detail}` : ''}`);
 }
 
 /**
@@ -113,7 +116,9 @@ async function openApp(context, url, { onboarding = false } = {}) {
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('response', (response) => { if (response.status() >= 400) errors.push(`HTTP ${response.status()} ${response.url()}`); });
   await page.goto(url, { waitUntil: 'load' });
-  await page.waitForSelector('body.is-ready', { timeout: 20000 });
+  // L'émulation télécharge IWER depuis son CDN : ce délai externe ne mesure pas le démarrage local.
+  const startupTimeout = new URL(url).searchParams.has('iwer') ? 60000 : 20000;
+  await page.waitForSelector('body.is-ready', { timeout: startupTimeout });
   return { page, errors };
 }
 
@@ -407,78 +412,6 @@ function isInFormation(state, expected) {
     && state.pressed.length === 1 && state.pressed[0] === expected;
 }
 
-/**
- * Script de page (sprint 5) : outils de visée, installés dans window.__aim. La caméra active est
- * celle de la vue 3D, ou en AR la caméra de la vue WebXR (pose et projection de la session). Un
- * point ne convient que s'il est à l'écran, hors de l'interface, et si le rayon qui passe par ce
- * pixel touche bien ce qui est visé : le test vérifie le raycasting de l'application, pas un clic
- * caché par un autre joueur.
- * @responsable Bilel Khlif
- * @date 2026-11-15
- * @role Tests de bout en bout — outillage de l'interaction tactique
- */
-function installAimTools() {
-  /** Éléments d'interface qui reçoivent les touchers. */
-  const ui = 'button, .ui-surface, .notice';
-  window.__aim = {
-    async context() {
-      const THREE = await import('three');
-      const app = window.__footballSimulator;
-      const camera = app.renderer.xr.isPresenting ? app.renderer.xr.getCamera().cameras[0] : app.camera;
-      app.pitchGroup.updateMatrixWorld(true);
-      return { THREE, app, camera, rect: app.renderer.domElement.getBoundingClientRect() };
-    },
-    // Pixel d'un point monde, et s'il est utilisable (à l'écran, hors de l'interface).
-    toScreen({ THREE, camera, rect }, world) {
-      const ndc = world.clone().applyMatrix4(new THREE.Matrix4().copy(camera.matrixWorld).invert()).applyMatrix4(camera.projectionMatrix);
-      const x = rect.left + ((ndc.x + 1) / 2) * rect.width;
-      const y = rect.top + ((1 - ndc.y) / 2) * rect.height;
-      const onScreen = Math.abs(ndc.x) < 0.92 && Math.abs(ndc.y) < 0.92 && ndc.z > -1 && ndc.z < 1;
-      return { x, y, usable: onScreen && !document.elementFromPoint(x, y)?.closest(ui) };
-    },
-    // Premier objet touché par le rayon de la caméra vers un point monde.
-    firstHit({ THREE, app, camera }, world) {
-      const origin = new THREE.Vector3().setFromMatrixPosition(camera.matrixWorld);
-      const raycaster = new THREE.Raycaster(origin, world.clone().sub(origin).normalize());
-      return raycaster.intersectObjects(app.tacticalView.hitboxes, false)[0]?.object.parent ?? null;
-    },
-    async player(teamId, exclude = []) {
-      const context = await this.context();
-      const { THREE, app } = context;
-      for (const player of app.pitchGroup.getObjectByName(`team-${teamId}`).children) {
-        if (exclude.includes(player.userData.number)) {
-          continue;
-        }
-        const head = player.localToWorld(new THREE.Vector3(0, 0.03, 0));
-        const screen = this.toScreen(context, head);
-        if (screen.usable && this.firstHit(context, head) === player) {
-          return { number: player.userData.number, x: screen.x, y: screen.y };
-        }
-      }
-      return null;
-    },
-    async ball() {
-      const context = await this.context();
-      const { THREE, app } = context;
-      const ball = app.pitchGroup.getObjectByName('ball');
-      const center = ball.getWorldPosition(new THREE.Vector3());
-      const screen = this.toScreen(context, center);
-      return screen.usable && this.firstHit(context, center) === ball ? { x: screen.x, y: screen.y } : null;
-    },
-    async spot(candidates) {
-      const context = await this.context();
-      const { THREE, app } = context;
-      for (const [x, z] of candidates) {
-        const world = app.pitchGroup.localToWorld(new THREE.Vector3(x, 0, z));
-        const screen = this.toScreen(context, world);
-        if (screen.usable && this.firstHit(context, world) === null) {
-          return { x, z, sx: screen.x, sy: screen.y };
-        }
-      }
-      return null;
-    },
-  };
-}
 
 /**
  * Lit l'état tactique dans la page : tableau, interaction, historique, flèches 3D et bandeau d'aide.
@@ -590,11 +523,11 @@ async function testFormationButtons(browser, url) {
   try {
     const { page, errors } = await openApp(context, `${url}?debug`);
     /** Clique sur le bouton d'une formation, pour une équipe. */
-    const choose = (teamId, name) => page.click(`.formation-button[data-team="${teamId}"][data-formation="${name}"]`);
+    const choose = (teamId, name) => clickUi(page, `.formation-button[data-team="${teamId}"][data-formation="${name}"]`);
 
     // Le panneau s'ouvre et se ferme par le bouton « Formations ».
     const closedAtStart = await page.evaluate(() => document.getElementById('formation-panel').hidden);
-    await page.click('#formations-toggle');
+    await clickUi(page, '#formations-toggle');
     const opened = await page.evaluate(() => !document.getElementById('formation-panel').hidden
       && document.getElementById('formations-toggle').getAttribute('aria-expanded') === 'true');
     const buttonCount = await page.locator('.formation-button').count();
@@ -653,8 +586,8 @@ async function testReducedMotion(browser, url) {
   const context = await browser.newContext({ ...DESKTOP, reducedMotion: 'reduce' });
   try {
     const { page } = await openApp(context, `${url}?debug`);
-    await page.click('#formations-toggle');
-    await page.click('.formation-button[data-team="red"][data-formation="3-5-2"]');
+    await clickUi(page, '#formations-toggle');
+    await clickUi(page, '.formation-button[data-team="red"][data-formation="3-5-2"]');
     const state = await readTeamPlacement(page, 'red');
     record(name, !state.animating && isInFormation(state, '3-5-2') ? 'ok' : 'échec', `écart juste après le clic : ${state.worstCm} cm`);
   } catch (error) {
@@ -781,7 +714,7 @@ async function testEmulator(browser, url) {
         }
       });
     });
-    await page.click('#test-session');
+    await clickUi(page, '#test-session');
     const session = await (await page.waitForFunction(() => window.testSession, null, { timeout: 15000 })).jsonValue();
     const ok = session.ok && ['local-floor', 'webgpu', 'hit-test', 'anchors'].every((feature) => session.features.includes(feature));
     record(name, ok ? 'ok' : 'échec', session.ok ? `fonctionnalités : ${session.features.join(', ')}` : session.error);
@@ -846,7 +779,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
     /** Entre en AR par le bouton, le téléphone émulé visant la table. */
     const enterAr = async () => {
       await aim(35);
-      await page.click('#enter-ar');
+      await clickUi(page, '#enter-ar');
       await page.waitForFunction(() => document.body.dataset.xr === 'active', null, { timeout: 15000 });
       await page.waitForFunction(() => Boolean(window.__footballSimulator.placement?.state), null, { timeout: 15000 });
     };
@@ -948,9 +881,9 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         await waitForPlacementState('surface');
         const state = await readPlacement();
         const onTable = near(state.reticle[1], table.height, 0.001) && near(state.reticle[2], table.centerZ, 0.05);
-        const toggleHidden = await page.evaluate(() => document.getElementById('formations-toggle').hidden);
+        const toggleHidden = await page.evaluate(() => document.getElementById('formations-toggle').disabled);
         const ok = state.reticleVisible && onTable && !state.pitchVisible && state.hint.includes('Touchez') && toggleHidden;
-        return [ok, `réticule en (${state.reticle.join(' ; ')}), terrain masqué : ${!state.pitchVisible}, bouton « Formations » caché : ${toggleHidden}`];
+        return [ok, `réticule en (${state.reticle.join(' ; ')}), terrain masqué : ${!state.pitchVisible}, espace Formations bloqué avant la pose : ${toggleHidden}`];
       }],
       ['toucher : terrain posé sur la table, puis ancré', async () => {
         const reticle = (await readPlacement()).reticle;
@@ -969,23 +902,23 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
       }],
       ['formations sur le terrain posé : joueurs replacés, terrain toujours posé', async () => {
         const toggleVisible = await page.evaluate(() => !document.getElementById('formations-toggle').hidden);
-        await page.click('#formations-toggle');
-        await page.click('.formation-button[data-team="blue"][data-formation="4-2-3-1"]');
-        await page.click('.formation-button[data-team="red"][data-formation="3-5-2"]');
+        await clickUi(page, '#formations-toggle');
+        await clickUi(page, '.formation-button[data-team="blue"][data-formation="4-2-3-1"]');
+        await clickUi(page, '.formation-button[data-team="red"][data-formation="3-5-2"]');
         await waitForFormationsSettled(page);
         const blue = await readTeamPlacement(page, 'blue');
         const red = await readTeamPlacement(page, 'red');
         const stillPlaced = await page.evaluate(() => window.__footballSimulator.placement.state === 'placed');
         // Retour au scénario de démonstration, panneau fermé, pour les étapes suivantes.
-        await page.click('.formation-button[data-team="blue"][data-formation="4-3-3"]');
-        await page.click('.formation-button[data-team="red"][data-formation="4-4-2"]');
+        await clickUi(page, '.formation-button[data-team="blue"][data-formation="4-3-3"]');
+        await clickUi(page, '.formation-button[data-team="red"][data-formation="4-4-2"]');
         await waitForFormationsSettled(page);
-        await page.click('#formations-toggle');
+        await clickUi(page, '#formations-toggle');
         const ok = toggleVisible && stillPlaced && isInFormation(blue, '4-2-3-1') && isInFormation(red, '3-5-2');
         return [ok, `bouton visible : ${toggleVisible}, Bleus ${blue.chip} (${blue.worstCm} cm), Rouges ${red.chip} (${red.worstCm} cm), terrain toujours posé : ${stillPlaced}`];
       }],
       ['« Déplacer le terrain », puis nouvelle pose face à l\'utilisateur', async () => {
-        await page.click('#move-pitch');
+        await clickUi(page, '#move-pitch');
         const lifted = await readPlacement();
         await aim(35, 25); // regard tourné de 25° vers la gauche
         await waitForPlacementState('surface');
@@ -1026,7 +959,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         return [gap < 2 && sceneGap < 0.01, `visé (${spot.x} ; ${spot.z}) sur le terrain tourné de ${rotation.toFixed(1)}°, placé à ${gap.toFixed(3)} mm`];
       }],
       ['flèche de passe en AR : départ au ballon, aperçu guidé par la source d\'entrée, puis « Annuler »', async () => {
-        await page.click('[data-mode="pass"]');
+        await clickUi(page, '[data-mode="pass"]');
         const ball = await page.evaluate(() => window.__aim.ball());
         const start = await page.evaluate(() => window.__footballSimulator.board.getBallPosition());
         const end = await page.evaluate(() => window.__aim.spot([[0.12, -0.08], [0.15, 0.1], [0.08, 0.15], [0.2, 0]]));
@@ -1040,9 +973,9 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         await page.mouse.click(end.sx, end.sy);
         await page.waitForFunction(() => window.__footballSimulator.board.getArrows().length === 1, null, { timeout: 5000 });
         const drawn = await readTactics(page);
-        await page.click('[data-action="undo"]');
+        await clickUi(page, '[data-action="undo"]');
         const undone = await readTactics(page);
-        await page.click('[data-mode="move"]');
+        await clickUi(page, '[data-mode="move"]');
         const [arrow] = drawn.snapshot.arrows;
         const ok = arrow.kind === 'pass' && gapMm(arrow.from, start) < 2 && gapMm(arrow.to, end) < 2 && drawn.arrowMeshes === 1
           && undone.arrowMeshes === 0 && undone.snapshot.arrows.length === 0;
@@ -1072,6 +1005,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         return [ok, `select reçus après un toucher sur la barre : ${blocked} ; après un toucher sur le gazon : 1`];
       }],
       // Sprint 6 : séquence animée (BF9) sur le terrain ancré.
+      ['espaces de travail et DOM Overlay : navigation sans déplacement ni sélection accidentelle', async () => verifyArWorkspaces(page, { capture: !webglTest && Boolean(process.env.WORKSPACE_CAPTURE_AR) })],
       ['séquence animée en AR sur le terrain tourné : lecture dans le repère du terrain, terrain toujours ancré', async () => {
         const toggleVisible = await page.evaluate(() => !document.getElementById('sequence-toggle').hidden);
         const { start, to } = await page.evaluate(async () => {
@@ -1097,13 +1031,13 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
           };
         });
         const before = await read();
-        await page.click('#sequence-toggle');
-        await page.click('[data-sequence="play"]');
+        await clickUi(page, '#sequence-toggle');
+        await clickUi(page, '[data-sequence="play"]');
         await page.waitForTimeout(700);
         const middle = await read();
         await page.waitForFunction(() => window.__footballSimulator.sequencePlayer.state === 'paused', null, { timeout: 8000 });
         const after = await read();
-        await page.click('#sequence-toggle');
+        await clickUi(page, '#sequence-toggle');
         const between = middle.ten.x < start.x && middle.ten.x > to.x;
         const exact = Math.abs(after.ten.x - to.x) < 1e-12 && Math.abs(after.ten.z - to.z) < 1e-12;
         const anchored = JSON.stringify(after.pose) === JSON.stringify(before.pose) && after.placed && middle.placed;
@@ -1115,11 +1049,11 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         try {
           for (const [width, height] of [[320, 568], [568, 320]]) {
             await page.setViewportSize({ width, height });
-            await page.click('#formations-toggle');
+            await clickUi(page, '#formations-toggle');
             layouts.push(await page.evaluate(readControlsLayout));
-            await page.click('#sequence-toggle');
+            await clickUi(page, '#sequence-toggle');
             layouts.push(await page.evaluate(readControlsLayout));
-            await page.click('#sequence-toggle');
+            await clickUi(page, '#sequence-toggle');
           }
         } finally {
           await page.setViewportSize(DESKTOP.viewport);
@@ -1129,7 +1063,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
           `320 × 568 et 568 × 320 ; commandes masquées ou trop petites : ${failures.join(', ') || 'aucune'}`];
       }],
       ['regard hors de la table : pas de réticule, et un toucher ne pose rien', async () => {
-        await page.click('#move-pitch');
+        await clickUi(page, '#move-pitch');
         await aim(0); // regard horizontal : le rayon ne rencontre aucune surface
         await waitForPlacementState('searching');
         await tapScreen();
@@ -1139,7 +1073,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         return [ok, `état : ${state.state}, réticule visible : ${state.reticleVisible}, terrain visible : ${state.pitchVisible}`];
       }],
       ['sortie par « Quitter l\'AR » et vue 3D restaurée', async () => {
-        await page.click('#exit-ar');
+        await clickUi(page, '#exit-ar');
         await page.waitForFunction(() => document.body.dataset.xr === 'inactive', null, { timeout: 15000 });
         const view = await readView();
         const counts = await countLoopCalls(800);
@@ -1176,7 +1110,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
           await waitForPlacementState('surface');
           await tapScreen();
           await waitForPlacementState('placed');
-          await page.click('#exit-ar');
+          await clickUi(page, '#exit-ar');
           await page.waitForFunction(() => document.body.dataset.xr === 'inactive', null, { timeout: 15000 });
           await page.waitForTimeout(300);
           samples.push(await memory());
@@ -1194,7 +1128,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
           const requestSession = navigator.xr.requestSession.bind(navigator.xr);
           navigator.xr.requestSession = (...args) => { window.__sessionRequests += 1; return requestSession(...args); };
         });
-        await page.click('#enter-ar');
+        await clickUi(page, '#enter-ar');
         await page.waitForSelector('#ar-message:not([hidden])', { timeout: 15000 });
         const state = await page.evaluate(() => ({
           message: document.getElementById('ar-message').textContent,
@@ -1213,7 +1147,7 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         await page.evaluate(() => {
           navigator.xr.requestSession = () => Promise.reject(new DOMException('Refus simulé', 'NotAllowedError'));
         });
-        await page.click('#enter-ar');
+        await clickUi(page, '#enter-ar');
         await page.waitForSelector('#ar-message:not([hidden])', { timeout: 15000 });
         const state = await page.evaluate(() => ({
           message: document.getElementById('ar-message').textContent,
@@ -1298,10 +1232,10 @@ async function testTacticalBoard(browser, url) {
         return [ok, `visé (${spot.x} ; ${spot.z}), placé à ${gapMm(moved.place, spot).toFixed(3)} mm, affiché à ${sceneGap.toFixed(4)} mm de sa place`];
       }],
       ['« Annuler » puis « Rétablir », par la barre d\'outils', async () => {
-        await page.click('[data-action="undo"]');
+        await clickUi(page, '[data-action="undo"]');
         await settledSceneGapMm(page);
         const undone = await readTactics(page);
-        await page.click('[data-action="redo"]');
+        await clickUi(page, '[data-action="redo"]');
         const sceneGap = await settledSceneGapMm(page);
         const redone = await readTactics(page);
         const ok = undone.initial && undone.canRedo && gapMm(redone.snapshot.players[`blue:${moved.number}`], moved.place) === 0 && sceneGap < 0.01;
@@ -1346,7 +1280,7 @@ async function testTacticalBoard(browser, url) {
         return [ok, `aide : « ${after.hint} », sélection gardée : n° ${after.selection?.number}`];
       }],
       ['flèche de passe : départ au ballon, aperçu au survol, arrivée au point visé', async () => {
-        await page.click('[data-mode="pass"]');
+        await clickUi(page, '[data-mode="pass"]');
         const ball = await page.evaluate(() => window.__aim.ball());
         await page.mouse.click(ball.x, ball.y);
         const spot = await page.evaluate(() => window.__aim.spot([[0.1, 0.12], [0.15, -0.15], [0.05, 0.18], [0.2, 0.1]]));
@@ -1360,13 +1294,13 @@ async function testTacticalBoard(browser, url) {
         return [ok, `départ au ballon, arrivée à ${gapMm(arrow.to, spot).toFixed(3)} mm du point visé, flèches 3D : ${state.arrowMeshes}`];
       }],
       ['changement de formation annulé : le joueur déplacé à la main retrouve sa place exacte', async () => {
-        await page.click('[data-mode="move"]');
-        await page.click('#formations-toggle');
-        await page.click('.formation-button[data-team="blue"][data-formation="4-4-2"]');
+        await clickUi(page, '[data-mode="move"]');
+        await clickUi(page, '#formations-toggle');
+        await clickUi(page, '.formation-button[data-team="blue"][data-formation="4-4-2"]');
         await settledSceneGapMm(page);
         const changed = await readTactics(page);
-        await page.click('#formations-toggle');
-        await page.click('[data-action="undo"]');
+        await clickUi(page, '#formations-toggle');
+        await clickUi(page, '[data-action="undo"]');
         const sceneGap = await settledSceneGapMm(page);
         const state = await readTactics(page);
         const chip = await page.evaluate(() => document.getElementById('formation-blue').textContent);
@@ -1376,12 +1310,12 @@ async function testTacticalBoard(browser, url) {
       }],
       ['« Réinitialiser » : état de départ, et « Annuler » rétablit tout', async () => {
         const before = await readTactics(page);
-        await page.click('[data-action="reset"]'); // arme la confirmation
+        await clickUi(page, '[data-action="reset"]'); // arme la confirmation
         await page.waitForTimeout(450);
-        await page.click('[data-action="reset"]'); // confirme
+        await clickUi(page, '[data-action="reset"]'); // confirme
         const sceneGap = await settledSceneGapMm(page);
         const reset = await readTactics(page);
-        await page.click('[data-action="undo"]');
+        await clickUi(page, '[data-action="undo"]');
         await settledSceneGapMm(page);
         const restored = await readTactics(page);
         const ok = reset.initial && reset.arrowMeshes === 0 && sceneGap < 0.01
@@ -1418,6 +1352,7 @@ async function testTacticalMobile(browser, url) {
   try {
     await context.addInitScript(installAimTools);
     const { page, errors } = await openApp(context, `${url}?debug`);
+    await openWorkspace(page, 'tactics');
     const layout = await page.evaluate(() => {
       const tools = [...document.querySelectorAll('#tactical-toolbar .tool')];
       const boxes = tools.map((tool) => tool.getBoundingClientRect());
@@ -1496,20 +1431,20 @@ async function testSequencePlayback(browser, url) {
     const start = await page.evaluate(() => window.__footballSimulator.board.getPlayerPosition('blue', 9));
     const steps = [
       ['trois images clés enregistrées par le panneau, le n° 9 et le ballon avançant entre elles', async () => {
-        await page.click('#sequence-toggle');
-        await page.click('[data-sequence="keyframe"]');
+        await clickUi(page, '#sequence-toggle');
+        await clickUi(page, '[data-sequence="keyframe"]');
         await move('blue', 9, { x: 0.05, z: 0.02 });
         await move('ball', 0, { x: 0.06, z: 0.03 });
         await waitForFormationsSettled(page);
-        await page.click('[data-sequence="keyframe"]');
+        await clickUi(page, '[data-sequence="keyframe"]');
         await move('blue', 9, { x: 0.15, z: -0.05 });
         await waitForFormationsSettled(page);
-        await page.click('[data-sequence="keyframe"]');
+        await clickUi(page, '[data-sequence="keyframe"]');
         const state = await read();
         return [state.keyframes === 3 && state.status.startsWith('3 images clés'), `${state.keyframes} images clés ; « ${state.status} »`];
       }],
       ['lecture : à mi-étape entre deux images, puis exactement sur la dernière, sans changer le tableau', async () => {
-        await page.click('[data-sequence="play"]');
+        await clickUi(page, '[data-sequence="play"]');
         await page.waitForTimeout(600);
         const middle = await read();
         await page.waitForFunction(() => window.__footballSimulator.sequencePlayer.state === 'paused', null, { timeout: 8000 });
@@ -1521,23 +1456,23 @@ async function testSequencePlayback(browser, url) {
           `pendant la lecture : n° 9 en x = ${middle.nine.x.toFixed(4)} ; à la fin : (${end.nine.x} ; ${end.nine.z}) ; « ${end.status} »`];
       }],
       ['pause : rien ne bouge ; vitesse 2× : la lecture dure deux fois moins', async () => {
-        await page.click('[data-sequence="restart"]');
+        await clickUi(page, '[data-sequence="restart"]');
         await page.waitForTimeout(400);
-        await page.click('[data-sequence="play"]'); // pause
+        await clickUi(page, '[data-sequence="play"]'); // pause
         const paused = await read();
         await page.waitForTimeout(600);
         const still = await read();
-        await page.click('[data-speed="2"]');
+        await clickUi(page, '[data-speed="2"]');
         const begin = Date.now();
-        await page.click('[data-sequence="restart"]');
+        await clickUi(page, '[data-sequence="restart"]');
         await page.waitForFunction(() => window.__footballSimulator.sequencePlayer.state === 'paused', null, { timeout: 8000 });
         const seconds = (Date.now() - begin) / 1000;
-        await page.click('[data-speed="1"]');
+        await clickUi(page, '[data-speed="1"]');
         const ok = paused.state === 'paused' && JSON.stringify(still.nine) === JSON.stringify(paused.nine) && seconds < 2.6;
         return [ok, `en pause : immobile ; à 2× : ${seconds.toFixed(2)} s pour deux étapes (3 s à 1×)`];
       }],
       ['un changement du tableau arrête la lecture, et la scène rejoint le tableau', async () => {
-        await page.click('[data-sequence="restart"]');
+        await clickUi(page, '[data-sequence="restart"]');
         await page.waitForTimeout(300);
         await move('red', 5, { x: 0.12, z: 0.15 });
         const stopped = await read();
@@ -1545,8 +1480,8 @@ async function testSequencePlayback(browser, url) {
         return [stopped.state === 'stopped' && gap < 0.01, `état : ${stopped.state}, scène à ${gap.toFixed(4)} mm du tableau`];
       }],
       ['« Annuler » retire la dernière image clé ; rendu toujours en WebGPU, sans erreur', async () => {
-        await page.click('[data-action="undo"]'); // annule le déplacement du n° 5
-        await page.click('[data-action="undo"]'); // annule la troisième image clé
+        await clickUi(page, '[data-action="undo"]'); // annule le déplacement du n° 5
+        await clickUi(page, '[data-action="undo"]'); // annule la troisième image clé
         const state = await read();
         const contexts = await page.evaluate(() => window.__canvasContexts);
         const webgl = contexts.filter((type) => WEBGL_CONTEXTS.includes(type));
@@ -1616,7 +1551,7 @@ async function testShellVersioning(browser) {
         await reload();
         await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.update());
         await page.waitForSelector('#update-notice:not([hidden])', { timeout: 30000 });
-        await page.click('#reload-app');
+        await clickUi(page, '#reload-app');
         await page.waitForFunction(() => window.__deployMarker === 'B' && document.body.classList.contains('is-ready'), null, { timeout: 30000 });
         const state = await read();
         const ok = state.marker === 'B' && state.caches.length === 1 && state.caches[0].endsWith('deploiement-b');
@@ -1715,7 +1650,7 @@ async function testArrowRules(browser, url) {
     const invalidColor = 0xff5a4f;
     const steps = [
       ['passe depuis un joueur sans le ballon : refusée avant toute action, avec sa raison ; rien dans l\'historique', async () => {
-        await page.click('[data-mode="pass"]');
+        await clickUi(page, '[data-mode="pass"]');
         await page.waitForFunction(() => window.__footballSimulator.pitchGroup.getObjectByName('pass-origin-0').visible, null, { timeout: 5000 });
         const player = await page.evaluate(() => window.__aim.player('blue'));
         await page.mouse.click(player.x, player.y);
@@ -1849,15 +1784,15 @@ async function testMobileInterface(browser, url) {
     const steps = [
       ['aide au premier lancement : ouverte à la première visite, fermée par « Commencer », pas rouverte au rechargement, rouverte par « ? »', async () => {
         const first = await page.evaluate(() => !document.getElementById('onboarding').hidden);
-        await page.tap('#onboarding-close');
+        await tapUi(page, '#onboarding-close');
         const closed = await page.evaluate(() => document.getElementById('onboarding').hidden);
         await page.reload();
         await page.waitForSelector('body.is-ready', { timeout: 20000 });
         const afterReload = await page.evaluate(() => document.getElementById('onboarding').hidden);
-        await page.tap('#help-toggle');
+        await tapUi(page, '#help-toggle');
         const reopened = await page.evaluate(() => !document.getElementById('onboarding').hidden
           && document.getElementById('help-toggle').getAttribute('aria-expanded') === 'true');
-        await page.tap('#help-toggle');
+        await tapUi(page, '#help-toggle');
         return [first && closed && afterReload && reopened, `première visite : ${first}, fermée : ${closed}, absente au rechargement : ${afterReload}, rouverte : ${reopened}`];
       }],
       ['bandeau supérieur compact ; terrain entier et 22 joueurs visibles entre le bandeau et l\'aide', async () => {
@@ -1901,15 +1836,15 @@ async function testMobileInterface(browser, url) {
         return [ok, `aperçu à ${gapMm(ghost, b).toFixed(3)} mm du doigt, n° ${target.number} placé à ${gapMm(placed, b).toFixed(3)} mm`];
       }],
       ['« Réinitialiser » : un toucher arme « Confirmer ? » sans rien effacer ; un second toucher réinitialise', async () => {
-        await page.tap('[data-action="reset"]');
+        await tapUi(page, '[data-action="reset"]');
         const armed = await page.evaluate(() => {
           const button = document.querySelector('[data-action="reset"]');
           return { armed: button.dataset.armed === 'true', text: button.textContent.trim(), initial: window.__footballSimulator.board.isInInitialState() };
         });
         await page.waitForTimeout(450);
-        await page.tap('[data-action="reset"]');
+        await tapUi(page, '[data-action="reset"]');
         const state = await readTactics(page);
-        await page.tap('[data-action="undo"]');
+        await tapUi(page, '[data-action="undo"]');
         const undone = await readTactics(page);
         const ok = armed.armed && armed.text === 'Confirmer ?' && !armed.initial && state.initial && !undone.initial && errors.length === 0;
         return [ok, `armé : « ${armed.text} », rien effacé : ${!armed.initial} ; confirmé : ${state.initial} ; annulé : ${!undone.initial}`];
@@ -1932,7 +1867,7 @@ async function testMobileInterface(browser, url) {
  * @role Tests de bout en bout — accessibilité des commandes
  */
 function readControlsLayout() {
-  const failures = [...document.querySelectorAll('.topbar button, .dock button, .status-line button, #onboarding-close')]
+  const failures = [...document.querySelectorAll('.topbar button, #workspace-nav button, .view-controls button, .ar-session-actions button, .status-line button')]
     .filter((button) => button.getClientRects().length)
     .filter((button) => {
       const rect = button.getBoundingClientRect();
@@ -1960,8 +1895,8 @@ async function testResponsivePanels(browser, url) {
       await context.addInitScript(installAimTools);
       const { page, errors } = await openApp(context, `${url}?debug`, { onboarding: true });
       const layouts = [await page.evaluate(readControlsLayout)];
-      await page.tap('#onboarding-close'); // Chrome défile jusqu'au bouton si nécessaire.
-      await page.tap('#reset-view');
+      await tapUi(page, '#onboarding-close'); // Chrome défile jusqu'au bouton si nécessaire.
+      await tapUi(page, '#reset-view');
       /** Compte les quatre coins et 22 joueurs que l'aide du geste pourrait couvrir. */
       const hiddenPoints = () => page.evaluate(async () => {
         const context = await window.__aim.context();
@@ -1981,7 +1916,7 @@ async function testResponsivePanels(browser, url) {
       points += await hiddenPoints();
       layouts.push(await page.evaluate(readControlsLayout));
       await page.getByRole('button', { name: 'Désélectionner', exact: true }).tap();
-      await page.tap('[data-mode="pass"]');
+      await tapUi(page, '[data-mode="pass"]');
       const ball = await page.evaluate(() => window.__aim.ball());
       await page.touchscreen.tap(ball.x, ball.y);
       const draft = await readTactics(page);
@@ -1989,10 +1924,10 @@ async function testResponsivePanels(browser, url) {
       layouts.push(await page.evaluate(readControlsLayout));
       await page.getByRole('button', { name: 'Abandonner le tracé', exact: true }).tap();
       for (const selector of ['#formations-toggle', '#sequence-toggle', '#sequence-toggle', '#help-toggle']) {
-        await page.tap(selector);
+        await tapUi(page, selector);
         layouts.push(await page.evaluate(readControlsLayout));
       }
-      await page.tap('#onboarding-close');
+      await tapUi(page, '#onboarding-close');
       await page.keyboard.press('p');
       const selected = await page.getAttribute('[data-mode="pass"]', 'aria-pressed');
       const failures = layouts.flatMap((layout) => layout.failures);
@@ -2158,6 +2093,7 @@ async function main() {
     await testMobileInterface(browser, root.url);
     await testResponsivePanels(browser, root.url);
     await testModuleLoading(browser, root.url);
+    await runWorkspaceTests(browser, root.url, record);
     await testDiagnostics(browser, root.url);
     await testSequencePlayback(browser, root.url);
     await testShellVersioning(browser);
