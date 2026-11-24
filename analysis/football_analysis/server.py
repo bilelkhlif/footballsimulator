@@ -12,13 +12,25 @@ API (JSON) :
 - GET  /api/analyses/<id>/manifest : en-tête et disponibilité, sans images ;
 - GET  /api/analyses/<id>/frames?from=0&to=17 : fenêtre horodatée de trente secondes au plus ;
 - POST /api/analyses/<id>/resume : reprise explicite d'une analyse interrompue ;
+- POST /api/analyses/<id>/interrupt : interruption au prochain lot d'images, reprenable ensuite ;
 - GET  /api/analyses/<id>/video : vidéo source, avec lecture partielle (Range) pour l'avance rapide.
 
-Pages : visualizer.html et les dossiers src/ et assets/ du dépôt. Le serveur ne sert ni index.html,
+Pages : visualizer.html et les dossiers src/, assets/ et demo/ du dépôt. Le serveur ne sert ni index.html,
 ni sw.js, ni manifest.json : le Service Worker de l'application AR ne peut donc pas s'installer sur
 son origine, où il mettrait en cache les réponses de l'API et casserait la lecture partielle.
 
 Le serveur écoute 127.0.0.1 par défaut : il n'est pas prévu pour être exposé sur un réseau.
+
+Sécurité, pour une page publique (GitHub Pages) qui utilise ce serveur local :
+
+- l'en-tête Host doit nommer la boucle locale (127.0.0.1, localhost, [::1]) : protection contre le
+  rebond DNS ;
+- une requête qui porte un en-tête Origin n'est acceptée que de la page servie ici ou d'une origine
+  autorisée (par défaut https://bilelkhlif.github.io) : un autre site ne peut ni lire les résultats,
+  ni téléverser, ni lancer ou reprendre une analyse ;
+- une requête intersite sans Origin (balise vidéo ou image d'un autre site) est refusée sur l'API ;
+- les en-têtes CORS ne sont envoyés qu'aux origines autorisées, avec l'accord « Private Network
+  Access » de Chrome pour l'accès d'une page publique à la boucle locale.
 
 Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
 """
@@ -32,7 +44,8 @@ import sqlite3
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Callable
+import ipaddress
+from typing import Any, Callable, Iterable
 from urllib.parse import parse_qs, unquote, urlsplit
 
 from .jobs import AnalysisWorker, JobStore
@@ -53,12 +66,33 @@ STATIC_TYPES = {
 }
 
 #: Chemins statiques servis, relatifs à la racine du dépôt.
-STATIC_PREFIXES = ("/visualizer.html", "/src/", "/assets/")
+STATIC_PREFIXES = ("/visualizer.html", "/src/", "/assets/", "/demo/")
+
+#: Page publique autorisée par défaut à utiliser le serveur local : le site GitHub Pages du projet.
+DEFAULT_ALLOWED_ORIGINS = ("https://bilelkhlif.github.io",)
+
+#: Noms de la boucle locale acceptés dans l'en-tête Host.
+LOOPBACK_NAMES = ("127.0.0.1", "localhost", "[::1]")
 
 #: Taille maximale d'une vidéo téléversée, en octets (4 Go).
 MAX_UPLOAD_BYTES = 4 * 2 ** 30
 
-ROUTE = re.compile(r"^/api/analyses/(?P<id>[^/]+)(?:/(?P<part>tracking|video|manifest|frames|resume))?$")
+ROUTE = re.compile(r"^/api/analyses/(?P<id>[^/]+)(?:/(?P<part>tracking|video|manifest|frames|resume|interrupt))?$")
+
+
+def is_loopback(host: str) -> bool:
+    """Vrai si l'adresse d'écoute est la boucle locale (127.0.0.0/8, ::1 ou localhost).
+
+    @responsable Bilel Khlif
+    @date 2026-11-24
+    @role Analyse vidéo — serveur (sécurité)
+    """
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host.strip("[]")).is_loopback
+    except ValueError:
+        return False
 
 
 def parse_range(header: str | None, size: int) -> tuple[int, int] | None:
@@ -100,7 +134,7 @@ class VisualizerServer(ThreadingHTTPServer):
 
     def __init__(self, address: tuple[str, int], store: JobStore, worker: AnalysisWorker, static_root: Path,
                  health: Callable[[], dict[str, Any]], max_upload: int = MAX_UPLOAD_BYTES,
-                 probe: Callable[[Path], Any] | None = None):
+                 probe: Callable[[Path], Any] | None = None, allowed_origins: Iterable[str] = DEFAULT_ALLOWED_ORIGINS):
         """Prépare le serveur.
 
         Args:
@@ -111,6 +145,7 @@ class VisualizerServer(ThreadingHTTPServer):
             health: fonction qui décrit l'état du serveur (matériel, poids).
             max_upload: taille maximale d'une vidéo, en octets.
             probe: vérifie qu'une vidéo est lisible (lève une erreur sinon).
+            allowed_origins: pages publiques autorisées à utiliser ce serveur (CORS).
 
         @responsable Bilel Khlif
         @date 2026-11-17
@@ -123,6 +158,11 @@ class VisualizerServer(ThreadingHTTPServer):
         self.health = health
         self.max_upload = max_upload
         self.probe = probe or (lambda path: None)
+        host, port = self.server_address[0], self.server_address[1]
+        names = [*LOOPBACK_NAMES, *([] if is_loopback(str(host)) else [str(host)])]
+        self.allowed_hosts = {f"{name}:{port}" for name in names}
+        self.local_origins = {f"http://{name}:{port}" for name in names}
+        self.allowed_origins = {origin.rstrip("/") for origin in allowed_origins}
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -145,6 +185,74 @@ class RequestHandler(BaseHTTPRequestHandler):
         """
         if len(args) > 1 and str(args[1]).startswith(("4", "5")):
             super().log_message(format, *args)
+
+    def _origin_allowed(self, origin: str) -> bool:
+        """Vrai pour la page servie par ce serveur ou une origine publique autorisée.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Analyse vidéo — serveur (sécurité)
+        """
+        return origin in self.server.local_origins or origin in self.server.allowed_origins
+
+    def _refuse(self) -> bool:
+        """Refuse une requête d'un hôte inattendu ou d'une origine non autorisée ; vrai si refusée.
+
+        Host : seuls les noms de la boucle locale (rebond DNS). Origin : présent, il doit être
+        autorisé. Sans Origin, une requête intersite (balise d'un autre site) n'atteint pas l'API.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Analyse vidéo — serveur (sécurité)
+        """
+        if self.headers.get("Host", "") not in self.server.allowed_hosts:
+            self.send_error_json(HTTPStatus.MISDIRECTED_REQUEST, "Hôte inattendu : ce serveur ne répond qu'à la boucle locale.")
+            return True
+        origin = self.headers.get("Origin")
+        if origin is not None and not self._origin_allowed(origin):
+            self.send_error_json(HTTPStatus.FORBIDDEN, "Origine non autorisée : lancez le serveur avec --allow-origin pour cette page.")
+            return True
+        path = urlsplit(self.path).path
+        if origin is None and self.headers.get("Sec-Fetch-Site") == "cross-site" and path.startswith("/api/"):
+            self.send_error_json(HTTPStatus.FORBIDDEN, "Requête intersite refusée.")
+            return True
+        return False
+
+    def end_headers(self) -> None:
+        """Ajoute les en-têtes CORS pour une origine autorisée, puis termine les en-têtes.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Analyse vidéo — serveur (CORS)
+        """
+        headers = getattr(self, "headers", None)
+        origin = headers.get("Origin") if headers is not None else None
+        if origin is not None and self._origin_allowed(origin):
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Expose-Headers", "Content-Length, Content-Range, Accept-Ranges")
+        super().end_headers()
+
+    def do_OPTIONS(self) -> None:
+        """Répond à la requête préalable CORS, avec l'accord d'accès au réseau privé de Chrome.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Analyse vidéo — serveur (CORS)
+        """
+        if self._refuse():
+            return
+        self.send_response(HTTPStatus.NO_CONTENT)
+        self.send_header("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS")
+        requested = [name.strip() for name in self.headers.get("Access-Control-Request-Headers", "").split(",")]
+        allowed = [name for name in requested if name.lower() in ("content-type", "range")]
+        if allowed:
+            self.send_header("Access-Control-Allow-Headers", ", ".join(allowed))
+        if self.headers.get("Access-Control-Request-Private-Network") == "true":
+            self.send_header("Access-Control-Allow-Private-Network", "true")
+        self.send_header("Access-Control-Max-Age", "600")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def send_json(self, payload: Any, status: int = HTTPStatus.OK) -> None:
         """Envoie une réponse JSON, jamais mise en cache.
@@ -171,7 +279,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         """
         self.send_json({"error": message}, status)
 
-    def send_file(self, path: Path, content_type: str, allow_range: bool = False) -> None:
+    def send_file(self, path: Path, content_type: str, allow_range: bool = False,
+                  extra_headers: dict[str, str] | None = None) -> None:
         """Envoie un fichier, en entier ou par intervalle (Range).
 
         @responsable Bilel Khlif
@@ -195,6 +304,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         if interval:
             self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
         self.send_header("Cache-Control", "no-cache")
+        for name, value in (extra_headers or {}).items():
+            self.send_header(name, value)
         self.end_headers()
         if self.command == "HEAD":
             return
@@ -227,6 +338,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         @date 2026-11-17
         @role Analyse vidéo — serveur (requêtes)
         """
+        if self._refuse():
+            return
         path = unquote(urlsplit(self.path).path)
         if path == "/":
             self.send_response(HTTPStatus.FOUND)
@@ -254,12 +367,15 @@ class RequestHandler(BaseHTTPRequestHandler):
         if status is None:
             self.send_error_json(HTTPStatus.NOT_FOUND, "Analyse introuvable.")
         elif match["part"] is None:
-            self.send_json(status)
+            # « results » : la base des segments existe ; avant, ni manifeste ni fenêtre à demander.
+            self.send_json({**status, "results": store.database(match["id"]).is_file()})
         elif match["part"] == "video":
             source = store.source(match["id"])
             self.send_file(source, VIDEO_TYPES.get(source.suffix.lower(), "application/octet-stream"), allow_range=True)
         elif match["part"] in ("manifest", "frames", "tracking") and store.database(match["id"]).is_file():
             self.get_chunked(match["id"], match["part"])
+        elif match["part"] in ("manifest", "frames") and status["status"] in ("receiving", "queued", "running"):
+            self.send_error_json(HTTPStatus.CONFLICT, "Résultats en cours d'initialisation : aucun segment publié.")
         elif match["part"] != "tracking":
             self.send_error_json(HTTPStatus.NOT_FOUND, "Lecture par fenêtres indisponible pour cette ancienne analyse.")
         elif status["status"] != "done" or not store.tracking(match["id"]).is_file():
@@ -324,7 +440,9 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_error_json(HTTPStatus.NOT_FOUND, "Fichier introuvable.")
             return
         content_type = STATIC_TYPES.get(target.suffix.lower()) or mimetypes.guess_type(target.name)[0] or "application/octet-stream"
-        self.send_file(target, content_type)
+        # Vidéos de démo : lecture partielle, sinon Chrome ne peut pas se déplacer dans un MP4 non chargé.
+        self.send_file(target, content_type, allow_range=target.suffix.lower() in VIDEO_TYPES,
+                       extra_headers={"Server-Timing": "football-analysis"})
 
     def do_POST(self) -> None:
         """Reçoit une vidéo (corps brut), vérifie qu'elle est lisible, puis la met en file.
@@ -333,8 +451,21 @@ class RequestHandler(BaseHTTPRequestHandler):
         @date 2026-11-17
         @role Analyse vidéo — serveur (téléversement)
         """
+        if self._refuse():
+            return
         parts = urlsplit(self.path)
         match = ROUTE.match(parts.path)
+        if match and match["part"] == "interrupt":
+            status = self.server.store.get(match["id"])
+            if status is None:
+                self.send_error_json(HTTPStatus.NOT_FOUND, "Analyse introuvable.")
+            else:
+                updated = self.server.worker.interrupt(match["id"])
+                if updated is None:
+                    self.send_error_json(HTTPStatus.CONFLICT, "Seule une analyse en attente ou en cours peut être interrompue.")
+                else:
+                    self.send_json(updated, HTTPStatus.ACCEPTED)
+            return
         if match and match["part"] == "resume":
             status = self.server.store.get(match["id"])
             if status is None:

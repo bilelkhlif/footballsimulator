@@ -16,6 +16,7 @@ import queue
 import re
 import secrets
 import threading
+import time
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
@@ -36,6 +37,28 @@ def _now() -> str:
     @role Analyse vidéo — file des analyses
     """
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _retry_sharing_violation(action: Callable[[], Any], attempts: int = 50) -> Any:
+    """Exécute une lecture ou un renommage de status.json, en réessayant pendant un conflit d'accès.
+
+    Sous Windows, remplacer un fichier qu'un autre fil est en train de lire (ou lire pendant le
+    remplacement) échoue un instant avec PermissionError : le serveur lit l'état pendant que
+    l'analyse le met à jour. Le conflit dure quelques millisecondes ; au-delà d'environ 0,5 s,
+    l'erreur est rendue telle quelle.
+
+    @responsable Bilel Khlif
+    @date 2026-11-24
+    @role Analyse vidéo — file des analyses (accès concurrents)
+    """
+    for attempt in range(attempts):
+        try:
+            return action()
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(0.01)
+    return None
 
 
 class JobStore:
@@ -96,7 +119,7 @@ class JobStore:
         temporary = path.with_suffix(".tmp")
         with self._lock:
             temporary.write_text(json.dumps(status, ensure_ascii=False), encoding="utf-8")
-            os.replace(temporary, path)
+            _retry_sharing_violation(lambda: os.replace(temporary, path))
 
     def update(self, job_id: str, **fields: Any) -> dict[str, Any]:
         """Modifie quelques champs de l'état d'un travail.
@@ -124,7 +147,7 @@ class JobStore:
             return None
         if not path.is_file():
             return None
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(_retry_sharing_violation(lambda: path.read_text(encoding="utf-8")))
 
     def list(self) -> list[dict[str, Any]]:
         """États de tous les travaux, du plus récent au plus ancien.
@@ -189,6 +212,15 @@ class JobStore:
         return self.directory(job_id) / "tracking.sqlite"
 
 
+class AnalysisInterrupted(Exception):
+    """Interruption demandée par l'utilisateur : levée au prochain rapport de progression.
+
+    @responsable Bilel Khlif
+    @date 2026-11-24
+    @role Analyse vidéo — file d'analyses (interruption)
+    """
+
+
 class AnalysisWorker(threading.Thread):
     """Traite les travaux un par un, dans l'ordre d'arrivée.
 
@@ -214,6 +246,7 @@ class AnalysisWorker(threading.Thread):
         self.chunked = chunked
         self.jobs: queue.Queue[str] = queue.Queue()
         self._pending: set[str] = set()
+        self._interrupts: set[str] = set()
         self._submission_lock = threading.Lock()
 
     def submit(self, job_id: str) -> bool:
@@ -232,6 +265,29 @@ class AnalysisWorker(threading.Thread):
             self.jobs.put(job_id)
             return True
 
+    def interrupt(self, job_id: str) -> dict[str, Any] | None:
+        """Interrompt une analyse en attente (aussitôt) ou en cours (au prochain lot d'images).
+
+        L'analyse devient « interrupted » et reste reprenable : les segments validés sont gardés.
+        Renvoie l'état mis à jour, ou None si l'analyse n'est ni en attente ni en cours.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Analyse vidéo — file d'analyses (interruption)
+        """
+        with self._submission_lock:
+            status = self.store.get(job_id)
+            if status is None or status["status"] not in ("queued", "running"):
+                return None
+            if status["status"] == "queued":
+                self._pending.discard(job_id)
+                return self.store.update(job_id, status="interrupted", resumable=True, progress=None,
+                                         error="Analyse interrompue avant son début.")
+            self._interrupts.add(job_id)
+            progress = dict(status.get("progress") or {})
+            progress["message"] = "Interruption demandée : arrêt au prochain lot d'images."
+            return self.store.update(job_id, progress=progress, interruptRequested=True)
+
     def run(self) -> None:
         """Boucle de traitement : un travail après l'autre, sans fin.
 
@@ -246,6 +302,7 @@ class AnalysisWorker(threading.Thread):
             finally:
                 with self._submission_lock:
                     self._pending.discard(job_id)
+                    self._interrupts.discard(job_id)
                 self.jobs.task_done()
 
     def process(self, job_id: str) -> None:
@@ -255,10 +312,17 @@ class AnalysisWorker(threading.Thread):
         @date 2026-11-17
         @role Analyse vidéo — file des analyses (traitement)
         """
-        status = self.store.update(job_id, status="running", startedAt=_now(), error=None)
+        current = self.store.get(job_id)
+        if current is None or current["status"] in ("interrupted", "done"):
+            return  # interrompue pendant l'attente, ou entrée périmée d'une analyse déjà reprise et terminée
+        with self._submission_lock:
+            self._interrupts.discard(job_id)
+        status = self.store.update(job_id, status="running", startedAt=_now(), error=None, interruptRequested=False)
 
         def report(stage: str, fraction: float | None, message: str) -> None:
             """Recopie la progression dans l'état du travail."""
+            if job_id in self._interrupts:
+                raise AnalysisInterrupted()
             self.store.update(job_id, progress={"stage": stage, "fraction": fraction, "message": message})
 
         try:
@@ -273,6 +337,10 @@ class AnalysisWorker(threading.Thread):
                 os.replace(temporary, self.store.tracking(job_id))
             self.store.update(job_id, status="done", finishedAt=_now(), metrics=document.get("metrics"),
                               limitations=document.get("limitations"), progress=None, resumable=False)
+        except AnalysisInterrupted:
+            self.store.update(job_id, status="interrupted", finishedAt=_now(), progress=None, interruptRequested=False,
+                              error="Analyse interrompue à la demande ; les segments validés sont conservés.",
+                              resumable=self.chunked)
         except Exception as error:  # l'erreur est rapportée à l'utilisateur, le fil continue
             traceback.print_exc()
             self.store.update(job_id, status="failed", finishedAt=_now(), error=str(error) or type(error).__name__,

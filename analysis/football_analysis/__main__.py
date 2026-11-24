@@ -88,10 +88,16 @@ def command_serve(arguments: argparse.Namespace) -> int:
     @date 2026-11-17
     @role Analyse vidéo — ligne de commande
     """
+    from .server import DEFAULT_ALLOWED_ORIGINS, VisualizerServer, is_loopback
+
+    if not is_loopback(arguments.host) and not arguments.allow_network:
+        print(f"Adresse d'écoute refusée : {arguments.host} n'est pas la boucle locale. Les vidéos téléversées "
+              "et les analyses seraient exposées au réseau ; ajoutez --allow-network seulement en connaissance de cause.",
+              file=sys.stderr)
+        return 2
     from .jobs import AnalysisWorker, JobStore
     from .incremental_pipeline import analyse_to_store
     from .pipeline import choose_device, probe_video
-    from .server import VisualizerServer
 
     disable_ultralytics_analytics()
     options = build_options(arguments)
@@ -109,12 +115,83 @@ def command_serve(arguments: argparse.Namespace) -> int:
                 "teamEmbeddings": options.team_backbone, "analysisFps": options.target_fps,
                 "queued": worker.jobs.qsize()}
 
-    server = VisualizerServer((arguments.host, arguments.port), store, worker, REPOSITORY_ROOT, health, probe=probe_video)
-    print(f"Visualiseur de match : http://{arguments.host}:{arguments.port}/visualizer.html (calcul : {device})")
+    origins = arguments.allow_origin or list(DEFAULT_ALLOWED_ORIGINS)
+    server = VisualizerServer((arguments.host, arguments.port), store, worker, REPOSITORY_ROOT, health, probe=probe_video,
+                              allowed_origins=origins)
+    local = f"http://{arguments.host}:{arguments.port}"
+    print(f"Visualiseur de match : {local}/visualizer.html (calcul : {device})")
+    print(f"Pages autorisées : {', '.join(origins)} ; depuis GitHub Pages : "
+          f"https://bilelkhlif.github.io/footballsimulator/visualizer.html?serveur={local}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
+    return 0
+
+
+def command_export(arguments: argparse.Namespace) -> int:
+    """Exporte une analyse terminée en fichiers statiques pour le mode démo du visualiseur.
+
+    Sans --video, la vidéo est celle du dossier d'analyse du serveur (status.json à côté de la base).
+
+    @responsable Bilel Khlif
+    @date 2026-11-24
+    @role Analyse vidéo — ligne de commande (export statique)
+    """
+    from .static_export import ExportError, export_analysis, update_catalog
+
+    database = Path(arguments.database)
+    video = Path(arguments.video) if arguments.video else None
+    status_path = database.parent / "status.json"
+    if video is None and status_path.is_file():
+        status = json.loads(status_path.read_text(encoding="utf-8"))
+        video = database.parent / status.get("source", "")
+    if video is None:
+        print("Vidéo source requise : --video <fichier>.", file=sys.stderr)
+        return 2
+    output = Path(arguments.output)
+    analysis_id = arguments.id or output.name
+    try:
+        manifest = export_analysis(database, output, video=video, analysis_id=analysis_id, title=arguments.title,
+                                   overwrite=arguments.replace, allow_other_video=arguments.other_video)
+        if arguments.catalog:
+            update_catalog(Path(arguments.catalog), output, manifest, arguments.description)
+    except ExportError as error:
+        print(f"Export impossible : {error}", file=sys.stderr)
+        return 1
+    storage = manifest["storage"]
+    print(f"Export écrit : {output} ({storage['frameCount']} images, {len(storage['chunks'])} segments, "
+          f"{storage['tracks']['count']} trajectoires)")
+    return 0
+
+
+def command_verify_export(arguments: argparse.Namespace) -> int:
+    """Vérifie un export statique : manifeste, empreintes, segments et trajectoires.
+
+    @responsable Bilel Khlif
+    @date 2026-11-24
+    @role Analyse vidéo — ligne de commande (export statique)
+    """
+    from .static_export import verify_bundle
+
+    problems = verify_bundle(Path(arguments.directory))
+    for problem in problems[:20]:
+        print(f"- {problem}", file=sys.stderr)
+    print("Export valide." if not problems else f"Export invalide : {len(problems)} défaut(s).")
+    return 0 if not problems else 1
+
+
+def command_demo(arguments: argparse.Namespace) -> int:
+    """Régénère la démonstration publique synthétique (vidéo, base locale, export, catalogue).
+
+    @responsable Bilel Khlif
+    @date 2026-11-24
+    @role Analyse vidéo — ligne de commande (démonstration)
+    """
+    from .demo_match import build_demo, describe
+
+    manifest = build_demo(Path(arguments.output), Path(arguments.work))
+    print(f"Démonstration écrite : {describe(manifest)}")
     return 0
 
 
@@ -138,6 +215,25 @@ def main(argv: list[str] | None = None) -> int:
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8765)
     serve.add_argument("--jobs", default=str(DATA_DIR / "jobs"), help="dossier des analyses (permet un essai isolé)")
+    serve.add_argument("--allow-origin", action="append", default=None, metavar="ORIGINE",
+                       help="page web autorisée à utiliser ce serveur (par défaut : https://bilelkhlif.github.io) ; répétable")
+    serve.add_argument("--allow-network", action="store_true",
+                       help="accepte une adresse d'écoute autre que la boucle locale (déconseillé : vidéos privées)")
+    export = commands.add_parser("export", help="exporter une analyse terminée en fichiers statiques (mode démo)")
+    export.add_argument("database", help="base d'analyse terminée (.sqlite)")
+    export.add_argument("output", help="dossier de l'export")
+    export.add_argument("--video", help="vidéo analysée, MP4 ou WebM (par défaut : celle du dossier d'analyse)")
+    export.add_argument("--id", help="identifiant de l'export (par défaut : le nom du dossier)")
+    export.add_argument("--title", help="titre affiché dans le visualiseur")
+    export.add_argument("--catalog", help="catalogue à mettre à jour, par exemple ../demo/index.json")
+    export.add_argument("--description", help="description dans le catalogue")
+    export.add_argument("--replace", action="store_true", help="remplace un export existant")
+    export.add_argument("--other-video", action="store_true", help="accepte une vidéo transcodée, différente de la source")
+    verify = commands.add_parser("verify-export", help="vérifier un export statique")
+    verify.add_argument("directory")
+    demo = commands.add_parser("demo", help="régénérer la démonstration synthétique publique")
+    demo.add_argument("--output", default=str(REPOSITORY_ROOT / "demo"), help="dossier public de la démonstration")
+    demo.add_argument("--work", default=str(DATA_DIR / "demo"), help="dossier de travail local (base SQLite)")
     for sub in (analyse, serve):
         sub.add_argument("--models", default=str(MODELS_DIR), help="dossier des poids")
         sub.add_argument("--fps", type=float, default=12.5, help="cadence d'analyse, en images par seconde")
@@ -151,7 +247,8 @@ def main(argv: list[str] | None = None) -> int:
         for path in download_models():
             print(f"Téléchargé : {path}")
         return 0
-    return {"analyse": command_analyse, "serve": command_serve}[arguments.command](arguments)
+    return {"analyse": command_analyse, "serve": command_serve, "export": command_export,
+            "verify-export": command_verify_export, "demo": command_demo}[arguments.command](arguments)
 
 
 if __name__ == "__main__":
