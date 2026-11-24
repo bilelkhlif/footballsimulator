@@ -42,6 +42,72 @@ def evaluate(document: dict, samples: list[dict]) -> dict:
             "permutation": flip}
 
 
+def _box_iou(a: list[float], b: list[float]) -> float:
+    """Recouvrement de deux boîtes [x1, y1, x2, y2].
+
+    @responsable Bilel Khlif
+    @date 2026-11-24
+    @role Validation de l'analyse vidéo — correspondance par boîte
+    """
+    width, height = min(a[2], b[2]) - max(a[0], b[0]), min(a[3], b[3]) - max(a[1], b[1])
+    if width <= 0 or height <= 0:
+        return 0.0
+    inter = width * height
+    return inter / ((a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter)
+
+
+def match_by_box(baseline: dict, candidate: dict, samples: list[dict], min_iou: float = 0.9) -> list[dict | None]:
+    """Retrouve l'observation annotée dans un autre résultat par sa boîte, pas par son identifiant.
+
+    Un contrôle d'identité peut renuméroter une trajectoire : l'annotation porte sur le maillot
+    visible dans la boîte de l'audit, pas sur un numéro de trajectoire.
+
+    @responsable Bilel Khlif
+    @date 2026-11-24
+    @role Validation de l'analyse vidéo — correspondance par boîte
+    """
+    boxes = {(frame["index"], obj["id"]): obj["box"] for frame in baseline["frames"] for obj in frame["objects"]}
+    frames = {frame["index"]: frame for frame in candidate["frames"]}
+    matches = []
+    for sample in samples:
+        box = boxes[(sample["index"], sample["track"])]
+        best = max(frames[sample["index"]]["objects"], key=lambda obj: _box_iou(obj["box"], box), default=None)
+        matches.append(best if best is not None and _box_iou(best["box"], box) >= min_iou else None)
+    return matches
+
+
+def evaluate_by_box(baseline: dict, candidate: dict, samples: list[dict]) -> dict:
+    """Compte maillots justes, faux et inconnus, et identités qui portent deux maillots annotés.
+
+    « mixedIdentities » : identités finales dont les observations annotées portent les deux
+    maillots. Une telle identité contient au moins deux joueurs : c'est un échange non corrigé. Ce
+    décompte ne voit pas un échange entre coéquipiers.
+
+    @responsable Bilel Khlif
+    @date 2026-11-24
+    @role Validation de l'analyse vidéo — équipes et identités
+    """
+    matches = match_by_box(baseline, candidate, samples)
+    if any(match is None for match, sample in zip(matches, samples) if sample["team"] is not None):
+        raise ValueError("observation annotée introuvable dans le résultat comparé")
+    remapped = {"frames": [{"index": sample["index"], "objects": [{**match, "id": position}]}
+                           for position, (match, sample) in enumerate(zip(matches, samples))]}
+    result = evaluate(remapped, [{**sample, "track": position} for position, sample in enumerate(samples)])
+    kits: dict[int, set] = {}
+    certain: dict[int, set] = {}
+    for match, sample in zip(matches, samples):
+        if sample["team"] is not None:
+            kits.setdefault(match["id"], set()).add(sample["team"])
+            if match.get("identity") != "uncertain":
+                certain.setdefault(match["id"], set()).add(sample["team"])
+    # Une observation marquée incertaine (pendant un contact corrigé) n'affirme pas d'identité :
+    # elle est comptée à part, pas comme un échange non corrigé.
+    result["mixedIdentities"] = sorted(track for track, teams in certain.items() if len(teams) > 1)
+    result["mixedIncludingUncertain"] = sorted(track for track, teams in kits.items() if len(teams) > 1)
+    result["uncertainObservations"] = sum(match.get("identity") == "uncertain" for match in matches if match)
+    return result
+
+
 def compare_frames(baseline: dict, candidate: dict) -> dict:
     """Vérifie que détection, suivi, calibration, horodatage et ballon restent identiques.
 
