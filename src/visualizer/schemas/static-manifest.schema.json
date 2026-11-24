@@ -1,0 +1,287 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://bilelkhlif.github.io/footballsimulator/src/visualizer/schemas/static-manifest.schema.json",
+ "title": "Manifeste d'un export statique d'analyse (football-tracking-static, version 1)",
+ "description": "Écrit par analysis/football_analysis/static_export.py ; lu par src/visualizer/static-source.mjs. Adresses relatives au dossier de l'export.",
+ "type": "object",
+ "required": [
+  "format",
+  "version",
+  "id",
+  "title",
+  "provenance",
+  "source",
+  "analysis",
+  "pitch",
+  "teams",
+  "metrics",
+  "limitations",
+  "complete",
+  "storage",
+  "video"
+ ],
+ "properties": {
+  "format": {
+   "const": "football-tracking-static"
+  },
+  "version": {
+   "const": 1
+  },
+  "id": {
+   "type": "string",
+   "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+  },
+  "title": {
+   "type": "string",
+   "minLength": 1
+  },
+  "provenance": {
+   "type": "object",
+   "required": [
+    "kind",
+    "exporter",
+    "exportedAt"
+   ],
+   "properties": {
+    "kind": {
+     "enum": [
+      "analysis",
+      "synthetic"
+     ]
+    },
+    "exporter": {
+     "type": "object",
+     "required": [
+      "name",
+      "version"
+     ]
+    },
+    "exportedAt": {
+     "type": "string"
+    }
+   }
+  },
+  "source": {
+   "type": "object",
+   "required": [
+    "name",
+    "width",
+    "height",
+    "fps"
+   ],
+   "properties": {
+    "name": {
+     "type": "string",
+     "pattern": "^[^/\\\\]+$"
+    },
+    "width": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "height": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "fps": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    }
+   }
+  },
+  "analysis": {
+   "type": "object",
+   "required": [
+    "fps"
+   ],
+   "properties": {
+    "fps": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    }
+   }
+  },
+  "pitch": {
+   "const": {
+    "length": 105.0,
+    "width": 68.0,
+    "origin": "centre",
+    "units": "m"
+   }
+  },
+  "teams": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "id"
+    ],
+    "properties": {
+     "id": {
+      "enum": [
+       0,
+       1
+      ]
+     }
+    }
+   }
+  },
+  "metrics": {
+   "type": "object"
+  },
+  "limitations": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "complete": {
+   "const": true
+  },
+  "storage": {
+   "type": "object",
+   "required": [
+    "kind",
+    "chunkSeconds",
+    "frameCount",
+    "availableUntil",
+    "chunks",
+    "tracks"
+   ],
+   "properties": {
+    "kind": {
+     "const": "static"
+    },
+    "chunkSeconds": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "frameCount": {
+     "type": "integer",
+     "minimum": 1
+    },
+    "availableUntil": {
+     "type": "number",
+     "minimum": 0
+    },
+    "chunks": {
+     "type": "array",
+     "minItems": 1,
+     "items": {
+      "allOf": [
+       {
+        "$ref": "#/$defs/fileEntry"
+       },
+       {
+        "type": "object",
+        "required": [
+         "seq",
+         "start",
+         "end",
+         "frames"
+        ],
+        "properties": {
+         "seq": {
+          "type": "integer",
+          "minimum": 0
+         },
+         "start": {
+          "type": "number",
+          "minimum": 0
+         },
+         "end": {
+          "type": "number",
+          "minimum": 0
+         },
+         "frames": {
+          "type": "integer",
+          "minimum": 1
+         }
+        }
+       }
+      ]
+     }
+    },
+    "tracks": {
+     "allOf": [
+      {
+       "$ref": "#/$defs/fileEntry"
+      },
+      {
+       "type": "object",
+       "required": [
+        "count"
+       ],
+       "properties": {
+        "count": {
+         "type": "integer",
+         "minimum": 0
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  "video": {
+   "allOf": [
+    {
+     "$ref": "#/$defs/fileEntry"
+    },
+    {
+     "type": "object",
+     "required": [
+      "type"
+     ],
+     "properties": {
+      "type": {
+       "enum": [
+        "video/mp4",
+        "video/webm"
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "files": {
+   "type": "object",
+   "additionalProperties": {
+    "$ref": "#/$defs/fileEntry"
+   }
+  }
+ },
+ "$defs": {
+  "sha256": {
+   "type": "string",
+   "pattern": "^[0-9a-f]{64}$"
+  },
+  "relative": {
+   "type": "string",
+   "minLength": 1,
+   "pattern": "^(?![A-Za-z]:|/|\\./|file:)[^\\\\]*$",
+   "not": {
+    "pattern": "(^|/)\\.\\.(/|$)"
+   }
+  },
+  "fileEntry": {
+   "type": "object",
+   "required": [
+    "file",
+    "bytes",
+    "sha256"
+   ],
+   "properties": {
+    "file": {
+     "$ref": "#/$defs/relative"
+    },
+    "bytes": {
+     "type": "integer",
+     "minimum": 1
+    },
+    "sha256": {
+     "$ref": "#/$defs/sha256"
+    }
+   }
+  }
+ }
+}

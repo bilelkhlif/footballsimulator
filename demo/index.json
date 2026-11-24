@@ -1,0 +1,14 @@
+{
+ "format": "football-demo-catalog",
+ "version": 1,
+ "matches": [
+  {
+   "id": "match-synthetique",
+   "title": "Match synthétique de démonstration",
+   "path": "matches/match-synthetique/",
+   "kind": "synthetic",
+   "duration": 36.0,
+   "description": "Vidéo de diffusion simulée (36 s) et annotations au format de l'analyse : équipes, coupure, plan non calibré et contact masqué d'identité incertaine."
+  }
+ ]
+}

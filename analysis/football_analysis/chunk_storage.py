@@ -317,6 +317,58 @@ class ChunkStore:
         finally:
             cursor.close()
 
+    def iter_ready_chunks(self) -> Iterator[tuple[int, float | None, float | None, list[dict]]]:
+        """Parcourt les morceaux publiés (numéro, début, fin, images), un seul décomprimé à la fois.
+
+        Un morceau illisible lève ValueError avec son numéro, sans interrompre silencieusement l'export.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Analyse vidéo — export statique (lecture bornée des segments)
+        """
+        cursor = self._connection.execute("SELECT seq,start,end,frames FROM ready_chunks ORDER BY seq")
+        try:
+            for seq, start, end, payload in cursor:
+                try:
+                    frames = _unpack(payload)
+                except (zlib.error, ValueError, TypeError) as error:
+                    raise ValueError(f"Segment {seq} illisible : {error}") from error
+                yield seq, start, end, frames
+        finally:
+            cursor.close()
+
+    def iter_tracks(self) -> Iterator[dict]:
+        """Parcourt les résumés publics des trajectoires (sans les votes internes), par identifiant.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Analyse vidéo — export statique (résumés des trajectoires)
+        """
+        cursor = self._connection.execute("SELECT value FROM tracks ORDER BY id")
+        try:
+            for (value,) in cursor:
+                yield {key: item for key, item in json.loads(value).items() if key != "roleVotes"}
+        finally:
+            cursor.close()
+
+    def summary(self) -> dict:
+        """Renvoie le résumé final (équipes, mesures, limites), vide avant la fin de l'analyse.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Analyse vidéo — export statique (résumé)
+        """
+        return self._get("summary", {})
+
+    def signature(self) -> Any:
+        """Renvoie la signature de reprise : empreintes de la source, des poids, du code et des versions.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Analyse vidéo — export statique (provenance)
+        """
+        return self._get("signature")
+
     def team_counts(self) -> dict[int, int]:
         """Compte les équipes sans charger la liste des trajectoires.
 
