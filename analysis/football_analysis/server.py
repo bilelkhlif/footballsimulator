@@ -195,6 +195,18 @@ class RequestHandler(BaseHTTPRequestHandler):
         """
         return origin in self.server.local_origins or origin in self.server.allowed_origins
 
+    def _request_path(self) -> str:
+        """Décode une fois le chemin brut, de façon identique pour la sécurité et les routes.
+
+        Chaque appel part de self.path, jamais d'une valeur déjà décodée ; les séparateurs et
+        lettres encodés ne peuvent donc changer la route après le contrôle d'accès.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Analyse vidéo — serveur (normalisation des routes)
+        """
+        return unquote(urlsplit(self.path).path)
+
     def _refuse(self) -> bool:
         """Refuse une requête d'un hôte inattendu ou d'une origine non autorisée ; vrai si refusée.
 
@@ -212,7 +224,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         if origin is not None and not self._origin_allowed(origin):
             self.send_error_json(HTTPStatus.FORBIDDEN, "Origine non autorisée : lancez le serveur avec --allow-origin pour cette page.")
             return True
-        path = urlsplit(self.path).path
+        path = self._request_path()
         if origin is None and self.headers.get("Sec-Fetch-Site") == "cross-site" and path.startswith("/api/"):
             self.send_error_json(HTTPStatus.FORBIDDEN, "Requête intersite refusée.")
             return True
@@ -340,7 +352,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         """
         if self._refuse():
             return
-        path = unquote(urlsplit(self.path).path)
+        path = self._request_path()
         if path == "/":
             self.send_response(HTTPStatus.FOUND)
             self.send_header("Location", "/visualizer.html")
@@ -454,7 +466,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self._refuse():
             return
         parts = urlsplit(self.path)
-        match = ROUTE.match(parts.path)
+        path = self._request_path()
+        match = ROUTE.match(path)
         if match and match["part"] == "interrupt":
             status = self.server.store.get(match["id"])
             if status is None:
@@ -478,7 +491,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 else:
                     self.send_json(self.server.store.get(match["id"]), HTTPStatus.ACCEPTED)
             return
-        if parts.path != "/api/analyses":
+        if path != "/api/analyses":
             self.send_error_json(HTTPStatus.NOT_FOUND, "Adresse inconnue.")
             return
         name = Path(parse_qs(parts.query).get("name", ["video.mp4"])[0]).name

@@ -199,6 +199,42 @@ class SecurityTest(unittest.TestCase):
         self.assertEqual(headers.get("content-range"), f"bytes 10-19/{len(VIDEO_BYTES)}")
         self.assertEqual(body, VIDEO_BYTES[10:20])
 
+    def test_encoded_api_paths_have_the_same_cross_site_policy(self):
+        """L'encodage du préfixe ne contourne ni Host / Origin, ni le refus intersite sans Origin.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Tests du serveur — normalisation commune des chemins et de la sécurité
+        """
+        for path in ("/%61pi/analyses", "/api/%61nalyses", "/api%2fanalyses", "/%61pi/health"):
+            for method in ("GET", "HEAD"):
+                with self.subTest(path=path, method=method):
+                    status, _, _ = self.request(method, path, {"Sec-Fetch-Site": "cross-site"})
+                    self.assertEqual(status, 403)
+                    self.assertEqual(self.request(method, path, {"Origin": EVIL})[0], 403)
+                    status, headers, _ = self.request(method, path, {"Origin": PUBLIC})
+                    self.assertEqual(status, 200)
+                    self.assertEqual(headers.get("access-control-allow-origin"), PUBLIC)
+
+    def test_encoded_post_upload_interrupt_and_resume_use_the_same_path(self):
+        """Les routes POST autorisées utilisent le même décodage que leur contrôle d'accès.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Tests du serveur — routes POST normalisées
+        """
+        status, _, body = self.request("POST", "/%61pi/analyses?name=essai.mp4", {"Origin": PUBLIC}, VIDEO_BYTES)
+        self.assertEqual(status, 202)
+        job_id = json.loads(body)["id"]
+        self.wait_status(job_id, "running")
+        encoded = f"/%61pi/analyses/{job_id}"
+        self.assertEqual(self.request("POST", encoded + "/%69nterrupt", {"Origin": PUBLIC})[0], 202)
+        self.wait_status(job_id, "interrupted")
+        self.release.set()
+        self.assertEqual(self.request("POST", encoded + "/%72esume", {"Origin": PUBLIC})[0], 202)
+        self.wait_status(job_id, "done")
+        self.assertEqual(self.runs, 2)
+
     def test_loopback_only_by_default(self):
         """Adresses de la boucle locale reconnues ; « serve » refuse une autre adresse sans --allow-network.
 
