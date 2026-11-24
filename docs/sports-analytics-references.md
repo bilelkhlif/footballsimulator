@@ -65,7 +65,7 @@ Les coûts ci-dessous sont une appréciation d'intégration, pas des mesures de 
 | Distinguer terrain observé et hors champ | Homographie disponible, mais pas de polygone caméra affiché | Inversion d'homographie OpenCV/Three.js | Aucun nouveau modèle ; coût géométrique faible | Calibration et intersections à valider ; ne pas extrapoler les joueurs hors champ | Compatible avec le panneau **3D dans la vidéo** ; différé |
 | Segmentation des silhouettes : annotations plus fines | Boîtes déjà synchronisées et sélectionnables | YOLO segmentation ; modèle spécialisé à trouver et licencier | Masques plus coûteux en GPU et disque ; coût RTX 2050 non mesuré | Gain tactique faible pour cette phase ; effort moyen/fort | Possible sans stocker tous les masques ; différé |
 | Noms et numéros : recherche par joueur réel | Nos étiquettes sont des identifiants de suivi | OCR spécialisé, effectif vérifié, association et réidentification | Nouveaux modèles et inférences ; coût non mesuré | Les échanges visibles dans la référence interdisent de présumer une identité fiable | Évidence temporelle nécessaire ; différé |
-| Réduire les échanges d'identité après masquage ou mouvement de caméra | ByteTrack peut fragmenter ou échanger des trajectoires | BoT-SORT avec compensation caméra ; OC-SORT | Compensation sur CPU possible ; ReID ajouterait mémoire et latence | Nécessite vérité terrain et mesure IDF1/HOTA, pas seulement un compte d'IDs | Tester hors de la chaîne stable ; aucun modèle ReID lourd ajouté |
+| Réduire les échanges d'identité après masquage ou mouvement de caméra | ByteTrack peut fragmenter ou échanger des trajectoires | BoT-SORT avec compensation caméra ; OC-SORT ; séparateur de GTA | Compensation sur CPU possible ; ReID ajouterait mémoire et latence | Nécessite vérité terrain et mesure IDF1/HOTA, pas seulement un compte d'IDs | **24 novembre : contrôle aux contacts masqués par les maillots implémenté** ([identites-contacts.md](identites-contacts.md)) ; aucun modèle ReID ajouté |
 
 La carte 2D sous la diffusion n'est pas retenue. Le terrain Three.js reste directement dans
 la vidéo, avec placement automatique, déplacement, taille, rotation, zoom, verrou et réduction.
@@ -91,9 +91,48 @@ Aucun nouveau paquet ni poids n'a été téléchargé. Les licences d'un outil, 
 de ses données doivent être examinées séparément. Les conditions des anciennes vidéos DFL
 restent non vérifiées : fichiers privés, aucune nouvelle redistribution.
 
-## 4. Validation et suites
+## 4. Troisième référence : suivi de basket depuis une diffusion (24 novembre 2026)
 
-Les mesures et leurs limites sont consignées dans [l'architecture incrémentale](analyse-incrementale.md).
+**Accès.** Le lien court `lnkd.in/p/etNTG4Jg` redirige (HTTP 301) vers une
+[publication de Vasileios Papadopoulos](https://www.linkedin.com/posts/vasileios-papadopoulos-1035014b_roboflow-computervision-sportsanalytics-activity-7530030773572227072-kPfO),
+datée du 21 novembre 2026, lisible sans compte. Le paramètre de partage personnel de la
+redirection n'est pas conservé. Seul le texte public a été lu : la vidéo de la publication n'a
+pas été examinée, et aucun code, poids ni jeu de données n'y est lié.
+
+**Ce que décrit l'auteur** (projet personnel, **basket**, une seule caméra de diffusion) :
+
+- repérage du terrain : un modèle de points clés trouve 33 repères FIBA ; homographie ajustée par
+  RANSAC, stabilisée par flot optique et points de fuite ; erreur médiane annoncée 0,25 m ;
+- identité malgré les masquages : détecteur RF-DETR (Roboflow), suivi par filtre de Kalman et
+  affectation hongroise, modèle de réidentification affiné, couleurs d'équipe regroupées dans
+  l'espace Lab, puis lissage et **raccord de tronçons de trajectoires** (IDF1 annoncé 0,944) ;
+- numéros de maillot lus par Qwen3-VL, seulement sur les cas ambigus, par vote majoritaire ;
+- objectifs : espacements, reconnaissance des systèmes de jeu, cartes de tirs, charge des joueurs.
+
+Ces chiffres sont ceux de l'auteur, sur son propre jeu de test, non reproduits ici ; le basket
+(10 joueurs, terrain fermé) n'est pas transposable tel quel au football.
+
+**Travaux ouverts apparentés, vérifiés :**
+
+| Travail | Ce qu'il apporte | Licence et ressources | Décision |
+| --- | --- | --- | --- |
+| [GTA, Global Tracklet Association](https://arxiv.org/abs/2411.08216) (Sun et al., ACCV 2024) ; [code](https://github.com/sjc042/gta-link) | Post-traitement : sépare les trajectoires qui contiennent deux identités (DBSCAN sur des plongements d'apparence), puis relie les fragments ; gain HOTA annoncé sur SoccerNet | MIT ; demande `torchreid` et des poids OSNet (SportsMOT) | **Idée du séparateur reprise** avec nos plongements SigLIP déjà en cache : [identites-contacts.md](identites-contacts.md). Raccord général non repris : il demande une apparence individuelle |
+| [Roboflow : suivre et identifier des joueurs de basket](https://blog.roboflow.com/identify-basketball-players/) | RF-DETR, suivi SAM2, équipes par SigLIP + UMAP + KMeans (notre méthode), numéros par SmolVLM2/ResNet | Bloc-notes annoncé ouvert, non retrouvé ; SAM2 annoncé comme goulot (1 à 2 images/s sur T4) | Confirme le choix SigLIP ; SAM2 trop coûteux pour la RTX 2050 |
+| Suiveurs de `trackers` 2.7.0 : BoT-SORT, OC-SORT, C-BIoU, McByte | Compensation de caméra, observations corrigées, IoU tamponné pour le sport | Apache-2.0, **déjà installés** | Rejoués sur nos détections : voir [identites-contacts.md](identites-contacts.md#2-composants-éprouvés-évalués) |
+
+**Comparaison avec notre visualiseur.**
+
+| Fonction de la référence | Notre état | Écart réaliste |
+| --- | --- | --- |
+| Homographie par repères, RANSAC | Mêmes principes (32 repères football, RANSAC, erreur hors échantillon mesurée) | Stabilisation temporelle par flot optique : piste, non mesurée chez nous |
+| Équipes par couleur regroupée | SigLIP + UMAP + KMeans, puis voisins figés | Rien à reprendre : notre audit est meilleur que la couleur seule sur `573e61_0` (soleil et ombre) |
+| Identité malgré les masquages | ByteTrack, et désormais **contrôle aux contacts masqués par les maillots** | Les échanges entre coéquipiers demandent une réidentification ou les numéros : non traités |
+| Numéros par modèle vision-langage | Absents | Nouveau modèle lourd, licence et coût à vérifier ; différé |
+| Possession, analyses tactiques | Non affichées | Pas de modèle validé : aucune probabilité inventée |
+
+## 5. Validation et suites
+
+Les mesures et leurs limites sont consignées dans [l'architecture incrémentale](analyse-incrementale.md) et, pour les identités, dans [identites-contacts.md](identites-contacts.md) et [validation-identites-2026-11-24.json](validation-identites-2026-11-24.json).
 Les fixtures synthétiques servent aux transactions, horloges, interruptions et bornes mémoire.
 Les vidéos réelles servent au contrôle des maillots et au temps d'analyse. Ces deux protocoles
 ne sont pas interchangeables.

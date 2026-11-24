@@ -1,0 +1,935 @@
+{
+  "date": "2026-11-24",
+  "machine": "RTX 2050 (4 Gio), Ryzen 7 6800HS ; GPU partagé avec le bureau ; une seule analyse GPU à la fois",
+  "codeCommits": {
+    "before": "4f62247",
+    "afterCode": "5bf01ff"
+  },
+  "frozenTrackAudit": {
+    "protocol": "suivis v4 figés, segments 10 s, référence 30 s, SigLIP ; observations retrouvées par boîte",
+    "totals": {
+      "v4": {
+        "labelled": 446,
+        "correct": 430,
+        "wrong": 3,
+        "unknown": 13,
+        "mixedIdentities": 8,
+        "mixedIncludingUncertain": 8,
+        "uncertainObservations": 0
+      },
+      "segmentsBefore": {
+        "labelled": 446,
+        "correct": 430,
+        "wrong": 3,
+        "unknown": 13,
+        "mixedIdentities": 8,
+        "mixedIncludingUncertain": 8,
+        "uncertainObservations": 0
+      },
+      "after": {
+        "labelled": 446,
+        "correct": 444,
+        "wrong": 0,
+        "unknown": 2,
+        "mixedIdentities": 0,
+        "mixedIncludingUncertain": 2,
+        "uncertainObservations": 2
+      }
+    },
+    "videos": [
+      {
+        "name": "roboflow-dfl-2e57b9_0",
+        "v4": {
+          "labelled": 59,
+          "correct": 57,
+          "wrong": 2,
+          "unknown": 0,
+          "mixedIdentities": 2,
+          "mixedIncludingUncertain": 2,
+          "uncertainObservations": 0
+        },
+        "segmentsBefore": {
+          "labelled": 59,
+          "correct": 57,
+          "wrong": 2,
+          "unknown": 0,
+          "mixedIdentities": 2,
+          "mixedIncludingUncertain": 2,
+          "uncertainObservations": 0
+        },
+        "after": {
+          "labelled": 59,
+          "correct": 59,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "identity": {
+          "contacts": 8,
+          "crowded": 2,
+          "decidable": 5,
+          "splits": 0,
+          "swaps": 1
+        },
+        "corrections": [
+          {
+            "kind": "swap",
+            "start": 6.56,
+            "time": 8.88,
+            "tracks": [
+              1,
+              15
+            ]
+          }
+        ],
+        "classificationSeconds": {
+          "before": 69.33,
+          "after": 84.13
+        }
+      },
+      {
+        "name": "roboflow-dfl-2e57b9_0-720p30",
+        "v4": {
+          "labelled": 58,
+          "correct": 52,
+          "wrong": 0,
+          "unknown": 6,
+          "mixedIdentities": 2,
+          "mixedIncludingUncertain": 2,
+          "uncertainObservations": 0
+        },
+        "segmentsBefore": {
+          "labelled": 58,
+          "correct": 52,
+          "wrong": 0,
+          "unknown": 6,
+          "mixedIdentities": 2,
+          "mixedIncludingUncertain": 2,
+          "uncertainObservations": 0
+        },
+        "after": {
+          "labelled": 58,
+          "correct": 58,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "identity": {
+          "contacts": 7,
+          "crowded": 0,
+          "decidable": 4,
+          "splits": 0,
+          "swaps": 1
+        },
+        "corrections": [
+          {
+            "kind": "swap",
+            "start": 11.0,
+            "time": 11.7333,
+            "tracks": [
+              12,
+              19
+            ]
+          }
+        ],
+        "classificationSeconds": {
+          "before": 15.37,
+          "after": 17.41
+        }
+      },
+      {
+        "name": "test-vfr-2e57b9",
+        "v4": {
+          "labelled": 41,
+          "correct": 37,
+          "wrong": 0,
+          "unknown": 4,
+          "mixedIdentities": 2,
+          "mixedIncludingUncertain": 2,
+          "uncertainObservations": 0
+        },
+        "segmentsBefore": {
+          "labelled": 41,
+          "correct": 37,
+          "wrong": 0,
+          "unknown": 4,
+          "mixedIdentities": 2,
+          "mixedIncludingUncertain": 2,
+          "uncertainObservations": 0
+        },
+        "after": {
+          "labelled": 41,
+          "correct": 39,
+          "wrong": 0,
+          "unknown": 2,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 2,
+          "uncertainObservations": 2
+        },
+        "identity": {
+          "contacts": 4,
+          "crowded": 0,
+          "decidable": 4,
+          "splits": 0,
+          "swaps": 1
+        },
+        "corrections": [
+          {
+            "kind": "swap",
+            "start": 6.52,
+            "time": 8.88,
+            "tracks": [
+              1,
+              7
+            ]
+          }
+        ],
+        "classificationSeconds": {
+          "before": 11.51,
+          "after": 13.93
+        }
+      },
+      {
+        "name": "montage-coupures-2e57b9",
+        "v4": {
+          "labelled": 51,
+          "correct": 51,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "segmentsBefore": {
+          "labelled": 51,
+          "correct": 51,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "after": {
+          "labelled": 51,
+          "correct": 51,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "identity": {
+          "contacts": 9,
+          "crowded": 0,
+          "decidable": 5,
+          "splits": 0,
+          "swaps": 0
+        },
+        "corrections": [],
+        "classificationSeconds": {
+          "before": 22.44,
+          "after": 29.59
+        }
+      },
+      {
+        "name": "roboflow-dfl-573e61_0",
+        "v4": {
+          "labelled": 61,
+          "correct": 61,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "segmentsBefore": {
+          "labelled": 61,
+          "correct": 61,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "after": {
+          "labelled": 61,
+          "correct": 61,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "identity": {
+          "contacts": 7,
+          "crowded": 0,
+          "decidable": 4,
+          "splits": 0,
+          "swaps": 0
+        },
+        "corrections": [],
+        "classificationSeconds": {
+          "before": 13.62,
+          "after": 21.21
+        }
+      },
+      {
+        "name": "roboflow-dfl-0bfacc_0",
+        "v4": {
+          "labelled": 58,
+          "correct": 58,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "segmentsBefore": {
+          "labelled": 58,
+          "correct": 58,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "after": {
+          "labelled": 58,
+          "correct": 58,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "identity": {
+          "contacts": 10,
+          "crowded": 3,
+          "decidable": 3,
+          "splits": 0,
+          "swaps": 0
+        },
+        "corrections": [],
+        "classificationSeconds": {
+          "before": 17.29,
+          "after": 18.3
+        }
+      },
+      {
+        "name": "roboflow-dfl-121364_0",
+        "v4": {
+          "labelled": 59,
+          "correct": 55,
+          "wrong": 1,
+          "unknown": 3,
+          "mixedIdentities": 2,
+          "mixedIncludingUncertain": 2,
+          "uncertainObservations": 0
+        },
+        "segmentsBefore": {
+          "labelled": 59,
+          "correct": 55,
+          "wrong": 1,
+          "unknown": 3,
+          "mixedIdentities": 2,
+          "mixedIncludingUncertain": 2,
+          "uncertainObservations": 0
+        },
+        "after": {
+          "labelled": 59,
+          "correct": 59,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "identity": {
+          "contacts": 7,
+          "crowded": 0,
+          "decidable": 6,
+          "splits": 0,
+          "swaps": 1
+        },
+        "corrections": [
+          {
+            "kind": "swap",
+            "start": 8.16,
+            "time": 8.88,
+            "tracks": [
+              4,
+              22
+            ]
+          }
+        ],
+        "classificationSeconds": {
+          "before": 15.35,
+          "after": 19.31
+        }
+      },
+      {
+        "name": "roboflow-dfl-08fd33_0",
+        "v4": {
+          "labelled": 59,
+          "correct": 59,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "segmentsBefore": {
+          "labelled": 59,
+          "correct": 59,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "after": {
+          "labelled": 59,
+          "correct": 59,
+          "wrong": 0,
+          "unknown": 0,
+          "mixedIdentities": 0,
+          "mixedIncludingUncertain": 0,
+          "uncertainObservations": 0
+        },
+        "identity": {
+          "contacts": 6,
+          "crowded": 2,
+          "decidable": 3,
+          "splits": 0,
+          "swaps": 0
+        },
+        "corrections": [],
+        "classificationSeconds": {
+          "before": 13.58,
+          "after": 19.17
+        }
+      }
+    ]
+  },
+  "fullPipeline": {
+    "protocol": "analyses complètes dans des processus neufs, avant (4f62247) puis après le contrôle",
+    "videos": [
+      {
+        "name": "roboflow-dfl-2e57b9_0",
+        "before": {
+          "seconds": {
+            "frames": 153.71,
+            "models": 2.23,
+            "teams": 82.06
+          },
+          "processingSeconds": 238.0,
+          "slowdown": 7.93,
+          "identitySeconds": null,
+          "peakRamMb": 2671,
+          "peakGpuMb": 627,
+          "frames": 375,
+          "identity": null,
+          "wrong": 2,
+          "unknown": 0,
+          "correct": 57,
+          "mixedIdentities": 2,
+          "uncertain": 0
+        },
+        "after": {
+          "seconds": {
+            "frames": 145.67,
+            "models": 1.59,
+            "teams": 70.9
+          },
+          "processingSeconds": 218.17,
+          "slowdown": 7.27,
+          "identitySeconds": 6.04,
+          "peakRamMb": 2640,
+          "peakGpuMb": 627,
+          "frames": 375,
+          "identity": {
+            "checked": true,
+            "contacts": 8,
+            "crowded": 2,
+            "decidable": 5,
+            "splits": 0,
+            "swaps": 1,
+            "truncated": false,
+            "uncertainSeconds": 2.32
+          },
+          "wrong": 0,
+          "unknown": 0,
+          "correct": 59,
+          "mixedIdentities": 0,
+          "uncertain": 0
+        },
+        "unchangedDistanceIds": 29,
+        "changedDistances": {
+          "1": [
+            90.841,
+            109.182
+          ],
+          "15": [
+            111.679,
+            92.987
+          ]
+        }
+      },
+      {
+        "name": "roboflow-dfl-121364_0",
+        "before": {
+          "seconds": {
+            "frames": 143.24,
+            "models": 1.23,
+            "teams": 63.94
+          },
+          "processingSeconds": 208.4,
+          "slowdown": 6.95,
+          "identitySeconds": null,
+          "peakRamMb": 2642,
+          "peakGpuMb": 627,
+          "frames": 375,
+          "identity": null,
+          "wrong": 1,
+          "unknown": 3,
+          "correct": 55,
+          "mixedIdentities": 2,
+          "uncertain": 0
+        },
+        "after": {
+          "seconds": {
+            "frames": 153.27,
+            "models": 1.59,
+            "teams": 73.8
+          },
+          "processingSeconds": 228.66,
+          "slowdown": 7.62,
+          "identitySeconds": 6.69,
+          "peakRamMb": 2644,
+          "peakGpuMb": 627,
+          "frames": 375,
+          "identity": {
+            "checked": true,
+            "contacts": 7,
+            "crowded": 0,
+            "decidable": 6,
+            "splits": 0,
+            "swaps": 1,
+            "truncated": false,
+            "uncertainSeconds": 0.72
+          },
+          "wrong": 0,
+          "unknown": 0,
+          "correct": 59,
+          "mixedIdentities": 0,
+          "uncertain": 0
+        },
+        "unchangedDistanceIds": 25,
+        "changedDistances": {
+          "4": [
+            100.574,
+            102.619
+          ],
+          "22": [
+            103.322,
+            101.276
+          ]
+        }
+      }
+    ]
+  },
+  "trackerReplay": {
+    "protocol": "détections enregistrées rejouées sur le processeur ; reprise à chaque coupure ; réglages par défaut de trackers 2.7.0",
+    "videos": [
+      {
+        "name": "roboflow-dfl-2e57b9_0",
+        "fps": 12.5,
+        "trackers": {
+          "ByteTrack (actuel)": {
+            "mixedIdentities": 2,
+            "untracked": 0,
+            "ids": 31,
+            "seconds": 1.59
+          },
+          "BoT-SORT + CMC": {
+            "mixedIdentities": 1,
+            "untracked": 0,
+            "ids": 29,
+            "seconds": 13.88
+          },
+          "OC-SORT": {
+            "mixedIdentities": 0,
+            "untracked": 0,
+            "ids": 67,
+            "seconds": 2.59
+          },
+          "OC-SORT + CMC": {
+            "mixedIdentities": 1,
+            "untracked": 0,
+            "ids": 31,
+            "seconds": 12.86
+          },
+          "C-BIoU": {
+            "mixedIdentities": 2,
+            "untracked": 0,
+            "ids": 33,
+            "seconds": 2.41
+          },
+          "McByte + CMC (sans masques)": {
+            "mixedIdentities": 2,
+            "untracked": 0,
+            "ids": 28,
+            "seconds": 5.95
+          }
+        }
+      },
+      {
+        "name": "roboflow-dfl-121364_0",
+        "fps": 12.5,
+        "trackers": {
+          "ByteTrack (actuel)": {
+            "mixedIdentities": 2,
+            "untracked": 0,
+            "ids": 27,
+            "seconds": 1.76
+          },
+          "BoT-SORT + CMC": {
+            "mixedIdentities": 1,
+            "untracked": 0,
+            "ids": 35,
+            "seconds": 13.45
+          },
+          "OC-SORT": {
+            "mixedIdentities": 0,
+            "untracked": 1,
+            "ids": 36,
+            "seconds": 2.3
+          },
+          "OC-SORT + CMC": {
+            "mixedIdentities": 1,
+            "untracked": 1,
+            "ids": 32,
+            "seconds": 12.45
+          },
+          "C-BIoU": {
+            "mixedIdentities": 0,
+            "untracked": 0,
+            "ids": 26,
+            "seconds": 2.56
+          },
+          "McByte + CMC (sans masques)": {
+            "mixedIdentities": 1,
+            "untracked": 0,
+            "ids": 29,
+            "seconds": 5.78
+          }
+        }
+      }
+    ]
+  },
+  "cutDetection": {
+    "date": "2026-11-24",
+    "videos": [
+      {
+        "name": "montage-coupures-2e57b9",
+        "sourceFrames": 600,
+        "width": 1920,
+        "cuts": {
+          "full": [
+            200,
+            400
+          ],
+          "downscaled": [
+            200,
+            400
+          ]
+        },
+        "identical": true,
+        "seconds": {
+          "full": 18.96,
+          "downscaled": 0.61
+        }
+      },
+      {
+        "name": "roboflow-dfl-08fd33_0",
+        "sourceFrames": 750,
+        "width": 1920,
+        "cuts": {
+          "full": [],
+          "downscaled": []
+        },
+        "identical": true,
+        "seconds": {
+          "full": 24.71,
+          "downscaled": 0.75
+        }
+      },
+      {
+        "name": "roboflow-dfl-0bfacc_0",
+        "sourceFrames": 750,
+        "width": 1920,
+        "cuts": {
+          "full": [],
+          "downscaled": []
+        },
+        "identical": true,
+        "seconds": {
+          "full": 25.38,
+          "downscaled": 0.76
+        }
+      },
+      {
+        "name": "roboflow-dfl-121364_0",
+        "sourceFrames": 750,
+        "width": 1920,
+        "cuts": {
+          "full": [],
+          "downscaled": []
+        },
+        "identical": true,
+        "seconds": {
+          "full": 27.79,
+          "downscaled": 0.89
+        }
+      },
+      {
+        "name": "roboflow-dfl-2e57b9_0-720p30",
+        "sourceFrames": 900,
+        "width": 1280,
+        "cuts": {
+          "full": [],
+          "downscaled": []
+        },
+        "identical": true,
+        "seconds": {
+          "full": 13.92,
+          "downscaled": 0.85
+        }
+      },
+      {
+        "name": "roboflow-dfl-2e57b9_0",
+        "sourceFrames": 750,
+        "width": 1920,
+        "cuts": {
+          "full": [],
+          "downscaled": []
+        },
+        "identical": true,
+        "seconds": {
+          "full": 29.41,
+          "downscaled": 0.9
+        }
+      },
+      {
+        "name": "roboflow-dfl-573e61_0",
+        "sourceFrames": 750,
+        "width": 1920,
+        "cuts": {
+          "full": [],
+          "downscaled": []
+        },
+        "identical": true,
+        "seconds": {
+          "full": 28.08,
+          "downscaled": 0.82
+        }
+      },
+      {
+        "name": "test-vfr-2e57b9",
+        "sourceFrames": 167,
+        "width": 1920,
+        "cuts": {
+          "full": [],
+          "downscaled": []
+        },
+        "identical": true,
+        "seconds": {
+          "full": 11.91,
+          "downscaled": 0.36
+        }
+      }
+    ],
+    "allIdentical": true
+  },
+  "profiles": {
+    "fullResolutionCuts": {
+      "video": "roboflow-dfl-2e57b9_0.mp4",
+      "wallSeconds": 239.3,
+      "pipelineSeconds": {
+        "frames": 151.35,
+        "models": 1.79,
+        "teams": 78.14
+      },
+      "identitySeconds": 6.85,
+      "analysedFrames": 375,
+      "videoSeconds": 30.0,
+      "parts": {
+        "équipes : référence (lecture, SigLIP, UMAP, KMeans)": {
+          "seconds": 70.36,
+          "calls": 1,
+          "msPerCall": 70357.72
+        },
+        "modèle des personnes (YOLO)": {
+          "seconds": 55.91,
+          "calls": 375,
+          "msPerCall": 149.1
+        },
+        "modèle du ballon (YOLO)": {
+          "seconds": 49.38,
+          "calls": 375,
+          "msPerCall": 131.69
+        },
+        "calibration (modèle + homographie)": {
+          "seconds": 22.33,
+          "calls": 375,
+          "msPerCall": 59.55
+        },
+        "coupures (PySceneDetect)": {
+          "seconds": 19.73,
+          "calls": 375,
+          "msPerCall": 52.63
+        },
+        "identités : contrôle complet": {
+          "seconds": 6.86,
+          "calls": 1,
+          "msPerCall": 6855.32
+        },
+        "équipes : prédictions (SigLIP + voisins)": {
+          "seconds": 4.49,
+          "calls": 1,
+          "msPerCall": 4489.22
+        },
+        "décodage (retrieve)": {
+          "seconds": 2.24,
+          "calls": 928,
+          "msPerCall": 2.42
+        },
+        "décodage (grab)": {
+          "seconds": 1.9,
+          "calls": 2249,
+          "msPerCall": 0.84
+        },
+        "suivi ByteTrack": {
+          "seconds": 1.31,
+          "calls": 375,
+          "msPerCall": 3.49
+        },
+        "SQLite : segments bruts": {
+          "seconds": 0.61,
+          "calls": 3,
+          "msPerCall": 202.67
+        },
+        "SQLite : publications": {
+          "seconds": 0.39,
+          "calls": 6,
+          "msPerCall": 64.51
+        },
+        "mesures de qualité": {
+          "seconds": 0.33,
+          "calls": 1,
+          "msPerCall": 333.45
+        },
+        "identités : contacts": {
+          "seconds": 0.24,
+          "calls": 1,
+          "msPerCall": 236.22
+        }
+      }
+    },
+    "downscaledCuts": {
+      "video": "roboflow-dfl-2e57b9_0.mp4",
+      "wallSeconds": 224.43,
+      "pipelineSeconds": {
+        "frames": 136.14,
+        "models": 1.85,
+        "teams": 78.5
+      },
+      "identitySeconds": 6.28,
+      "analysedFrames": 375,
+      "videoSeconds": 30.0,
+      "parts": {
+        "équipes : référence (lecture, SigLIP, UMAP, KMeans)": {
+          "seconds": 71.23,
+          "calls": 1,
+          "msPerCall": 71231.3
+        },
+        "modèle des personnes (YOLO)": {
+          "seconds": 57.36,
+          "calls": 375,
+          "msPerCall": 152.96
+        },
+        "modèle du ballon (YOLO)": {
+          "seconds": 50.87,
+          "calls": 375,
+          "msPerCall": 135.66
+        },
+        "calibration (modèle + homographie)": {
+          "seconds": 23.06,
+          "calls": 375,
+          "msPerCall": 61.51
+        },
+        "identités : contrôle complet": {
+          "seconds": 6.28,
+          "calls": 1,
+          "msPerCall": 6276.16
+        },
+        "équipes : prédictions (SigLIP + voisins)": {
+          "seconds": 3.85,
+          "calls": 1,
+          "msPerCall": 3852.95
+        },
+        "décodage (retrieve)": {
+          "seconds": 2.18,
+          "calls": 928,
+          "msPerCall": 2.34
+        },
+        "décodage (grab)": {
+          "seconds": 1.94,
+          "calls": 2249,
+          "msPerCall": 0.86
+        },
+        "suivi ByteTrack": {
+          "seconds": 1.36,
+          "calls": 375,
+          "msPerCall": 3.63
+        },
+        "coupures (PySceneDetect)": {
+          "seconds": 0.84,
+          "calls": 375,
+          "msPerCall": 2.24
+        },
+        "SQLite : segments bruts": {
+          "seconds": 0.57,
+          "calls": 3,
+          "msPerCall": 191.08
+        },
+        "mesures de qualité": {
+          "seconds": 0.42,
+          "calls": 1,
+          "msPerCall": 418.38
+        },
+        "SQLite : publications": {
+          "seconds": 0.38,
+          "calls": 6,
+          "msPerCall": 63.46
+        },
+        "identités : contacts": {
+          "seconds": 0.24,
+          "calls": 1,
+          "msPerCall": 236.56
+        }
+      }
+    },
+    "identicalPublishedFrames": true
+  },
+  "limits": [
+    "méthode conçue après examen des quatre échanges, sur les mêmes clips : pas une mesure de généralisation",
+    "aucune vérité terrain d'identité : l'audit ne voit que les échanges entre maillots différents, à trois instants par clip",
+    "passages uniques : écarts de temps total dans la variabilité de l'étape d'images",
+    "coupures : seules deux coupures franches dans les clips de validation"
+  ]
+}

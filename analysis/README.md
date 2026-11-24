@@ -67,7 +67,9 @@ Téléversez une vidéo (MP4, WebM, MOV, MKV…) : l'analyse se fait en arrière
 
 Chaque analyse calcule des indicateurs de qualité sans vérité terrain, affichés par le visualiseur : part des images calibrées, erreur d'ajustement et erreur hors échantillon de la calibration (sur les repères du terrain, pas sur les joueurs), part des images avec ballon, indice de fragmentation des trajectoires, part des déplacements invraisemblables (plus de 12 m/s), part des joueurs dont l'équipe est connue, équilibre des équipes dans chaque image, lenteur rapportée à la durée de la vidéo, et mémoire.
 
-Quand la calibration échoue, aucune position n'est donnée sur le terrain pour l'image, et le visualiseur le dit. Les numéros de maillot ne sont pas lus. Le détail est dans [docs/visualiseur-match.md](../docs/visualiseur-match.md).
+Quand la calibration échoue, aucune position n'est donnée sur le terrain pour l'image, et le visualiseur le dit. Les numéros de maillot ne sont pas lus.
+
+**Identités.** Après la référence des équipes, un contrôle examine les contacts masqués entre joueurs (boîtes qui se chevauchent, l'un disparaissant au moins une image). Il compare les maillots 2 s avant et 2 s après : un échange entre maillots différents est corrigé, un changement isolé donne un nouvel identifiant, et pendant le contact l'identité est marquée incertaine. Les échanges entre coéquipiers ne sont pas détectés. Méthode et mesures : [docs/identites-contacts.md](../docs/identites-contacts.md). Le détail est dans [docs/visualiseur-match.md](../docs/visualiseur-match.md).
 
 ## Licences
 
@@ -81,6 +83,6 @@ Quand la calibration échoue, aucune position n'est donnée sur le terrain pour 
 .venv\Scripts\python -m unittest discover -s tests
 ```
 
-Les tests fonctionnent sans GPU ni poids. Ils couvrent le contrat, les modèles simulés, les maillots, les transactions, les interruptions et reprises sans doublon, les coupures, les horodatages VFR, les bornes mémoire, les mesures et l'API. Les tests du navigateur sont dans `npm test`, avec lecture par fenêtres et interactions du terrain 3D. Les [résultats datés](../docs/validation-incrementale-2026-11-23.json) distinguent ces fixtures des contrôles sur vidéos réelles.
+Les tests fonctionnent sans GPU ni poids. Ils couvrent le contrat, les modèles simulés, les maillots, les transactions, les interruptions et reprises sans doublon, les coupures, les horodatages VFR, les bornes mémoire, les mesures et l'API, ainsi que le contrôle d'identité : contacts, preuves, échange et séparation, coéquipiers, coupures, reprise, et un échange réel de ByteTrack corrigé dans la chaîne complète. Les tests du navigateur sont dans `npm test`, avec lecture par fenêtres et interactions du terrain 3D. Les [résultats datés](../docs/validation-incrementale-2026-11-23.json) distinguent ces fixtures des contrôles sur vidéos réelles.
 
-L'[audit interne des équipes](validation/README.md) conserve les annotations textuelles de 446 observations lisibles, leurs vidéos de référence et un script de comparaison avant/après. Les vidéos et les résultats complets restent dans `data/`, hors du dépôt.
+L'[audit interne des équipes](validation/README.md) conserve les annotations textuelles de 446 observations lisibles, leurs vidéos de référence et un script de comparaison avant/après. Pour les identités : `python -m validation.validate_chunked_teams`, puis `python -m validation.summarise_identity` (suivis figés), `python -m validation.compare_full_runs` (chaîne complète), `python -m validation.compare_trackers` (suiveurs rejoués) et `python -m validation.profile_pipeline` (temps par étape). Les vidéos et les résultats complets restent dans `data/`, hors du dépôt.

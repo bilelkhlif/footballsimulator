@@ -72,8 +72,11 @@ calibrée de bonne reconnaissance. Les observations ambiguës ou insuffisantes r
 
 Un changement de caméra termine les trajectoires de ce plan et efface leur contexte de mouvement.
 Les références de maillots restent communes. Il n'y a pas de réidentification d'un joueur entre
-plans. Un identifiant de suivi peut encore être échangé pendant un plan. Une tenue nouvelle peut
-aussi être mal classée : le vote ne constitue pas un détecteur général de données hors distribution.
+plans. Depuis le 24 novembre, un contrôle aux contacts masqués corrige, avant la publication des
+équipes, les échanges d'identifiants entre joueurs de maillots différents quand les maillots le
+prouvent ([identites-contacts.md](identites-contacts.md)) ; un échange entre coéquipiers peut
+encore se produire sans être vu. Une tenue nouvelle peut aussi être mal classée : le vote ne
+constitue pas un détecteur général de données hors distribution.
 
 ## 4. Horodatages et contrat
 
@@ -272,6 +275,23 @@ Au relevé des branches en cours, les deux chemins communs aux diffs de PR #15 e
 `tests/run-tests.mjs` et `tests/unit/documentation.test.mjs`. Ils ne sont pas modifiés dans ce suivi,
 mais leur rapprochement futur devra conserver l'appel des tests du visualiseur et le contrôle
 de ses en-têtes. Les modifications actuelles de Claude continuent indépendamment de ce relevé.
+
+### Relevé du 24 novembre 2026, après la fusion académique (PR #16, `main` = `27eff23`)
+
+`main` utilise désormais les modules `.mjs`. Codex travaille sur la barre latérale académique dans
+`../fs-sidebar` (branche `feature/espaces-coaching-sidebar`) ; ce dossier, `main` et
+`../fs-main-deployment` ne sont pas modifiés par ce suivi. Aucune fusion, rebase ni
+cherry-pick de `main` ou de cette branche n'est fait ici. Exigences vérifiées pour l'intégration future :
+
+| Point | État sur `main` | Adaptation nécessaire |
+| --- | --- | --- |
+| Neuf imports partagés | `config.mjs`, `ball.mjs`, `pitch.mjs`, `players.mjs`, `pointer-input.mjs`, `raycasting.mjs`, `tactical-arrows.mjs`, `webgpu.mjs`, `events.mjs` | Changer seulement les chemins dans `overlay-pitch.js` et `overlay-frame.js` |
+| Exports utilisés | `isTap`, `pickTarget`, `pointerToNdc`, `setRayFromCamera`, `buildArrowGeometry`, `createWebGpuRenderer`, `createBall`, `createPitch`, `PlayerFactory`, `EventEmitter`, constantes de `config` : présents, mêmes signatures | Aucune ; `findTargetOnRay` et `INVALID_COLOR` sont des ajouts non utilisés ici |
+| Contrôle `tests/unit/migration-mjs.test.mjs` | Refuse tout `.js` du projet hors `sw.js` et `src/vendor` | Renommer aussi les modules du visualiseur (`src/visualizer/*.js`) en `.mjs`, puis `visualizer.html`, les tests et le contrôle documentaire |
+| `tests/unit/documentation.test.mjs` | Portée `sw.m?js`, `src/*.mjs`, `tests/` | Ajouter `src/visualizer/*.mjs`, `visualizer.html` et `src/visualizer/visualizer.css` |
+| `tests/run-tests.mjs` | Lanceur AR étendu (règles des flèches, interface, migration du Service Worker) | Conserver l'appel des tests du visualiseur |
+| Service Worker | `sw.mjs` (module) et script de migration `sw.js` à la racine | Aucun : le serveur Python ne sert que `visualizer.html`, `src/` et `assets/` ; ni `sw.js` ni `sw.mjs` ne peuvent s'y installer |
+| Test unitaire du visualiseur | Importe `../../src/config.js` | Passer à `config.mjs` |
 
 **Après la fusion académique décidée par l'utilisateur :** créer un travail d'intégration distinct,
 relever les nouveaux exports, adapter seulement les imports consommateurs du visualiseur, traiter
