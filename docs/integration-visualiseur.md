@@ -92,7 +92,7 @@ Sur PC (Windows 11, Chrome en mode sans interface, WebGPU), avec la vraie démon
 | `npm run test:unit` | 267 tests, tous réussis |
 | `npm run test:e2e` | 197 vérifications dans Chrome, toutes réussies, aucune ignorée |
 | Tests Python du serveur (`analysis/`) | 113 tests, tous réussis |
-| Vrai pipeline sur GPU (`tests/visualizer-local-ai.mjs`) | voir ci-dessous |
+| Vrai pipeline sur GPU (`tests/visualizer-local-ai.mjs`) | 12 étapes, toutes réussies |
 
 Les vérifications dans Chrome couvrent l'application :
 
@@ -121,7 +121,21 @@ Sept vérifications portent sur l'intégration elle-même :
 
 ### Vrai pipeline sur GPU
 
-À compléter après l'exécution.
+`node tests/visualizer-local-ai.mjs`, lancé dans l'arbre intégré, sur un GPU NVIDIA (`cuda:0`). La vidéo
+est un extrait local de 10 s, dont l'usage est autorisé. Elle reste hors du dépôt, comme les poids des
+modèles : rien n'est versionné ni publié. Résultat : 12 étapes réussies en 184 s.
+
+- Page servie par le serveur Python : mode local connecté, sans lien vers `index.html`.
+- Téléversement, puis résultats partiels affichés au bout de 18 s : 23 objets, dont 16 placés sur le terrain.
+- Interruption, puis analyse reprenable.
+- Serveur arrêté brutalement : « indisponible » affiché en 79 ms. Au redémarrage, l'analyse est retrouvée
+  « interrompue », puis reprise jusqu'à la fin (159 s en tout).
+- Lecture : annotations, terrain 3D dans la vidéo et sélection d'un joueur, en WebGPU.
+- Seules erreurs de la console : celles de l'arrêt volontaire du serveur.
+- Depuis l'origine publique, sans l'autorisation « réseau local » : serveur indisponible, aide affichée.
+  Avec elle : analyse ouverte, vidéo en CORS, terrain 3D.
+- Export statique de l'analyse réelle (125 images, 5 segments, 25 trajectoires), vérifié, puis lu en mode
+  démonstration, serveur arrêté. L'export reste dans un dossier temporaire, supprimé à la fin.
 
 ## Limites et risques restants
 
