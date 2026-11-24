@@ -25,5 +25,8 @@ desktop.ini
 # Analyse vidéo (visualiseur de match) : environnement Python, modèles et vidéos locales
 analysis/.venv/
 analysis/data/
+
+# Journaux de travail locaux des assistants (non versionnés)
+.audit/
 __pycache__/
 *.pyc

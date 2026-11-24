@@ -462,6 +462,120 @@ async function testLocalStates(browser, url, record) {
 }
 
 /**
+ * Application intégrée : la démonstration sous le contrôle du Service Worker de l'application AR.
+ * Le Service Worker est installé par index.html, puis visualizer.html, dans son périmètre, lit la
+ * vraie vidéo de 36 s par de vraies réponses 206 du serveur statique (sans émulation).
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @param {(name: string, status: string, detail?: string) => void} record
+ * @responsable Bilel Khlif
+ * @date 2026-11-24
+ * @role Tests de bout en bout — visualiseur intégré sous le Service Worker
+ */
+async function testDemoUnderServiceWorker(browser, url, record) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await context.route('http://127.0.0.1:8765/**', (route) => route.abort('connectionrefused'));
+  await context.addInitScript(installDemoFrameReader);
+  const page = await context.newPage();
+  const statuses = [];
+  page.on('response', (response) => { if (response.url().endsWith('/video.mp4')) statuses.push(response.status()); });
+  const errors = collectErrors(page);
+  try {
+    await step(record, 'intégré : démonstration lue sous le contrôle du Service Worker, synchronisée après déplacements', async () => {
+      await page.goto(url);
+      await page.waitForFunction(() => document.body.classList.contains('is-ready')
+        && navigator.serviceWorker.controller?.scriptURL.endsWith('/sw.mjs'), null, { timeout: 30000 });
+      await page.goto(`${url}visualizer.html?demo=${DEMO_ID}`);
+      await page.waitForFunction(() => window.__matchVisualizer?.snapshot().window, null, { timeout: 30000 });
+      const controlled = await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL ?? null);
+      await page.evaluate(() => document.getElementById('match-video').play());
+      await page.waitForFunction(() => document.getElementById('match-video').currentTime > 1, null, { timeout: 15000 });
+      await page.evaluate(() => document.getElementById('match-video').pause());
+      const frames = [];
+      let ok = Boolean(controlled);
+      for (const frame of [800, 125, 450]) {
+        const state = await seekDemo(page, frame);
+        frames.push(`${frame}→${state.displayedFrame}`);
+        ok &&= state.displayedFrame === frame && Math.abs(state.analysedTime - frame / FPS) <= 0.08 + 1e-6
+          && state.overlay?.placed === state.objects.filter((object) => object.pitch).length;
+      }
+      const cached = await page.evaluate(async () => (await Promise.all((await caches.keys()).map(async (name) =>
+        (await (await caches.open(name)).keys()).filter((request) => request.url.endsWith('/video.mp4')).length)))
+        .reduce((sum, count) => sum + count, 0));
+      ok &&= statuses.includes(206) && cached === 0;
+      return [ok, `contrôlée : ${Boolean(controlled)} ; images ${frames.join(', ')} ; réponses ${[...new Set(statuses)]} ; vidéo en cache : ${cached}`];
+    });
+    const unexpected = errors.filter((text) => !/127\.0\.0\.1:8765|ERR_CONNECTION_REFUSED/.test(text));
+    record('Visualiseur, modes : intégré, sous le Service Worker, sans erreur dans la console',
+      unexpected.length ? 'échec' : 'ok', unexpected.slice(0, 3).join(' | '));
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Application intégrée : l'analyse de match s'ouvre depuis « Plus d'outils » dans un nouvel onglet,
+ * sans perdre la tactique en cours ; elle est masquée en AR ; le visualiseur ramène au tableau.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @param {(name: string, status: string, detail?: string) => void} record
+ * @responsable Bilel Khlif
+ * @date 2026-11-24
+ * @role Tests de bout en bout — navigation entre l'application AR et le visualiseur
+ */
+async function testAcademicNavigation(browser, url, record) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  await context.route('http://127.0.0.1:8765/**', (route) => route.abort('connectionrefused'));
+  await context.addInitScript(() => { try { localStorage.setItem('football-simulator:aide-vue', '1'); } catch { /* sans stockage */ } });
+  const page = await context.newPage();
+  const errors = collectErrors(page);
+  try {
+    await step(record, 'intégré : « Plus d’outils » ouvre l’analyse de match dans un nouvel onglet, tactique conservée', async () => {
+      await page.goto(`${url}?debug`);
+      await page.waitForSelector('body.is-ready');
+      await page.locator('#workspace-nav [data-workspace="formations"]').click();
+      await page.locator('.formation-button[data-team="blue"][data-formation="3-5-2"]').click();
+      await page.waitForTimeout(700);
+      const before = await page.evaluate(() => window.__footballSimulator.board.snapshot());
+      const more = page.locator('#workspace-nav [data-workspace="more"]');
+      if (await more.isVisible()) await more.click();
+      const link = page.locator('#match-analysis-link');
+      const attributes = await link.evaluate((element) => ({ href: element.getAttribute('href'), target: element.target, rel: element.rel }));
+      const [visualizer] = await Promise.all([context.waitForEvent('page'), link.click()]);
+      await visualizer.waitForFunction(() => window.__matchVisualizer?.snapshot().window, null, { timeout: 30000 });
+      const opened = await visualizer.evaluate(() => ({ mode: window.__matchVisualizer.mode, analysis: window.__matchVisualizer.currentAnalysis }));
+      const after = await page.evaluate(() => window.__footballSimulator.board.snapshot());
+      const workspace = await page.evaluate(() => document.body.dataset.workspace);
+      await visualizer.close();
+      const ok = attributes.href === 'visualizer.html' && attributes.target === '_blank' && attributes.rel.includes('noopener')
+        && opened.mode === 'demo' && opened.analysis === DEMO_ID && JSON.stringify(after) === JSON.stringify(before)
+        && after.formations.blue === '3-5-2' && workspace === 'more';
+      return [ok, `lien ${JSON.stringify(attributes)} ; visualiseur ${JSON.stringify(opened)} ; tactique identique : ${JSON.stringify(after) === JSON.stringify(before)} ; espace ${workspace}`];
+    });
+    await step(record, 'intégré : carte de l’analyse de match masquée pendant une session AR', async () => {
+      const hidden = await page.evaluate(() => {
+        document.body.dataset.xr = 'active';
+        const display = getComputedStyle(document.querySelector('.match-analysis')).display;
+        delete document.body.dataset.xr;
+        return display;
+      });
+      return [hidden === 'none', `affichage en AR : ${hidden}`];
+    });
+    await step(record, 'intégré : le visualiseur ramène au tableau tactique', async () => {
+      await page.goto(`${url}visualizer.html?demo=${DEMO_ID}`);
+      await page.waitForFunction(() => window.__matchVisualizer?.snapshot().window, null, { timeout: 30000 });
+      await page.locator('#back-to-board').click();
+      await page.waitForSelector('body.is-ready', { timeout: 30000 });
+      return [new URL(page.url()).pathname.endsWith('/index.html') || new URL(page.url()).pathname.endsWith('/'), page.url()];
+    });
+    const unexpected = errors.filter((text) => !/127\.0\.0\.1:8765|ERR_CONNECTION_REFUSED/.test(text));
+    record('Visualiseur, modes : intégré, navigation sans erreur dans la console', unexpected.length ? 'échec' : 'ok', unexpected.slice(0, 3).join(' | '));
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Tous les tests des modes du visualiseur.
  * @param {import('playwright-core').Browser} browser
  * @param {{root: string, subPath: string}} urls serveurs statiques, à la racine et sous /footballsimulator/
@@ -476,4 +590,6 @@ export async function testVisualizerModes(browser, urls, record) {
   await testMobileLayouts(browser, urls.subPath, record);
   await testLocalStates(browser, urls.root, record);
   await testVisualizerAsyncRegressions(browser, urls.root, record);
+  await testDemoUnderServiceWorker(browser, urls.subPath, record);
+  await testAcademicNavigation(browser, urls.subPath, record);
 }
