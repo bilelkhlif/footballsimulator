@@ -1,6 +1,6 @@
 /**
  * Régressions du visualiseur : les réponses locales retardées ne doivent pas réactiver un mode
- * quitté. Les changements de mode et les actions
+ * quitté ; fermer une analyse efface ses informations. Les changements de mode et les actions
  * Reprendre / Interrompre passent par les vrais boutons, avec une API locale simulée sans calcul.
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -91,7 +91,7 @@ function modeState(page) {
 }
 
 /**
- * Trois parcours ciblés : sonde de connexion, reprise et interruption.
+ * Quatre parcours ciblés : sonde de connexion, reprise, interruption et fermeture des panneaux.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url serveur statique du dépôt
  * @param {(name: string, status: string, detail?: string) => void} record
@@ -181,4 +181,30 @@ export async function testVisualizerAsyncRegressions(browser, url, record) {
     });
   }
 
+  await check('fermer la démonstration efface le joueur, les mesures et les légendes précédents', async (page, context) => {
+    await context.route('**/api/health', (route) => route.fulfill({ status: 503, json: { error: 'Serveur de test arrêté' } }));
+    await page.goto(`${url}visualizer.html?mode=demo`);
+    await demoReady(page);
+    const target = await page.evaluate(() => {
+      const app = window.__matchVisualizer;
+      const object = app.store.sample(0).objects[0];
+      const stage = app.stage.getBoundingClientRect();
+      return { x: stage.left + app.content.x + ((object.box[0] + object.box[2]) / 2 / app.store.source.width) * app.content.width,
+        y: stage.top + app.content.y + ((object.box[1] + object.box[3]) / 2 / app.store.source.height) * app.content.height };
+    });
+    await page.mouse.click(target.x, target.y);
+    await page.waitForSelector('#selection-details:visible');
+    assert.ok(await page.locator('#quality-list').evaluate((element) => element.children.length) > 0);
+    await page.locator('#mode-local').click();
+    await page.waitForFunction(() => window.__matchVisualizer.connection === 'unavailable');
+    const empty = await page.evaluate(() => ({ store: window.__matchVisualizer.store, selected: window.__matchVisualizer.selectedId,
+      sample: window.__matchVisualizer.lastSample, details: document.getElementById('selection-details').hidden,
+      empty: !document.getElementById('selection-empty').hidden,
+      remaining: ['quality-list', 'limitations-list', 'team-legend'].map((id) => document.getElementById(id).children.length),
+      availability: document.getElementById('tracking-availability').textContent,
+      frame: document.getElementById('frame-counts').textContent,
+      calibration: document.getElementById('frame-calibration').textContent }));
+    assert.deepEqual(empty, { store: null, selected: null, sample: null, details: true, empty: true,
+      remaining: [0, 0, 0], availability: '', frame: '', calibration: 'Aucune analyse ouverte.' });
+  });
 }

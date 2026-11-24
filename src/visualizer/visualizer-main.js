@@ -250,17 +250,45 @@ class MatchVisualizer {
     this.store = null;
     this.currentAnalysis = null;
     this.selectedId = null;
+    this.lastSample = null;
+    this.lastUpdate = null;
+    this.lastPanelFrame = null;
+    this.lastPanelUpdate = 0;
+    this.lastWindowCheck = 0;
+    this.mediaTime = null;
+    this.lastPlacementTime = -Infinity;
     this.video.pause();
     if (this.video.src.startsWith('blob:')) {
       URL.revokeObjectURL(this.video.src);
     }
     this.video.removeAttribute('src');
     this.video.removeAttribute('poster');
+    this.video.dataset.analysis = '';
     this.video.load();
     byId('stage-empty').hidden = false;
     byId('provenance-banner').hidden = true;
+    byId('provenance-banner').textContent = '';
+    byId('provenance-banner').dataset.kind = '';
     byId('resume-analysis').hidden = true;
     byId('interrupt-analysis').hidden = true;
+    byId('resume-analysis').disabled = false;
+    byId('interrupt-analysis').disabled = false;
+    byId('selection-details').hidden = true;
+    byId('selection-empty').hidden = false;
+    // Garder les sous-éléments de la sélection (pastille et libellé de l'équipe).
+    for (const id of ['sel-id', 'sel-role', 'sel-team', 'sel-visible', 'sel-position', 'sel-speed', 'sel-distance', 'sel-identity', 'sel-span']) {
+      byId(id).textContent = '';
+    }
+    byId('sel-team-chip').style.background = 'transparent';
+    for (const id of ['quality-list', 'limitations-list', 'team-legend']) {
+      byId(id).replaceChildren();
+    }
+    byId('frame-calibration').textContent = 'Aucune analyse ouverte.';
+    byId('frame-counts').textContent = '';
+    byId('tracking-availability').textContent = '';
+    byId('analysis-select').value = '';
+    byId('demo-select').value = '';
+    this.#renderControls(0);
     this.setStatus('');
   }
 
