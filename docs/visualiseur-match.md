@@ -1,6 +1,6 @@
 # Visualiseur de match : architecture et validation
 
-Phases B et D du visualiseur de match. La phase A, la recherche des composants libres, est dans [opensource-research.md](opensource-research.md). La [recherche sur les équipes et la lumière](equipes-lumiere-recherche.md) compare les corrections légères. L'installation et l'utilisation sont dans [analysis/README.md](../analysis/README.md).
+Phases B et D du visualiseur de match. La phase A, la recherche des composants libres, est dans [opensource-research.md](opensource-research.md). Les deux modes (démonstration publique sans serveur, analyse locale), l'export statique, la sécurité et les licences de redistribution sont dans [visualiseur-modes.md](visualiseur-modes.md). La [recherche sur les équipes et la lumière](equipes-lumiere-recherche.md) compare les corrections légères. L'installation et l'utilisation sont dans [analysis/README.md](../analysis/README.md).
 
 **Statut :** prototype sur la branche `feature/visualiseur-match`, pas encore fusionné dans `main`. L'application AR n'est pas modifiée : aucun fichier de sa coquille ne change, et `SHELL_VERSION` reste `0cabdc0abc04da44`.
 
@@ -73,11 +73,15 @@ flowchart LR
 | `GET /api/health` | Matériel de calcul, poids manquants, réglages |
 | `POST /api/analyses?name=<fichier>` (corps : la vidéo) | 202 et l'état de l'analyse ; 415 si le format n'est pas pris en charge ; 422 si OpenCV ne peut pas lire la vidéo |
 | `GET /api/analyses` | Liste des analyses |
-| `GET /api/analyses/<id>` | État, progression, et à la fin mesures et limites |
+| `GET /api/analyses/<id>` | État, progression, `results` (segments déjà écrits), et à la fin mesures et limites |
+| `GET /api/analyses/<id>/manifest` | En-tête et disponibilité, sans images ; 409 tant qu'aucun segment n'existe |
+| `GET /api/analyses/<id>/frames?from=&to=` | Fenêtre de trente secondes au plus, images voisines comprises |
+| `POST /api/analyses/<id>/interrupt` | Interruption au prochain lot d'images ; l'analyse reste reprenable |
+| `POST /api/analyses/<id>/resume` | Reprise depuis le dernier segment validé |
 | `GET /api/analyses/<id>/tracking` | Document de suivi ; 409 avant la fin |
 | `GET /api/analyses/<id>/video` | Vidéo source, avec `Range` |
 
-Le serveur écoute `127.0.0.1:8765` et ne sert que `visualizer.html`, `src/` et `assets/`. Il ne sert ni `index.html` ni `sw.js` : le Service Worker de l'application AR ne peut donc pas s'installer sur son origine, où il mettrait en cache les réponses de l'API.
+Le serveur écoute `127.0.0.1:8765` et ne sert que `visualizer.html`, `src/`, `assets/` et `demo/` (vidéos avec `Range`). Il vérifie l'en-tête `Host` et l'origine des requêtes : voir [visualiseur-modes.md](visualiseur-modes.md), partie 5. Il ne sert ni `index.html` ni `sw.js` : le Service Worker de l'application AR ne peut donc pas s'installer sur son origine, où il mettrait en cache les réponses de l'API.
 
 ---
 

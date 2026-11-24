@@ -299,3 +299,16 @@ les éventuels conflits du lanceur et du contrôle documentaire, puis refaire le
 visualiseur. Les commandes et contraintes des flèches AR ne doivent pas être contournées pour
 accommoder les flèches de vitesse du visualiseur. La fusion de PR #15 reste une décision explicite
 de l'utilisateur. `main`, son Service Worker et `ATTRIBUTION.md` ne sont pas modifiés ici.
+
+
+### Compléments du 24 novembre 2026 : démonstration, Service Worker et sept espaces
+
+Relevés sans modifier `main` (détail : [visualiseur-modes.md](visualiseur-modes.md), partie 8) :
+
+- **Service Worker** : `sw.mjs` de `main` met en cache toute réponse `GET` réussie de la même origine,
+  réponses partielles `206` comprises, que `cache.put` refuse. Sous son contrôle, la lecture des vidéos
+  du visualiseur échouerait. Il faut le faire passer à côté des requêtes `Range`, de `demo/` et de
+  `api/`, puis recalculer `SHELL_VERSION` et rejouer la démonstration sous son contrôle.
+- **Sept espaces de travail** : le visualiseur reste une page séparée ; un lien depuis « Plus
+  d'outils » suffit. Aucune scène ni historique tactique partagés.
+- **Démonstration** : `demo/` (2,2 Mo, données synthétiques seulement) devient public avec `main`.

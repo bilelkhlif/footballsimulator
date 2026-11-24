@@ -234,6 +234,10 @@ La vidéo d'origine s'affiche annotée. Le terrain 3D de l'application, en WebGP
 
 L'analyse réutilise des composants libres (Roboflow Sports, Ultralytics, ByteTrack, PySceneDetect, OpenCV). Elle tourne sur un serveur Python local ([analysis/](analysis/README.md)), avec un GPU NVIDIA de préférence. L'application AR n'en dépend pas et n'est pas modifiée.
 
+Deux modes, une seule interface : **Explorer la démo** lit des exports statiques de `demo/` (un match synthétique, vidéo et annotations générées ensemble, sans Python ni serveur, compatible GitHub Pages) ; **Analyser ma vidéo** utilise le serveur local (téléversement, progression, résultats partiels, interruption et reprise).
+
+- Démonstration, export statique, analyse locale, sécurité et licences de redistribution : [docs/visualiseur-modes.md](docs/visualiseur-modes.md)
+- Qui a fait quoi, avec quelles preuves : [docs/attribution-visualiseur.md](docs/attribution-visualiseur.md)
 - Recherche des composants, licences et choix : [docs/opensource-research.md](docs/opensource-research.md)
 - Fiabilité des équipes sous soleil et ombre : [recherche et comparaison des variantes](docs/equipes-lumiere-recherche.md)
 - Architecture, format des données et validation sur de vraies vidéos : [docs/visualiseur-match.md](docs/visualiseur-match.md)

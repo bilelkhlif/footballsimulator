@@ -42,7 +42,9 @@ Sans GPU NVIDIA, remplacez `cu121` par `cpu`. La dernière commande télécharge
 # Visualiseur de match : http://127.0.0.1:8765/visualizer.html (calcul : cuda:0)
 ```
 
-Téléversez une vidéo (MP4, WebM, MOV, MKV…) : l'analyse se fait en arrière-plan et les premiers segments disponibles s'ouvrent automatiquement. Le terrain 3D reste superposé à la vidéo. La page indique la partie déjà analysée ; les équipes arrivent dans une seconde passe. Les analyses interrompues restent consultables et disposent d'un bouton de reprise. Le navigateur doit pouvoir lire la vidéo : H.264 ou VP9 conviennent à Chrome et Edge.
+Téléversez une vidéo (MP4, WebM, MOV, MKV…) : l'analyse se fait en arrière-plan et les premiers segments disponibles s'ouvrent automatiquement. Le terrain 3D reste superposé à la vidéo. La page indique la partie déjà analysée ; les équipes arrivent dans une seconde passe. « Interrompre » arrête l'analyse au lot d'images suivant ; les analyses interrompues, ou coupées par un arrêt du serveur, restent consultables et disposent d'un bouton de reprise. Le navigateur doit pouvoir lire la vidéo : H.264 ou VP9 conviennent à Chrome et Edge.
+
+La page a deux modes : « Analyser ma vidéo » (ce serveur) et « Explorer la démo » (exports statiques de `demo/`, sans serveur). Depuis une page publique, comme GitHub Pages, ajoutez `?serveur=http://127.0.0.1:8765/` à l'adresse du visualiseur et acceptez la demande d'accès de Chrome aux applications de cet appareil ; la page servie par ce serveur reste le moyen le plus simple. Sécurité, restrictions des navigateurs et démonstration : [docs/visualiseur-modes.md](../docs/visualiseur-modes.md).
 
 **Ligne de commande.** La même analyse, sans interface :
 
@@ -62,6 +64,19 @@ Téléversez une vidéo (MP4, WebM, MOV, MKV…) : l'analyse se fait en arrière
 | `--chunk-seconds 10` | Segments de 0,5 à 30 s ; mémoire indépendante de la durée totale |
 | `--team-fit-seconds 30` | Réserve initiale des équipes sur 1 à 120 s, bornée à 512 images de maillots |
 | `serve --jobs data/jobs-test` | Dossier distinct pour un essai isolé, sans relancer les anciennes vidéos en file |
+| `serve --allow-origin https://exemple.test` | Page publique autorisée à utiliser le serveur (par défaut `https://bilelkhlif.github.io`) ; répétable |
+| `serve --allow-network` | Écoute sur une autre adresse que la boucle locale : déconseillé, vidéos et analyses privées |
+
+**Export statique et démonstration.** Une analyse terminée devient des fichiers lisibles sans serveur (mode démo) :
+
+```powershell
+.venv\Scripts\python -m football_analysis export data\jobs\<id>\tracking.sqlite export\mon-match --title "Mon match"
+.venv\Scripts\python -m football_analysis verify-export export\mon-match
+# Démonstration publique synthétique (vidéo générée, aucune image réelle) : régénère ../demo/
+.venv\Scripts\python -m football_analysis demo
+```
+
+Ne publiez l'export d'une vidéo réelle que si vous avez le droit de diffuser cette vidéo et ses données : les exemples de Roboflow Sports (concours DFL) et les diffusions télévisées ne le permettent pas. Vérification complète du mode local avec le vrai pipeline : `node tests/visualizer-local-ai.mjs <vidéo>` (GPU et poids requis).
 
 ## Ce qui est mesuré, et ce qui ne l'est pas
 
