@@ -86,6 +86,32 @@ class CutDetectorTest(unittest.TestCase):
         results = [detector.is_cut(frame) for frame in [green] * 8 + [crowd] * 8]
         self.assertEqual([index for index, cut in enumerate(results) if cut], [8])
 
+    def test_full_hd_frames_are_reduced_like_scene_manager_with_same_cut(self):
+        """Une image 1920 px est réduite à 256 px avant ContentDetector ; même coupure qu'en entier.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Tests de l'analyse vidéo — découpage en plans (coût)
+        """
+        rng = np.random.default_rng(0)
+        pitch = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        pitch[:, :] = (40, 140, 40)
+        pitch[500:520] = 255  # une ligne blanche du terrain
+        stands = rng.integers(0, 255, size=(1080, 1920, 3), dtype=np.uint8)
+        sequence = [pitch] * 8 + [stands] * 8
+        reduced, full = CutDetector(12.5), CutDetector(12.5, downscale=False)
+        shapes = []
+        original = reduced._detector.process_frame
+
+        def spy(timecode, frame):
+            shapes.append(frame.shape)
+            return original(timecode, frame)
+
+        reduced._detector.process_frame = spy
+        cuts = [[index for index, frame in enumerate(sequence) if detector.is_cut(frame)] for detector in (reduced, full)]
+        self.assertEqual(cuts, [[8], [8]])
+        self.assertEqual(set(shapes), {(144, 256, 3)})
+
 
 if __name__ == "__main__":
     unittest.main()
