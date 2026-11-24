@@ -1,0 +1,146 @@
+<!doctype html>
+<!--
+  Football Simulator : visualiseur de match. Une vidéo de match annotée, avec le terrain 3D de
+  l'application rendu en WebGPU par-dessus. Deux modes, une seule interface : démonstration (exports
+  statiques de demo/, sans serveur, compatible GitHub Pages) et analyse locale (serveur Python de
+  analysis/, sur la boucle locale de cet ordinateur).
+  Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
+-->
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Visualiseur de match – Football Simulator</title>
+  <meta name="description" content="Analyse d'une vidéo de match : joueurs suivis, équipes, positions sur un terrain 3D synchronisé.">
+  <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="src/visualizer/visualizer.css">
+
+  <!-- Même carte d'import que l'application AR : three.js r187, build WebGPU, servi depuis la même origine -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./src/vendor/three-r187/build/three.webgpu.js",
+        "three/webgpu": "./src/vendor/three-r187/build/three.webgpu.js",
+        "three/tsl": "./src/vendor/three-r187/build/three.tsl.js",
+        "three/addons/": "./src/vendor/three-r187/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="src/visualizer/visualizer-main.js"></script>
+</head>
+<body>
+  <!-- Barre du haut : mode (démonstration ou analyse locale), état de fonctionnement, commandes du mode -->
+  <header class="vz-bar">
+    <h1 class="vz-title">Visualiseur de match</h1>
+    <div class="vz-modes" role="group" aria-label="Mode du visualiseur">
+      <button id="mode-demo" class="vz-mode" type="button" aria-pressed="false">Explorer la démo</button>
+      <button id="mode-local" class="vz-mode" type="button" aria-pressed="false">Analyser ma vidéo</button>
+    </div>
+    <p id="connection-state" class="vz-state" role="status" aria-live="polite"></p>
+    <!-- Mode démonstration : exports statiques lus dans demo/, sans serveur ni GPU -->
+    <div id="demo-controls" class="vz-group" hidden>
+      <select id="demo-select" class="vz-select" aria-label="Match de démonstration"></select>
+    </div>
+    <!-- Mode analyse locale : serveur Python sur la boucle locale de cet ordinateur -->
+    <div id="local-controls" class="vz-group" hidden>
+      <form id="server-form" class="vz-server" hidden>
+        <label for="server-url">Serveur local</label>
+        <input id="server-url" class="vz-input" type="url" inputmode="url" spellcheck="false" autocomplete="off"
+               placeholder="http://127.0.0.1:8765/">
+        <button class="vz-button" type="submit">Connecter</button>
+      </form>
+      <label class="vz-button vz-button--primary">
+        Téléverser une vidéo
+        <input id="upload-input" type="file" accept="video/*" hidden>
+      </label>
+      <select id="analysis-select" class="vz-select" aria-label="Analyses précédentes">
+        <option value="">Analyses précédentes…</option>
+      </select>
+      <button id="interrupt-analysis" class="vz-button" type="button" hidden>Interrompre</button>
+      <button id="resume-analysis" class="vz-button" type="button" hidden>Reprendre l'analyse</button>
+    </div>
+    <p id="job-status" class="vz-status" role="status" aria-live="polite"></p>
+  </header>
+  <!-- Aide quand le serveur local est injoignable : comment le lancer, ou rester en démonstration -->
+  <section id="mode-help" class="vz-help" aria-label="Connexion au serveur local" hidden></section>
+
+  <main class="vz-main">
+    <section class="vz-player" aria-label="Vidéo du match">
+      <!-- Provenance des données affichées : démonstration synthétique ou export d'une analyse réelle -->
+      <p id="provenance-banner" class="vz-banner" role="note" hidden></p>
+      <!-- Scène : la vidéo, le calque d'annotations et le panneau du terrain 3D -->
+      <div id="stage" class="vz-stage">
+        <video id="match-video" class="vz-video" playsinline muted preload="auto"></video>
+        <canvas id="annotations" class="vz-annotations" aria-label="Joueurs détectés : cliquez pour sélectionner"></canvas>
+        <p id="stage-empty" class="vz-empty">Choisissez un match de démonstration, ou analysez votre vidéo avec le serveur local.</p>
+
+        <div id="pitch-panel" class="vz-panel" role="group" aria-label="Terrain 3D">
+          <div id="pitch-panel-bar" class="vz-panel-bar">
+            <span class="vz-panel-title">Terrain 3D</span>
+            <button id="toggle-auto" class="vz-chip" type="button" aria-pressed="true" title="Placer le terrain dans la zone la moins encombrée">Auto</button>
+            <button id="toggle-trails" class="vz-chip" type="button" aria-pressed="true" title="Traces des 4 dernières secondes">Traces</button>
+            <button id="toggle-arrows" class="vz-chip" type="button" aria-pressed="true" title="Déplacement en une seconde, à la vitesse mesurée">Flèches</button>
+            <button id="toggle-lock" class="vz-chip" type="button" aria-pressed="false" title="Verrouiller la position et la taille">Verrou</button>
+            <button id="pitch-recentre" class="vz-icon" type="button" title="Vue de départ" aria-label="Vue de départ">⟲</button>
+            <button id="pitch-minimise" class="vz-icon" type="button" title="Réduire" aria-label="Réduire le terrain 3D">–</button>
+          </div>
+          <div id="pitch-view" class="vz-panel-view"></div>
+          <div id="pitch-panel-resize" class="vz-resize" title="Redimensionner" aria-hidden="true"></div>
+        </div>
+        <button id="pitch-restore" class="vz-restore" type="button" hidden>Terrain 3D</button>
+      </div>
+
+      <!-- Commandes de lecture : les clics sur la vidéo servent à sélectionner les joueurs -->
+      <div class="vz-controls">
+        <button id="play" class="vz-button" type="button">Lecture</button>
+        <button id="frame-previous" class="vz-icon" type="button" title="Image analysée précédente (←)" aria-label="Image analysée précédente">◀</button>
+        <button id="frame-next" class="vz-icon" type="button" title="Image analysée suivante (→)" aria-label="Image analysée suivante">▶</button>
+        <input id="seek" class="vz-seek" type="range" min="0" max="0" step="0.01" value="0" aria-label="Position dans la vidéo">
+        <span id="time-display" class="vz-time">0:00,0 / 0:00,0</span>
+        <select id="speed" class="vz-select" aria-label="Vitesse de lecture">
+          <option value="0.25">0,25×</option>
+          <option value="0.5">0,5×</option>
+          <option value="1" selected>1×</option>
+          <option value="2">2×</option>
+        </select>
+        <button id="mute" class="vz-chip" type="button" aria-pressed="false">Son</button>
+        <button id="toggle-annotations" class="vz-chip" type="button" aria-pressed="true">Annotations</button>
+        <span id="team-legend" class="vz-legend"></span>
+      </div>
+    </section>
+
+    <!-- Panneaux : joueur sélectionné, image affichée, qualité de l'analyse et limites -->
+    <aside class="vz-side">
+      <section class="vz-card">
+        <h2>Joueur sélectionné</h2>
+        <p id="selection-empty" class="vz-muted">Cliquez sur un joueur, sur la vidéo ou sur le terrain 3D.</p>
+        <dl id="selection-details" class="vz-list" hidden>
+          <dt>Identifiant de suivi</dt><dd id="sel-id"></dd>
+          <dt>Rôle</dt><dd id="sel-role"></dd>
+          <dt>Équipe</dt><dd><i id="sel-team-chip" class="vz-chip-colour"></i><span id="sel-team"></span></dd>
+          <dt>Visible</dt><dd id="sel-visible"></dd>
+          <dt>Position</dt><dd id="sel-position"></dd>
+          <dt>Vitesse</dt><dd id="sel-speed"></dd>
+          <dt>Distance</dt><dd id="sel-distance"></dd>
+          <dt>Identité</dt><dd id="sel-identity"></dd>
+          <dt>Suivi</dt><dd id="sel-span"></dd>
+        </dl>
+      </section>
+      <section class="vz-card">
+        <h2>Image affichée</h2>
+        <p id="frame-calibration" class="vz-muted">Aucune analyse ouverte.</p>
+        <p id="frame-counts" class="vz-muted"></p>
+        <p id="tracking-availability" class="vz-muted" role="status"></p>
+      </section>
+      <section class="vz-card">
+        <h2>Qualité de l'analyse</h2>
+        <dl id="quality-list" class="vz-list"></dl>
+      </section>
+      <section class="vz-card">
+        <h2>Limites</h2>
+        <ul id="limitations-list" class="vz-limits"></ul>
+      </section>
+    </aside>
+  </main>
+</body>
+</html>

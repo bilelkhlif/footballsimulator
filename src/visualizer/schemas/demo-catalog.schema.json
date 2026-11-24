@@ -1,0 +1,76 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://bilelkhlif.github.io/footballsimulator/src/visualizer/schemas/demo-catalog.schema.json",
+ "title": "Catalogue des matchs de démonstration (football-demo-catalog, version 1)",
+ "type": "object",
+ "required": [
+  "format",
+  "version",
+  "matches"
+ ],
+ "properties": {
+  "format": {
+   "const": "football-demo-catalog"
+  },
+  "version": {
+   "const": 1
+  },
+  "matches": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "id",
+     "title",
+     "path",
+     "kind"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+     },
+     "title": {
+      "type": "string",
+      "minLength": 1
+     },
+     "path": {
+      "allOf": [
+       {
+        "$ref": "#/$defs/relative"
+       },
+       {
+        "pattern": "/$"
+       }
+      ]
+     },
+     "kind": {
+      "enum": [
+       "analysis",
+       "synthetic"
+      ]
+     },
+     "duration": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "description": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ },
+ "$defs": {
+  "relative": {
+   "type": "string",
+   "minLength": 1,
+   "pattern": "^(?![A-Za-z]:|/|\\./|file:)[^\\\\]*$",
+   "not": {
+    "pattern": "(^|/)\\.\\.(/|$)"
+   }
+  }
+ }
+}

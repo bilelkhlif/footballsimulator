@@ -1,0 +1,145 @@
+{
+ "date": "2026-11-24",
+ "branch": "feature/visualiseur-match",
+ "scope": "Modes du visualiseur : démonstration publique sans serveur, analyse locale réelle, accès depuis une origine publique",
+ "environment": {
+  "browser": "Chrome 158.0.8127.36 sans interface, WebGPU matériel",
+  "gpu": "NVIDIA GeForce RTX 2050 (4 Go)",
+  "system": "Windows 11",
+  "physicalPhone": false
+ },
+ "realPipeline": {
+  "script": "tests/visualizer-local-ai.mjs",
+  "video": {
+   "description": "10 premières secondes de l'exemple 121364_0 de Roboflow Sports (concours DFL), réencodées en H.264 ; fichier local, ni versionné ni publié",
+   "bytes": 5742925
+  },
+  "serverOptions": "serve --chunk-seconds 2 (segments courts pour voir les résultats partiels), dossier d'analyses temporaire",
+  "steps": [
+   {
+    "name": "page servie par Python : mode local, serveur connecté",
+    "label": "Serveur local connecté (calcul : cuda:0)"
+   },
+   {
+    "name": "résultats partiels affichés pendant l’analyse (image à 1 s)",
+    "afterSeconds": 20,
+    "objects": 23,
+    "placed": 16,
+    "availableUntil": 1.92,
+    "complete": false
+   },
+   {
+    "name": "interruption demandée depuis l'interface : analyse interrompue, reprenable",
+    "label": "Analyse interrompue (reprenable)"
+   },
+   {
+    "name": "serveur arrêté brutalement pendant l'analyse : état « indisponible »",
+    "detectedAfterMs": 95,
+    "status": "Connexion perdue avec le serveur local ; nouvel essai dans 1 s. Si le serveur a été arrêté, relancez-le : l'analyse sera reprenable."
+   },
+   {
+    "name": "serveur redémarré : analyse retrouvée « interrompue », reprenable",
+    "label": "Analyse interrompue (reprenable)"
+   },
+   {
+    "name": "analyse terminée après reprise",
+    "totalSeconds": 139
+   },
+   {
+    "name": "lecture : annotations, terrain 3D dans la vidéo et sélection d'un joueur",
+    "time": 2.01,
+    "objects": 23,
+    "placed": 23,
+    "selected": 1,
+    "webgpu": true,
+    "complete": true
+   },
+   {
+    "name": "aucune erreur de console hors de l'arrêt volontaire du serveur",
+    "pendantArret": 7
+   },
+   {
+    "name": "origine publique sans autorisation « réseau local » : serveur indisponible, aide affichée",
+    "help": "Serveur local injoignable à http://127.0.0.1:64345/. Démarrez-le dans le dossier analysis/ du dépôt :.venv\\Scripts\\pytho"
+   },
+   {
+    "name": "origine publique avec autorisation : analyse ouverte, vidéo en CORS, terrain 3D",
+    "time": 2.01,
+    "objects": 23,
+    "placed": 23,
+    "selected": 1,
+    "webgpu": true,
+    "complete": true
+   },
+   {
+    "name": "export statique de l'analyse réelle, vérifié",
+    "export": "Export écrit : <dossier temporaire> (125 images, 5 segments, 25 trajectoires)",
+    "verification": "Export valide."
+   },
+   {
+    "name": "export réel lu en mode démo, serveur arrêté",
+    "time": 2.01,
+    "objects": 23,
+    "placed": 23,
+    "selected": 1,
+    "webgpu": true,
+    "complete": true,
+    "banner": "Export statique d'une analyse réelle (exporté le 2026-11-24)"
+   }
+  ],
+  "analysis": {
+   "processing": {
+    "device": "cuda:0",
+    "processingSeconds": 119.05,
+    "videoSeconds": 10,
+    "slowdown": 11.91,
+    "analysedFrames": 125,
+    "identitySeconds": 2.31,
+    "peakRamMb": 2629,
+    "peakGpuMb": 627
+   },
+   "processingNote": "Durée cumulée sur trois lancements (interruption, arrêt du serveur, reprises) : modèles chargés trois fois. Ce n'est pas une mesure de performance.",
+   "identity": {
+    "checked": true,
+    "contacts": 3,
+    "crowded": 0,
+    "decidable": 2,
+    "splits": 0,
+    "swaps": 0,
+    "truncated": false,
+    "uncertainSeconds": 0
+   },
+   "calibration": {
+    "calibratedShare": 1,
+    "medianHoldoutErrorM": 0.407
+   },
+   "teams": {
+    "knownTeamShare": 1,
+    "medianMajorityShare": 0.5
+   }
+  },
+  "exportPublished": false
+ },
+ "localNetworkAccessProbe": {
+  "page": "https://bilelkhlif.github.io/footballsimulator/ (page réelle publiée)",
+  "target": "serveur HTTP sur 127.0.0.1, en-têtes CORS du serveur d'analyse",
+  "withoutPermission": {
+   "permissionState": "prompt",
+   "result": "TypeError: Failed to fetch, avant toute requête vers le serveur",
+   "console": "Permission was denied for this request to access the `loopback` address space."
+  },
+  "withPermission": {
+   "get": 200,
+   "post": 200,
+   "preflight": "OPTIONS avant le POST",
+   "privateNetworkAccessHeader": "non envoyé"
+  },
+  "mixedContent": "http://127.0.0.1 accepté depuis une page HTTPS (boucle locale réputée sûre)",
+  "notTested": [
+   "Firefox",
+   "Safari",
+   "Edge",
+   "clic réel sur l'invite de Chrome"
+  ]
+ }
+}

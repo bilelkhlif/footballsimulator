@@ -1,0 +1,550 @@
+{
+  "date": "2026-11-17",
+  "method": "Audit interne des maillots sur trois instants par vidéo, distincts des images du corpus expérimental reconstruit (doublons de pixels exclus par SHA-256). Mêmes vidéos et mêmes trajectoires. Étiquettes visuelles non officielles, groupes 0 et 1 arbitraires par vidéo ; null signifie exclu.",
+  "annotationsSha256": "836d3b4ebe67b5133417c87ba60a64248eb8234decfd649866c76049fec098fa",
+  "baselineCommit": "61bec1ce4f0ece45d0aa655233ff4150f60b543b",
+  "candidateCodeCommit": "d127e54",
+  "settings": {
+    "backbone": "siglip",
+    "seed": 0,
+    "targetFps": 12.5,
+    "useBallModel": true,
+    "device": "cuda:0"
+  },
+  "fitCorpusNote": "Le corpus expérimental est reconstruit avec les rôles majoritaires. La collecte originale utilisait les rôles instantanés avant correction ; leur identité complète ne peut être prouvée après coup.",
+  "videos": [
+    {
+      "name": "roboflow-dfl-2e57b9_0",
+      "sourceSha256": "7788719b32b944e42d8f1024fb4802f681bc2053d6301218a5bff6705b549f96",
+      "kits": [
+        "blanc",
+        "bleu marine"
+      ],
+      "baseline": {
+        "labelled": 59,
+        "correct": 57,
+        "wrong": 2,
+        "unknown": 0,
+        "excluded": 2,
+        "permutation": 0
+      },
+      "candidate": {
+        "labelled": 59,
+        "correct": 57,
+        "wrong": 2,
+        "unknown": 0,
+        "excluded": 2,
+        "permutation": 0
+      },
+      "regression": {
+        "sourceAndCountIdentical": true,
+        "changedFrames": 0
+      },
+      "baselineProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.97,
+          "frames": 191.22,
+          "teams": 71.12
+        },
+        "videoSeconds": 30.0,
+        "processingSeconds": 264.3,
+        "slowdown": 8.81,
+        "analysedFrames": 375,
+        "analysedFramesPerSecond": 1.96,
+        "peakRamMb": 2659,
+        "peakGpuMb": 646
+      },
+      "candidateProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 2.02,
+          "frames": 150.2,
+          "teams": 61.69
+        },
+        "videoSeconds": 30.0,
+        "processingSeconds": 213.91,
+        "slowdown": 7.13,
+        "analysedFrames": 375,
+        "analysedFramesPerSecond": 2.5,
+        "peakRamMb": 2634,
+        "peakGpuMb": 627
+      },
+      "candidateTeams": {
+        "tracksByTeam": {
+          "0": 14,
+          "1": 12
+        },
+        "knownTeamShare": 1.0,
+        "medianMajorityShare": 0.5
+      }
+    },
+    {
+      "name": "roboflow-dfl-2e57b9_0-720p30",
+      "sourceSha256": "b260692f030cf1a27ef4a7792af6fa10dc85bc885670eada969f0c9354290e78",
+      "kits": [
+        "blanc",
+        "bleu marine"
+      ],
+      "baseline": {
+        "labelled": 58,
+        "correct": 52,
+        "wrong": 0,
+        "unknown": 6,
+        "excluded": 1,
+        "permutation": 0
+      },
+      "candidate": {
+        "labelled": 58,
+        "correct": 52,
+        "wrong": 0,
+        "unknown": 6,
+        "excluded": 1,
+        "permutation": 0
+      },
+      "regression": {
+        "sourceAndCountIdentical": true,
+        "changedFrames": 0
+      },
+      "baselineProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.56,
+          "frames": 174.21,
+          "teams": 64.24
+        },
+        "videoSeconds": 30.0,
+        "processingSeconds": 240.01,
+        "slowdown": 8.0,
+        "analysedFrames": 450,
+        "analysedFramesPerSecond": 2.58,
+        "peakRamMb": 2569,
+        "peakGpuMb": 646
+      },
+      "candidateProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.64,
+          "frames": 155.7,
+          "teams": 55.99
+        },
+        "videoSeconds": 30.0,
+        "processingSeconds": 213.32,
+        "slowdown": 7.11,
+        "analysedFrames": 450,
+        "analysedFramesPerSecond": 2.89,
+        "peakRamMb": 2533,
+        "peakGpuMb": 627
+      },
+      "candidateTeams": {
+        "tracksByTeam": {
+          "0": 11,
+          "1": 11,
+          "None": 3
+        },
+        "knownTeamShare": 0.897,
+        "medianMajorityShare": 0.5
+      }
+    },
+    {
+      "name": "test-vfr-2e57b9",
+      "sourceSha256": "8467131f8f51f103e2593958fd2fb55504fad34758e790bde135f71221d18a08",
+      "kits": [
+        "blanc",
+        "bleu marine"
+      ],
+      "baseline": {
+        "labelled": 41,
+        "correct": 37,
+        "wrong": 0,
+        "unknown": 4,
+        "excluded": 0,
+        "permutation": 1
+      },
+      "candidate": {
+        "labelled": 41,
+        "correct": 37,
+        "wrong": 0,
+        "unknown": 4,
+        "excluded": 0,
+        "permutation": 1
+      },
+      "regression": {
+        "sourceAndCountIdentical": true,
+        "changedFrames": 0
+      },
+      "baselineProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.61,
+          "frames": 73.74,
+          "teams": 59.64
+        },
+        "videoSeconds": 10.021,
+        "processingSeconds": 134.99,
+        "slowdown": 13.47,
+        "analysedFrames": 167,
+        "analysedFramesPerSecond": 2.26,
+        "peakRamMb": 2631,
+        "peakGpuMb": 645
+      },
+      "candidateProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.76,
+          "frames": 76.02,
+          "teams": 57.79
+        },
+        "videoSeconds": 10.021,
+        "processingSeconds": 135.58,
+        "slowdown": 13.53,
+        "analysedFrames": 167,
+        "analysedFramesPerSecond": 2.2,
+        "peakRamMb": 2640,
+        "peakGpuMb": 627
+      },
+      "candidateTeams": {
+        "tracksByTeam": {
+          "0": 15,
+          "1": 11,
+          "None": 2
+        },
+        "knownTeamShare": 0.902,
+        "medianMajorityShare": 0.5
+      }
+    },
+    {
+      "name": "montage-coupures-2e57b9",
+      "sourceSha256": "060446fcad6885348398dd95a1b8486c270234335dae3bf2026b93e141d100b6",
+      "kits": [
+        "bleu marine",
+        "blanc"
+      ],
+      "baseline": {
+        "labelled": 51,
+        "correct": 50,
+        "wrong": 0,
+        "unknown": 1,
+        "excluded": 2,
+        "permutation": 1
+      },
+      "candidate": {
+        "labelled": 51,
+        "correct": 51,
+        "wrong": 0,
+        "unknown": 0,
+        "excluded": 2,
+        "permutation": 1
+      },
+      "regression": {
+        "sourceAndCountIdentical": true,
+        "changedFrames": 0
+      },
+      "baselineProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.57,
+          "frames": 128.59,
+          "teams": 72.8
+        },
+        "videoSeconds": 24.0,
+        "processingSeconds": 202.96,
+        "slowdown": 8.46,
+        "analysedFrames": 300,
+        "analysedFramesPerSecond": 2.33,
+        "peakRamMb": 2660,
+        "peakGpuMb": 646
+      },
+      "candidateProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.64,
+          "frames": 120.77,
+          "teams": 74.06
+        },
+        "videoSeconds": 24.0,
+        "processingSeconds": 196.46,
+        "slowdown": 8.19,
+        "analysedFrames": 300,
+        "analysedFramesPerSecond": 2.48,
+        "peakRamMb": 2624,
+        "peakGpuMb": 627
+      },
+      "candidateTeams": {
+        "tracksByTeam": {
+          "0": 34,
+          "1": 32
+        },
+        "knownTeamShare": 1.0,
+        "medianMajorityShare": 0.524
+      }
+    },
+    {
+      "name": "roboflow-dfl-573e61_0",
+      "sourceSha256": "ed1038048d56e86c2eac93394344aadcd45df26a01e158c5dd55cd6409104685",
+      "kits": [
+        "bordeaux et noir",
+        "blanc"
+      ],
+      "baseline": {
+        "labelled": 61,
+        "correct": 45,
+        "wrong": 16,
+        "unknown": 0,
+        "excluded": 2,
+        "permutation": 0
+      },
+      "candidate": {
+        "labelled": 61,
+        "correct": 61,
+        "wrong": 0,
+        "unknown": 0,
+        "excluded": 2,
+        "permutation": 0
+      },
+      "regression": {
+        "sourceAndCountIdentical": true,
+        "changedFrames": 0
+      },
+      "baselineProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.66,
+          "frames": 174.73,
+          "teams": 82.88
+        },
+        "videoSeconds": 30.0,
+        "processingSeconds": 259.27,
+        "slowdown": 8.64,
+        "analysedFrames": 375,
+        "analysedFramesPerSecond": 2.15,
+        "peakRamMb": 2639,
+        "peakGpuMb": 646
+      },
+      "candidateProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.54,
+          "frames": 147.89,
+          "teams": 60.46
+        },
+        "videoSeconds": 30.0,
+        "processingSeconds": 209.9,
+        "slowdown": 7.0,
+        "analysedFrames": 375,
+        "analysedFramesPerSecond": 2.54,
+        "peakRamMb": 2632,
+        "peakGpuMb": 627
+      },
+      "candidateTeams": {
+        "tracksByTeam": {
+          "0": 13,
+          "1": 17
+        },
+        "knownTeamShare": 1.0,
+        "medianMajorityShare": 0.524
+      }
+    },
+    {
+      "name": "roboflow-dfl-0bfacc_0",
+      "sourceSha256": "43d342c78fbb40e522f48ab378fbee83b5b880d35c056836e0d493ec2b15ee51",
+      "kits": [
+        "blanc",
+        "rouge"
+      ],
+      "baseline": {
+        "labelled": 58,
+        "correct": 58,
+        "wrong": 0,
+        "unknown": 0,
+        "excluded": 1,
+        "permutation": 1
+      },
+      "candidate": {
+        "labelled": 58,
+        "correct": 58,
+        "wrong": 0,
+        "unknown": 0,
+        "excluded": 1,
+        "permutation": 1
+      },
+      "regression": {
+        "sourceAndCountIdentical": true,
+        "changedFrames": 0
+      },
+      "baselineProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.79,
+          "frames": 192.98,
+          "teams": 67.13
+        },
+        "videoSeconds": 30.0,
+        "processingSeconds": 261.9,
+        "slowdown": 8.73,
+        "analysedFrames": 375,
+        "analysedFramesPerSecond": 1.94,
+        "peakRamMb": 2640,
+        "peakGpuMb": 646
+      },
+      "candidateProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.65,
+          "frames": 148.72,
+          "teams": 56.63
+        },
+        "videoSeconds": 30.0,
+        "processingSeconds": 206.99,
+        "slowdown": 6.9,
+        "analysedFrames": 375,
+        "analysedFramesPerSecond": 2.52,
+        "peakRamMb": 2635,
+        "peakGpuMb": 627
+      },
+      "candidateTeams": {
+        "tracksByTeam": {
+          "0": 10,
+          "1": 11,
+          "None": 1
+        },
+        "knownTeamShare": 1.0,
+        "medianMajorityShare": 0.524
+      }
+    },
+    {
+      "name": "roboflow-dfl-121364_0",
+      "sourceSha256": "4f3ef60e27f925f2462b725c85fc30e983e27345ce52dad158148e265011f842",
+      "kits": [
+        "vert clair",
+        "rouge"
+      ],
+      "baseline": {
+        "labelled": 59,
+        "correct": 55,
+        "wrong": 1,
+        "unknown": 3,
+        "excluded": 0,
+        "permutation": 1
+      },
+      "candidate": {
+        "labelled": 59,
+        "correct": 55,
+        "wrong": 1,
+        "unknown": 3,
+        "excluded": 0,
+        "permutation": 1
+      },
+      "regression": {
+        "sourceAndCountIdentical": true,
+        "changedFrames": 0
+      },
+      "baselineProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.69,
+          "frames": 177.76,
+          "teams": 59.57
+        },
+        "videoSeconds": 30.0,
+        "processingSeconds": 239.02,
+        "slowdown": 7.97,
+        "analysedFrames": 375,
+        "analysedFramesPerSecond": 2.11,
+        "peakRamMb": 2633,
+        "peakGpuMb": 645
+      },
+      "candidateProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.52,
+          "frames": 144.36,
+          "teams": 56.71
+        },
+        "videoSeconds": 30.0,
+        "processingSeconds": 202.59,
+        "slowdown": 6.75,
+        "analysedFrames": 375,
+        "analysedFramesPerSecond": 2.6,
+        "peakRamMb": 2626,
+        "peakGpuMb": 627
+      },
+      "candidateTeams": {
+        "tracksByTeam": {
+          "0": 13,
+          "1": 10,
+          "None": 1
+        },
+        "knownTeamShare": 0.95,
+        "medianMajorityShare": 0.526
+      }
+    },
+    {
+      "name": "roboflow-dfl-08fd33_0",
+      "sourceSha256": "07886454cec2e859edb69b1bef5a3013fed54b887d9b8c5d563619bb511c1766",
+      "kits": [
+        "vert clair",
+        "blanc à épaules sombres"
+      ],
+      "baseline": {
+        "labelled": 59,
+        "correct": 59,
+        "wrong": 0,
+        "unknown": 0,
+        "excluded": 0,
+        "permutation": 1
+      },
+      "candidate": {
+        "labelled": 59,
+        "correct": 59,
+        "wrong": 0,
+        "unknown": 0,
+        "excluded": 0,
+        "permutation": 1
+      },
+      "regression": {
+        "sourceAndCountIdentical": true,
+        "changedFrames": 0
+      },
+      "baselineProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.72,
+          "frames": 168.51,
+          "teams": 63.5
+        },
+        "videoSeconds": 30.0,
+        "processingSeconds": 233.73,
+        "slowdown": 7.79,
+        "analysedFrames": 375,
+        "analysedFramesPerSecond": 2.23,
+        "peakRamMb": 2644,
+        "peakGpuMb": 645
+      },
+      "candidateProcessing": {
+        "device": "cuda:0",
+        "seconds": {
+          "models": 1.59,
+          "frames": 143.16,
+          "teams": 56.96
+        },
+        "videoSeconds": 30.0,
+        "processingSeconds": 201.71,
+        "slowdown": 6.72,
+        "analysedFrames": 375,
+        "analysedFramesPerSecond": 2.62,
+        "peakRamMb": 2639,
+        "peakGpuMb": 627
+      },
+      "candidateTeams": {
+        "tracksByTeam": {
+          "0": 12,
+          "1": 11,
+          "None": 1
+        },
+        "knownTeamShare": 1.0,
+        "medianMajorityShare": 0.5
+      }
+    }
+  ]
+}

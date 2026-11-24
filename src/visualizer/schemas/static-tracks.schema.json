@@ -1,0 +1,68 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://bilelkhlif.github.io/footballsimulator/src/visualizer/schemas/static-tracks.schema.json",
+ "title": "Résumés des trajectoires d'un export statique (football-tracking-tracks, version 1)",
+ "type": "object",
+ "required": [
+  "format",
+  "version",
+  "tracks"
+ ],
+ "properties": {
+  "format": {
+   "const": "football-tracking-tracks"
+  },
+  "version": {
+   "const": 1
+  },
+  "tracks": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "id",
+     "firstTime",
+     "lastTime"
+    ],
+    "not": {
+     "required": [
+      "roleVotes"
+     ]
+    },
+    "properties": {
+     "id": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "role": {
+      "enum": [
+       "player",
+       "goalkeeper",
+       "referee",
+       null
+      ]
+     },
+     "team": {
+      "enum": [
+       null,
+       0,
+       1
+      ]
+     },
+     "firstTime": {
+      "type": "number",
+      "minimum": 0
+     },
+     "lastTime": {
+      "type": "number",
+      "minimum": 0
+     },
+     "distanceM": {
+      "type": "number",
+      "minimum": 0
+     }
+    }
+   }
+  }
+ }
+}

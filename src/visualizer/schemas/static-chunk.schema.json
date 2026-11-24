@@ -1,0 +1,175 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://bilelkhlif.github.io/footballsimulator/src/visualizer/schemas/static-chunk.schema.json",
+ "title": "Segment d'un export statique : images analysées dans l'ordre du temps (football-tracking-chunk, version 1)",
+ "type": "object",
+ "required": [
+  "format",
+  "version",
+  "seq",
+  "start",
+  "end",
+  "frames"
+ ],
+ "properties": {
+  "format": {
+   "const": "football-tracking-chunk"
+  },
+  "version": {
+   "const": 1
+  },
+  "seq": {
+   "type": "integer",
+   "minimum": 0
+  },
+  "start": {
+   "type": "number",
+   "minimum": 0
+  },
+  "end": {
+   "type": "number",
+   "minimum": 0
+  },
+  "frames": {
+   "type": "array",
+   "minItems": 1,
+   "items": {
+    "type": "object",
+    "required": [
+     "index",
+     "time",
+     "shot",
+     "cut",
+     "calibration",
+     "objects",
+     "ball"
+    ],
+    "properties": {
+     "index": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "time": {
+      "type": "number",
+      "minimum": 0
+     },
+     "shot": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "cut": {
+      "type": "boolean"
+     },
+     "calibration": {
+      "type": "object",
+      "required": [
+       "status"
+      ],
+      "properties": {
+       "status": {
+        "enum": [
+         "ok",
+         "failed"
+        ]
+       },
+       "homography": {
+        "type": "array",
+        "minItems": 9,
+        "maxItems": 9,
+        "items": {
+         "type": "number"
+        }
+       }
+      }
+     },
+     "objects": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "required": [
+        "id",
+        "role",
+        "box",
+        "pitch",
+        "pitchStatus",
+        "team"
+       ],
+       "properties": {
+        "id": {
+         "type": "integer",
+         "minimum": 1
+        },
+        "role": {
+         "enum": [
+          "player",
+          "goalkeeper",
+          "referee"
+         ]
+        },
+        "box": {
+         "type": "array",
+         "minItems": 4,
+         "maxItems": 4,
+         "items": {
+          "type": "number"
+         }
+        },
+        "pitch": {
+         "oneOf": [
+          {
+           "type": "null"
+          },
+          {
+           "type": "array",
+           "minItems": 2,
+           "maxItems": 2,
+           "items": {
+            "type": "number"
+           }
+          }
+         ]
+        },
+        "pitchStatus": {
+         "enum": [
+          "ok",
+          "no-calibration",
+          "outside-pitch"
+         ]
+        },
+        "team": {
+         "enum": [
+          null,
+          0,
+          1
+         ]
+        },
+        "identity": {
+         "const": "uncertain"
+        },
+        "distanceM": {
+         "type": "number",
+         "minimum": 0
+        }
+       }
+      }
+     },
+     "ball": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "type": "object",
+        "required": [
+         "box",
+         "pitch",
+         "pitchStatus"
+        ]
+       }
+      ]
+     }
+    }
+   }
+  }
+ }
+}
