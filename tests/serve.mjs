@@ -26,6 +26,7 @@ const MIME_TYPES = {
   '.jpg': 'image/jpeg',
   '.svg': 'image/svg+xml',
   '.pdf': 'application/pdf',
+  '.mp4': 'video/mp4',
 };
 
 /**
@@ -94,6 +95,25 @@ export function startServer({ root = REPO_ROOT, port = 0, basePath = '/' } = {})
     fs.readFile(file, (error, data) => {
       if (error) {
         response.writeHead(404, { 'content-type': 'text/plain' }).end('404');
+        return;
+      }
+      // Les régressions vidéo utilisent le protocole Range réel, comme un hébergement statique.
+      const range = request.headers.range?.match(/^bytes=(\d+)-(\d*)$/);
+      if (range) {
+        const start = Number(range[1]);
+        const end = range[2] ? Math.min(Number(range[2]), data.length - 1) : data.length - 1;
+        if (start >= data.length || end < start) {
+          response.writeHead(416, { 'content-range': `bytes */${data.length}` }).end();
+          return;
+        }
+        response.writeHead(206, {
+          'content-type': MIME_TYPES[path.extname(file)] ?? 'application/octet-stream',
+          'accept-ranges': 'bytes',
+          'content-range': `bytes ${start}-${end}/${data.length}`,
+          'content-length': end - start + 1,
+          'cache-control': 'no-cache',
+        });
+        response.end(data.subarray(start, end + 1));
         return;
       }
       response.writeHead(200, {
