@@ -2,6 +2,24 @@
 
 Cette note n’ajoute aucune fonction vidéo à l’application académique et ne modifie pas l’autre branche.
 
+## Frontières après la revue de la PR nº 17
+
+La tête de la PR nº 15 vérifiée le 24 novembre 2026 est
+`e8ae5c0b4731107801f73c0a7b9b4c27d4372fb7`. Les références suivantes au relevé du
+23 novembre restent historiques ; ses imports devront être relus sur la tête retenue au moment
+d'une future intégration. Cette revue ne change ni ses fichiers ni son historique.
+
+Un éventuel espace Vidéo devra utiliser le contrôleur d'espaces existant pour la navigation,
+avec une propriété explicite de la scène, du tableau, de l'historique et de la saisie. Il ne doit
+pas installer un second gestionnaire de pointeur ou une seconde boucle sur le terrain académique.
+Une transition devra désactiver proprement le propriétaire de la saisie précédent, et conserver
+ou isoler explicitement les positions calculées par la vidéo. La migration des imports vers
+`.mjs` sera traitée dans ce lot séparé, avec ses propres tests.
+
+Le cache académique reste limité à sa coquille statique. Vidéos, modèles, résultats d'analyse
+et réponses du backend ne doivent pas entrer dans `APP_SHELL`. Les modes AR, la portée GitHub
+Pages et le cache hors ligne devront être rejoués après cette future intégration.
+
 ## État préservé
 
 - Branche : `feature/visualiseur-match`.

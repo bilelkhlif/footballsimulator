@@ -1,5 +1,10 @@
 # Espaces de travail du tableau tactique
 
+> Résultats initiaux du lot. La [revue finale de la PR nº 17](revue-finale-pr17.md) décrit les
+> corrections de focus, texte agrandi et marges d'encoche, les mesures et les **229 tests
+> unitaires + 140 vérifications navigateur** de la version revue. Son empreinte de coquille
+> `15d2a647fa7d74a5` remplace celle des résultats historiques ci-dessous.
+
 ## État de départ vérifié le 24 novembre 2026
 
 La branche `feature/espaces-coaching-sidebar` part de `origin/main`, commit

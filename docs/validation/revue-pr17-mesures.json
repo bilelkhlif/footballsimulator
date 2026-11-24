@@ -1,0 +1,160 @@
+{
+  "date": "2026-11-24",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "runs": [
+    {
+      "label": "main",
+      "samples": [
+        {
+          "phase": "idle",
+          "heapBytes": 8575016,
+          "listenerCounts": {
+            "window": 19,
+            "#overlay": 1
+          },
+          "ms": 3013.9000000953674,
+          "frames": 181,
+          "renders": 181,
+          "resources": {
+            "attributes": 35,
+            "attributesSize": 26692,
+            "geometries": 15,
+            "indexAttributes": 14,
+            "indexAttributesSize": 6342,
+            "indirectStorageAttributes": 0,
+            "indirectStorageAttributesSize": 0,
+            "programs": 15,
+            "programsSize": 53000,
+            "readbackBuffers": 0,
+            "readbackBuffersSize": 0,
+            "renderTargets": 1,
+            "storageAttributes": 0,
+            "storageAttributesSize": 0,
+            "textures": 26,
+            "texturesSize": 29197473,
+            "uniformBuffers": 47,
+            "uniformBuffersSize": 7312,
+            "total": 29290819
+          },
+          "canvas": 1
+        }
+      ],
+      "latencyMs": null
+    },
+    {
+      "label": "sidebar",
+      "samples": [
+        {
+          "phase": "idle",
+          "heapBytes": 8642264,
+          "listenerCounts": {
+            "window": 22,
+            "#overlay": 2,
+            "#workspace-nav": 1
+          },
+          "ms": 3015.399999976158,
+          "frames": 181,
+          "renders": 181,
+          "resources": {
+            "attributes": 35,
+            "attributesSize": 26692,
+            "geometries": 15,
+            "indexAttributes": 14,
+            "indexAttributesSize": 6342,
+            "indirectStorageAttributes": 0,
+            "indirectStorageAttributesSize": 0,
+            "programs": 15,
+            "programsSize": 53000,
+            "readbackBuffers": 0,
+            "readbackBuffersSize": 0,
+            "renderTargets": 1,
+            "storageAttributes": 0,
+            "storageAttributesSize": 0,
+            "textures": 26,
+            "texturesSize": 28376673,
+            "uniformBuffers": 47,
+            "uniformBuffersSize": 7312,
+            "total": 28470019
+          },
+          "canvas": 1
+        },
+        {
+          "phase": "after42",
+          "heapBytes": 9162388,
+          "listenerCounts": {
+            "window": 22,
+            "#overlay": 2,
+            "#workspace-nav": 1
+          },
+          "ms": 3005.2999999523163,
+          "frames": 181,
+          "renders": 181,
+          "resources": {
+            "attributes": 35,
+            "attributesSize": 26692,
+            "geometries": 15,
+            "indexAttributes": 14,
+            "indexAttributesSize": 6342,
+            "indirectStorageAttributes": 0,
+            "indirectStorageAttributesSize": 0,
+            "programs": 15,
+            "programsSize": 53000,
+            "readbackBuffers": 0,
+            "readbackBuffersSize": 0,
+            "renderTargets": 1,
+            "storageAttributes": 0,
+            "storageAttributesSize": 0,
+            "textures": 26,
+            "texturesSize": 28376673,
+            "uniformBuffers": 47,
+            "uniformBuffersSize": 7312,
+            "total": 28470019
+          },
+          "canvas": 1
+        },
+        {
+          "phase": "after210",
+          "heapBytes": 9468492,
+          "listenerCounts": {
+            "window": 22,
+            "#overlay": 2,
+            "#workspace-nav": 1
+          },
+          "ms": 3006.399999976158,
+          "frames": 181,
+          "renders": 181,
+          "resources": {
+            "attributes": 35,
+            "attributesSize": 26692,
+            "geometries": 15,
+            "indexAttributes": 14,
+            "indexAttributesSize": 6342,
+            "indirectStorageAttributes": 0,
+            "indirectStorageAttributesSize": 0,
+            "programs": 15,
+            "programsSize": 53000,
+            "readbackBuffers": 0,
+            "readbackBuffersSize": 0,
+            "renderTargets": 1,
+            "storageAttributes": 0,
+            "storageAttributesSize": 0,
+            "textures": 26,
+            "texturesSize": 28376673,
+            "uniformBuffers": 47,
+            "uniformBuffersSize": 7312,
+            "total": 28470019
+          },
+          "canvas": 1
+        }
+      ],
+      "latencyMs": {
+        "median": 83,
+        "p95": 90,
+        "note": "Playwright click plus two animation frames; not isolated input latency"
+      }
+    }
+  ]
+}

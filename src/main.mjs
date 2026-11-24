@@ -407,7 +407,7 @@ function readLocalStorage() {
  * @role Interface HTML — aide au premier lancement
  */
 function closeOnboarding(onboarding) {
-  if (!onboarding.isOpen) {
+  if (!onboarding.isOpen || !document.getElementById('onboarding').getClientRects().length) {
     return false;
   }
   onboarding.close({ restoreFocus: true });

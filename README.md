@@ -25,7 +25,7 @@
   - application installable, utilisable hors-ligne, mise à jour d'un bloc.
 - **Après l'évaluation.** Flèches vérifiées avant toute action : une passe part du ballon, une course d'un joueur, l'arrivée reste entre les lignes ([règles](docs/regles-des-fleches.md)). Interface refondue : outils à icônes, aperçu rouge des actions impossibles, visée au doigt, aide au premier lancement, raccourcis clavier ([ergonomie](docs/ergonomie.md)). Modules JavaScript en `.mjs`, Service Worker en module ([migration](docs/migration-mjs.md)).
 - **Espaces de coaching.** Rail sombre compact et sept espaces fonctionnels : Accueil, Équipes et formations, Outils tactiques, Animation et séquences, Réalité augmentée, Plus d'outils, Réglages et aide. Une seule scène, un seul tableau et un seul historique sont conservés entre les espaces. Navigation basse en portrait, panneaux défilants et contrôles de vue persistants. L'[inventaire, l'architecture, les correspondances et les captures avant / après](docs/espaces-coaching.md) détaillent cette évolution.
-- **Testé.** 358 tests automatisés sur PC le 24 novembre 2026 : 229 unitaires et 129 de bout en bout, dont le parcours AR complet en émulation, tous réussis sans cas ignoré ([résultats](docs/espaces-coaching.md#vérification-et-limites)). Les anciens essais physiques du 12 et du 14 novembre concernent des versions précédentes : AR WebGPU sur TECNO POVA 6 Pro 5G, mode test WebGL sur Galaxy S10e. Cette nouvelle interface n'a pas été testée sur téléphone réel. Restent à mesurer : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde ([recette](docs/recette.md)).
+- **Testé.** 369 tests automatisés sur PC le 24 novembre 2026 : 229 unitaires et 140 de bout en bout, dont le parcours complet d'un entraîneur de la 3D vers l'AR émulée, tous réussis sans cas ignoré ([revue critique, mesures et limites](docs/revue-finale-pr17.md)). Les anciens essais physiques du 12 et du 14 novembre concernent des versions précédentes : AR WebGPU sur TECNO POVA 6 Pro 5G, mode test WebGL sur Galaxy S10e. Cette nouvelle interface n'a pas été testée sur téléphone réel. Restent à mesurer : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde ([recette](docs/recette.md)).
 
 > Les espaces de coaching de cette branche ne sont pas encore publiés sur le site de `main` : fusion réservée à une approbation explicite. La PR #15 reste indépendante ; voir la [note d’intégration future](docs/integration-future-visualiseur.md). `ATTRIBUTION.md` reste inchangé.
 
@@ -363,7 +363,7 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
 npm run test:unit   # 229 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
-npm run test:e2e    # 129 vérifications dans Chrome, sans interface
+npm run test:e2e    # 140 vérifications dans Chrome, sans interface
 npm run bench       # mesure des performances (sprint 6), hors de npm test : 1 à 2 minutes
 npm run shell-version  # recalcule SHELL_VERSION dans sw.mjs après une modification de l'application
 ```

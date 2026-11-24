@@ -19,6 +19,9 @@ import { REPO_ROOT, startServer } from './serve.mjs';
 import { readShellVersion } from './shell-version.mjs';
 import { clickUi, tapUi, installAimTools, openWorkspace } from './workspace-test-helpers.mjs';
 import { runWorkspaceTests, verifyArWorkspaces } from './workspace-tests.mjs';
+import { runFinalUxReviewTests } from './final-ux-review-tests.mjs';
+import { runSafeAreaReviewTests } from './safe-area-review-tests.mjs';
+import { runCoachingWorkflowTests } from './coaching-workflow-tests.mjs';
 
 /** Navigateur utilisé : Chrome par défaut. */
 const CHANNEL = process.env.BROWSER_CHANNEL ?? 'chrome';
@@ -2094,6 +2097,8 @@ async function main() {
     await testResponsivePanels(browser, root.url);
     await testModuleLoading(browser, root.url);
     await runWorkspaceTests(browser, root.url, record);
+    await runFinalUxReviewTests(browser, root.url, record);
+    await runSafeAreaReviewTests(browser, root.url, record);
     await testDiagnostics(browser, root.url);
     await testSequencePlayback(browser, root.url);
     await testShellVersioning(browser);
@@ -2109,6 +2114,7 @@ async function main() {
     await testEmulator(browser, root.url);
     await testArSession(browser, root.url);
     await testArSession(browser, root.url, { webglTest: true });
+    await runCoachingWorkflowTests(browser, root.url, record);
   } finally {
     await browser.close();
     await root.close();

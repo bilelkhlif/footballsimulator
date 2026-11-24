@@ -32,8 +32,16 @@ export function createWorkspaceNavigation({ root, controller, onNavigate = () =>
   let reopenAfterBack = null;
   let destroyed = false;
 
+  /** Retrouve une cible visible après la fermeture, y compris par Retour navigateur. */
+  const restoreFocus = () => {
+    const fallback = root.querySelector('[data-workspace="more"]');
+    const target = trigger?.getClientRects().length && !trigger.disabled ? trigger : fallback;
+    target?.focus({ preventScroll: true });
+  };
+
   /** Rend l'espace sans réinitialiser ni recréer ses composants. */
   const render = ({ active, open }) => {
+    const previousFocus = document.activeElement;
     onNavigate();
     document.body.dataset.workspace = active;
     document.body.dataset.panelOpen = String(open);
@@ -49,6 +57,16 @@ export function createWorkspaceNavigation({ root, controller, onNavigate = () =>
       if (button.dataset.workspace === active) button.setAttribute('aria-current', 'page');
       else button.removeAttribute('aria-current');
     }
+    // Masquer une section peut laisser le focus dans un bouton invisible, ou sur body.
+    // Les destinations du débordement mobile n'ont pas forcément de bouton visible dans le rail.
+    if (root.contains(previousFocus) && !previousFocus.getClientRects().length) {
+      if (!open) restoreFocus();
+      else {
+        const destination = root.querySelector(`#workspace-nav [data-workspace="${active}"]`);
+        const target = destination?.getClientRects().length ? destination : panel.querySelector('[data-workspace-close]');
+        target?.focus({ preventScroll: true });
+      }
+    }
     // Une entrée par ouverture : les changements rapides remplacent cette entrée.
     // Retour navigateur replie le panneau ; Avancer peut le rouvrir, sans requête réseau.
     if (pendingBack) reopenAfterBack = open ? active : null;
@@ -62,9 +80,7 @@ export function createWorkspaceNavigation({ root, controller, onNavigate = () =>
   const close = () => {
     const changed = controller.close();
     if (changed) {
-      const fallback = root.querySelector('[data-workspace="more"]');
-      const target = trigger?.getClientRects().length ? trigger : fallback;
-      target?.focus({ preventScroll: true });
+      restoreFocus();
       if (window.history.state?.footballWorkspace && !pendingBack) {
         pendingBack = true;
         window.history.back();
