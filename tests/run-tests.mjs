@@ -16,6 +16,7 @@ import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { REPO_ROOT, startServer } from './serve.mjs';
 import { testMatchVisualizer } from './visualizer-tests.mjs';
+import { testVisualizerModes } from './visualizer-modes-tests.mjs';
 
 /** Navigateur utilisé : Chrome par défaut. */
 const CHANNEL = process.env.BROWSER_CHANNEL ?? 'chrome';
@@ -1655,6 +1656,7 @@ async function main() {
     await testDiagnostics(browser, root.url);
     await testSequencePlayback(browser, root.url);
     await testMatchVisualizer(browser, root.url, record, recordCanvasContexts);
+    await testVisualizerModes(browser, { root: root.url, subPath: subPath.url }, record);
     await testShellVersioning(browser);
     await testWebGpuRendering(browser, root.url);
     await testWithoutWebGpu(browser, root.url);

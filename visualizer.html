@@ -1,7 +1,9 @@
 <!doctype html>
 <!--
-  Football Simulator : visualiseur de match. Une vidéo de match analysée par le serveur local
-  (analysis/), annotée, avec le terrain 3D de l'application rendu en WebGPU par-dessus.
+  Football Simulator : visualiseur de match. Une vidéo de match annotée, avec le terrain 3D de
+  l'application rendu en WebGPU par-dessus. Deux modes, une seule interface : démonstration (exports
+  statiques de demo/, sans serveur, compatible GitHub Pages) et analyse locale (serveur Python de
+  analysis/, sur la boucle locale de cet ordinateur).
   Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
 -->
 <html lang="fr">
@@ -27,27 +29,50 @@
   <script type="module" src="src/visualizer/visualizer-main.js"></script>
 </head>
 <body>
-  <!-- Barre du haut : téléversement, analyses précédentes, état du serveur -->
+  <!-- Barre du haut : mode (démonstration ou analyse locale), état de fonctionnement, commandes du mode -->
   <header class="vz-bar">
     <h1 class="vz-title">Visualiseur de match</h1>
-    <label class="vz-button vz-button--primary">
-      Téléverser une vidéo
-      <input id="upload-input" type="file" accept="video/*" hidden>
-    </label>
-    <select id="analysis-select" class="vz-select" aria-label="Analyses précédentes">
-      <option value="">Analyses précédentes…</option>
-    </select>
-    <button id="resume-analysis" class="vz-button" type="button" hidden>Reprendre l'analyse</button>
+    <div class="vz-modes" role="group" aria-label="Mode du visualiseur">
+      <button id="mode-demo" class="vz-mode" type="button" aria-pressed="false">Explorer la démo</button>
+      <button id="mode-local" class="vz-mode" type="button" aria-pressed="false">Analyser ma vidéo</button>
+    </div>
+    <p id="connection-state" class="vz-state" role="status" aria-live="polite"></p>
+    <!-- Mode démonstration : exports statiques lus dans demo/, sans serveur ni GPU -->
+    <div id="demo-controls" class="vz-group" hidden>
+      <select id="demo-select" class="vz-select" aria-label="Match de démonstration"></select>
+    </div>
+    <!-- Mode analyse locale : serveur Python sur la boucle locale de cet ordinateur -->
+    <div id="local-controls" class="vz-group" hidden>
+      <form id="server-form" class="vz-server" hidden>
+        <label for="server-url">Serveur local</label>
+        <input id="server-url" class="vz-input" type="url" inputmode="url" spellcheck="false" autocomplete="off"
+               placeholder="http://127.0.0.1:8765/">
+        <button class="vz-button" type="submit">Connecter</button>
+      </form>
+      <label class="vz-button vz-button--primary">
+        Téléverser une vidéo
+        <input id="upload-input" type="file" accept="video/*" hidden>
+      </label>
+      <select id="analysis-select" class="vz-select" aria-label="Analyses précédentes">
+        <option value="">Analyses précédentes…</option>
+      </select>
+      <button id="interrupt-analysis" class="vz-button" type="button" hidden>Interrompre</button>
+      <button id="resume-analysis" class="vz-button" type="button" hidden>Reprendre l'analyse</button>
+    </div>
     <p id="job-status" class="vz-status" role="status" aria-live="polite"></p>
   </header>
+  <!-- Aide quand le serveur local est injoignable : comment le lancer, ou rester en démonstration -->
+  <section id="mode-help" class="vz-help" aria-label="Connexion au serveur local" hidden></section>
 
   <main class="vz-main">
     <section class="vz-player" aria-label="Vidéo du match">
+      <!-- Provenance des données affichées : démonstration synthétique ou export d'une analyse réelle -->
+      <p id="provenance-banner" class="vz-banner" role="note" hidden></p>
       <!-- Scène : la vidéo, le calque d'annotations et le panneau du terrain 3D -->
       <div id="stage" class="vz-stage">
         <video id="match-video" class="vz-video" playsinline muted preload="auto"></video>
         <canvas id="annotations" class="vz-annotations" aria-label="Joueurs détectés : cliquez pour sélectionner"></canvas>
-        <p id="stage-empty" class="vz-empty">Téléversez une vidéo de match, ou ouvrez une analyse précédente.</p>
+        <p id="stage-empty" class="vz-empty">Choisissez un match de démonstration, ou analysez votre vidéo avec le serveur local.</p>
 
         <div id="pitch-panel" class="vz-panel" role="group" aria-label="Terrain 3D">
           <div id="pitch-panel-bar" class="vz-panel-bar">

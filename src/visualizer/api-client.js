@@ -1,6 +1,7 @@
 /**
- * Client de l'API du serveur d'analyse (analysis/football_analysis/server.py), servi par la même
- * origine que la page.
+ * Client de l'API du serveur d'analyse (analysis/football_analysis/server.py). Par défaut, le
+ * serveur est la même origine que la page (page servie par Python) ; local-source.mjs fournit un
+ * fetcher et une base pour joindre un serveur local depuis une autre origine (GitHub Pages).
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -128,6 +129,19 @@ export async function resumeAnalysis(id, fetcher = fetch) {
 }
 
 /**
+ * Interrompt une analyse en attente ou en cours ; elle reste reprenable (resumeAnalysis).
+ * @param {string} id
+ * @param {typeof fetch} [fetcher]
+ * @returns {Promise<object>}
+ * @responsable Bilel Khlif
+ * @date 2026-11-24
+ * @role Visualiseur de match — interruption des analyses
+ */
+export async function interruptAnalysis(id, fetcher = fetch) {
+  return readJson(await fetcher(`api/analyses/${encodeURIComponent(id)}/interrupt`, { method: 'POST' }));
+}
+
+/**
  * Adresse de la vidéo source d'une analyse, lisible par un élément <video> (lecture partielle).
  * @param {string} id
  * @returns {string}
@@ -143,15 +157,17 @@ export function videoUrl(id) {
  * Téléverse une vidéo (corps brut) et suit la progression de l'envoi.
  * @param {File} file
  * @param {(fraction: number) => void} [onProgress]
+ * @param {{base?: string|URL|null}} [options] base : adresse du serveur, si ce n'est pas l'origine de la page
  * @returns {Promise<object>} état de l'analyse créée
  * @responsable Bilel Khlif
  * @date 2026-11-17
  * @role Visualiseur de match — client de l'API d'analyse
  */
-export function uploadVideo(file, onProgress = () => {}) {
+export function uploadVideo(file, onProgress = () => {}, { base = null } = {}) {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
-    request.open('POST', `api/analyses?name=${encodeURIComponent(file.name)}`);
+    const path = `api/analyses?name=${encodeURIComponent(file.name)}`;
+    request.open('POST', base ? new URL(path, base).href : path);
     request.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
     request.upload.addEventListener('progress', (event) => {
       if (event.lengthComputable) {

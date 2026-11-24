@@ -68,6 +68,12 @@ export function formatTime(seconds) {
  * @role Visualiseur de match — interface (identités)
  */
 export function describeIdentityCheck(identity) {
+  if (identity?.synthetic) {
+    const contacts = identity.scriptedContacts ?? [];
+    const spans = contacts.map((contact) => `${formatNumber(contact.start)} à ${formatNumber(contact.end)} s`).join(', ');
+    return `données synthétiques : ${contacts.length} contact${contacts.length > 1 ? 's' : ''} masqué${contacts.length > 1 ? 's' : ''} `
+      + `scénarisé${contacts.length > 1 ? 's' : ''}${spans ? ` (${spans})` : ''}, d'identité incertaine ; aucun contrôle par l'IA.`;
+  }
   if (!identity?.checked) {
     return 'non contrôlées (analyse antérieure) : un identifiant peut changer de joueur.';
   }
@@ -114,6 +120,9 @@ export function describeIdentityValues(object, speed, distance) {
 export function describeCalibration(calibration) {
   if (!calibration) {
     return 'Aucune image analysée à cet instant.';
+  }
+  if (calibration.status === 'ok' && calibration.synthetic) {
+    return `Calibration exacte par construction (vidéo synthétique) : ${calibration.keypoints} repères du terrain visibles.`;
   }
   if (calibration.status === 'ok') {
     // Erreur hors échantillon : chaque repère prédit sans lui. Ce n'est pas la précision des joueurs.

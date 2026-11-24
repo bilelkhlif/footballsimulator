@@ -60,6 +60,67 @@ body {
 .vz-chip[aria-pressed="true"] { background: #2d5a3e; border-color: #4a8a62; }
 .vz-icon { padding: 3px 8px; line-height: 1; }
 
+/* Choix du mode : démonstration (sans serveur) ou analyse locale (serveur Python) */
+.vz-modes { display: inline-flex; border: 1px solid var(--vz-border); border-radius: 999px; overflow: hidden; }
+.vz-mode {
+  font: inherit; font-size: 0.88rem; color: var(--vz-text); background: transparent; border: 0;
+  padding: 7px 14px; cursor: pointer; min-height: 36px;
+}
+.vz-mode + .vz-mode { border-left: 1px solid var(--vz-border); }
+.vz-mode[aria-pressed="true"] { background: #2d5a3e; font-weight: 600; }
+.vz-mode:focus-visible, .vz-input:focus-visible { outline: 2px solid var(--vz-accent); outline-offset: 2px; }
+.vz-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.vz-server { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--vz-muted); }
+.vz-input {
+  font: inherit; font-size: 0.85rem; color: var(--vz-text); background: var(--vz-bg);
+  border: 1px solid var(--vz-border); border-radius: 8px; padding: 6px 9px; width: 15.5rem; max-width: 60vw;
+}
+
+/* État de fonctionnement : couleur et pastille selon l'état */
+.vz-state {
+  margin: 0; font-size: 0.82rem; padding: 4px 10px 4px 22px; border-radius: 999px; position: relative;
+  background: var(--vz-surface-2); border: 1px solid var(--vz-border); color: var(--vz-text);
+}
+.vz-state::before {
+  content: ""; position: absolute; left: 9px; top: 50%; width: 8px; height: 8px; margin-top: -4px;
+  border-radius: 50%; background: var(--vz-muted);
+}
+.vz-state[data-state="demo"]::before { background: #8ab4f8; }
+.vz-state[data-state="connected"]::before, .vz-state[data-state="completed"]::before { background: #5fd38d; }
+.vz-state[data-state="connecting"]::before, .vz-state[data-state="processing"]::before { background: var(--vz-accent); }
+.vz-state[data-state="interrupted"]::before { background: #f0a35e; }
+.vz-state[data-state="unavailable"]::before, .vz-state[data-state="failed"]::before { background: var(--vz-error); }
+
+/* Aide de connexion et bandeau de provenance */
+.vz-help {
+  margin: 10px 16px 0; padding: 10px 14px; border: 1px solid var(--vz-border); border-left: 3px solid var(--vz-error);
+  border-radius: var(--vz-radius); background: var(--vz-surface); font-size: 0.88rem;
+}
+.vz-help p { margin: 0 0 6px; }
+.vz-help code {
+  display: block; margin: 0 0 8px; padding: 6px 9px; border-radius: 6px; background: var(--vz-bg);
+  font-family: ui-monospace, Consolas, monospace; font-size: 0.82rem; overflow-x: auto;
+}
+.vz-banner {
+  margin: 0; padding: 7px 12px; font-size: 0.84rem; border-radius: 8px;
+  background: #24301f; border: 1px solid #4b5f33; color: #e8f0d8;
+}
+.vz-banner[data-kind="analysis"] { background: #1d2a33; border-color: #36576d; color: #dbe9f3; }
+
+/* Écrans tactiles (téléphone en paysage compris) : cibles d'au moins 40 px */
+@media (pointer: coarse) {
+  .vz-mode, .vz-button, .vz-select, .vz-input { min-height: 40px; }
+}
+/* Écrans étroits : boutons du mode sur toute la largeur */
+@media (max-width: 600px) {
+  .vz-bar { padding: 8px 12px; }
+  .vz-modes { width: 100%; }
+  .vz-mode { flex: 1; min-height: 40px; }
+  .vz-button, .vz-select { min-height: 40px; }
+  .vz-group, .vz-server { width: 100%; }
+  .vz-input { flex: 1; width: auto; max-width: none; }
+}
+
 /* Page : la vidéo, puis les panneaux à droite (en dessous sur écran étroit) */
 .vz-main {
   flex: 1;

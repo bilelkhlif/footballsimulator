@@ -13,8 +13,9 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { formatSpeed, distanceCovered, teamCentroids, velocityAt } from './analytics.js';
-import { getAnalysis, getHealth, getTracking, getTrackingManifest, getTrackingWindow,
-  listAnalyses, resumeAnalysis, uploadVideo, videoUrl, waitForAnalysis } from './api-client.js';
+import { POLL_INTERVAL_MS } from './api-client.js';
+import { DEFAULT_SERVER_URL, LocalAnalysisSource, normaliseServerUrl } from './local-source.mjs';
+import { StaticAnalysisSource } from './static-source.mjs';
 import { applyHomography, AutoPlacer, candidateRects, scoreRegions, WEIGHTS } from './auto-placement.js';
 import { OverlayFrame } from './overlay-frame.js';
 import { OverlayPitch } from './overlay-pitch.js';
@@ -38,6 +39,34 @@ const PANEL_ASPECT = 1.55;
 
 /** Rôles, en clair. */
 const ROLE_LABELS = Object.freeze({ player: 'Joueur', goalkeeper: 'Gardien', referee: 'Arbitre' });
+
+/** Clé de stockage local de l'adresse du serveur d'analyse choisie sur une page publique. */
+const SERVER_KEY = 'football-simulator:serveur-analyse';
+
+/** Textes des états de fonctionnement affichés en haut de la page. */
+const CONNECTION_LABELS = {
+  demo: 'Mode démo : exports statiques, aucun serveur requis',
+  connecting: 'Connexion au serveur local…',
+  connected: 'Serveur local connecté',
+  unavailable: 'Serveur local indisponible',
+  processing: 'Analyse en cours',
+  interrupted: 'Analyse interrompue',
+  completed: 'Analyse terminée',
+  failed: 'Échec de l\'analyse',
+};
+
+/**
+ * Vrai si la page a été servie par le serveur d'analyse Python : il ajoute l'en-tête
+ * « Server-Timing: football-analysis », lisible sans requête dans la mesure de navigation.
+ * @returns {boolean}
+ * @responsable Bilel Khlif
+ * @date 2026-11-24
+ * @role Visualiseur de match — choix du mode
+ */
+function servedByAnalysisServer() {
+  const [navigation] = performance.getEntriesByType('navigation');
+  return Boolean(navigation?.serverTiming?.some((entry) => entry.name === 'football-analysis'));
+}
 
 /**
  * Raccourci de document.getElementById.
@@ -74,6 +103,15 @@ class MatchVisualizer {
     this.manifestTimer = null;
     this.lastWindowCheck = 0;
     this.currentAnalysis = null;
+    /** Mode affiché (« demo » ou « local »), source de données et état de fonctionnement. */
+    this.mode = null;
+    this.source = null;
+    this.local = null;
+    this.demo = new StaticAnalysisSource('demo/index.json');
+    this.connection = null;
+    this.jobTimer = null;
+    this.sameOrigin = undefined;
+    this.probeSameOrigin = false;
     /** Instant de la dernière image présentée (requestVideoFrameCallback), ou null avant la première. */
     this.mediaTime = null;
     this.lastSample = null;
@@ -86,7 +124,7 @@ class MatchVisualizer {
   }
 
   /**
-   * Démarre : terrain 3D en WebGPU, mise en page, serveur d'analyse, boucle de rendu.
+   * Démarre : terrain 3D en WebGPU, mise en page, mode (démonstration ou serveur local), boucle de rendu.
    * @responsable Bilel Khlif
    * @date 2026-11-17
    * @role Visualiseur de match — application
@@ -106,43 +144,264 @@ class MatchVisualizer {
     this.frame.on('resize', (rect) => this.overlay?.resize(rect.width, rect.height - byId('pitch-panel-bar').offsetHeight));
     this.#watchFrames();
     requestAnimationFrame(() => this.#loop());
-    await this.#connect();
+    await this.#initialMode();
   }
 
   /**
-   * Se connecte au serveur d'analyse, liste les analyses et ouvre celle de l'adresse (?analyse=).
+   * Choisit le mode de départ : celui de l'adresse (?demo=, ?analyse=, ?serveur=, ?mode=), sinon
+   * l'analyse locale si le serveur Python sert cette page, sinon la démonstration.
    * @responsable Bilel Khlif
-   * @date 2026-11-17
-   * @role Visualiseur de match — application
+   * @date 2026-11-24
+   * @role Visualiseur de match — choix du mode
    */
-  async #connect() {
-    const health = await getHealth();
-    if (!health) {
-      this.setStatus('Serveur d\'analyse injoignable : lancez « python -m football_analysis serve » dans analysis/.', 'error');
-      byId('upload-input').disabled = true;
+  async #initialMode() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('demo') || params.get('mode') === 'demo') {
+      await this.setMode('demo', { open: params.get('demo') });
+    } else if (params.has('serveur') || params.has('analyse') || params.get('mode') === 'local') {
+      this.probeSameOrigin = true;
+      await this.setMode('local', { server: params.get('serveur'), open: params.get('analyse') });
+    } else {
+      await this.setMode(servedByAnalysisServer() && await this.#sameOriginServer() ? 'local' : 'demo');
+    }
+  }
+
+  /**
+   * Vrai si le serveur d'analyse répond à la même origine que la page. Interrogé seulement si la
+   * page vient du serveur Python (marque Server-Timing) ou, en mode local demandé, de la boucle
+   * locale : une page publique ou statique ne produit donc pas d'erreur 404 au démarrage.
+   * @returns {Promise<boolean>}
+   * @responsable Bilel Khlif
+   * @date 2026-11-24
+   * @role Visualiseur de match — choix du mode
+   */
+  async #sameOriginServer() {
+    if (this.sameOrigin === undefined) {
+      const loopback = ['127.0.0.1', 'localhost', '[::1]'].includes(window.location.hostname);
+      if (!loopback || !(servedByAnalysisServer() || this.probeSameOrigin)) {
+        return false;
+      }
+      this.sameOrigin = Boolean(await new LocalAnalysisSource(new URL('./', window.location.href)).getHealth());
+    }
+    return this.sameOrigin;
+  }
+
+  /**
+   * Passe en mode démonstration (exports statiques) ou analyse locale (serveur Python).
+   * @param {'demo'|'local'} mode
+   * @param {{server?: string|null, open?: string|null}} [options] serveur à joindre, analyse à ouvrir
+   * @responsable Bilel Khlif
+   * @date 2026-11-24
+   * @role Visualiseur de match — choix du mode
+   */
+  async setMode(mode, { server = null, open = null } = {}) {
+    const generation = ++this.openGeneration;
+    this.mode = mode;
+    this.#closeAnalysis();
+    byId('mode-demo').setAttribute('aria-pressed', String(mode === 'demo'));
+    byId('mode-local').setAttribute('aria-pressed', String(mode === 'local'));
+    byId('demo-controls').hidden = mode !== 'demo';
+    byId('local-controls').hidden = mode !== 'local';
+    byId('mode-help').hidden = true;
+    document.body.dataset.mode = mode;
+    if (mode === 'demo') {
+      this.source = this.demo;
+      await this.#showDemos(open, generation);
+    } else {
+      await this.#connectLocal(server, open, generation);
+    }
+  }
+
+  /**
+   * Ferme l'analyse ouverte : suivi, minuteries, vidéo et bandeau de provenance.
+   * @responsable Bilel Khlif
+   * @date 2026-11-24
+   * @role Visualiseur de match — choix du mode
+   */
+  #closeAnalysis() {
+    clearTimeout(this.manifestTimer);
+    clearTimeout(this.jobTimer);
+    this.store?.dispose?.();
+    this.store = null;
+    this.currentAnalysis = null;
+    this.selectedId = null;
+    this.video.pause();
+    if (this.video.src.startsWith('blob:')) {
+      URL.revokeObjectURL(this.video.src);
+    }
+    this.video.removeAttribute('src');
+    this.video.removeAttribute('poster');
+    this.video.load();
+    byId('stage-empty').hidden = false;
+    byId('provenance-banner').hidden = true;
+    byId('resume-analysis').hidden = true;
+    byId('interrupt-analysis').hidden = true;
+    this.setStatus('');
+  }
+
+  /**
+   * Liste les démonstrations du catalogue et ouvre la demandée, sinon la première.
+   * @param {string|null} open
+   * @param {number} generation
+   * @responsable Bilel Khlif
+   * @date 2026-11-24
+   * @role Visualiseur de match — mode démonstration
+   */
+  async #showDemos(open, generation) {
+    this.setConnectionState('demo');
+    const select = byId('demo-select');
+    try {
+      const demos = await this.demo.listAnalyses();
+      if (generation !== this.openGeneration) {
+        return;
+      }
+      select.replaceChildren(...demos.map((demo) => new Option(demo.name, demo.id)));
+      const chosen = demos.find((demo) => demo.id === open) ?? demos[0];
+      if (!chosen) {
+        this.setStatus('Aucune démonstration disponible.', 'error');
+        return;
+      }
+      select.value = chosen.id;
+      await this.openAnalysis(chosen.id, { expectedGeneration: generation });
+    } catch (error) {
+      if (generation === this.openGeneration) {
+        this.setConnectionState('failed', 'Démonstration indisponible');
+        this.setStatus(error.message, 'error');
+      }
+    }
+  }
+
+  /**
+   * Se connecte au serveur local : même origine si possible, sinon l'adresse donnée, mémorisée ou par défaut.
+   * @param {string|null} server
+   * @param {string|null} open
+   * @param {number} generation
+   * @responsable Bilel Khlif
+   * @date 2026-11-24
+   * @role Visualiseur de match — mode analyse locale
+   */
+  async #connectLocal(server, open, generation) {
+    const sameOrigin = await this.#sameOriginServer();
+    let remembered = null;
+    try {
+      remembered = window.localStorage.getItem(SERVER_KEY);
+    } catch {
+      // stockage refusé : adresse par défaut
+    }
+    const base = sameOrigin ? new URL('./', window.location.href).href
+      : normaliseServerUrl(server) ?? normaliseServerUrl(remembered) ?? DEFAULT_SERVER_URL;
+    if (server && !sameOrigin && !normaliseServerUrl(server)) {
+      this.setStatus('Adresse de serveur refusée : seule la boucle locale (127.0.0.1, localhost) est acceptée.', 'error');
+    }
+    this.local = new LocalAnalysisSource(base);
+    this.source = this.local;
+    byId('server-form').hidden = sameOrigin;
+    byId('server-url').value = base;
+    byId('upload-input').disabled = true;
+    this.setConnectionState('connecting');
+    const health = await this.local.getHealth();
+    if (generation !== this.openGeneration) {
       return;
     }
+    if (!health) {
+      this.setConnectionState('unavailable');
+      this.#showHelp(base, sameOrigin);
+      byId('analysis-select').replaceChildren(new Option('Analyses précédentes…', ''));
+      return;
+    }
+    if (!sameOrigin) {
+      try {
+        window.localStorage.setItem(SERVER_KEY, base);
+      } catch {
+        // stockage refusé : l'adresse sera redemandée
+      }
+    }
+    byId('upload-input').disabled = false;
+    this.setConnectionState('connected', `Serveur local connecté (calcul : ${health.device})`);
     if (health.missingModels?.length) {
       this.setStatus(`Poids manquants sur le serveur : ${health.missingModels.join(', ')}.`, 'error');
-    } else {
-      this.setStatus(`Serveur prêt (calcul : ${health.device}).`);
     }
     await this.refreshList();
-    const requested = new URLSearchParams(window.location.search).get('analyse');
-    if (requested) {
-      await this.openAnalysis(requested);
+    if (open && generation === this.openGeneration) {
+      // Analyse en cours : suivie, et ouverte dès son premier segment publié. Sinon, ouverte aussitôt.
+      const status = await this.local.getAnalysis(open).catch(() => null);
+      if (generation !== this.openGeneration) {
+        return;
+      }
+      if (status && ['receiving', 'queued', 'running'].includes(status.status)) {
+        this.currentAnalysis = open;
+        this.#followJob(open, generation);
+        return;
+      }
+      await this.openAnalysis(open, { expectedGeneration: generation });
+      if (status && generation === this.openGeneration) {
+        this.#renderJob(status);
+      }
     }
   }
 
   /**
-   * Recharge la liste des analyses terminées.
+   * Explique comment démarrer ou joindre le serveur local, selon l'origine de la page.
+   * @param {string} base adresse essayée
+   * @param {boolean} sameOrigin page servie par le serveur lui-même
+   * @responsable Bilel Khlif
+   * @date 2026-11-24
+   * @role Visualiseur de match — mode analyse locale
+   */
+  #showHelp(base, sameOrigin) {
+    const help = byId('mode-help');
+    const steps = [
+      `Serveur local injoignable à ${base}. Démarrez-le dans le dossier analysis/ du dépôt :`,
+      '.venv\\Scripts\\python -m football_analysis serve',
+    ];
+    if (!sameOrigin && window.location.protocol === 'https:') {
+      steps.push('Si Chrome demande l\'accès aux applications et services de cet appareil, acceptez : '
+        + 'cette page publique doit joindre le serveur de votre ordinateur.');
+      steps.push(`Sinon, ouvrez ${base}visualizer.html : la même interface, servie par Python.`);
+    }
+    steps.push('Le mode « Explorer la démo » reste disponible sans serveur.');
+    help.replaceChildren(...steps.map((text, index) => {
+      const line = document.createElement(index === 1 ? 'code' : 'p');
+      line.textContent = text;
+      return line;
+    }));
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'vz-button';
+    retry.textContent = 'Réessayer';
+    retry.addEventListener('click', () => this.setMode('local', { server: byId('server-url').value }));
+    help.append(retry);
+    help.hidden = false;
+  }
+
+  /**
+   * Affiche l'état de fonctionnement : démo, connexion, traitement, interruption, fin ou échec.
+   * @param {'demo'|'connecting'|'connected'|'unavailable'|'processing'|'interrupted'|'completed'|'failed'} state
+   * @param {string} [label] texte affiché, à la place du texte par défaut
+   * @responsable Bilel Khlif
+   * @date 2026-11-24
+   * @role Visualiseur de match — états de fonctionnement
+   */
+  setConnectionState(state, label) {
+    const element = byId('connection-state');
+    element.dataset.state = state;
+    element.textContent = label ?? CONNECTION_LABELS[state];
+    document.body.dataset.connection = state;
+    this.connection = state;
+  }
+
+  /**
+   * Recharge la liste des analyses du serveur local.
    * @responsable Bilel Khlif
    * @date 2026-11-17
    * @role Visualiseur de match — application
    */
   async refreshList() {
+    if (this.mode !== 'local' || !this.local) {
+      return;
+    }
     const select = byId('analysis-select');
-    const analyses = await listAnalyses().catch(() => []);
+    const analyses = await this.local.listAnalyses().catch(() => []);
     select.replaceChildren(new Option('Analyses précédentes…', ''));
     for (const analysis of analyses) {
       const states = { failed: 'échec', interrupted: 'interrompue', queued: 'en attente', running: 'en cours' };
@@ -169,67 +428,132 @@ class MatchVisualizer {
   }
 
   /**
-   * Téléverse une vidéo, la montre aussitôt, attend son analyse puis l'ouvre.
+   * Téléverse une vidéo vers le serveur local, la montre aussitôt, puis suit son analyse.
    * @param {File} file
    * @responsable Bilel Khlif
    * @date 2026-11-17
    * @role Visualiseur de match — application
    */
   async analyse(file) {
+    if (this.mode !== 'local' || !this.local) {
+      return;
+    }
     const generation = ++this.openGeneration;
-    clearTimeout(this.manifestTimer);
-    this.store?.dispose?.();
-    this.store = null;
-    this.currentAnalysis = null;
-    byId('resume-analysis').hidden = true;
-    this.#showVideo(URL.createObjectURL(file), null);
+    this.#closeAnalysis();
+    this.#showVideo(URL.createObjectURL(file), null, { crossOrigin: null });
     try {
-      const job = await uploadVideo(file, (fraction) => this.setStatus(`Téléversement : ${formatShare(fraction)}`));
-      await this.refreshList();
-      let previewPending = null;
-      const final = await waitForAnalysis(job.id, (status) => {
-        if (generation !== this.openGeneration) {
-          return;
-        }
-        const progress = status.progress;
-        const share = progress?.fraction === null || progress?.fraction === undefined ? '' : ` ${formatShare(progress.fraction)}`;
-        this.setStatus(status.status === 'queued' ? 'En attente d\'analyse…' : `Analyse${share} : ${progress?.message ?? status.status}`);
-        if (status.status === 'running' && !this.store && !previewPending) {
-          previewPending = getTrackingManifest(job.id).then(async (manifest) => {
-            if (manifest?.storage.frameCount && generation === this.openGeneration) {
-              await this.refreshList();
-              await this.openAnalysis(job.id, { keepVideo: true, expectedGeneration: generation, manifest });
-            }
-          }).catch(() => {
-            // Le premier segment n'est pas encore lisible ; l'état suivant permettra un nouvel essai.
-          }).finally(() => { previewPending = null; });
-        }
-      });
+      this.setConnectionState('processing', 'Téléversement…');
+      const job = await this.local.uploadVideo(file, (fraction) => this.setStatus(`Téléversement : ${formatShare(fraction)}`));
       if (generation !== this.openGeneration) {
         return;
       }
-      if (final.status !== 'done') {
-        throw new Error(final.error ?? 'Analyse impossible.');
-      }
-      await previewPending;
+      this.currentAnalysis = job.id;
       await this.refreshList();
-      if (generation !== this.openGeneration) {
-        return;
-      }
-      if (this.currentAnalysis === job.id && this.store instanceof PagedTrackingStore) {
-        this.setStatus(`Analyse terminée : ${file.name}`);
-      } else {
-        await this.openAnalysis(job.id, { keepVideo: true });
-      }
+      await this.#followJob(job.id, generation, { fileName: file.name });
     } catch (error) {
       if (generation === this.openGeneration) {
+        this.setConnectionState('failed', 'Échec du téléversement');
         this.setStatus(error.message, 'error');
       }
     }
   }
 
   /**
-   * Ouvre une analyse complète ou partielle : fenêtre de suivi, vidéo, équipes, qualité.
+   * Suit une analyse du serveur local jusqu'à sa fin, son interruption ou son échec. Une coupure du
+   * serveur ne perd pas l'analyse : l'interrogation reprend avec un délai croissant (10 s au plus),
+   * et un serveur redémarré la rend « interrompue », donc reprenable.
+   * @param {string} id
+   * @param {number} generation
+   * @param {{fileName?: string}} [options]
+   * @responsable Bilel Khlif
+   * @date 2026-11-24
+   * @role Visualiseur de match — suivi des analyses locales
+   */
+  async #followJob(id, generation, { fileName = null } = {}) {
+    clearTimeout(this.jobTimer);
+    let delay = POLL_INTERVAL_MS;
+    let preview = null;
+    const poll = async () => {
+      if (generation !== this.openGeneration) {
+        return;
+      }
+      let status;
+      try {
+        status = await this.local.getAnalysis(id);
+        delay = POLL_INTERVAL_MS;
+      } catch {
+        if (generation !== this.openGeneration) {
+          return;
+        }
+        this.setConnectionState('unavailable', 'Serveur local injoignable : nouvel essai…');
+        this.setStatus(`Connexion perdue avec le serveur local ; nouvel essai dans ${Math.round(delay / 1000)} s. `
+          + 'Si le serveur a été arrêté, relancez-le : l\'analyse sera reprenable.', 'error');
+        this.jobTimer = setTimeout(poll, delay);
+        delay = Math.min(delay * 2, 10000);
+        return;
+      }
+      if (generation !== this.openGeneration) {
+        return;
+      }
+      this.#renderJob(status);
+      if (status.status === 'running' && status.results !== false && !this.store && !preview) {
+        preview = this.local.getTrackingManifest(id).then(async (manifest) => {
+          if (manifest?.storage.frameCount && generation === this.openGeneration && !this.store) {
+            await this.openAnalysis(id, { keepVideo: true, expectedGeneration: generation, manifest });
+          }
+        }).catch(() => {
+          // Le premier segment n'est pas encore lisible ; l'état suivant permettra un nouvel essai.
+        }).finally(() => { preview = null; });
+      }
+      if (['receiving', 'queued', 'running'].includes(status.status)) {
+        this.jobTimer = setTimeout(poll, POLL_INTERVAL_MS);
+        return;
+      }
+      await preview;
+      await this.refreshList();
+      if (status.status === 'done' && generation === this.openGeneration) {
+        if (this.currentAnalysis === id && this.store instanceof PagedTrackingStore && this.store.complete) {
+          this.setStatus(`Analyse terminée : ${fileName ?? this.store.source.name}`);
+        } else {
+          await this.openAnalysis(id, { keepVideo: Boolean(this.video.src), expectedGeneration: generation });
+        }
+      }
+    };
+    await poll();
+  }
+
+  /**
+   * Traduit l'état d'une analyse locale en état affiché, message et boutons Interrompre / Reprendre.
+   * @param {object} status
+   * @responsable Bilel Khlif
+   * @date 2026-11-24
+   * @role Visualiseur de match — suivi des analyses locales
+   */
+  #renderJob(status) {
+    const interrupt = byId('interrupt-analysis');
+    const resume = byId('resume-analysis');
+    const active = ['receiving', 'queued', 'running'].includes(status.status);
+    interrupt.hidden = !['queued', 'running'].includes(status.status);
+    interrupt.disabled = Boolean(status.interruptRequested);
+    resume.hidden = !(status.resumable && ['failed', 'interrupted'].includes(status.status));
+    const fraction = status.progress?.fraction;
+    const share = fraction === null || fraction === undefined ? '' : ` ${formatShare(fraction)}`;
+    if (active) {
+      this.setConnectionState('processing', status.status === 'running' ? `Analyse en cours${share}` : 'Analyse en attente');
+      this.setStatus(status.progress?.message ?? 'Analyse en attente…');
+    } else if (status.status === 'interrupted') {
+      this.setConnectionState('interrupted', status.resumable ? 'Analyse interrompue (reprenable)' : 'Analyse interrompue');
+      this.setStatus(status.error ?? 'Analyse interrompue.', 'error');
+    } else if (status.status === 'failed') {
+      this.setConnectionState('failed');
+      this.setStatus(status.error ?? 'Analyse impossible.', 'error');
+    } else {
+      this.setConnectionState('completed');
+    }
+  }
+
+  /**
+   * Ouvre une analyse complète ou partielle, ou une démonstration : fenêtre de suivi, vidéo, équipes, qualité.
    * @param {string} id
    * @param {{keepVideo?: boolean, expectedGeneration?: number|null, manifest?: object|null}} [options]
    * @responsable Bilel Khlif
@@ -241,24 +565,25 @@ class MatchVisualizer {
       return;
     }
     const generation = expectedGeneration ?? ++this.openGeneration;
+    const source = this.source;
     clearTimeout(this.manifestTimer);
     try {
-      this.setStatus('Chargement de l\'analyse…');
-      const manifest = providedManifest ?? await getTrackingManifest(id);
-      const tracking = manifest ?? await getTracking(id);
+      this.setStatus(source.kind === 'demo' ? 'Chargement de la démonstration…' : 'Chargement de l\'analyse…');
+      const manifest = providedManifest ?? await source.getTrackingManifest(id);
+      const tracking = manifest ?? await source.getTracking(id);
       if (generation !== this.openGeneration) {
         return;
       }
       this.store?.dispose?.();
       this.store = manifest
-        ? new PagedTrackingStore(manifest, (from, to, options) => getTrackingWindow(id, from, to, options))
+        ? new PagedTrackingStore(manifest, (from, to, options) => source.getTrackingWindow(id, from, to, options))
         : TrackingStore.fromDocument(tracking);
       this.currentAnalysis = id;
       this.selectedId = null;
       this.placer.reset();
       this.overlay?.setTeams(this.store.teams);
       if (!keepVideo || !this.video.src) {
-        this.#showVideo(videoUrl(id), id);
+        this.#showVideo(source.videoUrl(id), id, { poster: source.posterUrl?.(id) ?? null });
       }
       this.video.dataset.analysis = id;
       if (manifest) {
@@ -267,19 +592,66 @@ class MatchVisualizer {
           return;
         }
       }
-      byId('analysis-select').value = id;
+      byId(source.kind === 'demo' ? 'demo-select' : 'analysis-select').value = id;
+      this.#renderProvenance(manifest?.provenance ?? null);
       this.#renderQuality();
       this.layout();
-      this.setStatus(`Analyse ouverte : ${tracking.source.name}`);
-      byId('resume-analysis').hidden = true;
-      if (manifest && !manifest.complete) {
+      this.#rememberInAddress(id);
+      this.setStatus(`${source.kind === 'demo' ? 'Démonstration ouverte' : 'Analyse ouverte'} : ${manifest?.title ?? tracking.source.name}`);
+      if (source.kind === 'local' && manifest && !manifest.complete) {
         this.#refreshManifest(id, generation);
       }
     } catch (error) {
       if (generation === this.openGeneration) {
         this.setStatus(error.message, 'error');
+        if (source.kind === 'demo') {
+          this.setConnectionState('failed', 'Démonstration illisible');
+        }
       }
     }
+  }
+
+  /**
+   * Bandeau de provenance : démonstration synthétique ou export statique d'une analyse réelle.
+   * @param {object|null} provenance
+   * @responsable Bilel Khlif
+   * @date 2026-11-24
+   * @role Visualiseur de match — provenance des données
+   */
+  #renderProvenance(provenance) {
+    const banner = byId('provenance-banner');
+    if (provenance?.kind === 'synthetic') {
+      banner.textContent = 'Démonstration synthétique : vidéo et annotations générées ensemble, sans modèle. '
+        + 'Elle montre l\'interface et le format des données, pas la précision de l\'analyse IA.';
+    } else if (provenance?.kind === 'analysis') {
+      banner.textContent = `Export statique d'une analyse réelle (exporté le ${String(provenance.exportedAt ?? '').slice(0, 10)}) : `
+        + 'résultats figés, mesures de qualité et limites ci-contre.';
+    }
+    banner.dataset.kind = provenance?.kind ?? '';
+    banner.hidden = !provenance;
+  }
+
+  /**
+   * Inscrit l'analyse ouverte dans l'adresse, pour qu'un rechargement la rouvre.
+   * @param {string} id
+   * @responsable Bilel Khlif
+   * @date 2026-11-24
+   * @role Visualiseur de match — choix du mode
+   */
+  #rememberInAddress(id) {
+    const url = new URL(window.location.href);
+    for (const key of ['demo', 'analyse', 'mode', 'serveur']) {
+      url.searchParams.delete(key);
+    }
+    if (this.mode === 'demo') {
+      url.searchParams.set('demo', id);
+    } else {
+      url.searchParams.set('analyse', id);
+      if (this.local?.crossOrigin) {
+        url.searchParams.set('serveur', this.local.base.href);
+      }
+    }
+    window.history.replaceState(null, '', url);
   }
 
   /**
@@ -292,7 +664,7 @@ class MatchVisualizer {
    */
   async #refreshManifest(id, generation) {
     try {
-      const [manifest, status] = await Promise.all([getTrackingManifest(id), getAnalysis(id)]);
+      const [manifest, status] = await Promise.all([this.local.getTrackingManifest(id), this.local.getAnalysis(id)]);
       if (generation !== this.openGeneration || !(this.store instanceof PagedTrackingStore)) {
         return;
       }
@@ -301,21 +673,20 @@ class MatchVisualizer {
         this.overlay?.setTeams(this.store.teams);
         this.#renderQuality();
       }
-      byId('resume-analysis').hidden = !status.resumable || !['failed', 'interrupted'].includes(status.status);
-      if (status.status === 'running' || status.status === 'queued') {
-        this.setStatus(status.progress?.message ?? "Analyse en cours ; les segments publiés sont consultables.");
-      } else if (status.status !== 'done') {
-        this.setStatus(status.error ?? 'Analyse interrompue.', 'error');
-      } else {
+      this.#renderJob(status);
+      if (status.status === 'done') {
         this.setStatus(`Analyse terminée : ${this.store.source.name}`);
+      } else if (['receiving', 'queued', 'running'].includes(status.status)) {
+        this.setStatus(status.progress?.message ?? 'Analyse en cours ; les segments publiés sont consultables.');
       }
-      if (manifest?.complete) {
+      if (manifest?.complete || ['failed', 'interrupted'].includes(status.status)) {
         await this.refreshList();
         return;
       }
-    } catch (error) {
+    } catch {
       if (generation === this.openGeneration) {
-        this.setStatus(error.message, 'error');
+        this.setConnectionState('unavailable', 'Serveur local injoignable : nouvel essai…');
+        this.setStatus('Connexion perdue avec le serveur local ; les segments déjà chargés restent consultables.', 'error');
       }
     }
     if (generation === this.openGeneration) {
@@ -346,13 +717,24 @@ class MatchVisualizer {
    * Charge une vidéo dans le lecteur.
    * @param {string} source adresse de la vidéo
    * @param {string|null} id analyse correspondante
+   * @param {{crossOrigin?: string|null, poster?: string|null}} [options] mode CORS (serveur d'une autre origine), affiche
    * @responsable Bilel Khlif
    * @date 2026-11-17
    * @role Visualiseur de match — application
    */
-  #showVideo(source, id) {
+  #showVideo(source, id, { crossOrigin = this.source?.videoCrossOrigin?.() ?? null, poster = null } = {}) {
     if (this.video.src.startsWith('blob:')) {
       URL.revokeObjectURL(this.video.src);
+    }
+    if (crossOrigin) {
+      this.video.crossOrigin = crossOrigin;
+    } else {
+      this.video.removeAttribute('crossorigin');
+    }
+    if (poster) {
+      this.video.poster = poster;
+    } else {
+      this.video.removeAttribute('poster');
     }
     this.video.src = source;
     this.video.dataset.analysis = id ?? '';
@@ -564,6 +946,8 @@ class MatchVisualizer {
     const metrics = this.store.metrics ?? {};
     const { detection = {}, tracking = {}, calibration = {}, positions = {}, teams = {}, processing = {} } = metrics;
     const analysis = this.store.analysis ?? {};
+    const synthetic = analysis.synthetic === true;
+    const notApplicable = 'sans objet : données synthétiques, exactes par construction';
     byId('tracking-availability').textContent = this.store instanceof PagedTrackingStore
       ? (this.store.complete ? 'Analyse terminée. ' : 'Analyse incomplète. ')
         + `Suivi disponible jusqu'à ${formatTime(this.store.storage.availableUntil)}. `
@@ -571,8 +955,10 @@ class MatchVisualizer {
     const rows = [
       ['Images analysées', `${detection.frames ?? this.store.storage?.frameCount ?? this.store.frames.length} (${formatNumber(analysis.fps)} images/s)`],
       ['Calibration réussie', `${formatShare(calibration.calibratedShare)} des images`],
-      ["Erreur d'ajustement", `${formatNumber(calibration.medianFitErrorPx)} px, ${formatNumber(calibration.medianFitErrorM, 2)} m (médianes, optimistes)`],
-      ['Erreur hors échantillon', `${formatNumber(calibration.medianHoldoutErrorPx)} px, ${formatNumber(calibration.medianHoldoutErrorM, 2)} m `
+      ["Erreur d'ajustement", synthetic ? notApplicable
+        : `${formatNumber(calibration.medianFitErrorPx)} px, ${formatNumber(calibration.medianFitErrorM, 2)} m (médianes, optimistes)`],
+      ['Erreur hors échantillon', synthetic ? notApplicable
+        : `${formatNumber(calibration.medianHoldoutErrorPx)} px, ${formatNumber(calibration.medianHoldoutErrorM, 2)} m `
         + `(médianes ; 90 % sous ${formatNumber(calibration.p90HoldoutErrorM, 2)} m), sur les repères du terrain`],
       ['Positions sur le terrain', formatShare(positions.placedShare)],
       ['Ballon détecté', `${formatShare(detection.ballFrameShare)} des images`],
@@ -580,7 +966,8 @@ class MatchVisualizer {
       ['Identités', describeIdentityCheck(metrics.identity)],
       ['Équipe connue', `${formatShare(teams.knownTeamShare)} des observations`],
       ['Équilibre des équipes', `${formatShare(teams.medianMajorityShare)} des joueurs d'une image dans la même équipe (vers 50 % attendu)`],
-      ['Traitement', `${formatNumber(processing.slowdown)} fois la durée de la vidéo (${formatNumber(processing.analysedFramesPerSecond)} images analysées/s, ${processing.device ?? '—'})`],
+      ['Traitement', processing.synthetic ? 'aucun : rien n\'a été analysé (démonstration synthétique)'
+        : `${formatNumber(processing.slowdown)} fois la durée de la vidéo (${formatNumber(processing.analysedFramesPerSecond)} images analysées/s, ${processing.device ?? '—'})`],
     ];
     byId('quality-list').replaceChildren(...rows.flatMap(([label, value]) => {
       const term = document.createElement('dt');
@@ -667,7 +1054,41 @@ class MatchVisualizer {
       }
       event.target.value = '';
     });
-    byId('analysis-select').addEventListener('change', (event) => event.target.value && this.openAnalysis(event.target.value));
+    byId('analysis-select').addEventListener('change', async (event) => {
+      const id = event.target.value;
+      if (!id || !this.local) {
+        return;
+      }
+      await this.openAnalysis(id);
+      const status = await this.local.getAnalysis(id).catch(() => null);
+      if (status && this.currentAnalysis === id) {
+        this.#renderJob(status);
+        if (['receiving', 'queued', 'running'].includes(status.status)) {
+          this.#followJob(id, this.openGeneration);
+        }
+      }
+    });
+    byId('demo-select').addEventListener('change', (event) => event.target.value && this.openAnalysis(event.target.value));
+    byId('mode-demo').addEventListener('click', () => this.mode !== 'demo' && this.setMode('demo'));
+    byId('mode-local').addEventListener('click', () => this.mode !== 'local' && this.setMode('local'));
+    byId('server-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      this.setMode('local', { server: byId('server-url').value });
+    });
+    byId('interrupt-analysis').addEventListener('click', async () => {
+      const id = this.currentAnalysis;
+      if (!id || !this.local) {
+        return;
+      }
+      byId('interrupt-analysis').disabled = true;
+      try {
+        this.#renderJob(await this.local.interruptAnalysis(id));
+        this.setStatus('Interruption demandée : arrêt au prochain lot d\'images ; les segments validés sont conservés.');
+      } catch (error) {
+        this.setStatus(error.message, 'error');
+        byId('interrupt-analysis').disabled = false;
+      }
+    });
     byId('annotations').addEventListener('click', (event) => {
       const rect = event.currentTarget.getBoundingClientRect();
       this.select(this.annotations.pick(event.clientX - rect.left, event.clientY - rect.top));
@@ -676,15 +1097,16 @@ class MatchVisualizer {
     this.video.addEventListener('seeking', () => this.#ensureWindow(this.video.currentTime));
     byId('resume-analysis').addEventListener('click', async () => {
       const id = this.currentAnalysis;
-      if (!id) {
+      if (!id || !this.local) {
         return;
       }
       byId('resume-analysis').disabled = true;
       try {
-        await resumeAnalysis(id);
+        await this.local.resumeAnalysis(id);
         this.setStatus('Reprise en attente ; les segments validés sont conservés.');
         byId('resume-analysis').hidden = true;
         await this.refreshList();
+        this.#followJob(id, this.openGeneration);
       } catch (error) {
         this.setStatus(error.message, 'error');
       } finally {
@@ -769,6 +1191,10 @@ class MatchVisualizer {
       loadedFrames: this.store?.frames.length ?? 0,
       window: this.store?.window ?? null,
       complete: this.store?.complete ?? true,
+      mode: this.mode,
+      connection: this.connection,
+      source: this.source?.kind ?? null,
+      analysis: this.currentAnalysis,
     };
   }
 }
