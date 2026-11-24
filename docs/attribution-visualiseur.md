@@ -15,10 +15,10 @@ nom de Bilel Khlif ; ce nom ne prouve pas à lui seul qui a écrit le code.
 | Contributeur | Rôle documenté sur le visualiseur | Preuves |
 | --- | --- | --- |
 | **Bilel Khlif** | Demande de l'extension (17 novembre 2026) ; exigences : réutiliser les solutions libres, ne jamais inventer de position, publier seulement ce qui est redistribuable ; demande de revue critique avant toute fusion ; références fournies (trois publications LinkedIn) ; priorités et contraintes des travaux du 23 et du 24 novembre (analyse reprenable, échanges d'identifiants, mode démo et mode local, isolement des branches) ; fusion réservée à son accord | ATTRIBUTION.md (contributions 23 et 24), descriptions de la PR #15, [sports-analytics-references.md](sports-analytics-references.md) |
-| **Claude Code** (Anthropic, modèle Claude Opus 5.5 d'après le journal de développement) | Recherche des composants libres ; architecture ; code Python et JavaScript ; tests ; validations sur vidéos réelles ; documentation ; diagnostics et corrections | Commits de la branche (tableau ci-dessous) ; journaux de validation datés dans `docs/` |
-| **OpenAI Codex** | Aucune intervention connue sur cette branche ; il a travaillé en parallèle sur l'application académique (PR #16 et #17) | — |
+| **Claude Code** (Anthropic, modèle Claude Opus 5.5 d'après le journal de développement) | Recherche des composants libres ; architecture ; code Python et JavaScript ; tests ; validations sur vidéos réelles ; documentation ; diagnostics et corrections ; le 24 novembre 2026, reprise des corrections de Codex interrompu par sa limite d'usage : reproduction indépendante sur le code d'origine, compléments, vérification complète et commits | Commits de la branche (tableau ci-dessous) ; journaux de validation datés dans `docs/` |
+| **OpenAI Codex** | Deux revues indépendantes, puis, à la demande de Bilel Khlif le 24 novembre 2026, corrections commencées et laissées sans commit à sa limite d'usage : interruption atomique, normalisation des routes, confinement des exports, réponses asynchrones et remise à zéro des panneaux ; tests de non-régression et plan d'intégration. Correction du Service Worker préparée séparément depuis `main` | Tests de non-régression dans `analysis/tests/` et `tests/visualizer-modes-tests.mjs`, historique des corrections après `84463ad`, [visualiseur-modes.md](visualiseur-modes.md). Travail académique antérieur dans les PR #16 et #17 ; proposition académique de la PR #18 non modifiée |
 | **ChatGPT** | Aucun usage connu sur le visualiseur | — |
-| **Iyed Rachdi, Ghassen Dallekji** | Aucune contribution consignée au visualiseur ; leur rôle dans le projet évalué est décrit dans ATTRIBUTION.md | — |
+| **Iyed Rachdi, Ghassen Dalleji** | Aucune contribution consignée au visualiseur ; leur rôle dans le projet évalué est décrit dans ATTRIBUTION.md | — |
 
 ## Contributions et preuves
 
@@ -37,19 +37,21 @@ dans Chrome), **P** physique (téléphone) ; aucune vérification P n'est faite 
 | Démonstration publique et export statique | Consignes du 24 novembre : démo utilisable sans Python, aucune vidéo non redistribuable | Générateur synthétique, exportateur, schémas, source statique | `demo_match.py`, `static_export.py`, `src/visualizer/static-source.mjs`, `schemas/`, `demo/` ; `test_static_export.py`, `visualizer-sources.test.mjs`, `visualizer-modes-tests.mjs` | A, R (export d'une analyse réelle relu sans serveur) |
 | Mode local, sécurité, interruption | Consignes : boucle locale par défaut, aucune opération annoncée que le serveur ne sait pas faire | Origines, hôte, CORS, accès au réseau local, interruption coopérative, états | `server.py`, `jobs.py`, `src/visualizer/local-source.mjs` ; `test_server_security.py` ; `tests/visualizer-local-ai.mjs` | A, R (Chrome 158, page publique réelle, vrai pipeline) |
 | Audit des licences de redistribution | Exigence : ne rien publier dont la licence n'est pas lue | Métadonnées des paquets installés | [visualiseur-modes.md](visualiseur-modes.md), partie 6 | Documentaire |
+| Corrections des deux revues indépendantes | Bilel Khlif autorise Codex, puis Claude Code après la limite d'usage de Codex, à corriger, tester, commettre et pousser ; aucune fusion autorisée | Codex : reproductions déterministes, corrections des cinq défauts du visualiseur, tests et plan d'intégration ; correction du Service Worker sur une branche séparée. Claude Code : reproduction des défauts sur le code d'origine (25 contrôles Python et 4 vérifications Chrome en échec), alignement du contrôle des adresses du navigateur, vérifications complètes, commits | Commits après `84463ad`, `analysis/tests/`, `tests/visualizer-async-regressions.mjs`, `tests/unit/visualizer-sources.test.mjs` ; [visualiseur-modes.md](visualiseur-modes.md) | A ; aucun nouveau contrôle du pipeline réel ni essai physique revendiqué |
 
 ## Déclarations écartées, faute de preuve
 
 - Qui a téléversé, le 17 novembre, le résumé de la finale de la Coupe du monde 2022 présent dans les
   analyses locales : l'opération est visible, son auteur non.
 - Une relecture humaine ligne à ligne du code du visualiseur : aucune trace n'en est consignée.
-- Toute contribution d'Iyed Rachdi ou de Ghassen Dallekji au visualiseur : aucune n'est documentée.
+- Toute contribution d'Iyed Rachdi ou de Ghassen Dalleji au visualiseur : aucune n'est documentée.
 - Toute précision de l'analyse au-delà des audits internes cités : aucune vérité terrain indépendante.
 - Tout essai du visualiseur sur téléphone : aucun n'est consigné.
 
 ## Points à confirmer par l'équipe
 
-- L'orthographe du nom « Ghassen Dallekji » (ATTRIBUTION.md) ou « Ghassen Dalleji » (consigne du
-  24 novembre 2026).
+- Orthographe confirmée par Bilel Khlif le 24 novembre 2026 : **Ghassen Dalleji**. ATTRIBUTION.md et
+  d'autres documents historiques écrivent encore « Dallekji » ; ils sont listés pour relecture dans la
+  proposition d'attribution académique (PR #18), sans être corrigés ici.
 - Si le visualiseur doit un jour entrer dans la version évaluée : l'inscrire alors dans ATTRIBUTION.md
   de `main`, avec ce tableau et les commits de la fusion.

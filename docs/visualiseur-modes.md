@@ -39,8 +39,14 @@ dans l'adresse : un rechargement la rouvre.
 | Terminée / Échec | Fin de l'analyse, ou erreur du serveur avec son message |
 
 Le bouton « Interrompre » n'apparaît que pour une analyse en attente ou en cours ; il arrête l'analyse
-au lot d'images suivant et garde les segments validés. Il n'existe pas de suppression d'analyse : le
-serveur ne sait pas le faire, l'interface ne la propose donc pas.
+au lot d'images suivant et garde les segments validés. Une analyse interrompue pendant son attente ne
+démarre jamais : son état est relu et passé « en cours » sous le même verrou que l'interruption. Il
+n'existe pas de suppression d'analyse : le serveur ne sait pas le faire, l'interface ne la propose donc pas.
+
+Chaque réponse du serveur ne s'applique qu'à la source et à l'ouverture qui l'ont demandée : une
+réponse tardive (état du serveur, reprise, interruption, liste, téléversement) ne remplace pas la
+démonstration ouverte entre-temps et ne relance aucune interrogation locale. Fermer une analyse vide
+aussi le joueur sélectionné, la qualité, les limites, la légende et les informations de l'image.
 
 ## 2. Démonstration publique
 
@@ -90,11 +96,13 @@ d'analyse arrêté (partie 7). **Non vérifié à l'adresse publique**, puisque 
 
 **Condition bloquante pour l'intégration dans `main` :** le Service Worker académique (`sw.mjs`) met en
 cache toute réponse `GET` réussie de la même origine, réponses partielles `206` comprises ; or
-`cache.put` refuse une réponse partielle. Une fois la page du visualiseur sous son contrôle (après une
-visite de l'application AR), la lecture de la vidéo de démonstration échouerait. Avant la fusion,
-`sw.mjs` doit laisser passer sans cache les requêtes avec `Range`, celles de `demo/` et celles de `api/`
-(partie 8). Ce point vient de la lecture du code de `main` ; il n'a pas été rejoué, faute d'avoir le
-droit de combiner les branches.
+`cache.put` refuse une réponse partielle. Sous son contrôle, la lecture de la vidéo de démonstration
+échoue : rejoué le 24 novembre 2026 avec la vraie vidéo de 36 s, à la racine et sous
+`/footballsimulator/` (« erreur vidéo 4 »). La correction est sur une branche séparée issue de `main`
+(`fix/service-worker-video`) : les requêtes `Range` passent au réseau, les réponses `206` ne sont jamais
+stockées, et un cache indisponible n'empêche plus de transmettre une réponse réseau valide. Avec elle,
+la même vidéo se lit et se déplace à 30, 5 puis 20 s, sans copie en cache. Cette PR doit être fusionnée
+avant toute intégration (partie 8).
 
 ## 3. Export statique d'une analyse
 
@@ -116,6 +124,10 @@ python -m football_analysis verify-export <dossier>
   de reprise de la base). Une démonstration synthétique porte son générateur et sa graine.
 - **Aucun chemin local** : le nom de la source est réduit au nom du fichier ; toute autre chaîne qui
   ressemble à un chemin fait échouer l'export.
+- **Confinement** : les noms des fichiers d'un export refusent chemin absolu, UNC (`//serveur/…`,
+  `\\serveur\…`), lecteur relatif (`D:fichier`), flux Windows (`:`), caractère nul et remontée `..`,
+  avant tout accès au disque ou au réseau ; chaque fichier lu ou écrit doit rester dans le dossier de
+  l'export, liens symboliques et jonctions compris. Le lecteur du navigateur applique les mêmes règles.
 - **Erreurs** : base absente, illisible ou incompatible ; analyse incomplète (à reprendre d'abord) ;
   segment abîmé ; vidéo non lisible par un navigateur (MP4 ou WebM attendus) ; vidéo différente de celle
   analysée (empreinte), sauf `--other-video`, qui le note dans la provenance.
@@ -149,6 +161,7 @@ redémarré la retrouve « interrompue » et reprenable, depuis son dernier segm
 | --- | --- |
 | Écoute sur `127.0.0.1` ; autre adresse refusée sans `--allow-network` | Vidéos privées exposées au réseau |
 | En-tête `Host` limité à `127.0.0.1`, `localhost`, `[::1]` | Rebond DNS |
+| Chemin décodé une seule fois, de la même façon pour les contrôles et pour l'aiguillage | Contournement par encodage : `/%61pi/analyses` suit exactement les règles de `/api/analyses` |
 | Requête avec `Origin` : acceptée seulement de la page servie ici ou d'une origine autorisée (`https://bilelkhlif.github.io` par défaut, `--allow-origin` pour une autre) | Lecture des résultats, téléversement, lancement ou reprise par un autre site (une requête simple sans préalable CORS comprise) |
 | Requête intersite sans `Origin` refusée sur l'API | Intégration de la vidéo privée par une balise d'un autre site |
 | CORS et `Access-Control-Allow-Private-Network` envoyés aux seules origines autorisées | — |
@@ -202,9 +215,9 @@ Le 24 novembre 2026, sur Windows 11, Chrome 158 sans interface (WebGPU matériel
 
 | Niveau | Contenu | Résultat |
 | --- | --- | --- |
-| Tests Python | Export (validité, schémas JSON, refus des analyses incomplètes ou abîmées, écriture atomique, empreintes, catalogue), démonstration (reproductible, contrat, coupures, contact, vitesses), sécurité du serveur, lecture partielle, interruption ; plus l'existant | 105 réussis sur 105 |
+| Tests Python | Export (validité, schémas JSON, refus des analyses incomplètes ou abîmées, écriture atomique, empreintes, catalogue, confinement des fichiers), démonstration (reproductible, contrat, coupures, contact, vitesses), sécurité du serveur (chemins encodés compris), lecture partielle, interruption (course avec le démarrage rejouée de façon déterministe) ; plus l'existant | 113 réussis sur 113 |
 | Tests unitaires Node | Sources démo et locale : fenêtres, voisines, mémoire bornée, empreintes, adresses hors du dossier, boucle locale | 214 réussis sur 214 |
-| Chrome automatisé (`npm test`) | 19 vérifications nouvelles : démo sous `/footballsimulator/`, serveur arrêté : lecture, synchronisation image par image après cinq déplacements avant et arrière (numéro binaire de l'image affichée identique à l'image annotée), sélection sur la vidéo et sur le terrain 3D, identité incertaine sans vitesse ni équipe, distance estimée, plan non calibré, rechargement, export abîmé refusé, 390 × 844 et 844 × 390 ; analyse locale simulée : en cours, interrompue, reprise, coupure du serveur, redémarrage, terminée | 121 réussies sur 121 (79 de l'application AR, 23 du visualiseur existant, 19 nouvelles), aucune ignorée |
+| Chrome automatisé (`npm test`) | 19 vérifications nouvelles : démo sous `/footballsimulator/`, serveur arrêté : lecture, synchronisation image par image après cinq déplacements avant et arrière (numéro binaire de l'image affichée identique à l'image annotée), sélection sur la vidéo et sur le terrain 3D, identité incertaine sans vitesse ni équipe, distance estimée, plan non calibré, rechargement, export abîmé refusé, 390 × 844 et 844 × 390 ; analyse locale simulée : en cours, interrompue, reprise, coupure du serveur, redémarrage, terminée | 125 réussies sur 125 (79 de l'application AR, 23 du visualiseur existant, 19 des modes, 4 d'isolation : réponses tardives d'état, de reprise et d'interruption après un changement de mode, panneaux vidés à la fermeture), aucune ignorée |
 | Chrome, vrai pipeline GPU | `tests/visualizer-local-ai.mjs`, 10 s de l'exemple `121364_0` (fichier local) : page servie par Python ; résultats partiels après 20 s ; interruption ; arrêt brutal du serveur détecté en 0,1 s ; redémarrage, analyse « interrompue » ; reprise jusqu'à la fin ; lecture avec 23 joueurs annotés et posés en 3D ; origine publique sans autorisation (indisponible) puis avec (vidéo en CORS) ; export de l'analyse réelle vérifié puis lu sans serveur | 12 étapes réussies sur 12 ([relevé](validation-modes-2026-11-24.json)) |
 | Téléphone réel | — | Non fait |
 
@@ -213,17 +226,49 @@ La durée de l'analyse réelle (119 s pour 10 s de vidéo) cumule trois chargeme
 
 ## 8. Intégration future dans l'application académique
 
-Ne pas fusionner avant ces points (relevés le 24 novembre 2026, sans modifier `main`) :
+Plan préparé le 24 novembre 2026 contre `main` à `48c293d`. Ce plan n'est pas une intégration :
+les branches restent séparées et toute fusion demande l'accord explicite de Bilel Khlif.
 
-1. **`sw.mjs`** : ne pas mettre en cache les réponses `206`, `demo/` et `api/` (partie 2) ; recalculer
-   `SHELL_VERSION` ; rejouer la lecture de la démonstration sous le contrôle du Service Worker.
-2. **`.mjs`** : renommer `src/visualizer/*.js` et les neuf imports partagés ; étendre le test de
-   documentation aux fichiers du visualiseur ; garder ses tests dans le lanceur (voir
-   [analyse-incrementale.md](analyse-incrementale.md), partie 9).
-3. **Sept espaces de travail** : le visualiseur reste une page à part (`visualizer.html`). Un lien depuis
-   l'espace « Plus d'outils » suffirait ; ni la scène three.js ni l'historique tactique ne sont partagés.
-4. **Démonstration** : `demo/` (2,2 Mo) devient public avec `main` ; elle ne contient que des données
-   synthétiques.
+1. **Prérequis vérifiés séparément** : terminer les cinq corrections du visualiseur et leurs tests,
+   puis la correction des réponses partielles du Service Worker sur une branche issue de `main`.
+   Faire approuver cette dernière PR avant de prendre sa version de `sw.mjs` comme base de
+   l'intégration ; ne pas reprendre le vieux `sw.js` complet de la branche du visualiseur.
+2. **Neuf modules du visualiseur** : renommer en `.mjs` les fichiers `analytics`, `api-client`,
+   `auto-placement`, `format`, `overlay-frame`, `overlay-pitch`, `tracking-store`, `video-annotations`
+   et `visualizer-main` dans `src/visualizer/`. Mettre à jour leurs imports, `visualizer.html`, les
+   imports de types JSDoc, `tests/unit/visualizer.test.mjs`, `visualizer-sources.test.mjs`,
+   `paged-tracking.test.mjs` et les imports dynamiques des tests navigateur. Corriger aussi les
+   dépendances `.js` de `local-source.mjs` et `paged-tracking-store.mjs`. Les fichiers de three.js
+   dans `src/vendor/` gardent leur extension `.js` et leur carte d'import.
+3. **Neuf dépendances partagées** : `overlay-frame` doit importer `events.mjs` ; `overlay-pitch`
+   doit importer `config.mjs`, `ball.mjs`, `pitch.mjs`, `players.mjs`, `pointer-input.mjs`,
+   `raycasting.mjs`, `tactical-arrows.mjs` et `webgpu.mjs` depuis les modules de `main`. Vérifier
+   leurs exportations et leurs signatures avec les appels du visualiseur ; ne pas restaurer les
+   anciens modules académiques `.js` pour contourner un import cassé.
+4. **Sept espaces de travail** : garder `index.html`, `src/main.mjs`, `src/styles.css`,
+   `workspace-controller.mjs` et `workspace-navigation.mjs` de l'application académique. Ajouter un
+   lien relatif `visualizer.html` dans « Plus d'outils », avec un retour relatif vers `index.html`
+   depuis le visualiseur. La page conserve son terrain 3D à l'intérieur de la vidéo ; sa scène, ses
+   écouteurs, sa boucle d'animation et son historique restent distincts du tableau tactique.
+5. **Tests combinés** : partir du `tests/run-tests.mjs` de `main`, y ajouter les imports et appels des
+   tests du visualiseur, puis garder les contrôles de navigation, flèches, séquences, AR, petits
+   écrans, zones sûres, migration `sw.js` → `sw.mjs` et mises à jour atomiques. Dans
+   `tests/unit/documentation.test.mjs`, ajouter le visualiseur aux règles `.mjs` de `main`, ainsi que
+   son HTML et son CSS. Le total combiné doit refléter les tests réellement conservés, pas une somme
+   de suites ayant des cas communs.
+6. **PWA et GitHub Pages** : conserver l'enregistrement de `sw.mjs`, le `sw.js` de migration et
+   `tests/shell-version.mjs` de `main`. Définir explicitement la politique de cache de `demo/` ;
+   exclure `api/`, téléversements, modèles et résultats locaux du cache de l'application. Rejouer la
+   démonstration réelle sous le contrôle du worker, y compris les requêtes Range, la lecture et les
+   déplacements avant/arrière, à la racine et sous `/footballsimulator/`. Conserver les URL relatives
+   du catalogue, de la vidéo, des segments et des liens de navigation ; tester aussi le passage d'une
+   ancienne installation `sw.js` à la nouvelle coquille et le rechargement hors ligne.
+7. **Validation et publication** : vérifier les empreintes et la provenance des sept fichiers publics
+   de la démonstration synthétique ; ne publier aucune vraie vidéo ni aucun poids. Recalculer
+   `SHELL_VERSION` avec `npm run shell-version`, puis exécuter `npm run shell-version -- --check`,
+   `npm run test:unit`, `npm run test:e2e` et la suite Python. Vérifier les chemins et types MIME sur
+   l'hébergement de prévisualisation avant de demander l'accord de fusion. Les téléphones réels et
+   navigateurs non testés restent notés « non vérifiés » jusqu'à un essai effectif.
 
 ## 9. Limites connues
 
