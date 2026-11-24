@@ -1136,6 +1136,8 @@ class MatchVisualizer {
    * @role Visualiseur de match — interface
    */
   #bindInterface() {
+    // Le serveur d'analyse ne sert pas index.html (ni le Service Worker) : pas de lien mort.
+    byId('back-to-board').hidden = servedByAnalysisServer();
     byId('upload-input').addEventListener('change', (event) => {
       const [file] = event.target.files;
       if (file) {

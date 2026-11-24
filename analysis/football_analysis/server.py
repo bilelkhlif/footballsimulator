@@ -16,7 +16,7 @@ API (JSON) :
 - GET  /api/analyses/<id>/video : vidéo source, avec lecture partielle (Range) pour l'avance rapide.
 
 Pages : visualizer.html et les dossiers src/, assets/ et demo/ du dépôt. Le serveur ne sert ni index.html,
-ni sw.js, ni manifest.json : le Service Worker de l'application AR ne peut donc pas s'installer sur
+ni sw.js, ni sw.mjs, ni manifest.json : le Service Worker de l'application AR ne peut donc pas s'installer sur
 son origine, où il mettrait en cache les réponses de l'API et casserait la lecture partielle.
 
 Le serveur écoute 127.0.0.1 par défaut : il n'est pas prévu pour être exposé sur un réseau.

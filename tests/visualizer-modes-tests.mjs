@@ -568,6 +568,26 @@ async function testAcademicNavigation(browser, url, record) {
       await page.waitForSelector('body.is-ready', { timeout: 30000 });
       return [new URL(page.url()).pathname.endsWith('/index.html') || new URL(page.url()).pathname.endsWith('/'), page.url()];
     });
+    await step(record, 'intégré : servi par le serveur d’analyse, qui n’a pas index.html, le visualiseur n’affiche pas ce lien', async () => {
+      const served = await browser.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'block' });
+      await served.route('http://127.0.0.1:8765/**', (route) => route.abort('connectionrefused'));
+      await served.route('**/visualizer.html*', async (route) => {
+        const response = await route.fetch();
+        await route.fulfill({ response, headers: { ...response.headers(), 'server-timing': 'football-analysis' } });
+      });
+      try {
+        const marked = await served.newPage();
+        await marked.goto(`${url}visualizer.html?demo=${DEMO_ID}`);
+        await marked.waitForFunction(() => window.__matchVisualizer?.snapshot().window, null, { timeout: 30000 });
+        const state = await marked.evaluate(() => ({
+          marque: performance.getEntriesByType('navigation')[0].serverTiming.map((entry) => entry.name),
+          lienVisible: !document.getElementById('back-to-board').hidden,
+        }));
+        return [state.marque.includes('football-analysis') && !state.lienVisible, JSON.stringify(state)];
+      } finally {
+        await served.close();
+      }
+    });
     const unexpected = errors.filter((text) => !/127\.0\.0\.1:8765|ERR_CONNECTION_REFUSED/.test(text));
     record('Visualiseur, modes : intégré, navigation sans erreur dans la console', unexpected.length ? 'échec' : 'ok', unexpected.slice(0, 3).join(' | '));
   } finally {

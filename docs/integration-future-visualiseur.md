@@ -1,5 +1,7 @@
 # Intégration future du visualiseur : note différée
 
+> Intégration réalisée : voir le [compte rendu d'intégration](integration-visualiseur.md). Cette note reste comme trace de la décision différée.
+
 Cette note n’ajoute aucune fonction vidéo à l’application académique et ne modifie pas l’autre branche.
 
 ## Frontières après la revue de la PR nº 17

@@ -27,7 +27,7 @@
 - **Espaces de coaching.** Rail sombre compact et sept espaces fonctionnels : Accueil, Équipes et formations, Outils tactiques, Animation et séquences, Réalité augmentée, Plus d'outils, Réglages et aide. Une seule scène, un seul tableau et un seul historique sont conservés entre les espaces. Navigation basse en portrait, panneaux défilants et contrôles de vue persistants. L'[inventaire, l'architecture, les correspondances et les captures avant / après](docs/espaces-coaching.md) détaillent cette évolution.
 - **Testé.** 369 tests automatisés sur PC le 24 novembre 2026 : 229 unitaires et 140 de bout en bout, dont le parcours complet d'un entraîneur de la 3D vers l'AR émulée, tous réussis sans cas ignoré ([revue critique, mesures et limites](docs/revue-finale-pr17.md)). Les anciens essais physiques du 12 et du 14 novembre concernent des versions précédentes : AR WebGPU sur TECNO POVA 6 Pro 5G, mode test WebGL sur Galaxy S10e. Cette nouvelle interface n'a pas été testée sur téléphone réel. Restent à mesurer : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde ([recette](docs/recette.md)).
 
-> Les espaces de coaching de cette branche ne sont pas encore publiés sur le site de `main` : fusion réservée à une approbation explicite. La PR #15 reste indépendante ; voir la [note d’intégration future](docs/integration-future-visualiseur.md). `ATTRIBUTION.md` reste inchangé.
+- **Analyse de match intégrée.** Le visualiseur de match (PR #15) s'ouvre depuis l'espace Plus d'outils, dans un nouvel onglet : la tactique en cours reste intacte. La démonstration synthétique se lit sans serveur ; vos propres vidéos passent par le serveur d'analyse local. Le 24 novembre 2026, sur PC : 267 tests unitaires, 197 vérifications dans Chrome et 113 tests Python, tous réussis ; détail et limites dans le [compte rendu d'intégration](docs/integration-visualiseur.md).
 
 ## Aperçu
 
@@ -242,7 +242,7 @@ Cette mesure compare deux versions dans les mêmes conditions ; elle ne remplace
 
 ## Visualiseur de match (prototype)
 
-Extension après le projet, sur la branche `feature/visualiseur-match`. [visualizer.html](visualizer.html) analyse une vraie vidéo de match téléversée :
+Extension après le projet, ouverte depuis l'espace Plus d'outils (carte « Analyse de match (IA) »). [visualizer.html](visualizer.html) analyse une vraie vidéo de match téléversée :
 
 - détection et suivi des joueurs, des gardiens, des arbitres et du ballon ;
 - deux équipes ;
@@ -254,7 +254,7 @@ La vidéo d'origine s'affiche annotée. Le terrain 3D de l'application, en WebGP
 - placé seul dans la zone la moins encombrée ;
 - avec sélection d'un joueur, traces, flèches de déplacement et vitesse.
 
-L'analyse réutilise des composants libres (Roboflow Sports, Ultralytics, ByteTrack, PySceneDetect, OpenCV). Elle tourne sur un serveur Python local ([analysis/](analysis/README.md)), avec un GPU NVIDIA de préférence. L'application AR n'en dépend pas et n'est pas modifiée.
+L'analyse réutilise des composants libres (Roboflow Sports, Ultralytics, ByteTrack, PySceneDetect, OpenCV). Elle tourne sur un serveur Python local ([analysis/](analysis/README.md)), avec un GPU NVIDIA de préférence. L'application AR n'en dépend pas : elle n'y ajoute qu'un lien, masqué pendant une session AR. Le visualiseur n'est pas dans la coquille hors ligne de l'application.
 
 Deux modes, une seule interface : **Explorer la démo** lit des exports statiques de `demo/` (un match synthétique, vidéo et annotations générées ensemble, sans Python ni serveur, compatible GitHub Pages) ; **Analyser ma vidéo** utilise le serveur local (téléversement, progression, résultats partiels, interruption et reprise).
 
@@ -386,8 +386,8 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 ```bash
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
-npm run test:unit   # 229 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
-npm run test:e2e    # 140 vérifications dans Chrome, sans interface
+npm run test:unit   # 267 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
+npm run test:e2e    # 197 vérifications dans Chrome, sans interface
 npm run bench       # mesure des performances (sprint 6), hors de npm test : 1 à 2 minutes
 npm run shell-version  # recalcule SHELL_VERSION dans sw.mjs après une modification de l'application
 ```
@@ -404,7 +404,10 @@ Les tests de bout en bout couvrent :
 - le mode test WebGL (`?webgl`) : seulement sur demande, jamais en repli, et le même parcours AR rejoué dans ce mode ;
 - l'interaction tactique (sprint 5) : sélection et déplacement d'un joueur et du ballon au millimètre, en vue 3D, au doigt sur un téléphone de 360 px et en AR sur un terrain tourné de 25° ; flèches avec aperçu ; annuler, rétablir et réinitialiser ; toucher refusé hors du terrain ; toucher sur la barre d'outils arrêté avant la scène ; mode diagnostic ;
 - la séquence animée (sprint 6) : images clés, lecture exacte, pause, vitesse 2×, arrêt sur un changement du tableau, annulation ; en AR sur le terrain tourné, terrain toujours ancré ; et cinq entrées et sorties de l'AR de suite, sans fuite de ressources ;
-- le visualiseur de match (prototype) : WebGPU sans WebGL, synchronisation de la vidéo et des annotations à l'arrêt et en lecture, coupure de plan, calibration absente, sélection sur la vidéo et en 3D, rotation et zoom du terrain 3D, panneau déplacé, redimensionné, verrouillé, réduit et placé automatiquement.
+- le visualiseur de match (prototype) : WebGPU sans WebGL, synchronisation de la vidéo et des annotations à l'arrêt et en lecture, coupure de plan, calibration absente, sélection sur la vidéo et en 3D, rotation et zoom du terrain 3D, panneau déplacé, redimensionné, verrouillé, réduit et placé automatiquement ;
+- l'intégration du visualiseur : ouverture depuis Plus d'outils et retour au tableau, tactique conservée, démonstration de 36 s lue et déplacée sous le contrôle du Service Worker (vraies réponses 206, aucune vidéo en cache).
+
+Le serveur d'analyse a ses propres tests, 113 en Python (`python -m unittest discover -s tests` dans `analysis/`, voir [analysis/README.md](analysis/README.md)). Le vrai pipeline sur GPU se vérifie à la main : `node tests/visualizer-local-ai.mjs <vidéo>`.
 
 Les tests unitaires vérifient aussi la documentation du code : chaque fonction, classe et membre de classe porte un en-tête avec son responsable, sa date et son rôle, et chaque fichier renvoie à ATTRIBUTION.md ([convention](docs/convention-de-documentation.md)).
 
@@ -501,6 +504,7 @@ Résultat le 23 novembre 2026, après les retours de l'évaluation : 226 tests u
     ├── ergonomie.md       Interface : problèmes relevés, changements, captures avant et après
     ├── attribution-proposee.md  Ajouts factuels proposés à la relecture de l’équipe
     ├── integration-future-visualiseur.md  Imports partagés et référence de recherche différée
+    ├── integration-visualiseur.md  Intégration du visualiseur : conflits, migration, accès, tests, limites
     ├── migration-mjs.md   Modules en .mjs, exceptions, passage de sw.js à sw.mjs
     ├── sprint-1.md        Compte rendu du sprint 1
     ├── sprint-2.md        Compte rendu du sprint 2 : session AR

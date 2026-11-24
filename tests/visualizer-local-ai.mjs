@@ -172,7 +172,11 @@ async function run(video) {
     const log = watchErrors(page);
     await page.goto(`http://127.0.0.1:${port}/visualizer.html`);
     await waitState(page, 'connected', 60000);
-    note('page servie par Python : mode local, serveur connecté', { label: await page.textContent('#connection-state') });
+    const backLinkHidden = await page.evaluate(() => document.getElementById('back-to-board').hidden);
+    if (!backLinkHidden) {
+      throw new Error('lien « Tableau tactique » affiché alors que ce serveur ne sert pas index.html');
+    }
+    note('page servie par Python : mode local, serveur connecté, sans lien vers index.html', { label: await page.textContent('#connection-state') });
 
     const started = Date.now();
     await page.setInputFiles('#upload-input', video);
