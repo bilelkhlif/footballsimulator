@@ -18,6 +18,9 @@
  *
  * Les autres requêtes de la même origine (module de l'émulateur, autres pages du dépôt) passent
  * par le réseau d'abord, avec repli sur le cache ; le CDN de l'émulateur IWER est ignoré.
+ * Les requêtes Range restent au navigateur : une réponse complète du cache ne remplace jamais
+ * une plage d'octets. Les réponses partielles 206 ne sont pas stockées. Hors coquille, une panne
+ * du cache ne doit pas empêcher la transmission d'une réponse réseau valide.
  *
  * Module ES (migration .mjs, docs/migration-mjs.md) : src/pwa.mjs l'enregistre avec le type
  * « module ». Il n'importe rien, pour s'exécuter aussi en script classique dans un navigateur qui
@@ -142,7 +145,8 @@ async function removeOutdatedCaches() {
 }
 
 /**
- * Enregistre une copie de la réponse dans le cache, si elle est valide.
+ * Enregistre une copie complète de la réponse dans le cache, si elle est valide.
+ * Cache.put refuse les réponses 206 : elles ne représentent qu'une plage du fichier.
  * @param {Request} request
  * @param {Response} response
  * @returns {Promise<void>}
@@ -151,7 +155,7 @@ async function removeOutdatedCaches() {
  * @role PWA — Service Worker : stratégies de cache et hors-ligne
  */
 async function storeInCache(request, response) {
-  if (response.ok) {
+  if (response.ok && response.status !== 206) {
     const cache = await caches.open(CACHE_NAME);
     await cache.put(request, response.clone());
   }
@@ -174,7 +178,8 @@ async function fromShell(request) {
 }
 
 /**
- * Télécharge un fichier et met à jour sa copie dans le cache.
+ * Télécharge un fichier et tente de mettre à jour sa copie dans le cache.
+ * Un quota dépassé ou un cache indisponible n'invalide pas la réponse du serveur.
  * @param {Request} request
  * @returns {Promise<Response>}
  * @responsable Bilel Khlif
@@ -183,7 +188,11 @@ async function fromShell(request) {
  */
 async function fetchAndCache(request) {
   const response = await fetch(request);
-  await storeInCache(request, response);
+  try {
+    await storeInCache(request, response);
+  } catch {
+    // Le cache d'exécution est facultatif ; la coquille garde son installation atomique.
+  }
   return response;
 }
 
@@ -236,7 +245,7 @@ function withTimeout(promise, ms) {
  * @role PWA — Service Worker : stratégies de cache et hors-ligne
  */
 async function networkFirst(request, network) {
-  const cached = await findInCache(request);
+  const cached = await findInCache(request).catch(() => undefined);
   if (!cached) {
     return network;
   }
@@ -275,6 +284,7 @@ self.addEventListener('activate', (event) => {
  * Requêtes : seules les requêtes GET vers l'application elle-même passent par le cache.
  * Le CDN de l'émulateur IWER, utilisé seulement en développement, est ignoré. Depuis le sprint 6,
  * les fichiers de la coquille viennent tous du cache de la même version.
+ * Une requête Range passe directement au réseau, y compris pour un chemin de la coquille.
  * @responsable Bilel Khlif
  * @date 2026-11-05
  * @role PWA — Service Worker : interception des requêtes
@@ -282,7 +292,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== self.location.origin) {
+  if (request.method !== 'GET' || url.origin !== self.location.origin || request.headers.has('Range')) {
     return;
   }
   if (SHELL_PATHS.has(url.pathname)) {

@@ -22,6 +22,7 @@ import { runWorkspaceTests, verifyArWorkspaces } from './workspace-tests.mjs';
 import { runFinalUxReviewTests } from './final-ux-review-tests.mjs';
 import { runSafeAreaReviewTests } from './safe-area-review-tests.mjs';
 import { runCoachingWorkflowTests } from './coaching-workflow-tests.mjs';
+import { runServiceWorkerMediaTests } from './service-worker-media-tests.mjs';
 
 /** Navigateur utilisé : Chrome par défaut. */
 const CHANNEL = process.env.BROWSER_CHANNEL ?? 'chrome';
@@ -2110,6 +2111,7 @@ async function main() {
     await testPwa(browser, root.url, 'racine');
     await testLoading(browser, subPath.url, 'sous-chemin, comme GitHub Pages', DESKTOP);
     await testPwa(browser, subPath.url, 'sous-chemin');
+    await runServiceWorkerMediaTests(browser, { root: root.url, subPath: subPath.url }, record);
     await testSlowNetwork(browser, slow);
     await testEmulator(browser, root.url);
     await testArSession(browser, root.url);
