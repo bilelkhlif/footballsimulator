@@ -60,8 +60,11 @@ function isNumber(value, minimum = -Infinity) {
  * @role Visualiseur de match — contrôle des exports
  */
 export function isRelativeFile(value) {
-  return typeof value === 'string' && value.length > 0 && !/^(?:[A-Za-z]:|\/|\\|\.\/|file:)/.test(value)
-    && !value.includes('\\') && !value.includes('://') && !value.split('/').includes('..');
+  // Mêmes règles que _relative_file (static_export.py) : ni lecteur, ni UNC, ni « : » (lecteur
+  // relatif, flux Windows, schéma d'adresse), ni caractère nul, ni « . » seul, ni remontée « .. ».
+  return typeof value === 'string' && value.length > 0 && value !== '.' && !value.includes('\0')
+    && !/^(?:\/|\\|\.\/)/.test(value) && !value.includes('\\') && !value.includes(':')
+    && !value.split('/').includes('..');
 }
 
 /**

@@ -11,17 +11,19 @@ Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
 import hashlib
 import json
 import math
+import shutil
 import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 
 from football_analysis import contract, demo_match
 from football_analysis.chunk_storage import ChunkStore
 from football_analysis.static_export import (ExportError, catalog_problems, export_analysis, path_problems,
-                                             update_catalog, verify_bundle)
+                                             update_catalog, verify_bundle, _relative_file)
 
 REPOSITORY = Path(__file__).resolve().parents[2]
 SCHEMAS = REPOSITORY / "src" / "visualizer" / "schemas"
@@ -263,6 +265,115 @@ class StaticExportTest(unittest.TestCase):
         self.assertEqual(catalog_problems(json.loads((demo / "index.json").read_text(encoding="utf-8"))), [])
         with self.assertRaisesRegex(ExportError, "dossier du catalogue"):
             update_catalog(demo / "index.json", self.root / "ailleurs", manifest)
+
+    def test_export_file_names_are_relative_on_windows_and_posix(self):
+        """UNC, adresse réseau, lecteur relatif, flux Windows et chemin absolu sont refusés.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Tests de l'export statique — adresses portables
+        """
+        for value in ("//server/share/file.json", r"\\server\share\file.json", "D:outside.json",
+                      "C:/outside.json", "/outside.json", "../outside.json", "chunks/../outside.json",
+                      "//example.invalid/tracks.json", "chunks/file.json:stream", ".", "file\x00.json"):
+            with self.subTest(value=repr(value)):
+                self.assertFalse(_relative_file(value))
+        for value in ("chunks/00000.json", "tracks.json", "images/affiche du match.jpg", "matches/match-test/"):
+            self.assertTrue(_relative_file(value), value)
+
+    def test_export_rejects_external_extra_names_before_any_external_io(self):
+        """Un nom joint invalide est refusé avant création de dossier ou copie hors de l'export.
+
+        Les gardes de test évitent tout accès UNC même avec l'ancienne implémentation défectueuse.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Tests de l'export statique — confinement des écritures
+        """
+        original_mkdir, original_copy = Path.mkdir, shutil.copyfile
+
+        def guarded_mkdir(path, *args, **kwargs):
+            """Interdit une tentative de création hors du dossier temporaire du test."""
+            self.assertTrue(Path(path).is_relative_to(self.root), "création externe tentée")
+            return original_mkdir(path, *args, **kwargs)
+
+        def guarded_copy(source, target, *args, **kwargs):
+            """Interdit une tentative de copie hors du dossier temporaire du test."""
+            self.assertTrue(Path(target).is_relative_to(self.root), "copie externe tentée")
+            return original_copy(source, target, *args, **kwargs)
+
+        for index, relative in enumerate(("//server/share/file.json", "D:outside.json", "C:/outside.json")):
+            with self.subTest(relative=relative), patch.object(Path, "mkdir", guarded_mkdir), \
+                    patch("football_analysis.static_export.shutil.copyfile", guarded_copy):
+                with self.assertRaisesRegex(ExportError, "nommé|relative"):
+                    self.export(name=f"invalide-{index}", extra_files={relative: self.video})
+
+    def test_bundle_extra_descriptors_are_validated_before_file_access(self):
+        """Un descripteur joint ne peut désigner un chemin UNC ou un lecteur relatif.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Tests de l'export statique — contrôle des fichiers joints du manifeste
+        """
+        self.export()
+        output = self.root / "export"
+        manifest_path = output / "manifest.json"
+        manifest = json.loads(manifest_path.read_bytes())
+        original_is_file = Path.is_file
+
+        def guarded_is_file(path):
+            """Échoue avant tout accès à un autre volume, même avec l'ancien vérificateur."""
+            self.assertTrue(Path(path).is_relative_to(output), "lecture externe tentée")
+            return original_is_file(path)
+
+        for relative in ("//server/share/file.json", "D:outside.json"):
+            with self.subTest(relative=relative):
+                manifest["files"] = {"joint": {"file": relative, "bytes": 1, "sha256": "0" * 64}}
+                manifest_path.write_bytes(json.dumps(manifest).encode("utf-8"))
+                with patch.object(Path, "is_file", guarded_is_file):
+                    problems = verify_bundle(output)
+                self.assertTrue(any("relative" in problem for problem in problems), problems)
+
+    def test_bundle_resolved_files_cannot_leave_the_export_directory(self):
+        """Manifeste, trajectoires et segments ne peuvent suivre un lien hors du dossier choisi.
+
+        Un lien réel est utilisé si le système l'autorise ; sinon sa résolution est simulée,
+        sans ignorer le contrôle de confinement ni lire de fichier de l'utilisateur.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Tests de l'export statique — confinement des lectures et liens
+        """
+        self.export()
+        output = self.root / "export"
+        outside = self.root / "hors-export.json"
+        original_resolve = Path.resolve
+        for relative in ("manifest.json", "tracks.json", "chunks/00000.json"):
+            target = output / relative
+            contents = target.read_bytes()
+            outside.write_bytes(contents)
+            target.unlink()
+            linked = True
+            try:
+                target.symlink_to(outside)
+            except (OSError, NotImplementedError):
+                linked = False
+                target.write_bytes(contents)
+
+            def resolved(path, *args, **kwargs):
+                """Modélise le lien lorsque sa création demande un droit absent sur Windows."""
+                return outside if path == target else original_resolve(path, *args, **kwargs)
+
+            try:
+                if linked:
+                    problems = verify_bundle(output)
+                else:
+                    with patch.object(Path, "resolve", resolved):
+                        problems = verify_bundle(output)
+                self.assertTrue(any("hors" in problem for problem in problems), (relative, problems))
+            finally:
+                target.unlink()
+                target.write_bytes(contents)
 
 
 class PublicDemoTest(unittest.TestCase):

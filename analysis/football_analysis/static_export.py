@@ -28,7 +28,7 @@ import hashlib
 import json
 import math
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import re
 import shutil
 import sqlite3
@@ -84,8 +84,32 @@ def _relative_file(value: Any) -> bool:
     @date 2026-11-24
     @role Analyse vidéo — export statique (adresses portables)
     """
-    return (isinstance(value, str) and bool(value) and not LOCAL_PATH.search(value) and "://" not in value
-            and ".." not in value.split("/") and not value.startswith("./"))
+    return (isinstance(value, str) and bool(value) and value != "." and "\x00" not in value
+            and not LOCAL_PATH.search(value) and ":" not in value and not value.startswith(("/", "./"))
+            and not PureWindowsPath(value).drive and not PureWindowsPath(value).root
+            and ".." not in value.split("/"))
+
+
+def _bundle_file(directory: Path, relative: Any) -> Path:
+    """Résout un fichier relatif et refuse toute sortie par un lien symbolique ou une jonction.
+
+    Le nom est vérifié avant resolve : une adresse UNC ou un lecteur Windows ne déclenche
+    aucun accès au réseau ni à un autre volume pendant la vérification.
+
+    @responsable Bilel Khlif
+    @date 2026-11-24
+    @role Analyse vidéo — export statique (confinement des fichiers)
+    """
+    if not _relative_file(relative):
+        raise ValueError(f"Adresse de fichier non relative : {relative!r}")
+    try:
+        root = Path(directory).resolve()
+        target = (root / relative).resolve()
+    except (OSError, RuntimeError, ValueError) as error:
+        raise ValueError(f"Adresse de fichier illisible : {relative!r}") from error
+    if target == root or not target.is_relative_to(root):
+        raise ValueError(f"Fichier hors du dossier de l'export : {relative!r}")
+    return target
 
 
 def path_problems(value: Any, where: str = "manifeste") -> list[str]:
@@ -181,6 +205,16 @@ def manifest_problems(manifest: Any) -> list[str]:
         problems.append("manifeste.video invalide : fichier relatif MP4 ou WebM attendu")
     else:
         problems.extend(_file_entry_problems(video, "manifeste.video"))
+    files = manifest.get("files", {})
+    if not isinstance(files, dict):
+        problems.append("manifeste.files doit être un objet de fichiers joints")
+    else:
+        for name, entry in files.items():
+            where = f"manifeste.files[{name!r}]"
+            if not isinstance(entry, dict) or not _relative_file(entry.get("file")):
+                problems.append(f"{where}.file doit être une adresse relative")
+            else:
+                problems.extend(_file_entry_problems(entry, where))
     return problems
 
 
@@ -416,11 +450,13 @@ def export_analysis(database: Path, output: Path, *, video: Path, analysis_id: s
             shutil.copyfile(video, temporary / f"video{suffix}")
             extras = {}
             for relative, path in (extra_files or {}).items():
-                if not _relative_file(relative):
-                    raise ExportError(f"Fichier joint mal nommé : {relative}")
-                (temporary / relative).parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(path, temporary / relative)
-                digest, size = _digest_file(temporary / relative)
+                try:
+                    target = _bundle_file(temporary, relative)
+                except ValueError as error:
+                    raise ExportError(str(error)) from error
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(path, target)
+                digest, size = _digest_file(target)
                 extras[relative] = {"file": relative, "bytes": size, "sha256": digest}
             provenance = _provenance(signature, header, provenance)
             if expected and expected != video_digest:
@@ -527,7 +563,7 @@ def verify_bundle(directory: Path) -> list[str]:
     """
     directory = Path(directory)
     try:
-        manifest = _read_json(directory / "manifest.json")
+        manifest = _read_json(_bundle_file(directory, "manifest.json"))
     except ValueError as error:
         return [str(error)]
     problems = manifest_problems(manifest) + path_problems(manifest)
@@ -536,7 +572,11 @@ def verify_bundle(directory: Path) -> list[str]:
     storage = manifest["storage"]
     entries = [storage["tracks"], manifest["video"], *manifest.get("files", {}).values()]
     for entry in entries:
-        path = directory / entry["file"]
+        try:
+            path = _bundle_file(directory, entry["file"])
+        except ValueError as error:
+            problems.append(str(error))
+            continue
         if not path.is_file():
             problems.append(f"fichier manquant : {entry['file']}")
             continue
@@ -545,7 +585,11 @@ def verify_bundle(directory: Path) -> list[str]:
             problems.append(f"empreinte ou taille différente : {entry['file']}")
     previous_time = -1.0
     for entry in storage["chunks"]:
-        path = directory / entry["file"]
+        try:
+            path = _bundle_file(directory, entry["file"])
+        except ValueError as error:
+            problems.append(str(error))
+            continue
         if not path.is_file():
             problems.append(f"segment manquant : {entry['file']}")
             continue
@@ -569,7 +613,7 @@ def verify_bundle(directory: Path) -> list[str]:
         found, previous_time = frame_problems(chunk["frames"], previous_time, entry["file"])
         problems.extend(found[:3])
     try:
-        tracks = _read_json(directory / storage["tracks"]["file"])
+        tracks = _read_json(_bundle_file(directory, storage["tracks"]["file"]))
     except ValueError as error:
         return problems + [str(error)]
     if not isinstance(tracks, dict) or tracks.get("format") != TRACKS_FORMAT or not isinstance(tracks.get("tracks"), list):

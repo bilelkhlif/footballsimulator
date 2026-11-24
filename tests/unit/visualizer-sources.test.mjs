@@ -128,7 +128,8 @@ test('démonstration : contrôles des adresses, du catalogue et du manifeste', (
   for (const ok of ['chunks/00000.json', 'video.mp4', 'matches/match-synthetique/']) {
     assert.equal(isRelativeFile(ok), true, ok);
   }
-  for (const bad of ['../x', 'a/../../b', '/etc/passwd', 'C:/Users/x', 'C:\\x', 'https://autre.test/x', 'file:///x', './x', '']) {
+  for (const bad of ['../x', 'a/../../b', '/etc/passwd', 'C:/Users/x', 'C:\\x', 'https://autre.test/x', 'file:///x', './x', '',
+    '//serveur/partage/x.json', '\\\\serveur\\partage\\x.json', 'D:dehors.json', 'chunks/x.json:flux', '.', 'x\0.json']) {
     assert.equal(isRelativeFile(bad), false, bad);
   }
   assert.deepEqual(catalogProblems(JSON.parse(readFileSync(new URL('index.json', DEMO), 'utf8'))), []);
