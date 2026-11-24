@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { distanceCovered, formatSpeed, isPlausibleStep, teamCentroids, velocityAt } from '../../src/visualizer/analytics.js';
 import { getHealth, listAnalyses, waitForAnalysis } from '../../src/visualizer/api-client.js';
 import { applyHomography, AutoPlacer, candidateRects, overlapArea, pitchCoverage, scoreRegions } from '../../src/visualizer/auto-placement.js';
-import { describeCalibration, formatShare, formatTime } from '../../src/visualizer/format.js';
+import { describeCalibration, describeIdentityCheck, describeIdentityValues, formatShare, formatTime } from '../../src/visualizer/format.js';
 import { clampRect } from '../../src/visualizer/overlay-frame.js';
 import { pitchToScene, poolKey } from '../../src/visualizer/overlay-pitch.js';
 import { TrackingStore } from '../../src/visualizer/tracking-store.js';
@@ -248,4 +248,22 @@ test("échange d'identifiants : un saut de plus de 12 m/s ne compte ni dans la d
   assert.ok(Math.abs(distanceCovered(switched) - 6.4) < 1e-9, 'le saut de 40 m est écarté');
   assert.equal(velocityAt(switched, 1.16), null, "après le saut, suite trop courte : pas de vitesse plutôt qu'une fausse");
   assert.equal(velocityAt(run, 1).speed, 6);
+});
+
+test('identités : contrôle décrit en clair ; ancien résultat sans contrôle signalé comme tel', () => {
+  assert.equal(describeIdentityCheck({ checked: true, contacts: 8, swaps: 1, splits: 0 }),
+    '1 échange corrigé sur 8 contacts masqués ; échanges entre coéquipiers non détectés.');
+  assert.equal(describeIdentityCheck({ checked: true, contacts: 1, swaps: 0, splits: 2 }),
+    '0 échange corrigé, 2 trajectoires séparées sur 1 contact masqué ; échanges entre coéquipiers non détectés.');
+  assert.match(describeIdentityCheck(undefined), /^non contrôlées/);
+});
+
+test('identité incertaine pendant un contact corrigé : pas de vitesse affirmée, distance estimée', () => {
+  assert.deepEqual(describeIdentityValues({ identity: 'uncertain' }, '18,0 km/h', 412.4), {
+    speed: '— (identité incertaine)',
+    distance: '≈ 412 m (estimation : identité incertaine)',
+    note: 'Contact entre deux joueurs : qui est qui n’est pas connu à cet instant.',
+  });
+  assert.deepEqual(describeIdentityValues({ id: 3 }, '18,0 km/h', 412.4), { speed: '18,0 km/h', distance: '412 m mesurés', note: null });
+  assert.equal(describeIdentityValues(null, '—', null).distance, 'indisponible à cet instant');
 });

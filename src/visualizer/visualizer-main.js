@@ -18,7 +18,7 @@ import { getAnalysis, getHealth, getTracking, getTrackingManifest, getTrackingWi
 import { applyHomography, AutoPlacer, candidateRects, scoreRegions, WEIGHTS } from './auto-placement.js';
 import { OverlayFrame } from './overlay-frame.js';
 import { OverlayPitch } from './overlay-pitch.js';
-import { describeCalibration, formatNumber, formatShare, formatTime } from './format.js';
+import { describeCalibration, describeIdentityCheck, describeIdentityValues, formatNumber, formatShare, formatTime } from './format.js';
 import { TrackingStore } from './tracking-store.js';
 import { PagedTrackingStore } from './paged-tracking-store.mjs';
 import { boxToDisplay, containRect, VideoAnnotations } from './video-annotations.js';
@@ -540,14 +540,17 @@ class MatchVisualizer {
     const color = team === null ? null : this.store.teamColor(team);
     byId('sel-id').textContent = String(this.selectedId);
     byId('sel-role').textContent = ROLE_LABELS[object?.role ?? track?.role] ?? '—';
-    byId('sel-team').textContent = team === null ? 'inconnue' : `${team === 0 ? 'A' : 'B'} (votes : ${formatShare(object?.teamConfidence ?? track?.teamConfidence)})`;
+    const identityValues = describeIdentityValues(object, formatSpeed(velocities.get(this.selectedId)?.speed ?? null),
+      this.store instanceof PagedTrackingStore ? this.store.distanceAt(this.selectedId, this.lastSample.time) : distanceCovered(history));
+    byId('sel-team').textContent = team === null
+      ? (identityValues.note ? 'inconnue (identité incertaine)' : 'inconnue')
+      : `${team === 0 ? 'A' : 'B'} (votes : ${formatShare(object?.teamConfidence ?? track?.teamConfidence)})`;
     byId('sel-team-chip').style.background = color ?? 'transparent';
     byId('sel-visible').textContent = object ? `oui (détection ${formatShare(object.confidence)})` : 'non, à cet instant';
     byId('sel-position').textContent = object?.pitch ? `x ${formatNumber(object.pitch[0])} m, y ${formatNumber(object.pitch[1])} m` : 'indisponible';
-    byId('sel-speed').textContent = formatSpeed(velocities.get(this.selectedId)?.speed ?? null);
-    const distance = this.store instanceof PagedTrackingStore
-      ? this.store.distanceAt(this.selectedId, this.lastSample.time) : distanceCovered(history);
-    byId('sel-distance').textContent = distance === null ? 'indisponible à cet instant' : `${formatNumber(distance, 0)} m mesurés`;
+    byId('sel-speed').textContent = identityValues.speed;
+    byId('sel-distance').textContent = identityValues.distance;
+    byId('sel-identity').textContent = identityValues.note ?? 'suivie (pas de contact corrigé à cet instant)';
     byId('sel-span').textContent = track ? `${formatTime(track.firstTime)} – ${formatTime(track.lastTime)} (${track.observations} images)` : '—';
   }
 
@@ -574,6 +577,7 @@ class MatchVisualizer {
       ['Positions sur le terrain', formatShare(positions.placedShare)],
       ['Ballon détecté', `${formatShare(detection.ballFrameShare)} des images`],
       ['Trajectoires', `${tracking.tracks ?? '—'}, fragmentation ${formatNumber(tracking.fragmentation, 2)}`],
+      ['Identités', describeIdentityCheck(metrics.identity)],
       ['Équipe connue', `${formatShare(teams.knownTeamShare)} des observations`],
       ['Équilibre des équipes', `${formatShare(teams.medianMajorityShare)} des joueurs d'une image dans la même équipe (vers 50 % attendu)`],
       ['Traitement', `${formatNumber(processing.slowdown)} fois la durée de la vidéo (${formatNumber(processing.analysedFramesPerSecond)} images analysées/s, ${processing.device ?? '—'})`],

@@ -28,10 +28,22 @@ const FPS = 25;
  * @date 2026-11-17
  * @role Tests de bout en bout du visualiseur — outillage
  */
-async function mockAnalysisApi(page, { long = false, complete = true, availableUntil = null, legacy = false } = {}) {
+async function mockAnalysisApi(page, { long = false, complete = true, availableUntil = null, legacy = false, uncertainIds = null } = {}) {
   const prefix = long ? 'fenetres-synthetiques' : 'match-synthetique';
-  const tracking = await readFile(path.join(FIXTURE_DIR, `${prefix}.tracking.json`), 'utf8');
+  let tracking = await readFile(path.join(FIXTURE_DIR, `${prefix}.tracking.json`), 'utf8');
   const document = JSON.parse(tracking);
+  if (uncertainIds) {
+    // Contact corrigé simulé (identity.py) : identité incertaine, sans équipe, et un échange déclaré.
+    for (const frame of document.frames) {
+      for (const object of frame.objects) {
+        if (uncertainIds.includes(object.id)) {
+          Object.assign(object, { identity: 'uncertain', team: null, teamConfidence: null });
+        }
+      }
+    }
+    document.metrics = { ...document.metrics, identity: { checked: true, contacts: 1, crowded: 0, decidable: 1, swaps: 1, splits: 0 } };
+    tracking = JSON.stringify(document);
+  }
   const video = await readFile(path.join(FIXTURE_DIR, `${prefix}.webm`));
   const status = { id: FIXTURE_ID, name: `${prefix}.webm`, status: complete ? 'done' : 'running', createdAt: '2026-11-17T00:00:00+00:00' };
   const state = { status, windows: [], exportReads: 0, resumes: 0, delay: 0,
@@ -86,6 +98,39 @@ async function mockAnalysisApi(page, { long = false, complete = true, availableU
     }
   });
   return state;
+}
+
+/**
+ * Identité incertaine pendant un contact corrigé (analysis/football_analysis/identity.py) : le
+ * panneau du joueur sélectionné sur la vidéo n'affirme ni vitesse ni équipe, signale la distance
+ * comme une estimation, et la qualité décrit le contrôle des identités.
+ * @param {import('playwright-core').Page} page
+ * @param {string} url
+ * @param {Function} record
+ * @responsable Bilel Khlif
+ * @date 2026-11-24
+ * @role Tests du visualiseur — identités incertaines
+ */
+async function testUncertainIdentity(page, url, record) {
+  await page.unroute('**/api/**');
+  await mockAnalysisApi(page, { uncertainIds: [7] });
+  await page.goto(`${url}visualizer.html?analyse=${FIXTURE_ID}`);
+  await page.waitForFunction(() => window.__matchVisualizer?.snapshot().webgpu && window.__matchVisualizer.store?.frames.length);
+  await seekToFrame(page, 25);
+  await page.waitForFunction(() => window.__matchVisualizer.snapshot().objects.some((object) => object.id === 7));
+  const seven = await page.evaluate(() => window.__matchVisualizer.snapshot().objects.find((object) => object.id === 7));
+  const target = await boxCentre(page, seven.box);
+  await page.mouse.click(target.x, target.y);
+  await page.waitForFunction(() => window.__matchVisualizer.selectedId === 7);
+  await page.waitForTimeout(300);
+  const panel = await page.evaluate(() => Object.fromEntries(['sel-team', 'sel-speed', 'sel-distance', 'sel-identity']
+    .map((id) => [id, document.getElementById(id).textContent])));
+  const quality = await page.textContent('#quality-list');
+  const ok = panel['sel-speed'] === '— (identité incertaine)' && panel['sel-team'] === 'inconnue (identité incertaine)'
+    && /qui est qui/.test(panel['sel-identity']) && !/mesurés/.test(panel['sel-distance'])
+    && /1 échange corrigé sur 1 contact masqué/.test(quality);
+  record('Visualiseur : identité incertaine pendant un contact corrigé, ni vitesse ni équipe affirmées', ok ? 'ok' : 'échec',
+    `${panel['sel-team']} ; ${panel['sel-speed']} ; ${panel['sel-distance']}`);
 }
 
 /**
@@ -451,6 +496,7 @@ export async function testMatchVisualizer(browser, url, record, recordCanvasCont
 
     record('Visualiseur : aucune erreur dans la console', errors.length === 0 ? 'ok' : 'échec', errors.slice(0, 3).join(' | '));
     await testWindowedLoading(page, url, record);
+    await testUncertainIdentity(page, url, record);
   } catch (error) {
     record('Visualiseur : scénario complet', 'échec', error.message.split('\n')[0]);
   } finally {

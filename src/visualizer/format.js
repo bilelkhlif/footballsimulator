@@ -59,6 +59,51 @@ export function formatTime(seconds) {
 }
 
 /**
+ * Décrit le contrôle des identités de l'analyse (analysis/football_analysis/identity.py), en clair.
+ * Sans contrôle (ancien résultat), le dit plutôt que d'annoncer zéro correction.
+ * @param {object|null|undefined} identity mesures « identity » de l'analyse
+ * @returns {string}
+ * @responsable Bilel Khlif
+ * @date 2026-11-24
+ * @role Visualiseur de match — interface (identités)
+ */
+export function describeIdentityCheck(identity) {
+  if (!identity?.checked) {
+    return 'non contrôlées (analyse antérieure) : un identifiant peut changer de joueur.';
+  }
+  const parts = [`${identity.swaps} échange${identity.swaps > 1 ? 's' : ''} corrigé${identity.swaps > 1 ? 's' : ''}`];
+  if (identity.splits) {
+    parts.push(`${identity.splits} trajectoire${identity.splits > 1 ? 's' : ''} séparée${identity.splits > 1 ? 's' : ''}`);
+  }
+  return `${parts.join(', ')} sur ${identity.contacts} contact${identity.contacts > 1 ? 's' : ''} masqué${identity.contacts > 1 ? 's' : ''} ; `
+    + 'échanges entre coéquipiers non détectés.';
+}
+
+/**
+ * Valeurs du joueur sélectionné qui dépendent de son identité : pendant un contact corrigé, qui est
+ * qui n'est pas connu ; la vitesse n'est pas affichée, et la distance est signalée comme estimée.
+ * @param {{identity?: string}|null|undefined} object observation du joueur à l'instant affiché
+ * @param {string} speed vitesse déjà formatée
+ * @param {number|null} distance distance cumulée, en mètres
+ * @returns {{speed: string, distance: string, note: string|null}}
+ * @responsable Bilel Khlif
+ * @date 2026-11-24
+ * @role Visualiseur de match — interface (identités incertaines)
+ */
+export function describeIdentityValues(object, speed, distance) {
+  const uncertain = object?.identity === 'uncertain';
+  const metres = distance === null || distance === undefined ? null : formatNumber(distance, 0);
+  if (!uncertain) {
+    return { speed, distance: metres === null ? 'indisponible à cet instant' : `${metres} m mesurés`, note: null };
+  }
+  return {
+    speed: '— (identité incertaine)',
+    distance: metres === null ? 'indisponible à cet instant' : `≈ ${metres} m (estimation : identité incertaine)`,
+    note: 'Contact entre deux joueurs : qui est qui n’est pas connu à cet instant.',
+  };
+}
+
+/**
  * Décrit la calibration d'une image, en clair.
  * @param {object|null} calibration
  * @returns {string}
