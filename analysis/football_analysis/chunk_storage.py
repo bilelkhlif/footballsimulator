@@ -12,7 +12,7 @@ import json
 import math
 from pathlib import Path
 import sqlite3
-from typing import Any, Iterator
+from typing import Any, Iterable, Iterator
 import zlib
 
 #: Version du schéma local, indépendante du contrat JSON des images.
@@ -196,6 +196,32 @@ class ChunkStore:
         """
         self._connection.execute("INSERT INTO tracks VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value",
                                  (track["id"], _json(track)))
+
+    def max_track_id(self) -> int:
+        """Plus grand identifiant de trajectoire enregistré, ou 0 sans trajectoire.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Analyse vidéo — stockage des trajectoires (nouveaux identifiants)
+        """
+        return self._connection.execute("SELECT COALESCE(MAX(id), 0) FROM tracks").fetchone()[0]
+
+    def save_identity(self, plan: dict, tracks: Iterable[dict]) -> None:
+        """Valide ensemble le plan d'identités et les résumés des trajectoires qu'il corrige.
+
+        Le plan est écrit avant toute publication des équipes : une reprise le relit tel quel,
+        sans refaire les prédictions de maillots.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Analyse vidéo — stockage du contrôle d'identité
+        """
+        with self._connection:
+            if self._get("team_cursor", -1) != -1:
+                raise ValueError("Plan d'identités après le début de la publication des équipes.")
+            for track in tracks:
+                self._write_track(track)
+            self._set("identity_plan", plan)
 
     def state(self, key: str, default: Any = None) -> Any:
         """Lit un état de traitement compact.

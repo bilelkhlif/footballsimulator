@@ -22,7 +22,7 @@ import cv2
 import numpy as np
 import supervision as sv
 
-from . import contract
+from . import contract, identity
 from .calibration import foot_points, pitch_status
 from .chunk_storage import ChunkStore
 from .incremental_metrics import quality_metrics_stream
@@ -163,6 +163,24 @@ class CropReader:
             collector.offer(image, [row[0] for row in boxes],
                             np.asarray([row[1] for row in boxes], dtype=float).reshape(-1, 4))
 
+    def image(self, index: int) -> np.ndarray:
+        """Renvoie une image source, en avançant seulement : les numéros demandés croissent.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Analyse incrémentale — relecture de la source (contrôle d'identité)
+        """
+        if index <= self.index:
+            raise VideoError("Relecture d'identité non séquentielle.")
+        while self.index < index:
+            if not self.capture.grab():
+                raise VideoError("Source interrompue pendant le contrôle d'identité.")
+            self.index += 1
+        ok, image = self.capture.retrieve()
+        if not ok:
+            raise VideoError("Image illisible pendant le contrôle d'identité.")
+        return image
+
     def close(self) -> None:
         """Libère le décodeur, même après une interruption.
 
@@ -187,7 +205,7 @@ def analysis_signature(path: Path, options: AnalysisOptions) -> dict:
     return {"schema": 1, "sourceSha256": sha256(path), "settings": settings, "weights": weights,
             "implementation": {name: sha256(Path(__file__).with_name(name + ".py")) for name in (
                 "incremental_pipeline", "pipeline", "tracking", "teams", "streaming_teams", "calibration",
-                "detection", "contract", "chunk_storage")},
+                "detection", "contract", "chunk_storage", "identity")},
             "versions": {name: version(name) for name in ("trackers", "scenedetect", "opencv-python", "numpy",
                 "supervision", "ultralytics", "torch", "transformers", "scikit-learn", "umap-learn")}}
 
@@ -394,17 +412,69 @@ def fit_team_reference(path: Path, store: ChunkStore, options: AnalysisOptions, 
     return model, initial_keepers
 
 
+def check_identities(path: Path, store: ChunkStore, model: FrozenTeamModel) -> dict:
+    """Contrôle les identités aux contacts masqués entre joueurs, d'après les maillots (identity.py).
+
+    Lit le journal deux fois, sans le charger entier : contacts, puis maillots des seules fenêtres
+    de preuve, relus dans la source. Le plan et les résumés corrigés sont validés ensemble ; une
+    reprise relit le plan au lieu de refaire les prédictions. Sans repère d'équipes, rien n'est
+    corrigé.
+
+    @responsable Bilel Khlif
+    @date 2026-11-24
+    @role Analyse incrémentale — contrôle des identités
+    """
+    saved = store.state("identity_plan")
+    if saved is not None:
+        return identity.validate_plan(saved)
+    started = time.perf_counter()
+    roles: dict[int, bool] = {}
+
+    def is_player(track: int) -> bool:
+        """Rôle majoritaire de la trajectoire, lu une fois."""
+        if track not in roles:
+            span = store.track(track)
+            roles[track] = span is not None and span["role"] == "player"
+        return roles[track]
+
+    contacts, truncated = identity.find_contacts(identity.iter_frames(store.iter_raw()), is_player)
+    windows = identity.plan_windows(contacts)
+    votes: dict[int, list] = {}
+    if model.ready and windows:
+        reader = CropReader(path)
+        try:
+            votes = identity.window_votes(_events(store), windows, reader.image, model.predict)
+        finally:
+            reader.close()
+    plan = identity.decide(contacts, windows, votes, store.max_track_id() + 1)
+    plan["truncated"] = truncated
+    spans = identity.rebuild_tracks(identity.iter_frames(store.iter_raw()), plan, identity.affected_ids(plan))
+    store.save_identity(plan, spans.values())
+    store.save_state(identity_seconds=time.perf_counter() - started)
+    return plan
+
+
 def classify_chunks(path: Path, store: ChunkStore, options: AnalysisOptions, device: str,
                     meter: Any, progress: Progress) -> list[dict]:
     """Publie équipes et distances ; les votes, distances et images partagent la même transaction.
+
+    Depuis le contrôle d'identité, les images publiées portent les identifiants finaux : une
+    trajectoire échangée à un contact est rétablie, et ses équipe, votes et distance suivent le
+    même joueur.
 
     @responsable Bilel Khlif
     @date 2026-11-23
     @role Analyse incrémentale — classification persistante et reprise
     """
     model, keepers = fit_team_reference(path, store, options, "cuda" if device.startswith("cuda") else "cpu")
+    progress("identités", 0.8, "Contrôle des identités aux contacts entre joueurs")
+    plan = check_identities(path, store, model)
+    mapper = identity.IdentityMapper(plan)
+    corrected = identity.evidence_assignments(plan)
     votes = TeamState(model)
     votes.set_initial()
+    for track, assignment in corrected.items():
+        votes.seed(track, assignment, plan["evidence"][str(track)])
     saved = store.state("team_state")
     motion = {}
     if saved:
@@ -417,6 +487,8 @@ def classify_chunks(path: Path, store: ChunkStore, options: AnalysisOptions, dev
     try:
         for chunk in store.iter_raw(after_seq=cursor):
             frames = chunk["frames"]
+            for frame, event in zip(frames, chunk["replay"]):
+                mapper.apply(frame, event)
             spans = _roles(store, frames)
             if frames[-1]["time"] > options.team_fit_seconds:
                 collector = BoundedCrops()
@@ -425,7 +497,8 @@ def classify_chunks(path: Path, store: ChunkStore, options: AnalysisOptions, dev
                                 if spans[track]["role"] == "player"}
                 votes.update(player_crops, frames[-1]["time"])
                 del collector, player_crops
-            assignments = {track: (model.assignments.get(track) if frames[-1]["time"] <= options.team_fit_seconds
+            assignments = {track: (corrected[track] if track in corrected and frames[-1]["time"] <= options.team_fit_seconds
+                                    else model.assignments.get(track) if frames[-1]["time"] <= options.team_fit_seconds
                                     else votes.assignment(track)) for track in spans}
             teams = {track: assignment.team if assignment else None for track, assignment in assignments.items()}
             goalkeeper_ids = {track for track, span in spans.items() if span["role"] == "goalkeeper"}
@@ -443,8 +516,12 @@ def classify_chunks(path: Path, store: ChunkStore, options: AnalysisOptions, dev
                     if obj["role"] != "referee" and assignment is not None:
                         obj["team"] = assignment.team
                         obj["teamConfidence"] = None if assignment.confidence is None else round(assignment.confidence, 3)
-                    span.update(team=obj["team"], teamConfidence=obj["teamConfidence"],
-                                teamVotes=0 if assignment is None else assignment.votes)
+                    if obj.get("identity") == "uncertain":
+                        # Pendant un contact corrigé, qui est qui n'est pas connu : pas d'équipe affirmée.
+                        obj["team"] = obj["teamConfidence"] = None
+                    else:
+                        span.update(team=obj["team"], teamConfidence=obj["teamConfidence"],
+                                    teamVotes=0 if assignment is None else assignment.votes)
                     previous = motion.get(str(track))
                     if obj["pitch"] is not None:
                         if previous and previous["shot"] == frame["shot"]:
@@ -530,11 +607,15 @@ def analyse_to_store(path: Path, output: Path, options: AnalysisOptions | None =
             "slowdown": round(processing / timing["duration"], 2), "analysedFrames": frame_count,
             "analysedFramesPerSecond": round(frame_count / max(seconds["frames"], 1e-9), 2),
             "pipelineFramesPerSecond": round(frame_count / max(processing, 1e-9), 2),
-            "videoFramesPerSecond": video["fps"], **meter.summary()}
+            "videoFramesPerSecond": video["fps"], "identitySeconds": round(store.state("identity_seconds", 0), 2),
+            **meter.summary()}
+        metrics["identity"] = identity.describe(store.state("identity_plan"))
         limitations = describe_limitations(metrics)
         limitations.extend(["Les deux identités d'équipe sont apprises sur une réserve initiale bornée ; "
                             "un changement de tenue ultérieur peut laisser des joueurs inconnus.",
-                            "Sans réidentification, un identifiant de suivi ne garantit pas l'identité du joueur."])
+                            "Sans réidentification, un identifiant de suivi ne garantit pas l'identité du joueur : "
+                            "un échange entre joueurs de maillots différents est corrigé seulement à un contact "
+                            "masqué, quand les maillots le prouvent ; entre coéquipiers, il n'est pas détecté."])
         if timing["timestamps"] != "container":
             limitations.append("Horodatages du conteneur inutilisables : temps reconstitués à la cadence nominale ; "
                                "la synchronisation d'une source à cadence variable n'est pas garantie.")

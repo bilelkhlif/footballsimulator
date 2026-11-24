@@ -12,6 +12,10 @@ Pour une vidéo téléversée, le document JSON réunit les trois (en-tête, pui
 résumé). Pour un flux en direct, les mêmes objets circulent un par un : document_to_messages et
 messages_to_document passent de l'un à l'autre.
 
+Champs facultatifs d'une personne : « distanceM » (distance cumulée) et « identity » : « uncertain »
+pendant un contact où le suivi a échangé deux joueurs puis a été corrigé (identity.py) ; qui est
+qui n'y est pas connu, et l'équipe y est absente. Version 1 inchangée : ces champs s'ajoutent.
+
 Repère du terrain : origine au point central, en mètres ; x le long du terrain, vers le but de
 droite de l'image ; y le long de la largeur, vers la caméra principale. Une position absente
 (None) n'est jamais remplacée par une valeur inventée : « pitchStatus » en donne la cause.
@@ -213,6 +217,9 @@ def _frame_problems(frame: dict[str, Any], position: int, previous_time: float) 
             problems.append(f"{where}.objects[{k}].box invalide")
         if obj.get("team") not in (None, 0, 1):
             problems.append(f"{where}.objects[{k}].team invalide")
+        # Champ facultatif : présent seulement pendant un contact corrigé (identity.py).
+        if "identity" in obj and (obj["identity"] != "uncertain" or obj.get("team") is not None):
+            problems.append(f"{where}.objects[{k}].identity invalide")
     return problems
 
 

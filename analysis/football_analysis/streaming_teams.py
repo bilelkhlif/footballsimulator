@@ -419,6 +419,24 @@ class TeamState:
             state["votes"] = deque(detailed.get(track, [])[-self.vote_window:], maxlen=self.vote_window)
             state["initial"] = _copy_assignment(assignment)
 
+    def seed(self, track: int, assignment: TeamAssignment, labels: list[int | None], time: float = 0.0) -> None:
+        """Remplace l'amorce d'une identité corrigée par ses seuls votes de preuve (identity.py).
+
+        Le vote du regroupement initial d'une trajectoire échangée mélange deux joueurs ; il ne
+        doit pas survivre à la correction.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Analyse par segments — votes des identités corrigées
+        """
+        if not math.isfinite(time) or time < 0:
+            raise ValueError("instant des votes invalide")
+        if any(label not in (None, 0, 1) for label in labels):
+            raise ValueError("votes de preuve invalides")
+        state = self._touch(_track_id(track), time)
+        state["votes"] = deque(labels[-self.vote_window:], maxlen=self.vote_window)
+        state["initial"] = _copy_assignment(assignment)
+
     def assignment(self, track: int) -> TeamAssignment:
         """Résume les votes, en comptant les abstentions dans leur dénominateur.
 
