@@ -14,6 +14,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { testVisualizerAsyncRegressions } from './visualizer-async-regressions.mjs';
 
 const DEMO_ID = 'match-synthetique';
 const FPS = 25;
@@ -474,4 +475,5 @@ export async function testVisualizerModes(browser, urls, record) {
   await testCorruptedDemo(browser, urls.root, record);
   await testMobileLayouts(browser, urls.subPath, record);
   await testLocalStates(browser, urls.root, record);
+  await testVisualizerAsyncRegressions(browser, urls.root, record);
 }

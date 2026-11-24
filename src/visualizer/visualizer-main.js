@@ -155,6 +155,10 @@ class MatchVisualizer {
    * @role Visualiseur de match — choix du mode
    */
   async #initialMode() {
+    if (this.mode !== null) {
+      return; // un choix explicite effectué pendant le démarrage reste prioritaire
+    }
+    const generation = this.openGeneration;
     const params = new URLSearchParams(window.location.search);
     if (params.has('demo') || params.get('mode') === 'demo') {
       await this.setMode('demo', { open: params.get('demo') });
@@ -162,7 +166,11 @@ class MatchVisualizer {
       this.probeSameOrigin = true;
       await this.setMode('local', { server: params.get('serveur'), open: params.get('analyse') });
     } else {
-      await this.setMode(servedByAnalysisServer() && await this.#sameOriginServer() ? 'local' : 'demo');
+      const local = servedByAnalysisServer() && await this.#sameOriginServer();
+      if (generation !== this.openGeneration) {
+        return;
+      }
+      await this.setMode(local ? 'local' : 'demo');
     }
   }
 
@@ -208,8 +216,23 @@ class MatchVisualizer {
       this.source = this.demo;
       await this.#showDemos(open, generation);
     } else {
+      byId('upload-input').disabled = true;
+      this.setConnectionState('connecting');
       await this.#connectLocal(server, open, generation);
     }
+  }
+
+  /**
+   * Une réponse ne peut modifier que la source et la génération qui l'ont demandée.
+   * @param {number} generation génération capturée avant la requête
+   * @param {{kind: string}|null} source source capturée avant la requête
+   * @returns {boolean}
+   * @responsable Bilel Khlif
+   * @date 2026-11-24
+   * @role Visualiseur de match — isolation des opérations asynchrones
+   */
+  #isCurrentSource(generation, source) {
+    return generation === this.openGeneration && source === this.source && source?.kind === this.mode;
   }
 
   /**
@@ -221,6 +244,8 @@ class MatchVisualizer {
   #closeAnalysis() {
     clearTimeout(this.manifestTimer);
     clearTimeout(this.jobTimer);
+    this.manifestTimer = null;
+    this.jobTimer = null;
     this.store?.dispose?.();
     this.store = null;
     this.currentAnalysis = null;
@@ -282,6 +307,9 @@ class MatchVisualizer {
    */
   async #connectLocal(server, open, generation) {
     const sameOrigin = await this.#sameOriginServer();
+    if (generation !== this.openGeneration || this.mode !== 'local') {
+      return;
+    }
     let remembered = null;
     try {
       remembered = window.localStorage.getItem(SERVER_KEY);
@@ -293,14 +321,15 @@ class MatchVisualizer {
     if (server && !sameOrigin && !normaliseServerUrl(server)) {
       this.setStatus('Adresse de serveur refusée : seule la boucle locale (127.0.0.1, localhost) est acceptée.', 'error');
     }
-    this.local = new LocalAnalysisSource(base);
-    this.source = this.local;
+    const source = new LocalAnalysisSource(base);
+    this.local = source;
+    this.source = source;
     byId('server-form').hidden = sameOrigin;
     byId('server-url').value = base;
     byId('upload-input').disabled = true;
     this.setConnectionState('connecting');
-    const health = await this.local.getHealth();
-    if (generation !== this.openGeneration) {
+    const health = await source.getHealth();
+    if (!this.#isCurrentSource(generation, source)) {
       return;
     }
     if (!health) {
@@ -322,19 +351,22 @@ class MatchVisualizer {
       this.setStatus(`Poids manquants sur le serveur : ${health.missingModels.join(', ')}.`, 'error');
     }
     await this.refreshList();
-    if (open && generation === this.openGeneration) {
+    if (!this.#isCurrentSource(generation, source)) {
+      return;
+    }
+    if (open) {
       // Analyse en cours : suivie, et ouverte dès son premier segment publié. Sinon, ouverte aussitôt.
-      const status = await this.local.getAnalysis(open).catch(() => null);
-      if (generation !== this.openGeneration) {
+      const status = await source.getAnalysis(open).catch(() => null);
+      if (!this.#isCurrentSource(generation, source)) {
         return;
       }
       if (status && ['receiving', 'queued', 'running'].includes(status.status)) {
         this.currentAnalysis = open;
-        this.#followJob(open, generation);
+        this.#followJob(open, generation, { source });
         return;
       }
       await this.openAnalysis(open, { expectedGeneration: generation });
-      if (status && generation === this.openGeneration) {
+      if (status && this.#isCurrentSource(generation, source)) {
         this.#renderJob(status);
       }
     }
@@ -397,11 +429,16 @@ class MatchVisualizer {
    * @role Visualiseur de match — application
    */
   async refreshList() {
-    if (this.mode !== 'local' || !this.local) {
+    const generation = this.openGeneration;
+    const source = this.local;
+    if (!source || !this.#isCurrentSource(generation, source)) {
       return;
     }
     const select = byId('analysis-select');
-    const analyses = await this.local.listAnalyses().catch(() => []);
+    const analyses = await source.listAnalyses().catch(() => []);
+    if (!this.#isCurrentSource(generation, source)) {
+      return;
+    }
     select.replaceChildren(new Option('Analyses précédentes…', ''));
     for (const analysis of analyses) {
       const states = { failed: 'échec', interrupted: 'interrompue', queued: 'en attente', running: 'en cours' };
@@ -435,23 +472,31 @@ class MatchVisualizer {
    * @role Visualiseur de match — application
    */
   async analyse(file) {
-    if (this.mode !== 'local' || !this.local) {
+    if (this.mode !== 'local' || !this.local || this.source !== this.local) {
       return;
     }
     const generation = ++this.openGeneration;
+    const source = this.local;
     this.#closeAnalysis();
     this.#showVideo(URL.createObjectURL(file), null, { crossOrigin: null });
     try {
       this.setConnectionState('processing', 'Téléversement…');
-      const job = await this.local.uploadVideo(file, (fraction) => this.setStatus(`Téléversement : ${formatShare(fraction)}`));
-      if (generation !== this.openGeneration) {
+      const job = await source.uploadVideo(file, (fraction) => {
+        if (this.#isCurrentSource(generation, source)) {
+          this.setStatus(`Téléversement : ${formatShare(fraction)}`);
+        }
+      });
+      if (!this.#isCurrentSource(generation, source)) {
         return;
       }
       this.currentAnalysis = job.id;
       await this.refreshList();
-      await this.#followJob(job.id, generation, { fileName: file.name });
+      if (!this.#isCurrentSource(generation, source)) {
+        return;
+      }
+      await this.#followJob(job.id, generation, { fileName: file.name, source });
     } catch (error) {
-      if (generation === this.openGeneration) {
+      if (this.#isCurrentSource(generation, source)) {
         this.setConnectionState('failed', 'Échec du téléversement');
         this.setStatus(error.message, 'error');
       }
@@ -464,25 +509,28 @@ class MatchVisualizer {
    * et un serveur redémarré la rend « interrompue », donc reprenable.
    * @param {string} id
    * @param {number} generation
-   * @param {{fileName?: string}} [options]
+   * @param {{fileName?: string, source?: LocalAnalysisSource}} [options]
    * @responsable Bilel Khlif
    * @date 2026-11-24
    * @role Visualiseur de match — suivi des analyses locales
    */
-  async #followJob(id, generation, { fileName = null } = {}) {
+  async #followJob(id, generation, { fileName = null, source = this.local } = {}) {
+    if (!this.#isCurrentSource(generation, source)) {
+      return; // une opération dépassée ne doit même pas effacer une minuterie plus récente
+    }
     clearTimeout(this.jobTimer);
     let delay = POLL_INTERVAL_MS;
     let preview = null;
     const poll = async () => {
-      if (generation !== this.openGeneration) {
+      if (!this.#isCurrentSource(generation, source)) {
         return;
       }
       let status;
       try {
-        status = await this.local.getAnalysis(id);
+        status = await source.getAnalysis(id);
         delay = POLL_INTERVAL_MS;
       } catch {
-        if (generation !== this.openGeneration) {
+        if (!this.#isCurrentSource(generation, source)) {
           return;
         }
         this.setConnectionState('unavailable', 'Serveur local injoignable : nouvel essai…');
@@ -492,13 +540,13 @@ class MatchVisualizer {
         delay = Math.min(delay * 2, 10000);
         return;
       }
-      if (generation !== this.openGeneration) {
+      if (!this.#isCurrentSource(generation, source)) {
         return;
       }
       this.#renderJob(status);
       if (status.status === 'running' && status.results !== false && !this.store && !preview) {
-        preview = this.local.getTrackingManifest(id).then(async (manifest) => {
-          if (manifest?.storage.frameCount && generation === this.openGeneration && !this.store) {
+        preview = source.getTrackingManifest(id).then(async (manifest) => {
+          if (manifest?.storage.frameCount && this.#isCurrentSource(generation, source) && !this.store) {
             await this.openAnalysis(id, { keepVideo: true, expectedGeneration: generation, manifest });
           }
         }).catch(() => {
@@ -510,8 +558,11 @@ class MatchVisualizer {
         return;
       }
       await preview;
+      if (!this.#isCurrentSource(generation, source)) {
+        return;
+      }
       await this.refreshList();
-      if (status.status === 'done' && generation === this.openGeneration) {
+      if (status.status === 'done' && this.#isCurrentSource(generation, source)) {
         if (this.currentAnalysis === id && this.store instanceof PagedTrackingStore && this.store.complete) {
           this.setStatus(`Analyse terminée : ${fileName ?? this.store.source.name}`);
         } else {
@@ -566,12 +617,18 @@ class MatchVisualizer {
     }
     const generation = expectedGeneration ?? ++this.openGeneration;
     const source = this.source;
+    if (!this.#isCurrentSource(generation, source)) {
+      return;
+    }
     clearTimeout(this.manifestTimer);
     try {
       this.setStatus(source.kind === 'demo' ? 'Chargement de la démonstration…' : 'Chargement de l\'analyse…');
       const manifest = providedManifest ?? await source.getTrackingManifest(id);
+      if (!this.#isCurrentSource(generation, source)) {
+        return;
+      }
       const tracking = manifest ?? await source.getTracking(id);
-      if (generation !== this.openGeneration) {
+      if (!this.#isCurrentSource(generation, source)) {
         return;
       }
       this.store?.dispose?.();
@@ -588,7 +645,7 @@ class MatchVisualizer {
       this.video.dataset.analysis = id;
       if (manifest) {
         await this.store.ensureTime(keepVideo ? this.video.currentTime : 0);
-        if (generation !== this.openGeneration) {
+        if (!this.#isCurrentSource(generation, source)) {
           return;
         }
       }
@@ -599,10 +656,10 @@ class MatchVisualizer {
       this.#rememberInAddress(id);
       this.setStatus(`${source.kind === 'demo' ? 'Démonstration ouverte' : 'Analyse ouverte'} : ${manifest?.title ?? tracking.source.name}`);
       if (source.kind === 'local' && manifest && !manifest.complete) {
-        this.#refreshManifest(id, generation);
+        this.#refreshManifest(id, generation, source);
       }
     } catch (error) {
-      if (generation === this.openGeneration) {
+      if (this.#isCurrentSource(generation, source)) {
         this.setStatus(error.message, 'error');
         if (source.kind === 'demo') {
           this.setConnectionState('failed', 'Démonstration illisible');
@@ -658,14 +715,18 @@ class MatchVisualizer {
    * Suit les segments d'une analyse ouverte sans télécharger ses images déjà consultées.
    * @param {string} id
    * @param {number} generation
+   * @param {LocalAnalysisSource} [source] source capturée à l'ouverture de l'analyse
    * @responsable Bilel Khlif
    * @date 2026-11-23
    * @role Visualiseur de match — progression des analyses longues
    */
-  async #refreshManifest(id, generation) {
+  async #refreshManifest(id, generation, source = this.local) {
+    if (!this.#isCurrentSource(generation, source)) {
+      return;
+    }
     try {
-      const [manifest, status] = await Promise.all([this.local.getTrackingManifest(id), this.local.getAnalysis(id)]);
-      if (generation !== this.openGeneration || !(this.store instanceof PagedTrackingStore)) {
+      const [manifest, status] = await Promise.all([source.getTrackingManifest(id), source.getAnalysis(id)]);
+      if (!this.#isCurrentSource(generation, source) || !(this.store instanceof PagedTrackingStore)) {
         return;
       }
       if (manifest) {
@@ -684,13 +745,13 @@ class MatchVisualizer {
         return;
       }
     } catch {
-      if (generation === this.openGeneration) {
+      if (this.#isCurrentSource(generation, source)) {
         this.setConnectionState('unavailable', 'Serveur local injoignable : nouvel essai…');
         this.setStatus('Connexion perdue avec le serveur local ; les segments déjà chargés restent consultables.', 'error');
       }
     }
-    if (generation === this.openGeneration) {
-      this.manifestTimer = setTimeout(() => this.#refreshManifest(id, generation), 3000);
+    if (this.#isCurrentSource(generation, source)) {
+      this.manifestTimer = setTimeout(() => this.#refreshManifest(id, generation, source), 3000);
     }
   }
 
@@ -1056,15 +1117,20 @@ class MatchVisualizer {
     });
     byId('analysis-select').addEventListener('change', async (event) => {
       const id = event.target.value;
-      if (!id || !this.local) {
+      const source = this.local;
+      if (!id || this.mode !== 'local' || !source || source !== this.source) {
         return;
       }
-      await this.openAnalysis(id);
-      const status = await this.local.getAnalysis(id).catch(() => null);
-      if (status && this.currentAnalysis === id) {
+      const generation = ++this.openGeneration;
+      await this.openAnalysis(id, { expectedGeneration: generation });
+      if (!this.#isCurrentSource(generation, source) || this.currentAnalysis !== id) {
+        return;
+      }
+      const status = await source.getAnalysis(id).catch(() => null);
+      if (status && this.#isCurrentSource(generation, source) && this.currentAnalysis === id) {
         this.#renderJob(status);
         if (['receiving', 'queued', 'running'].includes(status.status)) {
-          this.#followJob(id, this.openGeneration);
+          this.#followJob(id, generation, { source });
         }
       }
     });
@@ -1077,16 +1143,24 @@ class MatchVisualizer {
     });
     byId('interrupt-analysis').addEventListener('click', async () => {
       const id = this.currentAnalysis;
-      if (!id || !this.local) {
+      const source = this.local;
+      const generation = this.openGeneration;
+      if (!id || !source || !this.#isCurrentSource(generation, source)) {
         return;
       }
       byId('interrupt-analysis').disabled = true;
       try {
-        this.#renderJob(await this.local.interruptAnalysis(id));
+        const status = await source.interruptAnalysis(id);
+        if (!this.#isCurrentSource(generation, source) || this.currentAnalysis !== id) {
+          return;
+        }
+        this.#renderJob(status);
         this.setStatus('Interruption demandée : arrêt au prochain lot d\'images ; les segments validés sont conservés.');
       } catch (error) {
-        this.setStatus(error.message, 'error');
-        byId('interrupt-analysis').disabled = false;
+        if (this.#isCurrentSource(generation, source) && this.currentAnalysis === id) {
+          this.setStatus(error.message, 'error');
+          byId('interrupt-analysis').disabled = false;
+        }
       }
     });
     byId('annotations').addEventListener('click', (event) => {
@@ -1097,20 +1171,31 @@ class MatchVisualizer {
     this.video.addEventListener('seeking', () => this.#ensureWindow(this.video.currentTime));
     byId('resume-analysis').addEventListener('click', async () => {
       const id = this.currentAnalysis;
-      if (!id || !this.local) {
+      const source = this.local;
+      const generation = this.openGeneration;
+      if (!id || !source || !this.#isCurrentSource(generation, source)) {
         return;
       }
       byId('resume-analysis').disabled = true;
       try {
-        await this.local.resumeAnalysis(id);
+        await source.resumeAnalysis(id);
+        if (!this.#isCurrentSource(generation, source) || this.currentAnalysis !== id) {
+          return;
+        }
         this.setStatus('Reprise en attente ; les segments validés sont conservés.');
         byId('resume-analysis').hidden = true;
         await this.refreshList();
-        this.#followJob(id, this.openGeneration);
+        if (this.#isCurrentSource(generation, source) && this.currentAnalysis === id) {
+          this.#followJob(id, generation, { source });
+        }
       } catch (error) {
-        this.setStatus(error.message, 'error');
+        if (this.#isCurrentSource(generation, source) && this.currentAnalysis === id) {
+          this.setStatus(error.message, 'error');
+        }
       } finally {
-        byId('resume-analysis').disabled = false;
+        if (this.#isCurrentSource(generation, source) && this.currentAnalysis === id) {
+          byId('resume-analysis').disabled = false;
+        }
       }
     });
     byId('play').addEventListener('click', () => (this.video.paused ? this.video.play() : this.video.pause()));
