@@ -1,6 +1,6 @@
 /**
  * Mise en forme des valeurs affichées par le visualiseur de match : nombres, parts, instants,
- * calibration. Séparée de visualizer-main.js pour être testée sans navigateur.
+ * calibration. Séparée de visualizer-main.mjs pour être testée sans navigateur.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */

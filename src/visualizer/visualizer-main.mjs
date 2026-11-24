@@ -12,17 +12,17 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { formatSpeed, distanceCovered, teamCentroids, velocityAt } from './analytics.js';
-import { POLL_INTERVAL_MS } from './api-client.js';
+import { formatSpeed, distanceCovered, teamCentroids, velocityAt } from './analytics.mjs';
+import { POLL_INTERVAL_MS } from './api-client.mjs';
 import { DEFAULT_SERVER_URL, LocalAnalysisSource, normaliseServerUrl } from './local-source.mjs';
 import { StaticAnalysisSource } from './static-source.mjs';
-import { applyHomography, AutoPlacer, candidateRects, scoreRegions, WEIGHTS } from './auto-placement.js';
-import { OverlayFrame } from './overlay-frame.js';
-import { OverlayPitch } from './overlay-pitch.js';
-import { describeCalibration, describeIdentityCheck, describeIdentityValues, formatNumber, formatShare, formatTime } from './format.js';
-import { TrackingStore } from './tracking-store.js';
+import { applyHomography, AutoPlacer, candidateRects, scoreRegions, WEIGHTS } from './auto-placement.mjs';
+import { OverlayFrame } from './overlay-frame.mjs';
+import { OverlayPitch } from './overlay-pitch.mjs';
+import { describeCalibration, describeIdentityCheck, describeIdentityValues, formatNumber, formatShare, formatTime } from './format.mjs';
+import { TrackingStore } from './tracking-store.mjs';
 import { PagedTrackingStore } from './paged-tracking-store.mjs';
-import { boxToDisplay, containRect, VideoAnnotations } from './video-annotations.js';
+import { boxToDisplay, containRect, VideoAnnotations } from './video-annotations.mjs';
 
 /** Durée des traces, en secondes. */
 export const TRAIL_SECONDS = 4;

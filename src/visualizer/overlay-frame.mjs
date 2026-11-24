@@ -7,7 +7,7 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { EventEmitter } from '../events.js';
+import { EventEmitter } from '../events.mjs';
 
 /** Taille minimale du panneau, en pixels CSS. */
 export const MIN_PANEL_SIZE = Object.freeze({ width: 200, height: 140 });

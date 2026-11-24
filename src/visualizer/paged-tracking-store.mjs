@@ -5,7 +5,7 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { TrackingStore } from './tracking-store.js';
+import { TrackingStore } from './tracking-store.mjs';
 
 /** Durée du contexte passé, pour les traces de quatre secondes et leur image précédente. */
 export const WINDOW_BEFORE_SECONDS = 5;

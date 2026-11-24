@@ -6,8 +6,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { PagedTrackingStore } from '../../src/visualizer/paged-tracking-store.mjs';
-import { TrackingStore } from '../../src/visualizer/tracking-store.js';
-import { getTrackingManifest, getTrackingWindow, resumeAnalysis } from '../../src/visualizer/api-client.js';
+import { TrackingStore } from '../../src/visualizer/tracking-store.mjs';
+import { getTrackingManifest, getTrackingWindow, resumeAnalysis } from '../../src/visualizer/api-client.mjs';
 
 /**
  * En-tête synthétique de quatre-vingt-dix minutes, sans données du match.

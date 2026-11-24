@@ -12,7 +12,7 @@ import { StaticAnalysisSource, StaticDataError, catalogProblems, isRelativeFile,
   from '../../src/visualizer/static-source.mjs';
 import { DEFAULT_SERVER_URL, LocalAnalysisSource, normaliseServerUrl } from '../../src/visualizer/local-source.mjs';
 import { PagedTrackingStore } from '../../src/visualizer/paged-tracking-store.mjs';
-import { describeCalibration, describeIdentityCheck } from '../../src/visualizer/format.js';
+import { describeCalibration, describeIdentityCheck } from '../../src/visualizer/format.mjs';
 
 /** Adresse fictive du site ; les fichiers viennent du dossier demo/ du dépôt. */
 const SITE = 'https://exemple.test/footballsimulator/';

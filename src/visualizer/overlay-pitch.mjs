@@ -1,30 +1,30 @@
 /**
  * Terrain 3D du visualiseur de match, rendu en WebGPU dans un panneau posé sur la vidéo.
  *
- * Réutilise les modules de l'application AR : moteur de rendu WebGPU sans repli (webgpu.js), fond
- * transparent pour laisser voir la vidéo autour du plateau, terrain (pitch.js), fabrique de joueurs
- * et pions instanciés (players.js), ballon (ball.js), géométrie des flèches (tactical-arrows.js),
- * raycasting (raycasting.js) et reconnaissance du tap (pointer-input.js).
+ * Réutilise les modules de l'application AR : moteur de rendu WebGPU sans repli (webgpu.mjs), fond
+ * transparent pour laisser voir la vidéo autour du plateau, terrain (pitch.mjs), fabrique de joueurs
+ * et pions instanciés (players.mjs), ballon (ball.mjs), géométrie des flèches (tactical-arrows.mjs),
+ * raycasting (raycasting.mjs) et reconnaissance du tap (pointer-input.mjs).
  *
  * Chaque équipe a une réserve de pions ; un pion suit une trajectoire tant qu'elle est visible,
  * puis retourne sous le plateau, où il est caché. Les positions viennent de l'analyse, en mètres,
- * converties à l'échelle de la maquette (config.js) : x le long du terrain, z vers la caméra
+ * converties à l'échelle de la maquette (config.mjs) : x le long du terrain, z vers la caméra
  * principale de la vidéo. Sans calibration pour l'image affichée, aucun joueur n'est posé.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { BALL_RADIUS, PITCH_SCALE, PLAYER_SIZE } from '../config.js';
-import { createBall } from '../ball.js';
-import { createPitch } from '../pitch.js';
-import { PlayerFactory } from '../players.js';
-import { isTap } from '../pointer-input.js';
-import { pickTarget, pointerToNdc, setRayFromCamera } from '../raycasting.js';
-import { buildArrowGeometry } from '../tactical-arrows.js';
-import { createWebGpuRenderer } from '../webgpu.js';
-import { isPlausibleStep } from './analytics.js';
-import { accentOnWhite } from './video-annotations.js';
+import { BALL_RADIUS, PITCH_SCALE, PLAYER_SIZE } from '../config.mjs';
+import { createBall } from '../ball.mjs';
+import { createPitch } from '../pitch.mjs';
+import { PlayerFactory } from '../players.mjs';
+import { isTap } from '../pointer-input.mjs';
+import { pickTarget, pointerToNdc, setRayFromCamera } from '../raycasting.mjs';
+import { buildArrowGeometry } from '../tactical-arrows.mjs';
+import { createWebGpuRenderer } from '../webgpu.mjs';
+import { isPlausibleStep } from './analytics.mjs';
+import { accentOnWhite } from './video-annotations.mjs';
 
 /** Taille de la réserve de pions de chaque groupe. */
 export const POOL_SIZES = Object.freeze({ 0: 20, 1: 20, unknown: 14, referee: 5 });
@@ -163,7 +163,7 @@ export class OverlayPitch {
    * @param {(trackId: number|null) => void} onSelect appelé quand l'utilisateur touche un joueur
    *   (ou le vide)
    * @returns {Promise<OverlayPitch>}
-   * @throws {import('../webgpu.js').WebGpuUnavailableError} sans WebGPU : aucun repli
+   * @throws {import('../webgpu.mjs').WebGpuUnavailableError} sans WebGPU : aucun repli
    * @responsable Bilel Khlif
    * @date 2026-11-17
    * @role Visualiseur de match — terrain 3D

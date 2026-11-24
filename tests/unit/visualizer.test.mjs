@@ -9,15 +9,15 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { distanceCovered, formatSpeed, isPlausibleStep, teamCentroids, velocityAt } from '../../src/visualizer/analytics.js';
-import { getHealth, listAnalyses, waitForAnalysis } from '../../src/visualizer/api-client.js';
-import { applyHomography, AutoPlacer, candidateRects, overlapArea, pitchCoverage, scoreRegions } from '../../src/visualizer/auto-placement.js';
-import { describeCalibration, describeIdentityCheck, describeIdentityValues, formatShare, formatTime } from '../../src/visualizer/format.js';
-import { clampRect } from '../../src/visualizer/overlay-frame.js';
-import { pitchToScene, poolKey } from '../../src/visualizer/overlay-pitch.js';
-import { TrackingStore } from '../../src/visualizer/tracking-store.js';
-import { accentOnWhite, annotationColor, boxToDisplay, containRect, readableText, VideoAnnotations } from '../../src/visualizer/video-annotations.js';
-import { PITCH_SCALE } from '../../src/config.js';
+import { distanceCovered, formatSpeed, isPlausibleStep, teamCentroids, velocityAt } from '../../src/visualizer/analytics.mjs';
+import { getHealth, listAnalyses, waitForAnalysis } from '../../src/visualizer/api-client.mjs';
+import { applyHomography, AutoPlacer, candidateRects, overlapArea, pitchCoverage, scoreRegions } from '../../src/visualizer/auto-placement.mjs';
+import { describeCalibration, describeIdentityCheck, describeIdentityValues, formatShare, formatTime } from '../../src/visualizer/format.mjs';
+import { clampRect } from '../../src/visualizer/overlay-frame.mjs';
+import { pitchToScene, poolKey } from '../../src/visualizer/overlay-pitch.mjs';
+import { TrackingStore } from '../../src/visualizer/tracking-store.mjs';
+import { accentOnWhite, annotationColor, boxToDisplay, containRect, readableText, VideoAnnotations } from '../../src/visualizer/video-annotations.mjs';
+import { PITCH_SCALE } from '../../src/config.mjs';
 
 const CALIBRATED = { status: 'ok', keypoints: 9, inliers: 8, fitErrorPx: 2.4, fitErrorM: 0.31, holdoutErrorPx: 3.6, holdoutErrorM: 0.52, homography: [1, 0, 0, 0, 1, 0, 0, 0, 1] };
 

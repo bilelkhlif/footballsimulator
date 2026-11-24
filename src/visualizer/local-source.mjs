@@ -12,7 +12,7 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { getAnalysis, getHealth, getTracking, getTrackingManifest, getTrackingWindow, interruptAnalysis,
-  listAnalyses, resumeAnalysis, uploadVideo, videoUrl } from './api-client.js';
+  listAnalyses, resumeAnalysis, uploadVideo, videoUrl } from './api-client.mjs';
 
 /** Adresse du serveur local par défaut (football_analysis serve). */
 export const DEFAULT_SERVER_URL = 'http://127.0.0.1:8765/';
