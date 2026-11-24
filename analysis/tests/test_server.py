@@ -246,6 +246,68 @@ class RecoveryTest(unittest.TestCase):
             self.assertFalse(worker.submit(job_id))
             self.assertEqual(worker.jobs.qsize(), 1)
 
+    def test_interrupt_wins_before_the_worker_acquires_the_start_lock(self):
+        """Une interruption gagnant le verrou de démarrage empêche tout lancement, même après une lecture.
+
+        Le verrou instrumenté bloque le fil de traitement avant son acquisition, sans temporisation
+        de course : l'interruption doit gagner. Le travail reste ensuite reprenable une seule fois.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Tests de l'analyse vidéo — atomicité du démarrage et de l'interruption
+        """
+        reached, release = threading.Event(), threading.Event()
+
+        class StartGate:
+            """Retient seulement le fil de démarrage devant le verrou partagé."""
+
+            def __init__(self):
+                self.lock = threading.Lock()
+
+            def __enter__(self):
+                if threading.current_thread().name == "queued-start-regression":
+                    reached.set()
+                    if not release.wait(5):
+                        raise TimeoutError("Le test n'a pas libéré le démarrage.")
+                self.lock.acquire()
+                return self
+
+            def __exit__(self, *_):
+                self.lock.release()
+
+        with tempfile.TemporaryDirectory() as directory:
+            store = JobStore(Path(directory))
+            job_id, source = store.create("interruption.mp4", ".mp4")
+            source.write_bytes(VIDEO_BYTES)
+            calls, errors = [], []
+            worker = AnalysisWorker(store, lambda *_: calls.append(job_id) or {})
+            worker.submit(job_id)
+            worker._submission_lock = StartGate()
+
+            def process():
+                """Rapporte au test les exceptions du fil secondaire."""
+                try:
+                    worker.process(job_id)
+                except BaseException as error:
+                    errors.append(error)
+
+            thread = threading.Thread(target=process, name="queued-start-regression")
+            thread.start()
+            try:
+                self.assertTrue(reached.wait(5), "le traitement atteint le verrou de démarrage")
+                self.assertEqual(worker.interrupt(job_id)["status"], "interrupted")
+            finally:
+                release.set()
+                thread.join(5)
+            self.assertFalse(thread.is_alive())
+            self.assertEqual(errors, [])
+            self.assertEqual(calls, [], "une interruption acceptée avant le démarrage n'appelle pas l'analyse")
+            self.assertEqual(store.get(job_id)["status"], "interrupted")
+            self.assertTrue(worker.submit(job_id), "le travail interrompu reste reprenable")
+            worker.process(job_id)
+            self.assertEqual(calls, [job_id])
+            self.assertEqual(store.get(job_id)["status"], "done")
+
     def test_queued_upload_survives_a_restart(self):
         """En file et vidéo vérifiée : relancé ; en cours ou inachevé : déclaré interrompu.
 
@@ -264,6 +326,30 @@ class RecoveryTest(unittest.TestCase):
             self.assertEqual(store.get(running)["status"], "failed")
             self.assertEqual(store.get(receiving)["status"], "failed")
             self.assertEqual(store.get(queued)["status"], "queued")
+
+    def test_stale_queue_entries_only_start_after_explicit_submission(self):
+        """Une ancienne entrée ne relance ni un échec, ni un traitement déjà en cours.
+
+        @responsable Bilel Khlif
+        @date 2026-11-24
+        @role Tests de l'analyse vidéo — état admissible au démarrage
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            store = JobStore(Path(directory))
+            job_id, source = store.create("perime.mp4", ".mp4")
+            source.write_bytes(VIDEO_BYTES)
+            calls = []
+            worker = AnalysisWorker(store, lambda *_: calls.append(job_id) or {})
+            for status in ("receiving", "running", "failed", "interrupted", "done"):
+                with self.subTest(status=status):
+                    store.update(job_id, status=status)
+                    worker.process(job_id)
+                    self.assertEqual(calls, [])
+                    self.assertEqual(store.get(job_id)["status"], status)
+            self.assertTrue(worker.submit(job_id))
+            worker.process(job_id)
+            self.assertEqual(calls, [job_id])
+            self.assertEqual(store.get(job_id)["status"], "done")
 
 
 class RangeTest(unittest.TestCase):

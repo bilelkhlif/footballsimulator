@@ -312,12 +312,14 @@ class AnalysisWorker(threading.Thread):
         @date 2026-11-17
         @role Analyse vidéo — file des analyses (traitement)
         """
-        current = self.store.get(job_id)
-        if current is None or current["status"] in ("interrupted", "done"):
-            return  # interrompue pendant l'attente, ou entrée périmée d'une analyse déjà reprise et terminée
         with self._submission_lock:
+            # L'interruption et le passage en cours partagent le même verrou : un état lu avant
+            # son acquisition pourrait être périmé et relancer un travail déjà interrompu.
+            current = self.store.get(job_id)
+            if current is None or current["status"] != "queued":
+                return  # entrée de file périmée, ou interruption ayant gagné le démarrage
             self._interrupts.discard(job_id)
-        status = self.store.update(job_id, status="running", startedAt=_now(), error=None, interruptRequested=False)
+            status = self.store.update(job_id, status="running", startedAt=_now(), error=None, interruptRequested=False)
 
         def report(stage: str, fraction: float | None, message: str) -> None:
             """Recopie la progression dans l'état du travail."""
