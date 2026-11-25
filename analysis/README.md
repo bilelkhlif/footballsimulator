@@ -8,7 +8,7 @@ Ce dossier analyse une vidéo de match : il détecte et suit les joueurs, les cl
 - Segments, reprise, mémoire et migration `.mjs` : [analyse incrémentale](../docs/analyse-incrementale.md).
 - Références sportives étudiées : [recherche et licences](../docs/sports-analytics-references.md).
 
-L'application AR reste une PWA statique. Le visualiseur lit la démo publique sans ce serveur ; seule l'analyse de vos vidéos utilise le serveur local et votre matériel. La démo de la branche d'intégration n'est pas annoncée comme déjà déployée. [Licences, composants livrés et décision du propriétaire](../docs/licences-et-distribution.md).
+L'application AR reste une PWA statique. Le visualiseur lit la démo publique sans ce serveur ; seule l'analyse de vos vidéos utilise le serveur local et votre matériel. La démonstration est publiée avec l'application sur GitHub Pages. [Licences et distribution](../docs/licences-et-distribution.md).
 
 ## Matériel
 
@@ -120,8 +120,9 @@ Il borne les connexions à 16 et les téléversements simultanés à 2, coupe un
 
 ## Licences
 
-- Ce serveur importe Ultralytics et charge des poids relevant de sa politique AGPL/Enterprise. L'exécution locale n'est pas une exemption automatique. La portée d'une combinaison, les obligations de redistribution/service, les droits sur les poids et la licence propre au projet nécessitent une décision des ayants droit. Aucun paquet serveur installé ni poids n'est publié par cette finalisation. Comparaison concrète, sources officielles et option recommandée dans [licences-et-distribution.md](../docs/licences-et-distribution.md). Les conclusions trop catégoriques de l'étude initiale sont rectifiées dans ce document.
-- Roboflow Sports (MIT), supervision (MIT), trackers (Apache-2.0), PySceneDetect (BSD-3-Clause), UMAP et scikit-learn (BSD-3-Clause), OpenCV (Apache-2.0), transformers (Apache-2.0) sont utilisés comme bibliothèques : aucun de leurs fichiers n'est copié dans le dépôt.
+- **Ce serveur est un logiciel libre sous [GNU AGPL-3.0-only](../LICENSES/AGPL-3.0-only.txt)**, © 2026 Bilel Khlif. Il importe Ultralytics (AGPL-3.0) : c'est la voie libre que décrit sa [page de licence](https://www.ultralytics.com/license), sans licence Enterprise. Toute version modifiée reste sous AGPL-3.0. Offerte à d'autres par le réseau, elle doit leur proposer son code source : `/api/health` en donne l'adresse et la licence. Détail : [licences et distribution](../docs/licences-et-distribution.md).
+- **Les poids ne sont pas distribués par le projet.** Roboflow ne publie pas de licence pour ses trois poids ; selon Ultralytics, les modèles entraînés avec son logiciel relèvent de l'AGPL-3.0. Chacun les télécharge depuis les liens officiels de Roboflow Sports, puis les vérifie. SigLIP (Apache-2.0) est le modèle des équipes par défaut. CLIP, dont la fiche exclut tout usage déployé, reste réservé à la recherche (`--teams clip`).
+- Roboflow Sports (MIT), supervision (MIT), trackers (Apache-2.0), PySceneDetect (BSD-3-Clause), UMAP et scikit-learn (BSD-3-Clause), OpenCV (Apache-2.0), transformers (Apache-2.0) sont utilisés comme bibliothèques : aucun de leurs fichiers n'est copié dans le dépôt. Inventaire complet des 88 paquets : [docs/inventaire-licences-python.md](../docs/inventaire-licences-python.md).
 - Ultralytics envoie par défaut des statistiques d'usage. Le serveur les coupe avant de charger les modèles : réglage `sync` à `false` dans `%APPDATA%\Ultralytics\settings.json`.
 
 ## Tests

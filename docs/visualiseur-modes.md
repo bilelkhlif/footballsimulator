@@ -202,10 +202,11 @@ Versions installées et licences déclarées (métadonnées des paquets, 24 nove
   2022 analysé le 17 novembre est une diffusion protégée. Aucune n'est versionnée ni publiée, ni leurs
   copies, ni les résultats de leurs analyses, qui en dérivent.
 - **AGPL-3.0** : la démonstration publique ne contient ni code d'Ultralytics, ni poids, ni sortie de modèle.
-  L'exécution locale du serveur n'est pas une exemption automatique de ses obligations. Le périmètre
-  de distribution et la licence du projet restent à décider ; aucune licence racine n'est inventée.
-  La [revue des licences du 25 novembre](licences-et-distribution.md) rectifie les conclusions trop
-  catégoriques de l'étude initiale et compare les voies possibles, sans engagement commercial.
+  L'exécution locale du serveur n'est pas une exemption automatique de ses obligations : le visualiseur
+  et le serveur sont donc publiés sous AGPL-3.0-only, la voie libre d'Ultralytics. L'application
+  académique attend l'accord écrit de ses coauteurs ([LICENSING.md](../LICENSING.md)). La
+  [revue des licences du 25 novembre](licences-et-distribution.md) décrit la voie retenue, ses
+  obligations et leur mise en œuvre.
 - Une dépendance libre ne rend pas ses poids ou ses données libres : chaque élément est évalué à part,
   et rien dont la licence n'est pas lue n'est publié.
 

@@ -281,6 +281,22 @@ class SecurityTest(unittest.TestCase):
         self.assertEqual(self.store.list(), [])
         self.assertEqual(self.request("GET", "/api/health")[0], 200)
 
+    def test_health_offers_the_licence_and_the_source_code(self):
+        """/api/health du vrai serveur indique sa licence et l'adresse de son code complet.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Tests du serveur — offre du code source (AGPL-3.0, section 13)
+        """
+        from football_analysis.__main__ import describe_health
+        from football_analysis.pipeline import AnalysisOptions
+
+        state = describe_health("cpu", AnalysisOptions(models_dir=Path(self.directory.name)), 0)
+        self.assertEqual(state["license"], "AGPL-3.0-only")
+        self.assertEqual(state["source"], "https://github.com/bilelkhlif/footballsimulator")
+        self.assertTrue(state["ok"])
+        self.assertEqual(sorted(state["missingModels"]), ["ball", "pitch", "players"])
+
     def test_public_page_is_allowed_with_cors_and_private_network_access(self):
         """La page publique autorisée lit l'API et passe la requête préalable, accès au réseau privé compris.
 

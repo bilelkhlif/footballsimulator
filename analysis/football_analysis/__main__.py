@@ -18,6 +18,10 @@ from .models import DATA_DIR, MODELS_DIR, MODEL_FILES, download_models, missing_
 #: Racine du dépôt, qui contient visualizer.html.
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
+#: Licence du serveur et adresse de son code source complet, renvoyées par /api/health : un serveur
+#: offert à d'autres par le réseau doit leur proposer son code (AGPL-3.0, section 13).
+SOURCE_OFFER = {"license": "AGPL-3.0-only", "source": "https://github.com/bilelkhlif/footballsimulator"}
+
 
 def build_options(arguments: argparse.Namespace):
     """Traduit les options de la ligne de commande en réglages d'analyse.
@@ -81,6 +85,18 @@ def command_analyse(arguments: argparse.Namespace) -> int:
     return 0
 
 
+def describe_health(device: str, options, queued: int) -> dict:
+    """État renvoyé par /api/health : matériel, modèles, file d'attente, licence et code source.
+
+    @responsable Bilel Khlif
+    @date 2026-11-25
+    @role Analyse vidéo — état du serveur et offre du code source (AGPL-3.0, section 13)
+    """
+    return {"ok": True, "device": device, "missingModels": missing_models(options.models_dir),
+            "teamEmbeddings": options.team_backbone, "analysisFps": options.target_fps,
+            "queued": queued, **SOURCE_OFFER}
+
+
 def command_serve(arguments: argparse.Namespace) -> int:
     """Lance le serveur local du visualiseur et sa file d'analyses.
 
@@ -111,9 +127,7 @@ def command_serve(arguments: argparse.Namespace) -> int:
 
     def health() -> dict:
         """État du serveur, pour la page du visualiseur."""
-        return {"ok": True, "device": device, "missingModels": missing_models(options.models_dir),
-                "teamEmbeddings": options.team_backbone, "analysisFps": options.target_fps,
-                "queued": worker.jobs.qsize()}
+        return describe_health(device, options, worker.jobs.qsize())
 
     origins = arguments.allow_origin or list(DEFAULT_ALLOWED_ORIGINS)
     server = VisualizerServer((arguments.host, arguments.port), store, worker, REPOSITORY_ROOT, health, probe=probe_video,
@@ -248,7 +262,7 @@ def main(argv: list[str] | None = None) -> int:
     if arguments.command == "models":
         try:
             if arguments.download:
-                print("Téléchargement explicite depuis les sources de models.lock.json ; aucune licence de projet n'est accordée par cette commande.")
+                print("Téléchargement explicite depuis les sources de models.lock.json ; les poids restent soumis aux conditions de leurs auteurs (THIRD_PARTY_NOTICES.md).")
                 for path in download_models():
                     print(f"Téléchargé et vérifié : {path.name}")
             print(json.dumps(verified_models(MODELS_DIR, tuple(MODEL_FILES)), ensure_ascii=False))

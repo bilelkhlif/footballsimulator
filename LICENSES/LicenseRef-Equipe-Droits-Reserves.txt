@@ -1,0 +1,17 @@
+Football Simulator — application académique et documents de l'équipe
+
+Copyright (c) 2026 Équipe Football Simulator : Iyed Rachdi, Bilel Khlif, Ghassen Dalleji.
+
+Tous droits réservés. Aucune licence n'est accordée sur ces fichiers.
+
+Ces fichiers sont publiés pour consultation, dans le cadre du projet académique de SUP'COM
+(module Réalité Étendue, 2026–2027). Leur conception est collective : le cahier des charges et
+plusieurs assets sont déclarés comme créations de l'équipe dans ATTRIBUTION.md. Une licence ne
+peut donc être accordée qu'avec l'accord écrit de chacun des coauteurs.
+
+La licence proposée est la GNU Affero General Public License version 3 (AGPL-3.0-only), déjà
+appliquée au visualiseur de match et au serveur d'analyse (voir LICENSING.md et REUSE.toml). La
+demande d'accord se trouve dans docs/demande-accord-licence.md.
+
+Certains de ces fichiers contiennent aussi des éléments de tiers, qui restent soumis à leurs
+propres droits, en particulier le logo de SUP'COM dans docs/presentation/, propriété de SUP'COM.

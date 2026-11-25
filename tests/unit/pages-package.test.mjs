@@ -45,7 +45,8 @@ function importsOf(source) {
 test('la préparation Pages contient la coquille et tout le visualiseur, sans serveur, poids ou données privées', () => {
   const output = preparePages();
   try {
-    for (const file of [...readAppShell(), 'visualizer.html', 'demo/index.json', 'demo/matches/match-synthetique/video.mp4', 'THIRD_PARTY_NOTICES.md']) {
+    for (const file of [...readAppShell(), 'visualizer.html', 'demo/index.json', 'demo/matches/match-synthetique/video.mp4', 'THIRD_PARTY_NOTICES.md',
+      'LICENSING.md', 'REUSE.toml', 'LICENSES/AGPL-3.0-only.txt', 'LICENSES/MIT.txt', 'LICENSES/LicenseRef-Equipe-Droits-Reserves.txt']) {
       assert.ok(existsSync(path.join(output, file)), file);
     }
     assert.deepEqual(listFiles(path.join(output, 'src')), listFiles(path.join(REPO_ROOT, 'src')), 'src/ copié à l\'identique');

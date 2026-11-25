@@ -27,7 +27,7 @@
 - **Espaces de coaching.** Rail sombre compact et sept espaces fonctionnels : Accueil, Équipes et formations, Outils tactiques, Animation et séquences, Réalité augmentée, Plus d'outils, Réglages et aide. Une seule scène, un seul tableau et un seul historique sont conservés entre les espaces. Navigation basse en portrait, panneaux défilants et contrôles de vue persistants. L'[inventaire, l'architecture, les correspondances et les captures avant / après](docs/espaces-coaching.md) détaillent cette évolution.
 - **Testé.** 369 tests automatisés sur PC le 24 novembre 2026 : 229 unitaires et 140 de bout en bout, dont le parcours complet d'un entraîneur de la 3D vers l'AR émulée, tous réussis sans cas ignoré ([revue critique, mesures et limites](docs/revue-finale-pr17.md)). Les anciens essais physiques du 12 et du 14 novembre concernent des versions précédentes : AR WebGPU sur TECNO POVA 6 Pro 5G, mode test WebGL sur Galaxy S10e. Cette nouvelle interface n'a pas été testée sur téléphone réel. Restent à mesurer : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde ([recette](docs/recette.md)).
 
-- **Analyse de match intégrée.** Le visualiseur de match (PR #15) s'ouvre depuis l'espace Plus d'outils, dans un nouvel onglet : la tactique en cours reste intacte. La démonstration synthétique se lit sans serveur ; vos propres vidéos passent par le serveur d'analyse local. La perte du GPU est signalée et le lecteur vidéo récupère une erreur de décodage. Préparation de la publication, le 25 novembre 2026 : serveur d'analyse durci, poids vérifiés avant tout chargement, PyTorch 2.14.1, site statique préparé sans le serveur ; 274 tests unitaires, 207 vérifications dans Chrome, 127 tests Python et 12 étapes du parcours CUDA réel, tous réussis. Les défauts reproduits sont dans la [revue indépendante](docs/revue-independante-pr19-pr20.md). Le [compte rendu d'intégration](docs/integration-visualiseur.md) donne les résultats ; les décisions de licence restent au propriétaire ([licences et distribution](docs/licences-et-distribution.md)).
+- **Analyse de match intégrée.** Le visualiseur de match (PR #15) s'ouvre depuis l'espace Plus d'outils, dans un nouvel onglet : la tactique en cours reste intacte. La démonstration synthétique se lit sans serveur ; vos propres vidéos passent par le serveur d'analyse local. La perte du GPU est signalée et le lecteur vidéo récupère une erreur de décodage. Préparation de la publication, le 25 novembre 2026 : serveur d'analyse durci, poids vérifiés avant tout chargement, PyTorch 2.14.1, site statique préparé sans le serveur ; 274 tests unitaires, 207 vérifications dans Chrome, 127 tests Python et 12 étapes du parcours CUDA réel, tous réussis. Les défauts reproduits sont dans la [revue indépendante](docs/revue-independante-pr19-pr20.md). Le [compte rendu d'intégration](docs/integration-visualiseur.md) donne les résultats. Le visualiseur et le serveur sont sous AGPL-3.0-only ; l'application académique attend l'accord écrit des coauteurs ([LICENSING.md](LICENSING.md)).
 
 ## Aperçu
 
@@ -368,6 +368,19 @@ Sur un téléphone dont Chrome bloque WebGPU (Android 11 ou plus ancien), l'appl
 
 Le protocole de validation finale, avec le tableau des résultats à remplir, est dans [docs/recette.md](docs/recette.md#5-protocole-de-validation-physique) ; le mode d'emploi complet, dans le [manuel utilisateur](docs/manuel-utilisateur.md).
 
+## Dépannage
+
+| Symptôme | Cause probable et solution |
+| --- | --- |
+| « Football Simulator a besoin de WebGPU » | Navigateur sans WebGPU : ouvrir Chrome ou Edge à jour, sur ordinateur ou sur Android. Safari 26 et Firefox ne sont pas testés. L'application n'a pas de repli WebGL ; le mode test `?webgl` sert seulement aux essais |
+| Pas de bouton « Entrer en AR » | L'AR WebXR demande Chrome sur Android, avec les Services Google Play pour la RA, en HTTPS. Si l'application affiche l'aide d'un drapeau de Chrome, l'AR existe mais ne sait pas encore afficher du WebGPU : suivre cette aide. Sur PC, `?iwer` émule l'AR |
+| Visualiseur : « Serveur local injoignable » depuis le site publié | Chrome demande l'autorisation « Accès au réseau local » pour joindre `127.0.0.1` : l'accepter. À défaut, ouvrir `http://127.0.0.1:8765/visualizer.html`, servie par le serveur lui-même |
+| « Modèles non vérifiés » ou « Poids absent » | Lancer `python -m football_analysis models --download` dans `analysis/`. Si un poids est refusé, le supprimer, puis relancer : une empreinte différente n'est jamais acceptée |
+| « PyTorch vulnérable » | Environnement ancien : recréer `.venv` avec la recette de [analysis/README.md](analysis/README.md) (PyTorch 2.14.1) |
+| Analyse sur `cpu` alors qu'un GPU NVIDIA est présent | Installer PyTorch depuis l'index `cu126`. `nvidia-smi` doit afficher « CUDA Version » 12.6 ou plus |
+| Terrain 3D arrêté, « le processeur graphique a été réinitialisé » | Le pilote du GPU a redémarré, par exemple après l'arrêt brutal d'un calcul CUDA : recharger la page. La vidéo, elle, se recharge seule |
+| Port 8765 déjà utilisé | `python -m football_analysis serve --port 8766`, puis indiquer cette adresse dans le visualiseur |
+
 ## Déploiement
 
 L'application est un site statique, sans compilation ni dépendance de production. GitHub Pages le publie depuis la branche `main`, à la racine du dépôt (Settings → Pages : « Deploy from a branch », `main`, `/`). Il le sert en HTTPS, exigé par WebXR et par le Service Worker, à l'adresse https://bilelkhlif.github.io/footballsimulator/.
@@ -380,7 +393,9 @@ Pour publier une nouvelle version :
 4. GitHub Pages republie le site en une à deux minutes (onglet Actions, « pages build and deployment ») ;
 5. vérifier le site publié. Il affiche « Rendu WebGPU ». Les appareils qui avaient l'ancienne version reçoivent l'avis « Nouvelle version installée ».
 
-Pour un autre hébergeur, servir le dossier du dépôt tel quel, en HTTPS, avec le type MIME `text/javascript` pour les fichiers `.js`.
+Pour un autre hébergeur, servir le dossier du dépôt tel quel, en HTTPS, avec le type MIME `text/javascript` pour les fichiers `.js` et `.mjs`. `npm run pages:prepare` copie dans un nouveau dossier la seule partie publique : application, visualiseur, démonstration synthétique, licences et avis. Il exclut le serveur, les tests et la documentation.
+
+GitHub Pages publie aussi le visualiseur et sa démonstration synthétique, qui fonctionnent sans serveur. Le serveur d'analyse, en Python, ne peut pas tourner sur GitHub Pages : chacun l'installe sur son propre PC, et aucun serveur IA public n'est déployé.
 
 ## Tests
 
@@ -551,7 +566,7 @@ Issues du cahier des charges (§7) :
 | --- | --- |
 | Iyed Rachdi | Session WebXR, hit testing, ancrage du terrain |
 | Bilel Khlif | Scène three.js, modélisation du terrain et des joueurs, formations |
-| Ghassen Dallekji | Interface HTML, raycasting, PWA, documentation |
+| Ghassen Dalleji | Interface HTML, raycasting, PWA, documentation |
 
 Les contributions effectivement documentées, et l'usage de l'IA, sont déclarés dans [ATTRIBUTION.md](ATTRIBUTION.md) (§4).
 
@@ -563,4 +578,8 @@ Encadrant : Dr. Ing. Mohamed-Bécha Kaâniche.
 - [IWER](https://github.com/meta-quest/immersive-web-emulation-runtime) 2.7.0, Meta, licence MIT, chargé depuis jsDelivr en développement seulement.
 - [Playwright](https://github.com/microsoft/playwright) (`playwright-core` 1.64.1), Microsoft, licence Apache 2.0, pour les tests seulement.
 
-L'origine de chaque ressource et l'usage de l'IA sont déclarés dans [ATTRIBUTION.md](ATTRIBUTION.md). Les composants tiers du site et du serveur facultatif sont inventoriés dans [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Aucune licence n'a encore été choisie pour le projet.
+L'origine de chaque ressource et l'usage de l'IA sont déclarés dans [ATTRIBUTION.md](ATTRIBUTION.md). Les composants tiers du site et du serveur facultatif sont inventoriés dans [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Licence
+
+Le visualiseur de match et le serveur d'analyse (`analysis/`, `src/visualizer/`, `visualizer.html`, `demo/`) sont un logiciel libre sous [GNU AGPL-3.0-only](LICENSES/AGPL-3.0-only.txt), © 2026 Bilel Khlif. C'est la voie libre qu'exige Ultralytics. L'application académique et les documents de l'équipe sont publiés pour consultation, sans licence pour l'instant. Ils attendent l'accord écrit des trois coauteurs ([demande](docs/demande-accord-licence.md)). three.js garde sa licence MIT. La correspondance de chaque fichier est dans [REUSE.toml](REUSE.toml), vérifiée par `reuse lint` ; les raisons sont dans [LICENSING.md](LICENSING.md).

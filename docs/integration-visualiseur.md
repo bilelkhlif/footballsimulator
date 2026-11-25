@@ -305,9 +305,9 @@ termine 151 s après le téléversement.
   de l'application installée. Le visualiseur n'est pas promis hors ligne.
 - **Taille publiée.** La démonstration publique `demo/` pèse environ 2,2 Mo, chargés seulement à
   l'ouverture du visualiseur.
-- **Licences.** Le serveur d'analyse dépend d'Ultralytics (AGPL-3.0 ou licence Enterprise) et de poids
-  dont les droits ne sont pas établis. Ni les poids ni les vidéos de match ne sont dans le dépôt, et le
-  dépôt n'a pas de fichier LICENSE. Les décisions sont réservées au propriétaire :
+- **Licences.** Le visualiseur et le serveur sont sous AGPL-3.0-only, la voie libre d'Ultralytics, sans
+  licence Enterprise. L'application académique attend l'accord écrit de ses coauteurs. Les poids et les
+  vidéos de match ne sont pas distribués. Voir [LICENSING.md](../LICENSING.md) et
   [licences-et-distribution.md](licences-et-distribution.md).
 - **PyTorch.** GHSA-v32g touche 2.14.1, atténué par la vérification des poids ; la correction demande
   CUDA 13 et un pilote NVIDIA plus récent.

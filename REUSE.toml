@@ -1,0 +1,56 @@
+# Licence de chaque fichier du dépôt, au format REUSE 3.3 (https://reuse.software/spec-3.3/).
+# Quand plusieurs blocs correspondent à un fichier, le dernier l'emporte.
+# Lecture humaine et raisons : LICENSING.md.
+version = 1
+
+# 1. Par défaut : application académique en sept espaces et documents de l'équipe. Tous droits
+#    réservés, en attente de l'accord écrit des trois coauteurs (docs/demande-accord-licence.md).
+[[annotations]]
+path = "**"
+SPDX-FileCopyrightText = "2026 Équipe Football Simulator : Iyed Rachdi, Bilel Khlif, Ghassen Dalleji"
+SPDX-License-Identifier = "LicenseRef-Equipe-Droits-Reserves"
+
+# 2. three.js r187, copié sans modification ; sa licence d'origine est dans le dossier.
+[[annotations]]
+path = "src/vendor/three-r187/**"
+SPDX-FileCopyrightText = "2010-2026 three.js authors"
+SPDX-License-Identifier = "MIT"
+
+# 3. Visualiseur de match et serveur d'analyse par IA, ajoutés au projet par Bilel Khlif, seul
+#    auteur des commits (ATTRIBUTION.md, contributions 23 et 24). AGPL-3.0-only, voie libre exigée
+#    par la licence d'Ultralytics pour un projet qui l'utilise.
+[[annotations]]
+path = [
+  "analysis/**",
+  "demo/**",
+  "src/visualizer/**",
+  "visualizer.html",
+  "tests/visualizer-*.mjs",
+  "tests/service-worker-media-tests.mjs",
+  "tests/prepare-pages.mjs",
+  "tests/fixtures/**",
+  "tests/unit/paged-tracking.test.mjs",
+  "tests/unit/pages-package.test.mjs",
+  "tests/unit/service-worker-fetch.test.mjs",
+  "tests/unit/static-server-security.test.mjs",
+  "tests/unit/visualizer-sources.test.mjs",
+  "tests/unit/visualizer.test.mjs",
+  "docs/analyse-incrementale.md",
+  "docs/attribution-visualiseur.md",
+  "docs/compatibilite-equipes-*.json",
+  "docs/demande-accord-licence.md",
+  "docs/equipes-lumiere-recherche.md",
+  "docs/identites-contacts.md",
+  "docs/integration-visualiseur.md",
+  "docs/inventaire-licences-python.md",
+  "docs/licences-et-distribution.md",
+  "docs/opensource-research.md",
+  "docs/revue-independante-pr19-pr20.md",
+  "docs/sports-analytics-references.md",
+  "docs/validation-*.json",
+  "docs/visualiseur-*.md",
+  "LICENSING.md",
+  "THIRD_PARTY_NOTICES.md",
+]
+SPDX-FileCopyrightText = "2026 Bilel Khlif"
+SPDX-License-Identifier = "AGPL-3.0-only"
