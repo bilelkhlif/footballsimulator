@@ -17,6 +17,8 @@ import { fileURLToPath } from 'node:url';
 import { testVisualizerAsyncRegressions } from './visualizer-async-regressions.mjs';
 
 const DEMO_ID = 'match-synthetique';
+/** Le scénario synthétique reste la fixture contrôlée ; la première entrée publique est réelle. */
+const PUBLIC_DEMO_ID = 'france-allemagne-2018';
 const FPS = 25;
 const MANIFEST = JSON.parse(readFileSync(fileURLToPath(new URL(`../demo/matches/${DEMO_ID}/manifest.json`, import.meta.url)), 'utf8'));
 const CONTACT = MANIFEST.metrics.identity.scriptedContacts[0];
@@ -559,7 +561,7 @@ async function testAcademicNavigation(browser, url, record) {
       const workspace = await page.evaluate(() => document.body.dataset.workspace);
       await visualizer.close();
       const ok = attributes.href === 'visualizer.html' && attributes.target === '_blank' && attributes.rel.includes('noopener')
-        && opened.mode === 'demo' && opened.analysis === DEMO_ID && JSON.stringify(after) === JSON.stringify(before)
+        && opened.mode === 'demo' && opened.analysis === PUBLIC_DEMO_ID && JSON.stringify(after) === JSON.stringify(before)
         && after.formations.blue === '3-5-2' && workspace === 'more';
       return [ok, `lien ${JSON.stringify(attributes)} ; visualiseur ${JSON.stringify(opened)} ; tactique identique : ${JSON.stringify(after) === JSON.stringify(before)} ; espace ${workspace}`];
     });
