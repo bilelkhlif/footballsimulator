@@ -35,7 +35,9 @@ def build_options(arguments: argparse.Namespace):
     return AnalysisOptions(models_dir=Path(arguments.models), target_fps=arguments.fps, device=arguments.device,
                            use_ball_model=not arguments.no_ball_model, team_backbone=arguments.teams,
                            max_seconds=getattr(arguments, "max_seconds", None),
-                           chunk_seconds=arguments.chunk_seconds, team_fit_seconds=arguments.team_fit_seconds)
+                           chunk_seconds=arguments.chunk_seconds, team_fit_seconds=arguments.team_fit_seconds,
+                           reference_calibration=(Path(arguments.reference_calibration)
+                                                  if getattr(arguments, "reference_calibration", None) else None))
 
 
 def disable_ultralytics_analytics() -> None:
@@ -71,7 +73,14 @@ def command_analyse(arguments: argparse.Namespace) -> int:
         percent = "" if fraction is None else f" {fraction:4.0%}"
         print(f"\r[{stage}]{percent} {message}".ljust(70), end="", file=sys.stderr, flush=True)
 
-    document = analyse_to_store(video, database, build_options(arguments), report)
+    from .reference_calibration import ReferenceError
+
+    try:
+        document = analyse_to_store(video, database, build_options(arguments), report)
+    except ReferenceError as error:
+        print(file=sys.stderr)
+        print(f"Calibration de référence refusée : {error}", file=sys.stderr)
+        return 2
     print(file=sys.stderr)
     if output != database:
         # Export facultatif compatible avec les anciens outils, sans chargement du match entier.
@@ -169,7 +178,12 @@ def command_export(arguments: argparse.Namespace) -> int:
         manifest = export_analysis(database, output, video=video, analysis_id=analysis_id, title=arguments.title,
                                    overwrite=arguments.replace, allow_other_video=arguments.other_video)
         if arguments.catalog:
-            update_catalog(Path(arguments.catalog), output, manifest, arguments.description)
+            check = None if arguments.calibration_check is None else {
+                "verdict": arguments.calibration_check, "note": arguments.calibration_note or ""}
+            gallery = {key: value for key, value in (
+                ("category", arguments.category), ("credit", arguments.credit), ("order", arguments.order),
+                ("calibrationCheck", check)) if value is not None}
+            update_catalog(Path(arguments.catalog), output, manifest, arguments.description, gallery=gallery)
     except ExportError as error:
         print(f"Export impossible : {error}", file=sys.stderr)
         return 1
@@ -227,6 +241,8 @@ def main(argv: list[str] | None = None) -> int:
     analyse.add_argument("video")
     analyse.add_argument("-o", "--output", help="base de suivi (par défaut : <vidéo>.tracking.sqlite) ; .json pour un export")
     analyse.add_argument("--max-seconds", type=float, help="n'analyser que le début de la vidéo")
+    analyse.add_argument("--reference-calibration", metavar="FICHIER",
+                         help="calibration de référence annotée (JSON) : remplace les points clés, comparés à chaque image")
     serve = commands.add_parser("serve", help="lancer le serveur du visualiseur")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8765)
@@ -243,6 +259,12 @@ def main(argv: list[str] | None = None) -> int:
     export.add_argument("--title", help="titre affiché dans le visualiseur")
     export.add_argument("--catalog", help="catalogue à mettre à jour, par exemple ../demo/index.json")
     export.add_argument("--description", help="description dans le catalogue")
+    export.add_argument("--category", help="catégorie affichée dans la galerie (vue large, coup franc…)")
+    export.add_argument("--credit", help="crédit court de la vidéo affiché sur la carte de la galerie")
+    export.add_argument("--order", type=int, help="rang dans la galerie (0 : match ouvert par défaut)")
+    export.add_argument("--calibration-check", choices=("approximate", "rejected", "exact"),
+                        help="verdict du contrôle visuel de la calibration ; rejected masque les positions 3D")
+    export.add_argument("--calibration-note", help="constat du contrôle visuel, affiché dans le visualiseur")
     export.add_argument("--replace", action="store_true", help="remplace un export existant")
     export.add_argument("--other-video", action="store_true", help="accepte une vidéo transcodée, différente de la source")
     verify = commands.add_parser("verify-export", help="vérifier un export statique")

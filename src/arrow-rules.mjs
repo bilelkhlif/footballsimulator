@@ -99,7 +99,7 @@ export function sameTarget(a, b) {
  * @param {{type: string, teamId?: string, number?: number}} target
  * @returns {string}
  * @responsable Bilel Khlif
- * @date 2026-11-15
+ * @date 2026-11-23
  * @role Règles des flèches — noms affichés
  */
 export function targetLabel(target) {

@@ -682,6 +682,10 @@ def build_demo(output: Path, work: Path) -> dict:
             raise RuntimeError("Vidéo de démonstration illisible après encodage.")
         poster_path = Path(directory) / "poster.jpg"
         cv2.imwrite(str(poster_path), poster, [cv2.IMWRITE_JPEG_QUALITY, 80])
+        # Vignette légère de la galerie du visualiseur (480 × 270), tirée de l'affiche.
+        thumbnail_path = Path(directory) / "thumbnail.jpg"
+        cv2.imwrite(str(thumbnail_path), cv2.resize(poster, (480, 270), interpolation=cv2.INTER_AREA),
+                    [cv2.IMWRITE_JPEG_QUALITY, 74])
         bundle = output / "matches" / DEMO_ID
         manifest = export_analysis(
             database, bundle, video=video, analysis_id=DEMO_ID, title=DEMO_TITLE, overwrite=True,
@@ -689,10 +693,13 @@ def build_demo(output: Path, work: Path) -> dict:
                         "generator": {"name": "football_analysis.demo_match", "version": GENERATOR_VERSION, "seed": SEED},
                         "license": "Vidéo et données générées pour ce dépôt : aucune image réelle, aucun poids de modèle.",
                         "notes": ["Annotations exactes par construction : aucune mesure de précision de l'analyse IA."]},
-            extra_files={"poster.jpg": poster_path})
+            extra_files={"poster.jpg": poster_path, "thumbnail.jpg": thumbnail_path})
     update_catalog(output / "index.json", bundle, manifest,
                    "Vidéo de diffusion simulée (36 s) et annotations au format de l'analyse : équipes, coupure, "
-                   "plan non calibré et contact masqué d'identité incertaine.")
+                   "plan non calibré et contact masqué d'identité incertaine.",
+                   gallery={"order": 3, "category": "Synthétique", "credit": "Généré pour ce dépôt · aucune image réelle",
+                            "calibrationCheck": {"verdict": "exact",
+                                                 "note": "Vidéo générée avec ses annotations : calibration exacte par construction."}})
     return manifest
 
 

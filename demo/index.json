@@ -3,12 +3,79 @@
  "version": 1,
  "matches": [
   {
+   "id": "samsunspor-altinordu-2023",
+   "title": "Samsunspor–Altınordu 2023 — penalty, vue large",
+   "path": "matches/samsunspor-altinordu-2023/",
+   "kind": "analysis",
+   "duration": 29.8,
+   "description": "Penalty filmé du haut de la tribune, vue large sur la surface : calibration automatique stabilisée et contrôlée visuellement. La démonstration la plus fiable du projet.",
+   "category": "Vue large",
+   "credit": "𐰇𐱅𐰚𐰤 · CC BY-SA 4.0 · Wikimedia Commons",
+   "order": 0,
+   "calibrationCheck": {
+    "verdict": "approximate",
+    "note": "Lignes projetées proches des lignes réelles sur six images contrôlées (écart estimé de 1 à 3 m) ; aucune vérité terrain mesurée."
+   },
+   "thumbnail": "matches/samsunspor-altinordu-2023/thumbnail.jpg",
+   "quality": {
+    "playersPerFrame": 17.03,
+    "ballShare": 0.794,
+    "calibratedShare": 1.0,
+    "medianTrackSeconds": 2.07,
+    "uncertainIdentitySeconds": 0,
+    "implausibleSpeedShare": 0.05,
+    "cuts": 0
+   }
+  },
+  {
+   "id": "bresil-afrique-du-sud-2016",
+   "title": "Brésil–Afrique du Sud 2016 — coup franc",
+   "path": "matches/bresil-afrique-du-sud-2016/",
+   "kind": "analysis",
+   "duration": 26.1,
+   "description": "Coup franc de Neymar vu d'en haut, jusqu'au but. Détection et suivi réels ; la calibration automatique est fausse sur cette vue : positions 3D masquées.",
+   "category": "Coup franc",
+   "credit": "Rodrigogomesonetwo · CC BY-SA 4.0 · Wikimedia Commons",
+   "order": 1,
+   "calibrationCheck": {
+    "verdict": "rejected",
+    "note": "sur cette vue plongeante, le modèle de points clés place la surface de réparation le long des panneaux publicitaires."
+   },
+   "thumbnail": "matches/bresil-afrique-du-sud-2016/thumbnail.jpg",
+   "quality": {
+    "playersPerFrame": 8.29,
+    "ballShare": 0.939,
+    "calibratedShare": 0.834,
+    "medianTrackSeconds": 0.6,
+    "uncertainIdentitySeconds": 0,
+    "implausibleSpeedShare": 0.109,
+    "cuts": 0
+   }
+  },
+  {
    "id": "france-allemagne-2018",
    "title": "France–Allemagne 2018 — penalty, vidéo réelle",
    "path": "matches/france-allemagne-2018/",
    "kind": "analysis",
    "duration": 26.0,
-   "description": "Vidéo réelle CC BY-SA 4.0, analysée sur RTX 2050. Vue de tribune : limites de calibration et de vitesse à consulter."
+   "description": "Penalty filmé derrière le but, à travers des drapeaux : occlusions et faux changement de plan. Calibration automatique fausse sur cette vue : positions 3D masquées.",
+   "category": "Suivi difficile",
+   "credit": "Like tears in rain · CC BY-SA 4.0 · Wikimedia Commons",
+   "order": 2,
+   "calibrationCheck": {
+    "verdict": "rejected",
+    "note": "filmé derrière le but, le modèle de points clés prend la ligne de but pour la ligne médiane et l'arc de la surface pour le rond central."
+   },
+   "thumbnail": "matches/france-allemagne-2018/thumbnail.jpg",
+   "quality": {
+    "playersPerFrame": 11.82,
+    "ballShare": 0.837,
+    "calibratedShare": 0.954,
+    "medianTrackSeconds": 2.8,
+    "uncertainIdentitySeconds": 0,
+    "implausibleSpeedShare": 0.112,
+    "cuts": 1
+   }
   },
   {
    "id": "match-synthetique",
@@ -16,7 +83,24 @@
    "path": "matches/match-synthetique/",
    "kind": "synthetic",
    "duration": 36.0,
-   "description": "Vidéo de diffusion simulée (36 s) et annotations au format de l'analyse : équipes, coupure, plan non calibré et contact masqué d'identité incertaine."
+   "description": "Vidéo de diffusion simulée (36 s) et annotations au format de l'analyse : équipes, coupure, plan non calibré et contact masqué d'identité incertaine.",
+   "category": "Synthétique",
+   "credit": "Généré pour ce dépôt · aucune image réelle",
+   "order": 3,
+   "calibrationCheck": {
+    "verdict": "exact",
+    "note": "Vidéo générée avec ses annotations : calibration exacte par construction."
+   },
+   "thumbnail": "matches/match-synthetique/thumbnail.jpg",
+   "quality": {
+    "playersPerFrame": 9.1,
+    "ballShare": 0.916,
+    "calibratedShare": 0.889,
+    "medianTrackSeconds": 6.08,
+    "uncertainIdentitySeconds": null,
+    "implausibleSpeedShare": 0.0,
+    "cuts": 2
+   }
   }
  ]
 }

@@ -97,6 +97,42 @@ export function catalogProblems(catalog) {
 }
 
 /**
+ * Champs facultatifs de la galerie, copiés seulement s'ils ont le bon type : un catalogue modifié
+ * ne peut injecter ni adresse hors de la démonstration, ni valeur non numérique dans la qualité.
+ * @param {object} entry entrée du catalogue
+ * @param {(file: string) => URL} resolve résout un fichier relatif dans la démonstration, ou lève
+ * @returns {{category: string|null, credit: string|null, order: number|null, thumbnailUrl: string|null,
+ *   calibrationCheck: {verdict: string, note: string}|null, quality: object|null}}
+ * @responsable Bilel Khlif
+ * @date 2026-11-25
+ * @role Visualiseur de match — galerie des démonstrations
+ */
+export function galleryFields(entry, resolve) {
+  const text = (value) => (typeof value === 'string' && value.trim() ? value : null);
+  let thumbnailUrl = null;
+  if (text(entry?.thumbnail)) {
+    try {
+      thumbnailUrl = resolve(entry.thumbnail).href;
+    } catch {
+      thumbnailUrl = null;
+    }
+  }
+  const check = entry?.calibrationCheck;
+  const quality = entry?.quality && typeof entry.quality === 'object' ? Object.fromEntries(
+    Object.entries(entry.quality).filter(([, value]) => value === null || (typeof value === 'number' && Number.isFinite(value) && value >= 0)),
+  ) : null;
+  return {
+    category: text(entry?.category),
+    credit: text(entry?.credit),
+    order: Number.isInteger(entry?.order) && entry.order >= 0 ? entry.order : null,
+    thumbnailUrl,
+    calibrationCheck: check && ['approximate', 'rejected', 'exact'].includes(check.verdict)
+      ? { verdict: check.verdict, note: typeof check.note === 'string' ? check.note : '' } : null,
+    quality,
+  };
+}
+
+/**
  * Défauts d'un manifeste d'export statique (mêmes règles que static-manifest.schema.json).
  * @param {any} manifest
  * @returns {string[]}
@@ -353,9 +389,10 @@ export class StaticAnalysisSource {
    * @role Visualiseur de match — source « démonstration »
    */
   async listAnalyses() {
+    const root = new URL('./', this.catalogUrl);
     return (await this.#entries()).map((entry) => ({
       id: entry.id, name: entry.title, status: 'done', kind: entry.kind, description: entry.description ?? '',
-      duration: entry.duration ?? null, resumable: false,
+      duration: entry.duration ?? null, resumable: false, ...galleryFields(entry, (file) => this.#inside(root, file)),
     }));
   }
 

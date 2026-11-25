@@ -22,7 +22,7 @@ import numpy as np
 
 from football_analysis import contract, demo_match
 from football_analysis.chunk_storage import ChunkStore
-from football_analysis.static_export import (ExportError, catalog_problems, export_analysis, path_problems,
+from football_analysis.static_export import (ExportError, catalog_problems, export_analysis, gallery_quality, path_problems,
                                              update_catalog, verify_bundle, _relative_file)
 
 REPOSITORY = Path(__file__).resolve().parents[2]
@@ -265,6 +265,46 @@ class StaticExportTest(unittest.TestCase):
         self.assertEqual(catalog_problems(json.loads((demo / "index.json").read_text(encoding="utf-8"))), [])
         with self.assertRaisesRegex(ExportError, "dossier du catalogue"):
             update_catalog(demo / "index.json", self.root / "ailleurs", manifest)
+
+    def test_catalog_gallery_fields_are_kept_checked_and_measured(self):
+        """Galerie : champs gardés d'un export à l'autre, qualité lue dans les mesures, ordre, verdict contrôlé.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Tests de l'export statique — galerie
+        """
+        demo = self.root / "demo"
+        bundle = demo / "matches" / "match-test"
+        manifest = export_analysis(self.database, bundle, video=self.video, analysis_id="match-test")
+        (bundle / "thumbnail.jpg").write_bytes(b"\xff\xd8\xff\xd9")
+        check = {"verdict": "rejected", "note": "ligne de but prise pour la ligne médiane"}
+        catalog = update_catalog(demo / "index.json", bundle, manifest, "essai",
+                                 gallery={"category": "Suivi difficile", "credit": "Auteur — CC BY-SA 4.0",
+                                          "order": 3, "calibrationCheck": check})
+        entry = catalog["matches"][0]
+        self.assertEqual(entry["thumbnail"], "matches/match-test/thumbnail.jpg")
+        self.assertEqual(entry["calibrationCheck"], check)
+        metrics = manifest["metrics"]
+        self.assertEqual(entry["quality"]["calibratedShare"], (metrics.get("calibration") or {}).get("calibratedShare"))
+        self.assertEqual(entry["quality"]["implausibleSpeedShare"],
+                         (metrics.get("positions") or {}).get("implausibleSpeedShare"))
+        shots = (metrics.get("tracking") or {}).get("shots")
+        self.assertEqual(entry["quality"]["cuts"], None if shots is None else shots - 1)
+        full = {"detection": {"peoplePerFrame": {"player": 11.8}, "ballFrameShare": 0.84},
+                "tracking": {"shots": 2, "medianTrackSeconds": 2.8}, "calibration": {"calibratedShare": 0.95},
+                "positions": {"implausibleSpeedShare": 0.11}, "identity": {"uncertainSeconds": 0}}
+        self.assertEqual(gallery_quality(full), {"playersPerFrame": 11.8, "ballShare": 0.84, "calibratedShare": 0.95,
+                                                 "medianTrackSeconds": 2.8, "uncertainIdentitySeconds": 0,
+                                                 "implausibleSpeedShare": 0.11, "cuts": 1})
+        again = update_catalog(demo / "index.json", bundle, manifest)["matches"][0]
+        for key in ("category", "credit", "order", "calibrationCheck", "description"):
+            self.assertEqual(again[key], entry[key], key)
+        self.assertEqual(catalog_problems(json.loads((demo / "index.json").read_text(encoding="utf-8"))), [])
+        bad = json.loads((demo / "index.json").read_text(encoding="utf-8"))
+        bad["matches"][0]["calibrationCheck"] = {"verdict": "parfait", "note": ""}
+        bad["matches"][0]["order"] = -1
+        bad["matches"][0]["quality"]["cuts"] = "deux"
+        self.assertEqual(len(catalog_problems(bad)), 3)
 
     def test_export_file_names_are_relative_on_windows_and_posix(self):
         """UNC, adresse réseau, lecteur relatif, flux Windows et chemin absolu sont refusés.
