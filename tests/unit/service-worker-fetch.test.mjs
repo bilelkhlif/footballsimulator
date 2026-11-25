@@ -14,14 +14,14 @@ const WORKER = readFileSync(new URL('../../sw.mjs', import.meta.url), 'utf8');
 
 /**
  * Exécute un événement fetch avec les interfaces réseau/cache du navigateur remplacées.
- * @param {{pathname?: string, headers?: object, status?: number, cached?: boolean,
+ * @param {{pathname?: string, headers?: object, responseHeaders?: object, status?: number, cached?: boolean,
  *   writeError?: boolean, openError?: boolean, lookupError?: boolean}} [options]
  * @returns {{response: Promise<Response>|undefined, finished: Promise<unknown>, calls: object}}
  * @responsable Bilel Khlif
  * @date 2026-11-24
  * @role Tests unitaires — traitement des requêtes par le Service Worker
  */
-function dispatchFetch({ pathname = 'video.mp4', headers = {}, status = 200, cached = false,
+function dispatchFetch({ pathname = 'extra.json', headers = {}, responseHeaders = {}, status = 200, cached = false,
   writeError = false, openError = false, lookupError = false } = {}) {
   const handlers = new Map();
   const calls = { fetch: 0, open: 0, put: 0, match: 0 };
@@ -39,7 +39,7 @@ function dispatchFetch({ pathname = 'video.mp4', headers = {}, status = 200, cac
     URL, Request, Response, setTimeout, clearTimeout,
     self: { location: new URL('https://example.test/footballsimulator/sw.mjs'),
       addEventListener: (type, handler) => handlers.set(type, handler) },
-    fetch: async () => { calls.fetch += 1; return new Response('réponse réseau', { status }); },
+    fetch: async () => { calls.fetch += 1; return new Response('réponse réseau', { status, headers: responseHeaders }); },
     caches: {
       open: async () => {
         calls.open += 1;
@@ -106,4 +106,21 @@ test('une réponse complète reste mise en cache pour les visites hors-ligne', a
   assert.equal(await (await result.response).text(), 'réponse réseau');
   await result.finished;
   assert.equal(result.calls.put, 1);
+});
+
+test('une vidéo complète sans Range contourne aussi le cache, même si une ancienne copie existe', async () => {
+  const result = dispatchFetch({ pathname: 'video.mp4', cached: true });
+  assert.equal(result.response, undefined);
+  await result.finished;
+  assert.deepEqual(result.calls, { fetch: 0, open: 0, put: 0, match: 0 });
+});
+
+test('une réponse no-store ou de type vidéo reste lisible sans être stockée', async () => {
+  for (const responseHeaders of [{ 'Cache-Control': 'private, no-store' }, { 'Content-Type': 'video/mp4' }]) {
+    const result = dispatchFetch({ responseHeaders });
+    assert.equal(await (await result.response).text(), 'réponse réseau');
+    await result.finished;
+    assert.equal(result.calls.put, 0);
+    assert.equal(result.calls.open, 0);
+  }
 });

@@ -1,5 +1,6 @@
 /**
  * Tests de bout en bout des sprints 1 à 4, et du mode test WebGL, exécutés dans Chrome sans interface.
+ * Depuis le visualiseur de match, aussi ceux de visualizer.html (tests/visualizer-tests.mjs).
  * Ils rejouent les vérifications consignées dans docs/sprint-1.md, docs/sprint-2.md et
  * docs/sprint-3.md.
  *
@@ -23,6 +24,9 @@ import { runFinalUxReviewTests } from './final-ux-review-tests.mjs';
 import { runSafeAreaReviewTests } from './safe-area-review-tests.mjs';
 import { runCoachingWorkflowTests } from './coaching-workflow-tests.mjs';
 import { runServiceWorkerMediaTests } from './service-worker-media-tests.mjs';
+import { testMatchVisualizer } from './visualizer-tests.mjs';
+import { testVisualizerGpuReset, testVisualizerModes } from './visualizer-modes-tests.mjs';
+import { runVisualizerReviewTests } from './visualizer-review-tests.mjs';
 
 /** Navigateur utilisé : Chrome par défaut. */
 const CHANNEL = process.env.BROWSER_CHANNEL ?? 'chrome';
@@ -2102,6 +2106,10 @@ async function main() {
     await runSafeAreaReviewTests(browser, root.url, record);
     await testDiagnostics(browser, root.url);
     await testSequencePlayback(browser, root.url);
+    await testMatchVisualizer(browser, root.url, record, recordCanvasContexts);
+    await testVisualizerModes(browser, { root: root.url, subPath: subPath.url }, record);
+    await runVisualizerReviewTests(browser, root.url, record);
+    await testVisualizerGpuReset(() => chromium.launch({ channel: CHANNEL, headless: true, args: LAUNCH_ARGS }), root.url, record);
     await testShellVersioning(browser);
     await testServiceWorkerMigration(browser);
     await testWebGpuRendering(browser, root.url);

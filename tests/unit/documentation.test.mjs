@@ -16,11 +16,12 @@ const ROOT = new URL('../../', import.meta.url);
 /**
  * Dossiers contrôlés et fichiers retenus ; src/vendor (bibliothèques tierces) n'en fait pas partie.
  * À la racine : sw.mjs, le Service Worker, et sw.js, son script de migration (docs/migration-mjs.md).
+ * src/visualizer : visualiseur de match, aux mêmes règles que l'application.
  */
-const SCOPE = [['', /^sw\.m?js$/], ['src/', /\.mjs$/], ['tests/', /\.mjs$/], ['tests/unit/', /\.mjs$/]];
+const SCOPE = [['', /^sw\.m?js$/], ['src/', /\.mjs$/], ['src/visualizer/', /\.mjs$/], ['tests/', /\.mjs$/], ['tests/unit/', /\.mjs$/]];
 
 /** Fichiers sans fonction, dont l'en-tête renvoie aussi à ATTRIBUTION.md. */
-const OTHER_SOURCES = ['index.html', 'src/styles.css'];
+const OTHER_SOURCES = ['index.html', 'src/styles.css', 'visualizer.html', 'src/visualizer/visualizer.css'];
 
 /** Déclaration de premier niveau : fonction, classe, fonction fléchée nommée ou gestionnaire. */
 const TOP_LEVEL = new RegExp('^(?:export\\s+)?(?:default\\s+)?(?:'

@@ -31,7 +31,7 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 /** Empreinte du contenu de la coquille, écrite par « npm run shell-version » (tests/shell-version.mjs). */
-const SHELL_VERSION = '15d2a647fa7d74a5';
+const SHELL_VERSION = 'd8d1fcf84bd5635f';
 const CACHE_PREFIX = 'football-simulator-';
 const CACHE_NAME = `${CACHE_PREFIX}${SHELL_VERSION}`;
 
@@ -155,7 +155,8 @@ async function removeOutdatedCaches() {
  * @role PWA — Service Worker : stratégies de cache et hors-ligne
  */
 async function storeInCache(request, response) {
-  if (response.ok && response.status !== 206) {
+  if (response.ok && response.status !== 206 && !/\bno-store\b/i.test(response.headers.get('Cache-Control') ?? '')
+    && !/^video\//i.test(response.headers.get('Content-Type') ?? '')) {
     const cache = await caches.open(CACHE_NAME);
     await cache.put(request, response.clone());
   }
@@ -284,7 +285,7 @@ self.addEventListener('activate', (event) => {
  * Requêtes : seules les requêtes GET vers l'application elle-même passent par le cache.
  * Le CDN de l'émulateur IWER, utilisé seulement en développement, est ignoré. Depuis le sprint 6,
  * les fichiers de la coquille viennent tous du cache de la même version.
- * Une requête Range passe directement au réseau, y compris pour un chemin de la coquille.
+ * Range et vidéo passent directement au réseau, y compris pour un chemin de la coquille.
  * @responsable Bilel Khlif
  * @date 2026-11-05
  * @role PWA — Service Worker : interception des requêtes
@@ -292,7 +293,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== self.location.origin || request.headers.has('Range')) {
+  if (request.method !== 'GET' || url.origin !== self.location.origin || request.headers.has('Range')
+    || request.destination === 'video' || /\.(?:mp4|m4v|mov|webm|mkv|ogv|avi)$/i.test(url.pathname)) {
     return;
   }
   if (SHELL_PATHS.has(url.pathname)) {

@@ -18,7 +18,8 @@ import { registerServiceWorker, SERVICE_WORKER_URL } from '../../src/pwa.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 /** Dossiers ignorés : dépendances, historique git, bibliothèques tierces copiées dans le dépôt. */
-const IGNORED = new Set(['node_modules', '.git', path.join('src', 'vendor')]);
+const IGNORED = new Set(['node_modules', '.git', '.audit', path.join('src', 'vendor'),
+  path.join('analysis', '.venv'), path.join('analysis', 'data')]);
 
 /**
  * Fichiers du dépôt, relatifs à la racine, hors dossiers ignorés.

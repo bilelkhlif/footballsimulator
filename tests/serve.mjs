@@ -45,6 +45,7 @@ const MIME_TYPES = {
  * @role Tests — serveur statique local
  */
 export function startServer({ root = REPO_ROOT, port = 0, basePath = '/' } = {}) {
+  root = fs.realpathSync(root);
   let latencyMs = 0;
   /** Fichiers retardés (chemins relatifs à l'application), ou null pour tous. */
   let latencyOnly = null;
@@ -53,15 +54,27 @@ export function startServer({ root = REPO_ROOT, port = 0, basePath = '/' } = {})
   /** Réponses retardées en attente, annulées à l'arrêt du serveur. */
   const delayed = new Set();
   const server = http.createServer((request, response) => {
-    const relative = decodeURIComponent(new URL(request.url, 'http://localhost').pathname).slice(basePath.length);
+    let pathname;
+    try {
+      pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+    } catch {
+      response.writeHead(400).end('Adresse invalide');
+      return;
+    }
+    const relative = pathname.slice(basePath.length);
+    // Une seule étape de décodage ; aucun séparateur Windows, lecteur, flux NTFS ou encodage imbriqué.
+    if (/[\\:\x00-\x1f%]/.test(relative)) {
+      response.writeHead(403).end('Adresse interdite');
+      return;
+    }
     if (latencyMs <= 0 || (latencyOnly && !latencyOnly.includes(relative))) {
-      serveFile(request, response);
+      serveFile(request, response, pathname);
       return;
     }
     const timer = setTimeout(() => {
       delayed.delete(timer);
       if (!response.destroyed) {
-        serveFile(request, response);
+        serveFile(request, response, pathname);
       }
     }, latencyMs);
     delayed.add(timer);
@@ -71,9 +84,9 @@ export function startServer({ root = REPO_ROOT, port = 0, basePath = '/' } = {})
    * Répond à une requête avec le fichier demandé.
    * @param {http.IncomingMessage} request
    * @param {http.ServerResponse} response
+   * @param {string} pathname chemin décodé et contrôlé une seule fois
    */
-  function serveFile(request, response) {
-    const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+  function serveFile(request, response, pathname) {
     if (!pathname.startsWith(basePath)) {
       response.writeHead(404).end();
       return;
@@ -85,12 +98,22 @@ export function startServer({ root = REPO_ROOT, port = 0, basePath = '/' } = {})
       return;
     }
     let file = path.join(root, relative);
-    if (!file.startsWith(root)) {
+    const boundary = path.relative(path.resolve(root), path.resolve(file));
+    if (boundary === '..' || boundary.startsWith(`..${path.sep}`) || path.isAbsolute(boundary)) {
       response.writeHead(403).end();
       return;
     }
-    if (fs.existsSync(file) && fs.statSync(file).isDirectory()) {
-      file = path.join(file, 'index.html');
+    try {
+      if (fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
+      file = fs.realpathSync(file);
+    } catch {
+      response.writeHead(404).end('404');
+      return;
+    }
+    const realBoundary = path.relative(root, file);
+    if (realBoundary === '..' || realBoundary.startsWith(`..${path.sep}`) || path.isAbsolute(realBoundary)) {
+      response.writeHead(403).end();
+      return;
     }
     fs.readFile(file, (error, data) => {
       if (error) {

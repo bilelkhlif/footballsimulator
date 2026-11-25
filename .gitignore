@@ -21,3 +21,12 @@ desktop.ini
 *.fls
 *.fdb_latexmk
 *.synctex.gz
+
+# Analyse vidéo (visualiseur de match) : environnement Python, modèles et vidéos locales
+analysis/.venv/
+analysis/data/
+__pycache__/
+*.pyc
+
+# Journaux de travail locaux des assistants (non versionnés)
+.audit/

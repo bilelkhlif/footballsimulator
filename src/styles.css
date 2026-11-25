@@ -115,6 +115,7 @@ dd { margin: 0; font-weight: 600; }
 .button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 .button--small { min-height: 40px; }
 .overflow-links { display: grid; gap: 10px; }
+a.button { text-decoration: none; }
 
 /* Les commandes d'origine, sans seconde barre d'outils. */
 .formation-panel { display: grid; gap: 20px; }
@@ -300,6 +301,7 @@ body[data-xr="active"] #scene-container { inset: 0; }
 body[data-xr="active"] .topbar__start, body[data-xr="active"] .connection-status,
 body[data-xr="active"] .onboarding-container, body[data-xr="active"] .view-controls,
 body[data-xr="active"] .pitch-meta { display: none; }
+body[data-xr="active"] .match-analysis { display: none; }
 body[data-xr="active"] .bottombar { grid-template-columns: 1fr; }
 body[data-xr="active"] .ar-session-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
 body[data-xr="active"] .status-line { grid-column: auto; }
