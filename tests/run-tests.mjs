@@ -607,6 +607,59 @@ async function testReducedMotion(browser, url) {
 }
 
 /**
+ * Sauvegarde automatique : une tactique modifiée (formation par son bouton, joueur déplacé, image
+ * clé) est enregistrée dans le vrai IndexedDB de Chrome peu après le changement, puis rétablie
+ * après un vrai rechargement du navigateur, avec un message ; « Réinitialiser » repart toujours des formations de départ.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Tests de bout en bout — sauvegarde automatique de la tactique
+ */
+async function testTacticAutosave(browser, url) {
+  const name = 'Sauvegarde automatique : tactique enregistrée après un changement, rétablie au rechargement';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    await clickUi(page, '#formations-toggle');
+    await clickUi(page, '.formation-button[data-team="blue"][data-formation="3-5-2"]');
+    const saved = await page.evaluate(async () => {
+      const app = window.__footballSimulator;
+      app.board.setPlayerPosition('blue', 9, { x: 0.11, z: -0.04 });
+      app.sequence.add({ players: app.board.snapshot().players, ball: app.board.getBallPosition() });
+      return app.board.snapshot();
+    });
+    // Vrai rechargement, sans visibilitychange simulé : l'enregistrement qui suit chaque changement
+    // (SAVE_DELAY_MS, 400 ms) doit suffire. Le délai couvre ce report et l'écriture IndexedDB.
+    await page.waitForTimeout(1000);
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForSelector('body.is-ready', { timeout: 20000 });
+    const after = await page.evaluate(() => ({
+      snapshot: window.__footballSimulator.board.snapshot(),
+      keyframes: window.__footballSimulator.sequence.length,
+      canUndo: window.__footballSimulator.history.canUndo,
+      hint: document.getElementById('hint')?.textContent ?? '',
+    }));
+    const reset = await page.evaluate(() => {
+      window.__footballSimulator.board.reset();
+      return window.__footballSimulator.board.getFormation('blue').name;
+    });
+    const problems = [];
+    if (JSON.stringify(after.snapshot) !== JSON.stringify(saved)) problems.push('tactique différente après rechargement');
+    if (after.keyframes !== 1) problems.push(`${after.keyframes} image(s) clé(s) au lieu de 1`);
+    if (after.canUndo) problems.push('le rétablissement est entré dans l\'historique');
+    if (!after.hint.includes('Tactique précédente rétablie')) problems.push(`message absent : « ${after.hint} »`);
+    if (reset !== '4-3-3') problems.push(`Réinitialiser donne ${reset} au lieu de 4-3-3`);
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || 'formation 3-5-2, n° 9 déplacé et une image clé rétablis');
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Vérifie le badge d'état de l'AR, le Service Worker et le rechargement hors-ligne.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
@@ -2096,6 +2149,7 @@ async function main() {
     await testFormations(browser, root.url);
     await testFormationButtons(browser, root.url);
     await testReducedMotion(browser, root.url);
+    await testTacticAutosave(browser, root.url);
     await testTacticalBoard(browser, root.url);
     await testTacticalMobile(browser, root.url);
     await testArrowRules(browser, root.url);

@@ -20,7 +20,8 @@ ballon, trace passes et courses, annule, et anime une action pas à pas. Rendu *
 **Pour évaluer.** Commencer par le [dossier d'évaluation](docs/dossier-evaluation.md) : ordre de lecture,
 preuves, résultats et limites. Puis la [matrice de conformité au cahier des charges](docs/conformite-cahier-des-charges.md),
 le [guide de démonstration](docs/guide-demonstration-soutenance.md) et la
-[matrice des contributions](docs/matrice-contributions-academiques.md).
+[matrice des contributions](docs/matrice-contributions-academiques.md). Pour le code : la
+[documentation technique](docs/technique.md), point d'entrée unique avec les améliorations à prévoir.
 
 | Point | État au 25 novembre 2026 |
 |---|---|
@@ -253,6 +254,8 @@ La barre d'outils, sous le terrain, réunit trois outils et l'historique :
 
 Un même calcul sert partout. Le toucher devient un **rayon** : depuis la caméra et à travers le point touché hors AR, depuis le `targetRaySpace` de la source d'entrée WebXR en AR. Ce rayon est confronté aux zones de sélection des joueurs, puis au plan du gazon. Le point trouvé est ramené dans le repère du terrain : le résultat ne dépend ni de la place ni de l'orientation de l'ancre. Chaque action est une **commande** annulable (patron Command), et la scène suit le tableau tactique (patron Observer). Une place hors du terrain est refusée, avec un message dans le bandeau d'aide.
 
+**Sauvegarde automatique.** La tactique en cours (formations, places des joueurs et du ballon, flèches, images clés de la séquence) est enregistrée dans le navigateur (IndexedDB) 0,4 s après chaque changement, et aussitôt quand la page passe en arrière-plan, puis rétablie au lancement suivant, avec le message « Tactique précédente rétablie ». Une donnée enregistrée est vérifiée avant d'être rétablie : invalide, elle est ignorée. Le rétablissement n'entre pas dans l'historique, et « Réinitialiser » repart toujours des formations de départ. Sans stockage (navigation privée), l'application fonctionne sans sauvegarde (`src/tactic-storage.mjs`).
+
 **Mode diagnostic** : ajouter `?diagnostics` à l'adresse affiche les images par seconde, la durée d'une image, le temps CPU par image, le moteur de rendu, l'état de la session XR, les appels de dessin, les triangles et la mémoire GPU estimée, aussi en AR. Il sert à vérifier l'objectif du cahier, au moins 30 images par seconde sur un téléphone de milieu de gamme.
 
 Mathématiques, machine à états, patron Command, tests et protocole sur téléphone : [docs/sprint-5.md](docs/sprint-5.md).
@@ -304,7 +307,7 @@ Pour essayer la démonstration, ouvrez [visualizer.html sur le site publié](htt
 | Élément | Rôle |
 | --- | --- |
 | `manifest.json` | Nom, icônes (dont une « maskable » pour Android), affichage sans barre d'adresse, identifiant stable et deux captures pour la fenêtre d'installation |
-| `sw.mjs` | Service Worker, enregistré en module : met en cache les 51 entrées de l'application (`APP_SHELL`), pour un lancement hors-ligne après une première visite |
+| `sw.mjs` | Service Worker, enregistré en module : met en cache les 55 entrées de l'application (`APP_SHELL`), pour un lancement hors-ligne après une première visite |
 | `sw.js` | Script de migration : fait passer une installation antérieure à `sw.mjs` ([docs/migration-mjs.md](docs/migration-mjs.md)) |
 | Bouton « Installer l'application » | Apparaît quand le navigateur propose l'installation ; disparaît une fois l'application installée |
 | Avis « Nouvelle version installée » | Propose de recharger quand une nouvelle version du Service Worker prend le relais |
@@ -313,7 +316,7 @@ Pour essayer la démonstration, ouvrez [visualizer.html sur le site publié](htt
 Depuis le sprint 6, la page ne mélange jamais deux versions :
 
 - **Coquille à version de contenu.** `SHELL_VERSION`, dans `sw.mjs`, est une empreinte SHA-256 du contenu des fichiers de l'application, recalculée par `npm run shell-version`. Un fichier modifié change donc `sw.mjs`, et le navigateur installe la nouvelle version.
-- **Installation d'un bloc.** Les 51 entrées sont téléchargées ensemble, sans le cache HTTP du navigateur, dans un cache propre à la version : tout ou rien.
+- **Installation d'un bloc.** Les 55 entrées sont téléchargées ensemble, sans le cache HTTP du navigateur, dans un cache propre à la version : tout ou rien.
 - **Cache d'abord** pour ces fichiers : l'application se lance aussitôt, même sur un réseau lent ou coupé, et toujours en une seule version. La nouvelle version s'applique par « Recharger ».
 - Les autres requêtes (module de l'émulateur) passent par le réseau d'abord, avec repli sur le cache après 3 secondes.
 
@@ -522,6 +525,8 @@ Résultat le 23 novembre 2026, après les retours de l'évaluation : 226 tests u
 │   ├── tactical-sequence.mjs    Images clés de la séquence animée (sprint 6, BF9)
 │   ├── sequence-player.mjs      Lecture de la séquence : temps écoulé, interpolation, vitesse
 │   ├── sequence-panel.mjs       Panneau de la séquence
+│   ├── tactic-storage.mjs       Sauvegarde automatique de la tactique dans IndexedDB, vérifiée avant rétablissement
+│   ├── theme.mjs                Thèmes clair, sombre et automatique de l'interface « verre »
 │   ├── styles.css               Styles de l'interface
 │   ├── visualizer/              Visualiseur de match (page visualizer.html) : sources démo et locale,
 │   │                            suivi par fenêtres, annotations, terrain 3D dans la vidéo, schémas JSON
@@ -550,6 +555,7 @@ Résultat le 23 novembre 2026, après les retours de l'évaluation : 226 tests u
 │   ├── icons/             Icônes de l'application
 │   └── screenshots/       Captures du manifeste (fenêtre d'installation)
 └── docs/
+    ├── technique.md       Documentation technique : point d'entrée, architecture, AR, patrons, PWA, améliorations
     ├── guide-du-code.md   Explication du code, fichier par fichier
     ├── architecture.md    Modules, graphe de scène, repère et mise en cache
     ├── convention-de-documentation.md  En-têtes des fonctions : responsable, date, rôle

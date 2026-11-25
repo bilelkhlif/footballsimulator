@@ -344,7 +344,7 @@ Le Service Worker réagit à trois événements :
 
 | Événement | Ce qu'il fait |
 | --- | --- |
-| `install` | Télécharge les 51 entrées de `APP_SHELL` d'un bloc (`cache.addAll`), sans le cache HTTP du navigateur (`cache: 'reload'`), dans le cache de la version (`football-simulator-<SHELL_VERSION>`), puis s'active aussitôt (`skipWaiting`). Si un seul fichier échoue, rien n'est installé |
+| `install` | Télécharge les 55 entrées de `APP_SHELL` d'un bloc (`cache.addAll`), sans le cache HTTP du navigateur (`cache: 'reload'`), dans le cache de la version (`football-simulator-<SHELL_VERSION>`), puis s'active aussitôt (`skipWaiting`). Si un seul fichier échoue, rien n'est installé |
 | `activate` | Supprime les caches des versions précédentes et prend le contrôle des pages ouvertes (`clients.claim`) |
 | `fetch` | Fichiers de la coquille : depuis le cache de la version (`fromShell`). Autres requêtes de la même origine : réseau d'abord, avec délai. Les requêtes vers d'autres origines (le CDN d'IWER) passent sans cache |
 

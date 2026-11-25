@@ -38,6 +38,7 @@ import { PointerInput } from './pointer-input.mjs';
 import { routeXrSelect, SELECT_ROUTES, XrTacticalInput } from './xr-input.mjs';
 import { DiagnosticsPanel, isDiagnosticsRequested } from './diagnostics.mjs';
 import { TacticalSequence } from './tactical-sequence.mjs';
+import { attachTacticAutosave, createTacticStore } from './tactic-storage.mjs';
 import { SequencePlayer } from './sequence-player.mjs';
 import { createSequencePanel } from './sequence-panel.mjs';
 import { installEmulatorIfRequested } from './dev-emulator.mjs';
@@ -313,6 +314,15 @@ async function init(renderMode) {
     onFeedback: ({ kind, message }) => hint.flash(message, kind),
   });
 
+  // Sauvegarde automatique : la tactique du dernier lancement est rétablie, une fois la scène et
+  // les panneaux abonnés au tableau ; elle est enregistrée dans IndexedDB quand la page est masquée.
+  const autosave = await attachTacticAutosave({
+    board,
+    sequence,
+    store: createTacticStore(readIndexedDb()),
+    target: document,
+  });
+
   // Réticule du hit test : en dehors du terrain, car il se déplace avant la pose.
   const reticle = createReticle();
   scene.add(reticle);
@@ -343,6 +353,10 @@ async function init(renderMode) {
   };
   interaction.on('statechange', () => refreshGuidance());
   refreshGuidance({ force: true });
+  // Après l'aide de base, qui efface tout retour en cours : le message reste lisible.
+  if (autosave.restored) {
+    hint.flash('Tactique précédente rétablie. « Réinitialiser » repart des formations de départ.', 'info');
+  }
 
   // Mode diagnostic à la demande : ?diagnostics ou l'espace Plus d'outils, sans rechargement.
   let diagnostics = isDiagnosticsRequested()
@@ -394,7 +408,7 @@ async function init(renderMode) {
   document.body.classList.add('is-ready');
   return {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave,
     get diagnostics() { return diagnostics; },
   };
 }
@@ -410,6 +424,22 @@ async function init(renderMode) {
 function readLocalStorage() {
   try {
     return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fabrique IndexedDB du navigateur, ou null si elle est refusée (réglages, contexte restreint) :
+ * l'application fonctionne alors sans sauvegarde automatique.
+ * @returns {IDBFactory|null}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Persistance — sauvegarde automatique de la tactique
+ */
+function readIndexedDb() {
+  try {
+    return window.indexedDB ?? null;
   } catch {
     return null;
   }
@@ -741,7 +771,7 @@ async function start() {
   }
   const {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave,
   } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
   const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding, workspaces, navigation });
@@ -761,6 +791,7 @@ async function start() {
     sequence,
     sequencePlayer,
     teamMeshes,
+    autosave,
     xrDevice: emulator?.xrDevice ?? null,
     get placement() {
       return arState.placement;
