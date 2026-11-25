@@ -55,7 +55,7 @@ function demoSource(options = {}) {
 
 test('démonstration : catalogue, manifeste au format du suivi, vidéo et affiche relatives', async () => {
   const source = demoSource();
-  const [demo] = await source.listAnalyses();
+  const demo = (await source.listAnalyses()).find((item) => item.id === 'match-synthetique');
   assert.equal(demo.id, 'match-synthetique');
   assert.equal(demo.status, 'done');
   const manifest = await source.getTrackingManifest(demo.id);
@@ -66,6 +66,19 @@ test('démonstration : catalogue, manifeste au format du suivi, vidéo et affich
   assert.equal(source.videoUrl(demo.id), `${SITE}demo/matches/match-synthetique/video.mp4`);
   assert.equal(source.posterUrl(demo.id), `${SITE}demo/matches/match-synthetique/poster.jpg`);
   assert.equal(source.videoCrossOrigin(), null);
+});
+
+test('démonstration réelle : première entrée, provenance d\'analyse et crédit distinct de la démo synthétique', async () => {
+  const source = demoSource();
+  const [demo] = await source.listAnalyses();
+  assert.equal(demo.id, 'france-allemagne-2018');
+  const manifest = await source.getTrackingManifest(demo.id);
+  assert.equal(manifest.provenance.kind, 'analysis');
+  assert.equal(manifest.provenance.media.author, 'Like tears in rain');
+  assert.equal(manifest.provenance.media.licenseUrl, 'https://creativecommons.org/licenses/by-sa/4.0/');
+  assert.equal(manifest.source.duration, 26);
+  const window = await source.getTrackingWindow(demo.id, 2, 4);
+  assert.ok(window.frames.some((frame) => frame.objects.some((object) => object.pitch)));
 });
 
 test('démonstration : fenêtre comme l\'API locale, voisines comprises, trajectoires présentes et sélection', async () => {

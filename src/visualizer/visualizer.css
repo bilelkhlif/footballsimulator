@@ -57,6 +57,7 @@ body {
 .vz-button--primary { background: #1f6b3d; border-color: #2d8a52; }
 .vz-back { text-decoration: none; display: inline-flex; align-items: center; }
 .vz-back::before { content: "←"; margin-right: 6px; }
+.vz-beta { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: #f2c94c; color: #1d1a10; font-size: .7rem; font-weight: 700; vertical-align: middle; }
 .vz-button:focus-visible, .vz-chip:focus-visible, .vz-icon:focus-visible, .vz-select:focus-visible { outline: 2px solid var(--vz-accent); outline-offset: 2px; }
 .vz-chip { padding: 3px 9px; font-size: 0.78rem; border-radius: 999px; }
 .vz-chip[aria-pressed="true"] { background: #2d5a3e; border-color: #4a8a62; }
@@ -108,6 +109,9 @@ body {
   background: #24301f; border: 1px solid #4b5f33; color: #e8f0d8;
 }
 .vz-banner[data-kind="analysis"] { background: #1d2a33; border-color: #36576d; color: #dbe9f3; }
+.vz-media-credit { display: block; margin-top: 4px; overflow-wrap: anywhere; }
+.vz-media-credit a { color: inherit; text-decoration: underline; }
+.vz-analysis-note { display: block; margin-top: 4px; color: #ffdda5; }
 
 /* Écrans tactiles (téléphone en paysage compris) : cibles d'au moins 40 px */
 @media (pointer: coarse) {

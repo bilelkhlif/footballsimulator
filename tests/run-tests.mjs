@@ -27,6 +27,7 @@ import { runServiceWorkerMediaTests } from './service-worker-media-tests.mjs';
 import { testMatchVisualizer } from './visualizer-tests.mjs';
 import { testVisualizerGpuReset, testVisualizerModes } from './visualizer-modes-tests.mjs';
 import { runVisualizerReviewTests } from './visualizer-review-tests.mjs';
+import { testRealDemo } from './visualizer-real-demo-tests.mjs';
 
 /** Navigateur utilisé : Chrome par défaut. */
 const CHANNEL = process.env.BROWSER_CHANNEL ?? 'chrome';
@@ -2109,6 +2110,7 @@ async function main() {
     await testMatchVisualizer(browser, root.url, record, recordCanvasContexts);
     await testVisualizerModes(browser, { root: root.url, subPath: subPath.url }, record);
     await runVisualizerReviewTests(browser, root.url, record);
+    await testRealDemo(browser, { root: root.url, subPath: subPath.url }, record);
     await testVisualizerGpuReset(() => chromium.launch({ channel: CHANNEL, headless: true, args: LAUNCH_ARGS }), root.url, record);
     await testShellVersioning(browser);
     await testServiceWorkerMigration(browser);

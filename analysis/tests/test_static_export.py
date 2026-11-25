@@ -411,7 +411,15 @@ class PublicDemoTest(unittest.TestCase):
             bundle = REPOSITORY / "demo" / entry["path"]
             self.assertEqual(verify_bundle(bundle), [], entry["id"])
             manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
-            self.assertEqual(manifest["provenance"]["kind"], "synthetic", "seule une démonstration synthétique est publiée")
+            if entry["kind"] == "synthetic":
+                self.assertEqual(manifest["provenance"]["kind"], "synthetic")
+            else:
+                registry = json.loads((REPOSITORY / "demo" / "media-licenses.json").read_text(encoding="utf-8"))["matches"]
+                approval = registry[entry["id"]]
+                self.assertEqual(manifest["provenance"]["kind"], "analysis")
+                for key in ("author", "license", "licenseUrl", "sourceUrl", "changes"):
+                    self.assertEqual(manifest["provenance"]["media"][key], approval[key])
+                self.assertEqual(manifest["video"]["sha256"], approval["files"][manifest["video"]["file"]])
 
     def test_simulation_is_reproducible(self):
         """Même graine, mêmes positions : la démonstration se régénère à l'identique.

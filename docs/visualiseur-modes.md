@@ -1,11 +1,17 @@
 # Visualiseur de match : démonstration publique et analyse locale
 
 Le visualiseur a deux modes, une seule interface. **Explorer la démo** lit des exports statiques, sans
-Python, sans GPU et sans serveur : c'est le mode prévu pour GitHub Pages. **Analyser ma vidéo** utilise
+Python ni calcul IA : seuls l'hébergement statique et le GPU du navigateur pour le terrain 3D sont
+nécessaires. C'est le mode prévu pour GitHub Pages. **Analyser ma vidéo** utilise
 le serveur d'analyse local (`analysis/`) : téléversement, analyse réelle sur GPU, résultats partiels,
 interruption et reprise. Les deux modes passent par le même moteur : `PagedTrackingStore`, la
 synchronisation `requestVideoFrameCallback`, les annotations, le terrain 3D en WebGPU dans la vidéo,
 le placement automatique et la sélection. Seule la source des données change.
+
+**Mise à jour du 25 novembre :** le catalogue propose maintenant un extrait réel France–Allemagne
+2018, crédité sous CC BY-SA 4.0, puis la démonstration synthétique de 36 s. Les anciens résultats
+et scénarios synthétiques ci-dessous restent datés ; le [rapport de la vidéo réelle](visualiseur-demos-reelles.md)
+décrit la nouvelle entrée, ses droits, l'analyse réellement exécutée et ses limites de vitesse.
 
 **Statut :** branche `feature/visualiseur-match` (PR #15), hors de la version évaluée. La démonstration
 est **prête pour GitHub Pages, mais pas publiée** : Pages publie `main`, et la PR #15 n'est pas fusionnée.

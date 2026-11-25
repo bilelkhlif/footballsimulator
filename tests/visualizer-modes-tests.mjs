@@ -17,6 +17,8 @@ import { fileURLToPath } from 'node:url';
 import { testVisualizerAsyncRegressions } from './visualizer-async-regressions.mjs';
 
 const DEMO_ID = 'match-synthetique';
+/** Le scénario synthétique reste la fixture contrôlée ; la première entrée publique est réelle. */
+const PUBLIC_DEMO_ID = 'france-allemagne-2018';
 const FPS = 25;
 const MANIFEST = JSON.parse(readFileSync(fileURLToPath(new URL(`../demo/matches/${DEMO_ID}/manifest.json`, import.meta.url)), 'utf8'));
 const CONTACT = MANIFEST.metrics.identity.scriptedContacts[0];
@@ -180,8 +182,8 @@ async function testDemoMode(browser, subPathUrl, record) {
   const page = await context.newPage();
   const errors = collectErrors(page);
   try {
-    await step(record, 'démo ouverte par défaut sous /footballsimulator/, sans serveur ni Python', async () => {
-      await page.goto(`${subPathUrl}visualizer.html`);
+    await step(record, 'démo synthétique ouverte explicitement sous /footballsimulator/, sans serveur ni Python', async () => {
+      await page.goto(`${subPathUrl}visualizer.html?demo=${DEMO_ID}`);
       await page.waitForFunction(() => window.__matchVisualizer?.snapshot().window, null, { timeout: 30000 });
       const state = await page.evaluate(() => window.__matchVisualizer.snapshot());
       const banner = await page.textContent('#provenance-banner');
@@ -559,7 +561,7 @@ async function testAcademicNavigation(browser, url, record) {
       const workspace = await page.evaluate(() => document.body.dataset.workspace);
       await visualizer.close();
       const ok = attributes.href === 'visualizer.html' && attributes.target === '_blank' && attributes.rel.includes('noopener')
-        && opened.mode === 'demo' && opened.analysis === DEMO_ID && JSON.stringify(after) === JSON.stringify(before)
+        && opened.mode === 'demo' && opened.analysis === PUBLIC_DEMO_ID && JSON.stringify(after) === JSON.stringify(before)
         && after.formations.blue === '3-5-2' && workspace === 'more';
       return [ok, `lien ${JSON.stringify(attributes)} ; visualiseur ${JSON.stringify(opened)} ; tactique identique : ${JSON.stringify(after) === JSON.stringify(before)} ; espace ${workspace}`];
     });
@@ -603,6 +605,96 @@ async function testAcademicNavigation(browser, url, record) {
     record('Visualiseur, modes : intégré, navigation sans erreur dans la console', unexpected.length ? 'échec' : 'ok', unexpected.slice(0, 3).join(' | '));
   } finally {
     await context.close();
+  }
+}
+
+/**
+ * Entrée « Analyse de match » du rail principal, marquée bêta : visible sur ordinateur et tablette,
+ * ouvre le visualiseur dans un nouvel onglet ; masquée sur téléphone (barre basse limitée à cinq
+ * espaces), en paysage court et pendant une session AR, où la carte de « Plus d'outils » reste.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @param {(name: string, status: string, detail?: string) => void} record
+ * @responsable Bilel Khlif
+ * @date 2026-11-25
+ * @role Tests de bout en bout — accès au visualiseur depuis le rail
+ */
+async function testRailEntry(browser, url, record) {
+  const open = async (viewport, extra = {}) => {
+    const context = await browser.newContext({ viewport, ...extra });
+    await context.route('http://127.0.0.1:8765/**', (route) => route.abort('connectionrefused'));
+    await context.addInitScript(() => { try { localStorage.setItem('football-simulator:aide-vue', '1'); } catch { /* sans stockage */ } });
+    const page = await context.newPage();
+    await page.goto(`${url}?debug`);
+    await page.waitForSelector('body.is-ready');
+    return { context, page };
+  };
+  const entryState = (page) => page.evaluate(() => {
+    const link = document.getElementById('match-analysis-nav');
+    const badge = link?.querySelector('.nav-item__beta');
+    const rect = link?.getBoundingClientRect();
+    return { visible: Boolean(link?.getClientRects().length), badge: badge?.getClientRects().length ? badge.textContent : null,
+      href: link?.getAttribute('href'), target: link?.target, rel: link?.rel, label: link?.getAttribute('aria-label'),
+      inRail: Boolean(link?.closest('#workspace-nav')), rect: rect ? [Math.round(rect.left), Math.round(rect.top), Math.round(rect.width)] : null };
+  });
+  const desktop = await open({ width: 1280, height: 800 });
+  const errors = collectErrors(desktop.page);
+  try {
+    await step(record, 'rail : entrée « Analyse de match » marquée bêta, sur ordinateur', async () => {
+      const state = await entryState(desktop.page);
+      return [state.visible && state.inRail && state.badge === 'Bêta' && state.href === 'visualizer.html' && state.target === '_blank'
+        && state.rel.includes('noopener') && /bêta/.test(state.label), JSON.stringify(state)];
+    });
+    await step(record, 'rail : l’entrée ouvre le visualiseur bêta dans un nouvel onglet, tactique conservée', async () => {
+      await desktop.page.locator('#workspace-nav [data-workspace="formations"]').click();
+      await desktop.page.locator('.formation-button[data-team="red"][data-formation="4-3-3"]').click();
+      await desktop.page.waitForTimeout(700);
+      const before = await desktop.page.evaluate(() => JSON.stringify(window.__footballSimulator.board.snapshot()));
+      const [visualizer] = await Promise.all([desktop.context.waitForEvent('page'), desktop.page.locator('#match-analysis-nav').click()]);
+      await visualizer.waitForFunction(() => window.__matchVisualizer?.snapshot().window, null, { timeout: 30000 });
+      const opened = await visualizer.evaluate(() => ({ mode: window.__matchVisualizer.mode, title: document.querySelector('.vz-title').textContent }));
+      await visualizer.close();
+      const after = await desktop.page.evaluate(() => JSON.stringify(window.__footballSimulator.board.snapshot()));
+      return [opened.mode === 'demo' && /Bêta/.test(opened.title) && before === after, `${JSON.stringify(opened)} ; tactique identique : ${before === after}`];
+    });
+    await step(record, 'rail déplié : libellé et pastille bêta dans l’entrée', async () => {
+      await desktop.page.evaluate(() => { document.body.dataset.railExpanded = 'true'; });
+      const state = await desktop.page.evaluate(() => {
+        const link = document.getElementById('match-analysis-nav');
+        const outer = link.getBoundingClientRect();
+        const inner = link.querySelector('.nav-item__beta').getBoundingClientRect();
+        return { label: getComputedStyle(link.querySelector('.nav-item__label')).display, inside: inner.left >= outer.left && inner.right <= outer.right + 1 };
+      });
+      await desktop.page.evaluate(() => { delete document.body.dataset.railExpanded; });
+      return [state.label !== 'none' && state.inside, JSON.stringify(state)];
+    });
+    await step(record, 'rail : entrée bêta masquée pendant une session AR', async () => {
+      const display = await desktop.page.evaluate(() => {
+        document.body.dataset.xr = 'active';
+        const value = getComputedStyle(document.getElementById('match-analysis-nav')).display;
+        delete document.body.dataset.xr;
+        return value;
+      });
+      return [display === 'none', `affichage en AR : ${display}`];
+    });
+    const unexpected = errors.filter((text) => !/127\.0\.0\.1:8765|ERR_CONNECTION_REFUSED/.test(text));
+    record('Visualiseur, modes : rail, aucune erreur dans la console', unexpected.length ? 'échec' : 'ok', unexpected.slice(0, 3).join(' | '));
+  } finally {
+    await desktop.context.close();
+  }
+  for (const [label, viewport] of [['tablette 820 × 1180', { width: 820, height: 1180 }], ['téléphone 390 × 844', { width: 390, height: 844 }],
+    ['paysage court 568 × 320', { width: 568, height: 320 }]]) {
+    const { context, page } = await open(viewport, { hasTouch: viewport.width < 700 || viewport.height < 541 });
+    try {
+      await step(record, `rail ${label} : entrée bêta ${viewport.width >= 700 && viewport.height >= 541 ? 'visible' : 'masquée, carte de « Plus d’outils » conservée'}`, async () => {
+        const state = await entryState(page);
+        const card = await page.evaluate(() => Boolean(document.getElementById('match-analysis-link')));
+        const expected = viewport.width >= 700 && viewport.height >= 541;
+        return [state.visible === expected && card && (!expected || state.badge === 'Bêta'), JSON.stringify({ ...state, carte: card })];
+      });
+    } finally {
+      await context.close();
+    }
   }
 }
 
@@ -711,6 +803,14 @@ export async function testVisualizerGpuReset(launch, url, record) {
         }
       }
       const { point } = target;
+      // frame.rect donne la destination ; la transition CSS du panneau peut encore couvrir le joueur.
+      // Un clic par coordonnées n'attend pas la stabilité comme locator.click() : vérifier le vrai hit-test.
+      await page.waitForFunction(({ point, id }) => {
+        const canvas = document.getElementById('annotations');
+        const rect = canvas.getBoundingClientRect();
+        return document.elementFromPoint(point.x, point.y) === canvas
+          && window.__matchVisualizer.annotations.pick(point.x - rect.left, point.y - rect.top) === id;
+      }, target, { timeout: 5000 });
       await page.mouse.click(point.x, point.y);
       await page.waitForTimeout(250);
       const selected = await page.evaluate(() => window.__matchVisualizer.selectedId);
@@ -748,4 +848,5 @@ export async function testVisualizerModes(browser, urls, record) {
   await testVisualizerAsyncRegressions(browser, urls.root, record);
   await testDemoUnderServiceWorker(browser, urls.subPath, record);
   await testAcademicNavigation(browser, urls.subPath, record);
+  await testRailEntry(browser, urls.subPath, record);
 }

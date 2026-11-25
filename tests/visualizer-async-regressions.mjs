@@ -183,7 +183,7 @@ export async function testVisualizerAsyncRegressions(browser, url, record) {
 
   await check('fermer la démonstration efface le joueur, les mesures et les légendes précédents', async (page, context) => {
     await context.route('**/api/health', (route) => route.fulfill({ status: 503, json: { error: 'Serveur de test arrêté' } }));
-    await page.goto(`${url}visualizer.html?mode=demo`);
+    await page.goto(`${url}visualizer.html?demo=match-synthetique`);
     await demoReady(page);
     const target = await page.evaluate(() => {
       const app = window.__matchVisualizer;

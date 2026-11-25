@@ -14,6 +14,11 @@ Les composants installés à part (Ultralytics, PyTorch et les autres paquets Py
 téléchargés par l'utilisateur ne sont pas dans le dépôt. Ils sont inventoriés dans
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
+**Exception média réel.** La vidéo et le poster de France–Allemagne 2018 sont de Like tears in rain,
+sous **CC BY-SA 4.0**, avec transformations décrites dans
+[leur notice](demo/matches/france-allemagne-2018/SOURCE.md). Ils ne sont pas relicenciés sous AGPL.
+La correspondance REUSE les distingue du code ; le texte CC est dans `LICENSES/CC-BY-SA-4.0.txt`.
+
 ## Pourquoi l'AGPL-3.0 pour l'IA
 
 Le serveur d'analyse importe Ultralytics, publié sous AGPL-3.0. Sa

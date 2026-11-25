@@ -1,5 +1,12 @@
 # Intégration du visualiseur de match : compte rendu
 
+**État constaté le 25 novembre 2026 :** GitHub a fusionné #19 (`1cbd087`) puis #20 (`3077a2e`),
+qui contient #21 et les correctifs de préparation. #15 est aussi marquée fusionnée par son ascendance.
+Ces fusions ont été constatées dans une autre session pendant la finalisation ; elles ne sont pas
+rejouées. La [livraison de la PR #23](visualiseur-livraison-2026-11-25.md) ajoute la carte Bêta,
+la vidéo réelle sous CC BY-SA et les derniers contrôles. Les paragraphes qui suivent conservent
+la chronologie de la répétition initiale, avant ces fusions.
+
 Intégration répétée le 24 novembre 2026 sur la branche `repetition/integration-visualiseur`, publiée
 ensuite comme PR #20 en brouillon. Elle réunit `main`, la correction du Service Worker (PR #19) et le
 visualiseur de match (PR #15). `main` et les branches des PR #15, #18 et #19 ne sont pas modifiées.

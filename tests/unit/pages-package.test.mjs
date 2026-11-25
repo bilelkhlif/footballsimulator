@@ -4,11 +4,12 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { preparePages } from '../prepare-pages.mjs';
 import { readAppShell, REPO_ROOT } from '../shell-version.mjs';
+import { createHash } from 'node:crypto';
 
 /** Modules du visualiseur passés en .mjs par l'intégration (docs/integration-visualiseur.md). */
 const MIGRATED = ['analytics', 'api-client', 'auto-placement', 'format', 'overlay-frame', 'overlay-pitch',
@@ -58,8 +59,9 @@ test('la préparation Pages contient la coquille et tout le visualiseur, sans se
     }
     const files = listFiles(output);
     assert.deepEqual(files.filter((file) => /\.(?:pt|pth|onnx|safetensors|sqlite3?|db)$/i.test(file)), [], 'aucun poids ni base');
-    assert.deepEqual(files.filter((file) => /\.(?:mp4|webm|mov)$/i.test(file)), ['demo/matches/match-synthetique/video.mp4'],
-      'seule la vidéo synthétique est publiée');
+    assert.deepEqual(files.filter((file) => /\.(?:mp4|webm|mov)$/i.test(file)),
+      ['demo/matches/france-allemagne-2018/video.mp4', 'demo/matches/match-synthetique/video.mp4'],
+      'seules les vidéos publiques relues sont publiées');
     assert.throws(() => preparePages({ output }), /existe déjà/);
   } finally {
     assert.ok(output.startsWith(path.join(os.tmpdir(), 'football-pages-preview-')));
@@ -73,12 +75,45 @@ test('une démonstration non synthétique arrête la préparation avant toute co
   const output = path.join(parent, 'site');
   try {
     mkdirSync(path.join(root, 'demo'));
-    writeFileSync(path.join(root, 'demo/index.json'), JSON.stringify({ matches: [{ id: 'reel', kind: 'analysis' }] }));
+    writeFileSync(path.join(root, 'demo/index.json'), JSON.stringify({ matches: [{ id: 'reel', path: 'matches/reel/', kind: 'analysis' }] }));
     assert.throws(() => preparePages({ root, output }), /revue explicite des droits/);
     assert.equal(existsSync(output), false, 'aucun dossier créé');
   } finally {
     rmSync(root, { recursive: true });
     rmSync(parent, { recursive: true });
+  }
+});
+
+test('la préparation refuse une vidéo approuvée dont les octets ont changé', () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'football-pages-root-'));
+  const output = path.join(root, 'site');
+  try {
+    cpSync(path.join(REPO_ROOT, 'demo'), path.join(root, 'demo'), { recursive: true });
+    writeFileSync(path.join(root, 'demo/matches/france-allemagne-2018/video.mp4'), 'modified');
+    assert.throws(() => preparePages({ root, output }), /Octets média différents/);
+    assert.equal(existsSync(output), false);
+  } finally {
+    rmSync(root, { recursive: true });
+  }
+});
+
+test('un clip privé non déclaré dans un export ou dans demo ne rejoint jamais le site préparé', () => {
+  const root = preparePages();
+  let output;
+  try {
+    writeFileSync(path.join(root, 'demo/private-broadcast.mp4'), 'private');
+    writeFileSync(path.join(root, 'demo/matches/france-allemagne-2018/private-broadcast.mp4'), 'private');
+    output = preparePages({ root });
+    assert.equal(listFiles(output).some((file) => file.includes('private-broadcast')), false);
+    const manifestPath = path.join(root, 'demo/matches/france-allemagne-2018/manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    manifest.files['private-broadcast.mp4'] = { file: 'private-broadcast.mp4', bytes: 7,
+      sha256: createHash('sha256').update('private').digest('hex') };
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    assert.throws(() => preparePages({ root }), /Média non approuvé/);
+  } finally {
+    if (output) rmSync(output, { recursive: true });
+    rmSync(root, { recursive: true });
   }
 });
 

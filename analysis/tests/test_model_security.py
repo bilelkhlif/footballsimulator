@@ -20,6 +20,24 @@ class ModelSecurityTest(unittest.TestCase):
     @role Tests — chaîne de confiance des modèles
     """
 
+    def test_resume_signature_changes_with_the_team_model_revision(self):
+        """Une reprise ne mélange pas deux versions des plongements sous le même nom de modèle.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Tests — identité des modèles lors d'une reprise
+        """
+        from football_analysis.incremental_pipeline import analysis_signature
+        with tempfile.TemporaryDirectory() as directory:
+            video = Path(directory) / "video.mp4"
+            video.write_bytes(b"signature fixture")
+            options = AnalysisOptions(models_dir=Path(directory))
+            before = analysis_signature(video, options)
+            with patch.dict(models.MODEL_LOCK["backbones"]["siglip"], {"revision": "0" * 40, "sha256": "f" * 64}):
+                after = analysis_signature(video, options)
+            self.assertNotEqual(before, after)
+            self.assertNotEqual(before["teamWeights"], after["teamWeights"])
+
     def test_digest_is_checked_not_only_size(self):
         """Une modification de même taille échoue, une entrée approuvée passe.
 
