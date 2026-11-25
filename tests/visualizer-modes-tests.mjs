@@ -607,6 +607,96 @@ async function testAcademicNavigation(browser, url, record) {
 }
 
 /**
+ * Entrée « Analyse de match » du rail principal, marquée bêta : visible sur ordinateur et tablette,
+ * ouvre le visualiseur dans un nouvel onglet ; masquée sur téléphone (barre basse limitée à cinq
+ * espaces), en paysage court et pendant une session AR, où la carte de « Plus d'outils » reste.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @param {(name: string, status: string, detail?: string) => void} record
+ * @responsable Bilel Khlif
+ * @date 2026-11-25
+ * @role Tests de bout en bout — accès au visualiseur depuis le rail
+ */
+async function testRailEntry(browser, url, record) {
+  const open = async (viewport, extra = {}) => {
+    const context = await browser.newContext({ viewport, ...extra });
+    await context.route('http://127.0.0.1:8765/**', (route) => route.abort('connectionrefused'));
+    await context.addInitScript(() => { try { localStorage.setItem('football-simulator:aide-vue', '1'); } catch { /* sans stockage */ } });
+    const page = await context.newPage();
+    await page.goto(`${url}?debug`);
+    await page.waitForSelector('body.is-ready');
+    return { context, page };
+  };
+  const entryState = (page) => page.evaluate(() => {
+    const link = document.getElementById('match-analysis-nav');
+    const badge = link?.querySelector('.nav-item__beta');
+    const rect = link?.getBoundingClientRect();
+    return { visible: Boolean(link?.getClientRects().length), badge: badge?.getClientRects().length ? badge.textContent : null,
+      href: link?.getAttribute('href'), target: link?.target, rel: link?.rel, label: link?.getAttribute('aria-label'),
+      inRail: Boolean(link?.closest('#workspace-nav')), rect: rect ? [Math.round(rect.left), Math.round(rect.top), Math.round(rect.width)] : null };
+  });
+  const desktop = await open({ width: 1280, height: 800 });
+  const errors = collectErrors(desktop.page);
+  try {
+    await step(record, 'rail : entrée « Analyse de match » marquée bêta, sur ordinateur', async () => {
+      const state = await entryState(desktop.page);
+      return [state.visible && state.inRail && state.badge === 'Bêta' && state.href === 'visualizer.html' && state.target === '_blank'
+        && state.rel.includes('noopener') && /bêta/.test(state.label), JSON.stringify(state)];
+    });
+    await step(record, 'rail : l’entrée ouvre le visualiseur bêta dans un nouvel onglet, tactique conservée', async () => {
+      await desktop.page.locator('#workspace-nav [data-workspace="formations"]').click();
+      await desktop.page.locator('.formation-button[data-team="red"][data-formation="4-3-3"]').click();
+      await desktop.page.waitForTimeout(700);
+      const before = await desktop.page.evaluate(() => JSON.stringify(window.__footballSimulator.board.snapshot()));
+      const [visualizer] = await Promise.all([desktop.context.waitForEvent('page'), desktop.page.locator('#match-analysis-nav').click()]);
+      await visualizer.waitForFunction(() => window.__matchVisualizer?.snapshot().window, null, { timeout: 30000 });
+      const opened = await visualizer.evaluate(() => ({ mode: window.__matchVisualizer.mode, title: document.querySelector('.vz-title').textContent }));
+      await visualizer.close();
+      const after = await desktop.page.evaluate(() => JSON.stringify(window.__footballSimulator.board.snapshot()));
+      return [opened.mode === 'demo' && /Bêta/.test(opened.title) && before === after, `${JSON.stringify(opened)} ; tactique identique : ${before === after}`];
+    });
+    await step(record, 'rail déplié : libellé et pastille bêta dans l’entrée', async () => {
+      await desktop.page.evaluate(() => { document.body.dataset.railExpanded = 'true'; });
+      const state = await desktop.page.evaluate(() => {
+        const link = document.getElementById('match-analysis-nav');
+        const outer = link.getBoundingClientRect();
+        const inner = link.querySelector('.nav-item__beta').getBoundingClientRect();
+        return { label: getComputedStyle(link.querySelector('.nav-item__label')).display, inside: inner.left >= outer.left && inner.right <= outer.right + 1 };
+      });
+      await desktop.page.evaluate(() => { delete document.body.dataset.railExpanded; });
+      return [state.label !== 'none' && state.inside, JSON.stringify(state)];
+    });
+    await step(record, 'rail : entrée bêta masquée pendant une session AR', async () => {
+      const display = await desktop.page.evaluate(() => {
+        document.body.dataset.xr = 'active';
+        const value = getComputedStyle(document.getElementById('match-analysis-nav')).display;
+        delete document.body.dataset.xr;
+        return value;
+      });
+      return [display === 'none', `affichage en AR : ${display}`];
+    });
+    const unexpected = errors.filter((text) => !/127\.0\.0\.1:8765|ERR_CONNECTION_REFUSED/.test(text));
+    record('Visualiseur, modes : rail, aucune erreur dans la console', unexpected.length ? 'échec' : 'ok', unexpected.slice(0, 3).join(' | '));
+  } finally {
+    await desktop.context.close();
+  }
+  for (const [label, viewport] of [['tablette 820 × 1180', { width: 820, height: 1180 }], ['téléphone 390 × 844', { width: 390, height: 844 }],
+    ['paysage court 568 × 320', { width: 568, height: 320 }]]) {
+    const { context, page } = await open(viewport, { hasTouch: viewport.width < 700 || viewport.height < 541 });
+    try {
+      await step(record, `rail ${label} : entrée bêta ${viewport.width >= 700 && viewport.height >= 541 ? 'visible' : 'masquée, carte de « Plus d’outils » conservée'}`, async () => {
+        const state = await entryState(page);
+        const card = await page.evaluate(() => Boolean(document.getElementById('match-analysis-link')));
+        const expected = viewport.width >= 700 && viewport.height >= 541;
+        return [state.visible === expected && card && (!expected || state.badge === 'Bêta'), JSON.stringify({ ...state, carte: card })];
+      });
+    } finally {
+      await context.close();
+    }
+  }
+}
+
+/**
  * Perte du processus GPU de Chrome, cause de l'échec intermittent du parcours GPU manuel : l'arrêt
  * brutal du serveur d'analyse pendant un calcul CUDA réinitialise parfois le pilote du GPU partagé.
  * Chrome perd alors son processus GPU : périphérique WebGPU perdu, décodeur vidéo déconnecté
@@ -748,4 +838,5 @@ export async function testVisualizerModes(browser, urls, record) {
   await testVisualizerAsyncRegressions(browser, urls.root, record);
   await testDemoUnderServiceWorker(browser, urls.subPath, record);
   await testAcademicNavigation(browser, urls.subPath, record);
+  await testRailEntry(browser, urls.subPath, record);
 }
