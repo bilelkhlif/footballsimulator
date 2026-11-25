@@ -76,7 +76,7 @@ class JobStore:
         @date 2026-11-17
         @role Analyse vidéo — file des analyses (stockage)
         """
-        self.root = Path(root)
+        self.root = Path(root).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
 
@@ -92,7 +92,25 @@ class JobStore:
         """
         if not JOB_ID.match(job_id or ""):
             raise KeyError(job_id)
-        return self.root / job_id
+        directory = self.root / job_id
+        if directory.resolve().parent != self.root:
+            raise KeyError(job_id)
+        return directory
+
+    def _file(self, job_id: str, name: str) -> Path:
+        """Fichier simple d'un travail, sans sortie par chemin absolu, lien ou jonction.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Analyse vidéo — confinement du stockage local
+        """
+        if not isinstance(name, str) or not name or any(character in name for character in '/\\:\x00'):
+            raise KeyError(job_id)
+        directory = self.directory(job_id).resolve()
+        target = directory / name
+        if target.resolve().parent != directory:
+            raise KeyError(job_id)
+        return target
 
     def create(self, name: str, suffix: str) -> tuple[str, Path]:
         """Crée un travail ; renvoie son identifiant et le chemin où écrire la vidéo.
@@ -115,8 +133,8 @@ class JobStore:
         @date 2026-11-17
         @role Analyse vidéo — file des analyses (stockage)
         """
-        path = self.directory(job_id) / "status.json"
-        temporary = path.with_suffix(".tmp")
+        path = self._file(job_id, "status.json")
+        temporary = self._file(job_id, "status.tmp")
         with self._lock:
             temporary.write_text(json.dumps(status, ensure_ascii=False), encoding="utf-8")
             _retry_sharing_violation(lambda: os.replace(temporary, path))
@@ -142,12 +160,15 @@ class JobStore:
         @role Analyse vidéo — file des analyses (stockage)
         """
         try:
-            path = self.directory(job_id) / "status.json"
+            path = self._file(job_id, "status.json")
         except KeyError:
             return None
         if not path.is_file():
             return None
-        return json.loads(_retry_sharing_violation(lambda: path.read_text(encoding="utf-8")))
+        try:
+            return json.loads(_retry_sharing_violation(lambda: path.read_text(encoding="utf-8")))
+        except (ValueError, OSError):
+            return None
 
     def list(self) -> list[dict[str, Any]]:
         """États de tous les travaux, du plus récent au plus ancien.
@@ -167,7 +188,10 @@ class JobStore:
         @role Analyse vidéo — file des analyses (stockage)
         """
         status = self.get(job_id)
-        return None if not status else self.directory(job_id) / status["source"]
+        try:
+            return None if not status else self._file(job_id, status["source"])
+        except KeyError:
+            return None
 
     def tracking(self, job_id: str) -> Path:
         """Chemin du document de suivi d'un travail.
@@ -176,7 +200,7 @@ class JobStore:
         @date 2026-11-17
         @role Analyse vidéo — file des analyses (stockage)
         """
-        return self.directory(job_id) / "tracking.json"
+        return self._file(job_id, "tracking.json")
 
     def recover(self) -> list[str]:
         """Remet en ordre les travaux laissés par un arrêt du serveur ; renvoie ceux à remettre en file.
@@ -209,7 +233,7 @@ class JobStore:
         @date 2026-11-23
         @role Analyse vidéo — stockage des analyses longues
         """
-        return self.directory(job_id) / "tracking.sqlite"
+        return self._file(job_id, "tracking.sqlite")
 
 
 class AnalysisInterrupted(Exception):

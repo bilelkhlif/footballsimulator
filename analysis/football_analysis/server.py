@@ -41,6 +41,7 @@ import mimetypes
 import re
 import shutil
 import sqlite3
+import threading
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -163,6 +164,40 @@ class VisualizerServer(ThreadingHTTPServer):
         self.allowed_hosts = {f"{name}:{port}" for name in names}
         self.local_origins = {f"http://{name}:{port}" for name in names}
         self.allowed_origins = {origin.rstrip("/") for origin in allowed_origins}
+        self.connection_slots = threading.BoundedSemaphore(16)
+        self.upload_slots = threading.BoundedSemaphore(2)
+        self.request_timeout = 30
+
+    def process_request(self, request, client_address) -> None:
+        """Borne les connexions actives avant de créer un fil de requête.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Analyse vidéo — limite de ressources HTTP
+        """
+        if not self.connection_slots.acquire(blocking=False):
+            try:
+                request.sendall(b"HTTP/1.0 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+            finally:
+                self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self.connection_slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address) -> None:
+        """Restitue la place même si la requête est interrompue ou malformée.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Analyse vidéo — limite de ressources HTTP
+        """
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self.connection_slots.release()
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -175,6 +210,30 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     server: VisualizerServer
     server_version = "FootballAnalysis/1"
+
+    def setup(self) -> None:
+        """Une connexion immobile ne conserve pas indéfiniment un fil ou un fichier partiel.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Analyse vidéo — délai des entrées réseau
+        """
+        super().setup()
+        self.connection.settimeout(self.server.request_timeout)
+
+    def parse_request(self) -> bool:
+        """Refuse HTTP/0.9 : une ligne sans version recevrait une réponse sans statut ni en-têtes.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Analyse vidéo — requêtes HTTP malformées
+        """
+        if not super().parse_request():
+            return False
+        if self.request_version not in ("HTTP/1.0", "HTTP/1.1"):
+            self.send_error(HTTPStatus.HTTP_VERSION_NOT_SUPPORTED, "HTTP/1.0 ou HTTP/1.1 requis.")
+            return False
+        return True
 
     def log_message(self, format: str, *args: Any) -> None:
         """Journal discret : seules les erreurs sont affichées.
@@ -205,7 +264,15 @@ class RequestHandler(BaseHTTPRequestHandler):
         @date 2026-11-24
         @role Analyse vidéo — serveur (normalisation des routes)
         """
-        return unquote(urlsplit(self.path).path)
+        target = urlsplit(self.path)
+        # Forme d'origine seulement : une cible absolue (« http://autre/… ») ou « //hôte/… » nommerait
+        # une autre autorité que l'en-tête Host contrôlé.
+        if target.scheme or target.netloc or not self.path.startswith("/"):
+            raise ValueError("Adresse invalide.")
+        path = unquote(target.path, errors="strict")
+        if any(ord(character) < 32 for character in path) or "\\" in path or ":" in path or "%" in path:
+            raise ValueError("Adresse invalide.")
+        return path
 
     def _refuse(self) -> bool:
         """Refuse une requête d'un hôte inattendu ou d'une origine non autorisée ; vrai si refusée.
@@ -224,7 +291,11 @@ class RequestHandler(BaseHTTPRequestHandler):
         if origin is not None and not self._origin_allowed(origin):
             self.send_error_json(HTTPStatus.FORBIDDEN, "Origine non autorisée : lancez le serveur avec --allow-origin pour cette page.")
             return True
-        path = self._request_path()
+        try:
+            path = self._request_path()
+        except (ValueError, UnicodeError):
+            self.send_error_json(HTTPStatus.BAD_REQUEST, "Adresse invalide.")
+            return True
         if origin is None and self.headers.get("Sec-Fetch-Site") == "cross-site" and path.startswith("/api/"):
             self.send_error_json(HTTPStatus.FORBIDDEN, "Requête intersite refusée.")
             return True
@@ -383,7 +454,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_json({**status, "results": store.database(match["id"]).is_file()})
         elif match["part"] == "video":
             source = store.source(match["id"])
-            self.send_file(source, VIDEO_TYPES.get(source.suffix.lower(), "application/octet-stream"), allow_range=True)
+            if source is None or not source.is_file():
+                self.send_error_json(HTTPStatus.NOT_FOUND, "Vidéo introuvable.")
+            else:
+                self.send_file(source, VIDEO_TYPES.get(source.suffix.lower(), "application/octet-stream"), allow_range=True)
         elif match["part"] in ("manifest", "frames", "tracking") and store.database(match["id"]).is_file():
             self.get_chunked(match["id"], match["part"])
         elif match["part"] in ("manifest", "frames") and status["status"] in ("receiving", "queued", "running"):
@@ -447,7 +521,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         """
         root = self.server.static_root
         target = (root / path.lstrip("/")).resolve()
-        allowed = path.startswith(STATIC_PREFIXES) and root in target.parents and ".." not in path
+        allowed = (path == "/visualizer.html" or path.startswith(STATIC_PREFIXES[1:])) and root in target.parents and ".." not in path
         if not allowed or not target.is_file():
             self.send_error_json(HTTPStatus.NOT_FOUND, "Fichier introuvable.")
             return
@@ -494,9 +568,16 @@ class RequestHandler(BaseHTTPRequestHandler):
         if path != "/api/analyses":
             self.send_error_json(HTTPStatus.NOT_FOUND, "Adresse inconnue.")
             return
-        name = Path(parse_qs(parts.query).get("name", ["video.mp4"])[0]).name
+        name = parse_qs(parts.query).get("name", ["video.mp4"])[0]
+        if not name or len(name) > 200 or any(ord(character) < 32 for character in name) or any(character in name for character in '/\\:'):
+            self.send_error_json(HTTPStatus.BAD_REQUEST, "Nom de fichier invalide : utilisez un simple nom vidéo.")
+            return
         suffix = Path(name).suffix.lower()
-        length = int(self.headers.get("Content-Length") or 0)
+        lengths = self.headers.get_all("Content-Length", [])
+        if self.headers.get("Transfer-Encoding") or len(lengths) != 1 or not re.fullmatch(r"[0-9]{1,12}", lengths[0]):
+            self.send_error_json(HTTPStatus.BAD_REQUEST, "Une longueur unique en octets est requise, sans Transfer-Encoding.")
+            return
+        length = int(lengths[0])
         if suffix not in VIDEO_TYPES:
             self.send_error_json(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, f"Format non pris en charge : {suffix or 'sans extension'}.")
             return
@@ -504,17 +585,40 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_error_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "Vidéo vide ou trop volumineuse.")
             return
         store = self.server.store
+        if length > shutil.disk_usage(store.root).free - 256 * 2 ** 20:
+            self.send_error_json(HTTPStatus.INSUFFICIENT_STORAGE, "Espace disque insuffisant pour cette vidéo.")
+            return
+        if not self.server.upload_slots.acquire(blocking=False):
+            self.send_error_json(HTTPStatus.TOO_MANY_REQUESTS, "Deux téléversements sont déjà en cours ; réessayez après leur fin.")
+            return
+        try:
+            self.receive_upload(name, suffix, length)
+        finally:
+            self.server.upload_slots.release()
+
+    def receive_upload(self, name: str, suffix: str, length: int) -> None:
+        """Reçoit un corps borné et efface tout fichier incomplet avant de libérer sa place.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Analyse vidéo — téléversement et nettoyage
+        """
+        store = self.server.store
         job_id, target = store.create(name, suffix)
-        with open(target, "wb") as stream:
-            remaining = length
-            while remaining > 0:
-                chunk = self.rfile.read(min(1 << 20, remaining))
-                if not chunk:
-                    break
-                stream.write(chunk)
-                remaining -= len(chunk)
+        remaining = length
+        try:
+            with open(target, "xb") as stream:
+                while remaining > 0:
+                    chunk = self.rfile.read(min(1 << 20, remaining))
+                    if not chunk:
+                        break
+                    stream.write(chunk)
+                    remaining -= len(chunk)
+        except OSError:
+            remaining = max(1, remaining)
         if remaining:
-            store.update(job_id, status="failed", error="Téléversement interrompu.")
+            target.unlink(missing_ok=True)
+            store.update(job_id, status="failed", error="Téléversement interrompu ou délai dépassé.", resumable=False)
             self.send_error_json(HTTPStatus.BAD_REQUEST, "Téléversement interrompu.")
             return
         try:

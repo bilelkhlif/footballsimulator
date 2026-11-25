@@ -8,6 +8,9 @@ Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
 """
 import http.client
 import json
+import os
+import socket
+import subprocess
 import tempfile
 import threading
 import time
@@ -131,6 +134,152 @@ class SecurityTest(unittest.TestCase):
         """
         headers = {"Content-Type": "video/mp4", **({"Origin": origin} if origin else {})}
         return self.request("POST", "/api/analyses?name=essai.mp4", headers, VIDEO_BYTES)
+
+    def test_invalid_lengths_and_transfer_encoding_are_rejected(self):
+        """Une longueur invalide n'abandonne pas la connexion sans réponse et ne crée aucun travail.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Tests du serveur — cadrage des téléversements
+        """
+        for headers in ({"Content-Length": "invalid"}, {"Content-Length": "-1"},
+                        {"Content-Length": "1,1"}, {"Transfer-Encoding": "chunked", "Content-Length": "1"}):
+            self.assertEqual(self.request("POST", "/api/analyses?name=a.mp4", headers)[0], 400)
+        self.assertEqual(self.store.list(), [])
+        self.assertEqual(self.request("GET", "/api/health")[0], 200)
+
+    def test_invalid_paths_and_nested_encodings_return_controlled_errors(self):
+        """NUL, encodages imbriqués, lecteurs et séparateurs ne font pas tomber un gestionnaire.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Tests du serveur — chemins hostiles
+        """
+        for path in ("/demo/%00", "/demo/%zz", "/demo/%252e%252e/file", "/demo/C:%5cWindows/file", "/demo/%5c%5cserver/file"):
+            self.assertEqual(self.request("GET", path)[0], 400, path)
+        self.assertEqual(self.request("GET", "/demo/index.json")[0], 200)
+
+    def test_upload_filename_is_a_simple_bounded_name(self):
+        """Un nom vidéo reste une étiquette : chemins, contrôles et noms démesurés sont refusés.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Tests du serveur — noms de fichiers
+        """
+        for name in ("../a.mp4", "C:%5ca.mp4", "%5c%5cserver%5ca.mp4", "a%00.mp4", "a" * 201 + ".mp4"):
+            self.assertEqual(self.request("POST", f"/api/analyses?name={name}", {}, VIDEO_BYTES)[0], 400, name)
+        self.assertEqual(self.store.list(), [])
+
+    def test_interrupted_uploads_are_bounded_and_cleaned(self):
+        """Deux corps incomplets bornent l'admission ; leur fermeture libère le disque et la file.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Tests du serveur — ressources des téléversements
+        """
+        connections = []
+        try:
+            for _ in range(2):
+                connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+                connection.putrequest("POST", "/api/analyses?name=partial.mp4")
+                connection.putheader("Content-Length", "100")
+                connection.endheaders(b"partial")
+                connections.append(connection)
+            deadline = time.time() + 5
+            while len(self.store.list()) < 2 and time.time() < deadline:
+                time.sleep(0.01)
+            self.assertEqual(len(self.store.list()), 2)
+            self.assertEqual(self.upload()[0], 429)
+            for connection in connections:
+                connection.sock.shutdown(socket.SHUT_WR)
+                self.assertEqual(connection.getresponse().status, 400)
+            for status in self.store.list():
+                self.wait_status(status["id"], "failed")
+                self.assertFalse(self.store.source(status["id"]).exists())
+            self.assertEqual(self.request("GET", "/api/health")[0], 200)
+        finally:
+            for connection in connections:
+                connection.close()
+
+    def test_local_files_cannot_escape_through_status_or_directory_links(self):
+        """Les routes média et statiques refusent aussi les liens locaux et un état corrompu.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Tests du serveur — confinement réel des fichiers
+        """
+        root = Path(self.directory.name)
+        external = tempfile.TemporaryDirectory()
+        outside = Path(external.name)
+        (outside / "secret.txt").write_text("outside-canary", encoding="utf-8")
+        link = root / "demo" / "linked"
+        if os.name == "nt":
+            subprocess.run(["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(outside)], check=True, capture_output=True)
+        else:
+            link.symlink_to(outside, target_is_directory=True)
+        try:
+            self.assertEqual(self.request("GET", "/demo/linked/secret.txt")[0], 404)
+            job_id, _ = self.store.create("a.mp4", ".mp4")
+            self.store.update(job_id, source=str(outside / "secret.txt"))
+            self.assertEqual(self.request("GET", f"/api/analyses/{job_id}/video")[0], 404)
+        finally:
+            os.rmdir(link) if os.name == "nt" else link.unlink()
+            external.cleanup()
+
+    def raw(self, data):
+        """Envoie des octets bruts ; renvoie la ligne de statut, ou ce qui en tient lieu.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Tests du serveur — requêtes HTTP brutes
+        """
+        with socket.create_connection(("127.0.0.1", self.port), timeout=5) as connection:
+            connection.sendall(data)
+            connection.shutdown(socket.SHUT_WR)
+            received = b""
+            while chunk := connection.recv(65536):
+                received += chunk
+        return received
+
+    def test_raw_malformed_requests_get_a_controlled_answer(self):
+        """Requêtes impossibles pour un navigateur : réponse d'erreur, aucun fichier servi, serveur intact.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Tests du serveur — requêtes HTTP brutes
+        """
+        root = Path(self.directory.name)
+        (root / "secret.txt").write_text("racine-privee", encoding="utf-8")
+        host = f"127.0.0.1:{self.port}".encode()
+        get = lambda target, extra=b"": b"GET " + target + b" HTTP/1.1\r\nHost: " + host + b"\r\n" + extra + b"\r\n"
+        post = lambda length_headers: (b"POST /api/analyses?name=a.mp4 HTTP/1.1\r\nHost: " + host + b"\r\n"
+                                       + length_headers + b"\r\nabcd")
+        cases = {
+            "NUL brut": (get(b"/demo/\x00"), b" 400 "),
+            "HTTP/0.9, sans version": (b"GET /demo/index.json\r\nHost: " + host + b"\r\n\r\n", b"505"),
+            "version inconnue": (b"GET /demo/index.json HTTP/9.9\r\nHost: " + host + b"\r\n\r\n", b" 505 "),
+            "en-tete de 70 Kio": (get(b"/demo/index.json", b"X: " + b"a" * 70000 + b"\r\n"), b" 431 "),
+            "cible absolue vers un autre hote": (get(b"http://exemple.test/demo/index.json"), b" 400 "),
+            # http.server ramène « //hôte/… » à « /hôte/… » (Python 3.11) : simple chemin introuvable.
+            "autorite //hote": (get(b"//serveur/partage/secret.txt"), b" 404 "),
+            "sans Host": (b"GET /demo/index.json HTTP/1.1\r\n\r\n", b" 421 "),
+            "methode inconnue": (b"BREW /demo/index.json HTTP/1.1\r\nHost: " + host + b"\r\n\r\n", b" 501 "),
+            "traversee encodee %2e%2e%2f": (get(b"/demo/%2e%2e%2fsecret.txt"), b" 404 "),
+            "separateurs meles ..%5c": (get(b"/demo/..%5csecret.txt"), b" 400 "),
+            "lecteur relatif C:": (get(b"/demo/C:secret.txt"), b" 400 "),
+            "UTF-8 invalide %c0%ae": (get(b"/demo/%c0%ae%c0%ae/secret.txt"), b" 400 "),
+            "longueur nulle": (post(b"Content-Length: 0\r\n"), b" 413 "),
+            "longueur demesuree": (post(b"Content-Length: 999999999999\r\n"), b" 413 "),
+            "deux longueurs": (post(b"Content-Length: 4\r\nContent-Length: 5\r\n"), b" 400 "),
+        }
+        for name, (data, expected) in cases.items():
+            with self.subTest(name):
+                answer = self.raw(data)
+                self.assertIn(expected, answer.split(b"\r\n", 1)[0] if b"HTTP/" in answer[:9] else answer, answer[:200])
+                self.assertNotIn(b"racine-privee", answer)
+                self.assertNotEqual(answer.strip(), b"{}", "HTTP/0.9 ne doit pas servir le fichier")
+        self.assertEqual(self.store.list(), [])
+        self.assertEqual(self.request("GET", "/api/health")[0], 200)
 
     def test_public_page_is_allowed_with_cors_and_private_network_access(self):
         """La page publique autorisée lit l'API et passe la requête préalable, accès au réseau privé compris.
