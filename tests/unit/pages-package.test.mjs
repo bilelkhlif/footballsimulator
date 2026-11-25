@@ -9,6 +9,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { preparePages } from '../prepare-pages.mjs';
 import { readAppShell, REPO_ROOT } from '../shell-version.mjs';
+import { createHash } from 'node:crypto';
 
 /** Modules du visualiseur passés en .mjs par l'intégration (docs/integration-visualiseur.md). */
 const MIGRATED = ['analytics', 'api-client', 'auto-placement', 'format', 'overlay-frame', 'overlay-pitch',
@@ -104,6 +105,12 @@ test('un clip privé non déclaré dans un export ou dans demo ne rejoint jamais
     writeFileSync(path.join(root, 'demo/matches/france-allemagne-2018/private-broadcast.mp4'), 'private');
     output = preparePages({ root });
     assert.equal(listFiles(output).some((file) => file.includes('private-broadcast')), false);
+    const manifestPath = path.join(root, 'demo/matches/france-allemagne-2018/manifest.json');
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    manifest.files['private-broadcast.mp4'] = { file: 'private-broadcast.mp4', bytes: 7,
+      sha256: createHash('sha256').update('private').digest('hex') };
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    assert.throws(() => preparePages({ root }), /Média non approuvé/);
   } finally {
     if (output) rmSync(output, { recursive: true });
     rmSync(root, { recursive: true });

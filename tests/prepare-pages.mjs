@@ -34,6 +34,11 @@ export function preparePages({ output, root = REPO_ROOT } = {}) {
     if (['author', 'license', 'licenseUrl', 'sourceUrl', 'changes'].some((key) => !approval[key] || manifest.provenance?.media?.[key] !== approval[key])) {
       throw new Error(`Crédits différents du registre relu : ${entry.id}`);
     }
+    for (const file of [manifest.video, ...Object.values(manifest.files ?? {})]) {
+      if (/\.(?:mp4|webm|jpg|png)$/i.test(file.file) && approval.files?.[file.file] !== file.sha256) {
+        throw new Error(`Média non approuvé dans le manifeste : ${entry.id}`);
+      }
+    }
     for (const [file, expected] of Object.entries(approval.files ?? {})) {
       if (!/^[a-z0-9.-]+$/.test(file) || createHash('sha256').update(readFileSync(path.join(root, 'demo', entry.path, file))).digest('hex') !== expected) {
         throw new Error(`Octets média différents du registre relu : ${entry.id}`);
