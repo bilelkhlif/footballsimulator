@@ -803,6 +803,14 @@ export async function testVisualizerGpuReset(launch, url, record) {
         }
       }
       const { point } = target;
+      // frame.rect donne la destination ; la transition CSS du panneau peut encore couvrir le joueur.
+      // Un clic par coordonnées n'attend pas la stabilité comme locator.click() : vérifier le vrai hit-test.
+      await page.waitForFunction(({ point, id }) => {
+        const canvas = document.getElementById('annotations');
+        const rect = canvas.getBoundingClientRect();
+        return document.elementFromPoint(point.x, point.y) === canvas
+          && window.__matchVisualizer.annotations.pick(point.x - rect.left, point.y - rect.top) === id;
+      }, target, { timeout: 5000 });
       await page.mouse.click(point.x, point.y);
       await page.waitForTimeout(250);
       const selected = await page.evaluate(() => window.__matchVisualizer.selectedId);
