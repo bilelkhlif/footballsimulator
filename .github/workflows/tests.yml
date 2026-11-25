@@ -1,0 +1,26 @@
+# Intégration continue : tests unitaires à chaque push et pull request.
+# Les tests de bout en bout (npm run test:e2e) exigent un GPU compatible WebGPU et restent
+# lancés à la main sur un PC (docs/technique.md, §9).
+# Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Tests unitaires (Node.js)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run test:unit
