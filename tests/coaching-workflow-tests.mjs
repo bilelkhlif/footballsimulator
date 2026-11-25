@@ -213,7 +213,9 @@ export async function runCoachingWorkflowTests(browser, url, record) {
       });
       assert.equal(overlay.selects, 0);
       assert.equal(overlay.anchored, true);
-      assert.deepEqual(overlay.pose, overlay.expectedPose);
+      // Les poses WebXR passent par Float32 : tolérance de 1 µm, bien sous le centimètre du cahier.
+      const poseError = Math.max(...overlay.pose.map((value, index) => Math.abs(value - overlay.expectedPose[index])));
+      assert.ok(Number.isFinite(poseError) && poseError <= 1e-6, `pose modifiée : écart maximal ${poseError}`);
       await clickUi(page, '#exit-ar');
       await page.waitForFunction(() => document.body.dataset.xr === 'inactive' && !window.__footballSimulator.renderer.xr.isPresenting);
       assert.deepEqual(await readCoachingState(page), expected);

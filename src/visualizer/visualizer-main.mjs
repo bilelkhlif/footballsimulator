@@ -110,6 +110,8 @@ class MatchVisualizer {
     this.gpuLost = false;
     /** Vidéo déjà rechargée après une erreur de décodage (une seule fois par vidéo). */
     this.videoRecovery = null;
+    /** Révision du chargement média : invalide une restauration après fermeture, même si l'URL revient. */
+    this.videoLoadRevision = 0;
     this.selectedId = null;
     this.openGeneration = 0;
     this.manifestTimer = null;
@@ -255,6 +257,7 @@ class MatchVisualizer {
    * @role Visualiseur de match — choix du mode
    */
   #closeAnalysis() {
+    this.videoLoadRevision += 1;
     clearTimeout(this.manifestTimer);
     clearTimeout(this.jobTimer);
     this.manifestTimer = null;
@@ -839,6 +842,7 @@ class MatchVisualizer {
       this.video.removeAttribute('poster');
     }
     this.video.src = source;
+    this.videoLoadRevision += 1;
     this.video.dataset.analysis = id ?? '';
     this.videoRecovery = null;
     byId('stage-empty').hidden = true;
@@ -865,14 +869,15 @@ class MatchVisualizer {
       return;
     }
     this.videoRecovery = source;
+    const revision = this.videoLoadRevision;
     const time = this.video.currentTime;
     this.video.addEventListener('loadedmetadata', () => {
-      if (this.video.getAttribute('src') === source) {
+      if (this.videoLoadRevision === revision && this.video.getAttribute('src') === source) {
         this.video.currentTime = time;
       }
     }, { once: true });
     this.video.load();
-    this.setStatus(`Décodeur vidéo du navigateur perdu : vidéo rechargée à ${formatTime(time)} ; relancez la lecture.`, 'error');
+    this.setStatus(`Erreur de décodage : vidéo rechargée à ${formatTime(time)} ; relancez la lecture.`, 'error');
   }
 
   /**
@@ -1136,7 +1141,9 @@ class MatchVisualizer {
     legend.replaceChildren(...this.store.teams.map((team) => {
       const item = document.createElement('span');
       item.className = 'vz-legend-item';
-      item.innerHTML = `<i style="background:${team.color ?? '#9aa0a6'}"></i>Équipe ${team.id === 0 ? 'A' : 'B'}`;
+      const chip = document.createElement('i');
+      chip.style.backgroundColor = team.color ?? '#9aa0a6';
+      item.append(chip, document.createTextNode(`Équipe ${team.id === 0 ? 'A' : 'B'}`));
       return item;
     }));
   }
@@ -1291,7 +1298,20 @@ class MatchVisualizer {
         }
       }
     });
-    byId('play').addEventListener('click', () => (this.video.paused ? this.video.play() : this.video.pause()));
+    byId('play').addEventListener('click', async () => {
+      if (!this.video.paused) {
+        this.video.pause();
+        return;
+      }
+      const revision = this.videoLoadRevision;
+      try {
+        await this.video.play();
+      } catch (error) {
+        if (revision === this.videoLoadRevision && (error.name !== 'AbortError' || !this.videoRecovery)) {
+          this.setStatus(`Lecture impossible : ${error.message}`, 'error');
+        }
+      }
+    });
     byId('seek').addEventListener('input', (event) => { this.video.currentTime = Number(event.target.value); });
     byId('speed').addEventListener('change', (event) => { this.video.playbackRate = Number(event.target.value); });
     byId('mute').addEventListener('click', (event) => {

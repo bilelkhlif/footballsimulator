@@ -85,7 +85,8 @@ export function startServer({ root = REPO_ROOT, port = 0, basePath = '/' } = {})
       return;
     }
     let file = path.join(root, relative);
-    if (!file.startsWith(root)) {
+    const boundary = path.relative(path.resolve(root), path.resolve(file));
+    if (boundary === '..' || boundary.startsWith(`..${path.sep}`) || path.isAbsolute(boundary)) {
       response.writeHead(403).end();
       return;
     }
