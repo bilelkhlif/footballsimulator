@@ -1,17 +1,20 @@
-# Serveur d'analyse du visualiseur de match (Python 3.11), versions testées le 17 novembre 2026.
+# Serveur local optionnel (Python 3.11). Recette de sécurité du 25 novembre 2026.
 # Licences et raisons de chaque choix : docs/opensource-research.md.
 #
 # PyTorch d'abord, selon le matériel (voir analysis/README.md) :
-#   GPU NVIDIA : pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
-#   processeur seul : pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cpu
+#   GPU NVIDIA : pip install torch==2.14.1 torchvision==0.29.1 --index-url https://download.pytorch.org/whl/cu126
+#   processeur seul : pip install torch==2.14.1 torchvision==0.29.1 --index-url https://download.pytorch.org/whl/cpu
+torch==2.14.1              # BSD-3-Clause ; GHSA-53q9 et GHSA-63cw corrigés ; GHSA-v32g : voir analysis/README.md (Sécurité)
+torchvision==0.29.1        # BSD-3-Clause ; couple officiel de torch 2.14.1
+numpy==2.4.6              # Version de la chaîne validée
 ultralytics==8.4.215        # AGPL-3.0 : inférence des poids YOLOv8 de Roboflow Sports
 supervision==0.31.7         # MIT : détections, points clés
 trackers==2.7.0             # Apache-2.0 : ByteTrack
 scenedetect==0.7.3          # BSD-3-Clause : coupures de plan
 umap-learn==0.6.0           # BSD-3-Clause : réduction des plongements (équipes)
-scikit-learn>=1.6           # BSD-3-Clause : KMeans (équipes)
+scikit-learn==1.6.1         # BSD-3-Clause : KMeans (équipes)
 transformers==5.13.0        # Apache-2.0 : SigLIP ou CLIP (équipes)
 sentencepiece==0.2.3        # Apache-2.0 : tokeniseur de SigLIP, chargé par TeamClassifier
-opencv-python>=4.10         # Apache-2.0 : lecture vidéo, homographie (numpy 2)
-gdown==5.2.0                # MIT : téléchargement des poids (liens de Roboflow Sports)
+opencv-python==4.14.0.94     # Apache-2.0 : lecture vidéo, homographie (numpy 2)
+gdown==5.2.2                # MIT : téléchargement des poids ; 5.2.2 corrige GHSA-76hw-p97h-883f (extractall, non utilisé ici)
 sports @ git+https://github.com/roboflow/sports.git@42c80c06b6b65a7f89455b89fe31cdf4c38ba227  # MIT

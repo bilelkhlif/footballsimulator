@@ -13,7 +13,7 @@ import json
 import sys
 from pathlib import Path
 
-from .models import DATA_DIR, MODELS_DIR, download_models, missing_models
+from .models import DATA_DIR, MODELS_DIR, MODEL_FILES, download_models, missing_models, verified_models, backbone_directory
 
 #: Racine du dépôt, qui contient visualizer.html.
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -206,7 +206,9 @@ def main(argv: list[str] | None = None) -> int:
         stream.reconfigure(encoding="utf-8")  # console Windows : accents lisibles
     parser = argparse.ArgumentParser(prog="football_analysis", description="Analyse de vidéos de football.")
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("models", help="télécharger les poids de Roboflow Sports")
+    models = commands.add_parser("models", help="vérifier les poids approuvés ; --download autorise leur téléchargement")
+    models.add_argument("--download", action="store_true", help="télécharger explicitement les poids absents, puis vérifier leurs octets")
+    models.add_argument("--teams", choices=("siglip", "clip"), default="siglip", help="plongements à vérifier ; clip réservé à la recherche")
     analyse = commands.add_parser("analyse", help="analyser une vidéo")
     analyse.add_argument("video")
     analyse.add_argument("-o", "--output", help="base de suivi (par défaut : <vidéo>.tracking.sqlite) ; .json pour un export")
@@ -244,8 +246,21 @@ def main(argv: list[str] | None = None) -> int:
         sub.add_argument("--team-fit-seconds", type=float, default=30, help="amorçage des équipes, entre 1 et 120 s")
     arguments = parser.parse_args(argv)
     if arguments.command == "models":
-        for path in download_models():
-            print(f"Téléchargé : {path}")
+        try:
+            if arguments.download:
+                print("Téléchargement explicite depuis les sources de models.lock.json ; aucune licence de projet n'est accordée par cette commande.")
+                for path in download_models():
+                    print(f"Téléchargé et vérifié : {path.name}")
+            print(json.dumps(verified_models(MODELS_DIR, tuple(MODEL_FILES)), ensure_ascii=False))
+            backbone_directory(arguments.teams, download=arguments.download)
+        except (ValueError, RuntimeError) as error:
+            # Un poids refusé n'est jamais chargé : la cause suffit, sans trace Python.
+            print(f"Modèles non vérifiés : {error}", file=sys.stderr)
+            if not arguments.download:
+                print("Poids absents : « python -m football_analysis models --download » ; poids modifiés : supprimez-les puis relancez.",
+                      file=sys.stderr)
+            return 1
+        print(f"Poids vérifiés, plongements {arguments.teams} épinglés et vérifiés.")
         return 0
     return {"analyse": command_analyse, "serve": command_serve, "export": command_export,
             "verify-export": command_verify_export, "demo": command_demo}[arguments.command](arguments)

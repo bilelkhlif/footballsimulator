@@ -1,0 +1,3 @@
+# Tests seulement ; pas de navigateur ou de modèle nécessaire pour la suite Python.
+-r requirements.txt
+jsonschema==4.23.0

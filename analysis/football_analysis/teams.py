@@ -30,6 +30,8 @@ from typing import Any, Iterable
 
 import numpy as np
 
+from .models import backbone_directory
+
 #: Modèles de plongements proposés : identifiant Hugging Face de chacun.
 BACKBONES = {
     "siglip": "google/siglip-base-patch16-224",
@@ -150,18 +152,16 @@ def build_classifier(backbone: str, device: str, seed: int = 0) -> Any:
     from sklearn.cluster import KMeans
     from sports.common.team import TeamClassifier
 
-    if backbone == "siglip":
-        classifier = TeamClassifier(device=device)
-    elif backbone == "clip":
-        from transformers import CLIPImageProcessor, CLIPVisionModel
-
-        # Même interface que SigLIP (pixel_values, last_hidden_state) : extract_features de
-        # TeamClassifier s'applique tel quel. __init__ est contourné pour ne pas charger SigLIP.
-        classifier = TeamClassifier.__new__(TeamClassifier)
-        classifier.device = device
-        classifier.batch_size = 32
-        classifier.features_model = CLIPVisionModel.from_pretrained(BACKBONES["clip"]).to(device)
-        classifier.processor = CLIPImageProcessor.from_pretrained(BACKBONES["clip"])
+    from transformers import CLIPImageProcessor, CLIPVisionModel, SiglipImageProcessor, SiglipVisionModel
+    directory = backbone_directory(backbone)
+    # Réutiliser l'extraction Roboflow, sans son téléchargement implicite sur une branche mutable.
+    classifier = TeamClassifier.__new__(TeamClassifier)
+    classifier.device = device
+    classifier.batch_size = 32
+    model_type, processor_type = (SiglipVisionModel, SiglipImageProcessor) if backbone == "siglip" else (CLIPVisionModel, CLIPImageProcessor)
+    classifier.features_model = model_type.from_pretrained(str(directory), local_files_only=True,
+                                                          use_safetensors=True, trust_remote_code=False).to(device)
+    classifier.processor = processor_type.from_pretrained(str(directory), local_files_only=True)
     classifier.features_model.eval()
     classifier.crop_torso = backbone == "siglip"
     # UMAP 0.6 annonce un changement de méthode par défaut : conserver celle qui a été validée.

@@ -26,7 +26,7 @@ from . import contract
 from .calibration import CalibrationSettings, PitchCalibrator, foot_points, pitch_status
 from .detection import DetectionSettings, FootballDetector
 from .metrics import describe_limitations, quality_metrics
-from .models import MODELS_DIR, missing_models, model_path, sha256
+from .models import MODELS_DIR, model_path, verified_models, require_secure_torch
 from .teams import (BACKBONES, MIN_CROPS_TO_FIT, CropCollector, TeamAssignment, assign_player_teams,
                     build_classifier, resolve_goalkeepers, team_colour)
 from .tracking import CutDetector, PeopleTracker
@@ -167,15 +167,18 @@ def _load_models(options: AnalysisOptions, device: str) -> tuple[FootballDetecto
     @date 2026-11-17
     @role Analyse vidéo — chaîne d'analyse (modèles)
     """
+    needed = ("players", "pitch", "ball") if options.use_ball_model else ("players", "pitch")
+    described = verified_models(options.models_dir, needed)
+    require_secure_torch()
     from ultralytics import YOLO, settings
-
+    from ultralytics.nn.tasks import _SafeLoad
+    from ultralytics.utils import SAFE_LOAD
+    # Ultralytics repasse sans bruit au chargement ordinaire si son mode restreint n'est pas pris en
+    # charge (torch_safe_load) : ce cas doit arrêter l'analyse, pas l'affaiblir.
+    if not SAFE_LOAD or not getattr(_SafeLoad, "SUPPORTED", False):
+        raise RuntimeError("Chargeur restreint Ultralytics inactif : relancez dans un nouveau processus.")
     if settings.get("sync", False):
         settings.update({"sync": False})  # pas de statistiques d'usage envoyées à Ultralytics
-    needed = ("players", "pitch", "ball") if options.use_ball_model else ("players", "pitch")
-    missing = missing_models(options.models_dir, needed)
-    if missing:
-        raise FileNotFoundError(f"Poids manquants : {', '.join(missing)}. "
-                                "Lancez « python -m football_analysis models » pour les télécharger.")
     # Demi-précision (16 bits) sur GPU : option « quantize » d'Ultralytics 8.4, qui remplace « half ».
     predict = {"device": device, **({"quantize": 16} if device.startswith("cuda") else {})}
     people = YOLO(str(model_path("players", options.models_dir)))
@@ -183,8 +186,6 @@ def _load_models(options: AnalysisOptions, device: str) -> tuple[FootballDetecto
     pitch = YOLO(str(model_path("pitch", options.models_dir)))
     detector = FootballDetector(people, ball, DetectionSettings(), predict)
     calibrator = PitchCalibrator(pitch, CalibrationSettings(), predict)
-    described = {name: {"file": model_path(name, options.models_dir).name,
-                        "sha256": sha256(model_path(name, options.models_dir))} for name in needed}
     crop_method = "torse" if options.team_backbone == "siglip" else "personne entière"
     described["teams"] = {"embeddings": BACKBONES[options.team_backbone],
                           "method": f"{crop_method} + UMAP + KMeans, vote par trajectoire"}
