@@ -27,7 +27,7 @@
 - **Espaces de coaching.** Rail sombre compact et sept espaces fonctionnels : Accueil, Équipes et formations, Outils tactiques, Animation et séquences, Réalité augmentée, Plus d'outils, Réglages et aide. Une seule scène, un seul tableau et un seul historique sont conservés entre les espaces. Navigation basse en portrait, panneaux défilants et contrôles de vue persistants. L'[inventaire, l'architecture, les correspondances et les captures avant / après](docs/espaces-coaching.md) détaillent cette évolution.
 - **Testé.** 369 tests automatisés sur PC le 24 novembre 2026 : 229 unitaires et 140 de bout en bout, dont le parcours complet d'un entraîneur de la 3D vers l'AR émulée, tous réussis sans cas ignoré ([revue critique, mesures et limites](docs/revue-finale-pr17.md)). Les anciens essais physiques du 12 et du 14 novembre concernent des versions précédentes : AR WebGPU sur TECNO POVA 6 Pro 5G, mode test WebGL sur Galaxy S10e. Cette nouvelle interface n'a pas été testée sur téléphone réel. Restent à mesurer : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde ([recette](docs/recette.md)).
 
-- **Analyse de match intégrée.** Le visualiseur de match (PR #15) s'ouvre depuis l'espace Plus d'outils, dans un nouvel onglet : la tactique en cours reste intacte. La démonstration synthétique se lit sans serveur ; vos propres vidéos passent par le serveur d'analyse local. La revue indépendante du 25 novembre 2026 passe, sur la branche corrective : 268 tests unitaires, 206 vérifications dans Chrome, 113 tests Python et 12 étapes du parcours CUDA réel. La perte du GPU est signalée et le lecteur vidéo récupère une erreur de décodage. Les défauts reproduits, les corrections et les décisions de sécurité/licence encore ouvertes sont détaillés dans la [revue indépendante](docs/revue-independante-pr19-pr20.md) ; le [compte rendu d'intégration](docs/integration-visualiseur.md) décrit la version précédente.
+- **Analyse de match intégrée.** Le visualiseur de match (PR #15) s'ouvre depuis l'espace Plus d'outils, dans un nouvel onglet : la tactique en cours reste intacte. La démonstration synthétique se lit sans serveur ; vos propres vidéos passent par le serveur d'analyse local. La perte du GPU est signalée et le lecteur vidéo récupère une erreur de décodage. Préparation de la publication, le 25 novembre 2026 : serveur d'analyse durci, poids vérifiés avant tout chargement, PyTorch 2.14.1, site statique préparé sans le serveur ; 274 tests unitaires, 207 vérifications dans Chrome, 127 tests Python et 12 étapes du parcours CUDA réel, tous réussis. Les défauts reproduits sont dans la [revue indépendante](docs/revue-independante-pr19-pr20.md). Le [compte rendu d'intégration](docs/integration-visualiseur.md) donne les résultats ; les décisions de licence restent au propriétaire ([licences et distribution](docs/licences-et-distribution.md)).
 
 ## Aperçu
 
@@ -258,7 +258,10 @@ L'analyse réutilise des composants libres (Roboflow Sports, Ultralytics, ByteTr
 
 Deux modes, une seule interface : **Explorer la démo** lit des exports statiques de `demo/` (un match synthétique, vidéo et annotations générées ensemble, sans Python ni serveur, compatible GitHub Pages) ; **Analyser ma vidéo** utilise le serveur local (téléversement, progression, résultats partiels, interruption et reprise).
 
+Pour essayer la démonstration, ouvrez `visualizer.html` sur un serveur statique local, ou sur le site GitHub Pages une fois cette version déployée (elle ne l'est pas encore) : aucun serveur Python n'est nécessaire. Pour analyser vos vidéos, installez le serveur local sur un PC avec GPU NVIDIA ([analysis/README.md](analysis/README.md) : environnement, vérification des modèles, sécurité), lancez `python -m football_analysis serve`, puis ouvrez l'adresse affichée.
+
 - Démonstration, export statique, analyse locale, sécurité et licences de redistribution : [docs/visualiseur-modes.md](docs/visualiseur-modes.md)
+- Licences, composants livrés et décisions réservées au propriétaire : [docs/licences-et-distribution.md](docs/licences-et-distribution.md), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - Qui a fait quoi, avec quelles preuves : [docs/attribution-visualiseur.md](docs/attribution-visualiseur.md)
 - Recherche des composants, licences et choix : [docs/opensource-research.md](docs/opensource-research.md)
 - Fiabilité des équipes sous soleil et ombre : [recherche et comparaison des variantes](docs/equipes-lumiere-recherche.md)
@@ -386,10 +389,11 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 ```bash
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
-npm run test:unit   # 268 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
-npm run test:e2e    # 206 vérifications dans Chrome, sans interface
+npm run test:unit   # 274 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
+npm run test:e2e    # 207 vérifications dans Chrome, sans interface
 npm run bench       # mesure des performances (sprint 6), hors de npm test : 1 à 2 minutes
 npm run shell-version  # recalcule SHELL_VERSION dans sw.mjs après une modification de l'application
+npm run pages:prepare  # prépare le site statique dans un nouveau dossier temporaire, sans rien publier
 ```
 
 Les tests de bout en bout couvrent :
@@ -407,7 +411,7 @@ Les tests de bout en bout couvrent :
 - le visualiseur de match (prototype) : WebGPU sans WebGL, synchronisation de la vidéo et des annotations à l'arrêt et en lecture, coupure de plan, calibration absente, sélection sur la vidéo et en 3D, rotation et zoom du terrain 3D, panneau déplacé, redimensionné, verrouillé, réduit et placé automatiquement ;
 - l'intégration du visualiseur : ouverture depuis Plus d'outils et retour au tableau, tactique conservée, démonstration de 36 s lue et déplacée sous le contrôle du Service Worker (vraies réponses 206, aucune vidéo en cache).
 
-Le serveur d'analyse a ses propres tests, 113 en Python (`python -m unittest discover -s tests` dans `analysis/`, voir [analysis/README.md](analysis/README.md)). Le vrai pipeline sur GPU se vérifie à la main : `node tests/visualizer-local-ai.mjs <vidéo>`.
+Le serveur d'analyse a ses propres tests, 127 en Python (`python -m unittest discover -s tests` dans `analysis/`, voir [analysis/README.md](analysis/README.md)), dont les requêtes hostiles et le refus d'un checkpoint piégé. Le vrai pipeline sur GPU se vérifie à la main : `node tests/visualizer-local-ai.mjs <vidéo>`.
 
 Les tests unitaires vérifient aussi la documentation du code : chaque fonction, classe et membre de classe porte un en-tête avec son responsable, sa date et son rôle, et chaque fichier renvoie à ATTRIBUTION.md ([convention](docs/convention-de-documentation.md)).
 
@@ -428,6 +432,7 @@ Résultat le 23 novembre 2026, après les retours de l'évaluation : 226 tests u
 ├── sw.js                  Script de migration des installations antérieures vers sw.mjs
 ├── package.json           Commandes npm start, npm test, test:unit, test:e2e, bench et shell-version
 ├── ATTRIBUTION.md         Origine des ressources et usage de l'IA
+├── THIRD_PARTY_NOTICES.md Composants tiers du site et du serveur facultatif
 ├── src/
 │   ├── main.mjs                 Point d'entrée : assemble la scène, l'AR et la PWA
 │   ├── workspace-controller.mjs Espace actif et disponibilité des panneaux, sans état tactique
@@ -492,6 +497,7 @@ Résultat le 23 novembre 2026, après les retours de l'évaluation : 226 tests u
 │   ├── fixtures/synthetic-range.mp4 Vidéo synthétique de 8 s de ce test
 │   ├── benchmark.mjs      Mesure des performances (npm run bench, sprint 6)
 │   ├── shell-version.mjs  Empreinte de la coquille, écrite dans sw.mjs (npm run shell-version)
+│   ├── prepare-pages.mjs  Site statique séparé du serveur, sans publication (npm run pages:prepare)
 │   └── unit/              Tests unitaires (npm run test:unit) et carte d'import pour Node.js
 ├── assets/
 │   ├── icons/             Icônes de l'application
@@ -505,6 +511,7 @@ Résultat le 23 novembre 2026, après les retours de l'évaluation : 226 tests u
     ├── attribution-proposee.md  Ajouts factuels proposés à la relecture de l’équipe
     ├── integration-future-visualiseur.md  Imports partagés et référence de recherche différée
     ├── integration-visualiseur.md  Intégration du visualiseur : conflits, migration, accès, tests, limites
+    ├── licences-et-distribution.md  Licences, deux modes de distribution, décisions du propriétaire
     ├── migration-mjs.md   Modules en .mjs, exceptions, passage de sw.js à sw.mjs
     ├── sprint-1.md        Compte rendu du sprint 1
     ├── sprint-2.md        Compte rendu du sprint 2 : session AR
@@ -556,4 +563,4 @@ Encadrant : Dr. Ing. Mohamed-Bécha Kaâniche.
 - [IWER](https://github.com/meta-quest/immersive-web-emulation-runtime) 2.7.0, Meta, licence MIT, chargé depuis jsDelivr en développement seulement.
 - [Playwright](https://github.com/microsoft/playwright) (`playwright-core` 1.64.1), Microsoft, licence Apache 2.0, pour les tests seulement.
 
-L'origine de chaque ressource et l'usage de l'IA sont déclarés dans [ATTRIBUTION.md](ATTRIBUTION.md). Aucune licence n'a encore été choisie pour le projet.
+L'origine de chaque ressource et l'usage de l'IA sont déclarés dans [ATTRIBUTION.md](ATTRIBUTION.md). Les composants tiers du site et du serveur facultatif sont inventoriés dans [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Aucune licence n'a encore été choisie pour le projet.

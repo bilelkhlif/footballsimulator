@@ -1,15 +1,19 @@
 # Intégration du visualiseur de match : compte rendu
 
-Répétition locale du 24 novembre 2026, sur la branche `repetition/integration-visualiseur`, non publiée.
-Elle réunit `main`, la correction du Service Worker (PR #19) et le visualiseur de match (PR #15).
-`main` et les branches des PR #15, #18 et #19 ne sont pas modifiées. Aucune fusion n'a été faite sur GitHub.
+Intégration répétée le 24 novembre 2026 sur la branche `repetition/integration-visualiseur`, publiée
+ensuite comme PR #20 en brouillon. Elle réunit `main`, la correction du Service Worker (PR #19) et le
+visualiseur de match (PR #15). `main` et les branches des PR #15, #18 et #19 ne sont pas modifiées.
+Aucune fusion n'a été faite vers `main`.
 
 Cette note remplace, pour l'intégration, la [note différée](integration-future-visualiseur.md), qui reste
 comme trace historique.
 
 Complément du 25 novembre : l'échec intermittent du lecteur est expliqué et pris en charge dans
 la [correction de perte du GPU](#perte-du-gpu--cause-correction-et-validation-du-25-novembre-2026).
-La PR #20 reste un brouillon et dépend toujours de la PR #19 ; aucune fusion supplémentaire n'est autorisée.
+Complément du 25 novembre, préparation de la publication : sécurité du serveur et des modèles,
+PyTorch 2.14.1, site statique préparé et fusion répétée, dans la
+[section dédiée](#préparation-de-la-publication-25-novembre-2026). La PR #20 reste un brouillon et
+dépend toujours de la PR #19 ; aucune fusion n'est faite sans autorisation.
 
 ## Points de départ
 
@@ -235,6 +239,64 @@ diagnostic si cette branche était prise.
 Les traces, modèles, vidéos et bases SQLite restent hors des fichiers suivis. Les essais sont faits sur
 PC dans Chrome, sans validation physique sur téléphone, Firefox ou Safari.
 
+## Préparation de la publication, 25 novembre 2026
+
+Ces commits suivent la PR #21 (`5610e16`) sur la branche `fix/release-readiness`. Codex a commencé ce
+travail ; sa limite d'usage l'a interrompu avant validation. Claude Code a conservé l'état non validé
+(24 fichiers), puis l'a vérifié, complété et testé.
+
+### Sécurité et dépendances
+
+| Domaine | Correction | Preuve |
+| --- | --- | --- |
+| Serveur d'analyse | Chemins décodés une fois ; refus des octets de contrôle, séparateurs Windows, lecteurs, encodages imbriqués, cibles absolues et HTTP/0.9 ; longueur unique ; nom simple ; deux téléversements et seize connexions au plus, 30 s d'inactivité, réserve disque ; fichiers d'un travail confinés | Reproduits avant correction : sortie par jonction, connexion coupée sans réponse pour une longueur invalide et pour un NUL. Tests : 18 requêtes brutes, liens, longueurs, noms, téléversements interrompus |
+| Serveur de développement (Node) | Racine et chemins réels confinés, mêmes refus | Lien extérieur, lecteurs, UNC, flux NTFS, encodages imbriqués refusés |
+| Poids des modèles | Taille et SHA-256 vérifiés avant tout import d'Ultralytics ; téléchargement en quarantaine ; mode restreint et `weights_only` forcés, sans repli | Un checkpoint piégé est refusé sans exécution ; le même fichier exécute sa charge sans garde-fous |
+| PyTorch | 2.14.1 + CUDA 12.6 ; une analyse refuse toute version antérieure à 2.10.0 | GHSA-53q9 et GHSA-63cw corrigés ; GHSA-v32g, voir ci-dessous |
+| gdown | 5.2.2 | Corrige GHSA-76hw-p97h-883f (fonction `extractall`, inutilisée ici) |
+| Service Worker | Vidéos et réponses `no-store` hors du cache d'exécution | Tests unitaires ; aucune vidéo en cache dans Chrome |
+| Revue indépendante (PR #21) | R1 à R6 conservés | Contrôles Chrome et test serveur inchangés |
+
+**PyTorch, risque résiduel.** [GHSA-v32g-mr63-3j83](https://github.com/pytorch/pytorch/security/advisories/GHSA-v32g-mr63-3j83) :
+un checkpoint malveillant peut lire des fichiers texte avec `weights_only=True`, à partir de 2.14.0.
+La correction, 2.15.0, n'est publiée qu'en CUDA 13.2 et 13.4. Le pilote de l'essai (566.07) ne va que
+jusqu'à CUDA 12.7. Ici, seuls les trois poids épinglés atteignent `torch.load`, et aucun ne référence la
+classe exploitée. Passer à 2.15.0 demande de mettre à jour le pilote NVIDIA, puis de valider à nouveau.
+
+**Provenance des empreintes.** Roboflow ne publie pas d'empreinte pour ses poids. Les octets servis par
+les liens de son `setup.sh` sont identiques le 17 et le 25 novembre, et les analyses du 17 au 23
+novembre avaient enregistré les mêmes empreintes. Les révisions SigLIP et CLIP, leurs tailles et leurs
+empreintes sont celles du Hub ; ces révisions sont aussi celles de leur branche principale.
+
+### Chaîne IA avec PyTorch 2.14.1
+
+Mêmes vidéos, même code d'analyse ; seuls l'environnement et le chargement sécurisé changent :
+
+| Vidéo | Détections appariées | Équipes, rôles, calibration | Coupures | Trajectoires | Temps de traitement |
+| --- | --- | --- | --- | --- | --- |
+| Extrait de 10 s | 2 759 sur 2 759, IoU médiane 1,0 | identiques | aucune | 25 et 25 | 124 s (2.5.1), 98 s (2.14.1) |
+| Montage de 24 s avec deux coupures | 5 925 sur 5 926 | identiques | images 200 et 400 dans les deux | 73 et 73 | 180 s (2.5.1), 160 s (2.14.1) |
+
+Positions sur le terrain : écart médian nul, 7 cm au 95ᵉ centile. Le premier passage de 2.14.1 sur
+l'extrait de 10 s a pris 199 s : premier usage d'UMAP dans le nouvel environnement, et calculs
+simultanés sur le processeur. Ce passage n'est pas retenu comme mesure. Mémoire de PyTorch : 627 Mo au
+plus dans les deux versions. Mémoire vive mesurée par la chaîne : 2,5 à 2,6 Go ; échantillonnée sur tous ses processus : 2,7 à 3,0 Gio.
+
+### Résultats
+
+| Vérification | Résultat |
+| --- | --- |
+| `npm run test:unit` | 274 tests réussis, aucun ignoré |
+| `npm run test:e2e` | 207 vérifications Chrome réussies, aucune ignorée |
+| Python, environnement 2.14.1 | 127 tests réussis |
+| Vrai parcours GPU (`tests/visualizer-local-ai.mjs`) | 12 étapes réussies en 177 s, sans perte GPU pendant ce passage |
+| Site préparé par `npm run pages:prepare`, servi seul sous `/footballsimulator/` | 6 contrôles réussis : Service Worker, démonstration sans Python, aucune vidéo en cache, 56 modules au type JavaScript, hors ligne, aucune erreur |
+| Fusion répétée : `main`, puis #19, puis cette branche | Aucun conflit ; arbre identique à la branche ; aucun fichier supprimé ; #18 fusionnable ensuite |
+
+Pendant le parcours GPU, la carte (affichage et Chrome compris) a utilisé de 1,0 à 2,5 Gio. Les
+résultats partiels arrivent au bout de 24 s, l'arrêt brutal est détecté en 220 ms, et l'analyse se
+termine 151 s après le téléversement.
+
 ## Limites et risques restants
 
 - **Aucun essai sur téléphone réel.** Les profils mobiles et l'AR sont des émulations sur PC. Firefox et
@@ -243,9 +305,12 @@ PC dans Chrome, sans validation physique sur téléphone, Firefox ou Safari.
   de l'application installée. Le visualiseur n'est pas promis hors ligne.
 - **Taille publiée.** La démonstration publique `demo/` pèse environ 2,2 Mo, chargés seulement à
   l'ouverture du visualiseur.
-- **Licences.** Le serveur d'analyse utilise des composants sous AGPL-3.0 (Ultralytics, poids de Roboflow
-  Sports). Ni les poids ni les vidéos de match ne sont dans le dépôt, et le dépôt n'a pas de fichier
-  LICENSE. Leur redistribution est discutée dans [visualiseur-modes.md](visualiseur-modes.md).
+- **Licences.** Le serveur d'analyse dépend d'Ultralytics (AGPL-3.0 ou licence Enterprise) et de poids
+  dont les droits ne sont pas établis. Ni les poids ni les vidéos de match ne sont dans le dépôt, et le
+  dépôt n'a pas de fichier LICENSE. Les décisions sont réservées au propriétaire :
+  [licences-et-distribution.md](licences-et-distribution.md).
+- **PyTorch.** GHSA-v32g touche 2.14.1, atténué par la vérification des poids ; la correction demande
+  CUDA 13 et un pilote NVIDIA plus récent.
 - **ATTRIBUTION.md.** La PR #15 et la PR #18 numérotent chacune de nouvelles entrées. À l'intégration de
   la seconde, la numérotation sera à revoir par l'équipe : ce fichier ne se modifie que sur sa demande.
 - **Chrome et le réseau local.** Depuis le site public, l'accès à `127.0.0.1` demande l'autorisation
@@ -255,18 +320,20 @@ PC dans Chrome, sans validation physique sur téléphone, Firefox ou Safari.
 
 ## Séquence Git recommandée
 
-1. Relire puis fusionner la PR #19 dans `main`. Vérifier le déploiement : la démonstration n'y est pas
-   encore, mais l'application doit rester inchangée, hors ligne compris.
-2. Créer une nouvelle branche d'intégration depuis `main` à jour.
-3. Y fusionner `feature/visualiseur-match` (PR #15) sans avance rapide, avec les résolutions ci-dessus.
-4. Y reporter les commits de migration et d'accès de cette répétition, par `git cherry-pick`.
-5. Relancer `npm run shell-version`, `npm test`, les tests Python et le pipeline GPU.
-6. Ouvrir une nouvelle PR d'intégration, en brouillon, vers `main`. Une fois fusionnée, la PR #15 est
-   fermée comme remplacée.
+Séquence vérifiée le 25 novembre 2026 dans un worktree isolé, sans rien publier ; chaque fusion
+reste soumise à l'autorisation du propriétaire :
 
-Une PR d'intégration séparée vaut mieux que la mise à jour de la PR #15. La PR #15 reste lisible telle
-qu'elle a été relue. L'intégration a son propre historique, ses résolutions et ses tests. En cas de
-problème, elle se rejette sans toucher au travail du visualiseur.
+1. Fusionner la PR #19 (`47d4a75`) dans `main` par **commit de fusion**. Un squash ou un rebase
+   recréerait ses commits ; la PR #20 garderait alors son diff.
+2. Fusionner la PR #20, avec les corrections de la PR #21 et de cette préparation, par **commit de
+   fusion**. La répétition le fait sans conflit, et son arbre final est celui de la branche.
+3. Revoir la PR #18 séparément : aucun conflit Git, mais la numérotation 23/24 de `ATTRIBUTION.md`
+   est à trancher.
+4. Fermer la PR #15 comme remplacée par la PR #20.
+5. Déployer GitHub Pages seulement après autorisation, puis vérifier le site publié.
+
+L'historique de la proposition initiale (nouvelle branche et `cherry-pick`) n'est plus nécessaire : la
+PR #20 porte déjà la répétition, les corrections et leurs preuves.
 
 ## À vérifier sur téléphone réel
 

@@ -202,10 +202,10 @@ Versions installées et licences déclarées (métadonnées des paquets, 24 nove
   2022 analysé le 17 novembre est une diffusion protégée. Aucune n'est versionnée ni publiée, ni leurs
   copies, ni les résultats de leurs analyses, qui en dérivent.
 - **AGPL-3.0** : la démonstration publique ne contient ni code d'Ultralytics, ni poids, ni sortie de modèle.
-  Le serveur d'analyse importe Ultralytics : il n'est utilisé que sur la machine de son utilisateur. Le
-  proposer comme service à d'autres déclencherait les obligations de l'AGPL (§13) sur le code combiné ;
-  ce n'est pas prévu. Le dépôt n'a pas de fichier `LICENSE` : la licence du code reste à choisir par
-  l'équipe.
+  L'exécution locale du serveur n'est pas une exemption automatique de ses obligations. Le périmètre
+  de distribution et la licence du projet restent à décider ; aucune licence racine n'est inventée.
+  La [revue des licences du 25 novembre](licences-et-distribution.md) rectifie les conclusions trop
+  catégoriques de l'étude initiale et compare les voies possibles, sans engagement commercial.
 - Une dépendance libre ne rend pas ses poids ou ses données libres : chaque élément est évalué à part,
   et rien dont la licence n'est pas lue n'est publié.
 
