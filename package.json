@@ -10,7 +10,8 @@
     "test:unit": "node --import ./tests/unit/import-map.mjs --test",
     "test:e2e": "node tests/run-tests.mjs",
     "bench": "node tests/benchmark.mjs",
-    "shell-version": "node tests/shell-version.mjs"
+    "shell-version": "node tests/shell-version.mjs",
+    "pages:prepare": "node tests/prepare-pages.mjs"
   },
   "devDependencies": {
     "playwright-core": "1.64.1"
