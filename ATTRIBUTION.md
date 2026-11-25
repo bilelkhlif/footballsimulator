@@ -2,7 +2,9 @@
 
 **Projet :** Football Simulator
 
-**Équipe :** Iyed Rachdi, Bilel Khlif, Ghassen Dallekji
+**Équipe :** Iyed Rachdi, Bilel Khlif, Ghassen Dalleji
+
+*Orthographe « Dalleji » confirmée par Bilel Khlif le 24 novembre 2026 et appliquée le 25 novembre 2026 ; les versions antérieures de ce fichier écrivaient « Dallekji ».*
 
 **Version :** 1.0 — Évaluation SUP'COM (2026/2027)
 
@@ -74,7 +76,7 @@ Aucun modèle 3D, aucune texture et aucune police n'est importé d'une source ex
 
     * **Modifications apportées par l'équipe :** sans objet, asset créé pour le projet
 
-*   **Asset :** visualiseur de match (extension après le projet, branche `feature/visualiseur-match`, hors de la version évaluée) : poids des modèles préentraînés et données de test, le 17 novembre 2026
+*   **Asset :** visualiseur de match (extension après le projet, développée sur la branche `feature/visualiseur-match`, intégrée à `main` le 25 novembre 2026 par les PR #19, #20, #21 et #23) : poids des modèles préentraînés et données de test, le 17 novembre 2026
 
     * **Source originale :** poids `football-player-detection.pt`, `football-ball-detection.pt` et `football-pitch-detection.pt` de Roboflow Sports (`examples/soccer/setup.sh`, commit 42c80c0), téléchargés à l'installation et jamais versionnés ; modèle de plongements des équipes : SigLIP base patch16-224 (Google) par défaut, CLIP ViT-L/14 (OpenAI) en option ; vidéo de test `tests/fixtures/visualizer/match-synthetique.webm` et son document de suivi, générés par `tests/fixtures/visualizer/make_fixture.py`
 
@@ -83,6 +85,16 @@ Aucun modèle 3D, aucune texture et aucune police n'est importé d'une source ex
     * **Licence :** poids de Roboflow : AGPL-3.0 selon Ultralytics ; jeux de données : CC BY 4.0 d'après leurs copies sur Roboflow Universe ; conditions des vidéos du concours non lues ; SigLIP : Apache-2.0 ; CLIP : aucune licence sur sa fiche, usage réservé à la recherche ; données de test : aucune licence choisie à ce jour
 
     * **Modifications apportées par l'équipe :** aucune sur les poids. Les vidéos de validation (exemples de Roboflow Sports, et copies réencodées avec ffmpeg) restent en local, ni versionnées ni diffusées
+
+*   **Asset :** vidéos réelles de la démonstration du visualiseur (`demo/matches/*/video.mp4`, affiches `poster.jpg` et vignettes `thumbnail.jpg`), le 25 novembre 2026 pour les deux dernières
+
+    * **Source originale :** Wikimedia Commons, déclarations de création personnelle relues sur chaque page et par l'API de Commons : « Match de football France-Allemagne - 16 octobre 2018 - Penalty d'Antoine Griezmann » ; « Samsunspor-Altınordu maçı (24.3.23) penaltı golü » ; « Neymar takes a free kick - BRA v. RSA, Rio 2016 ». Adresses, empreintes et relecture des droits : `demo/media-licenses.json` et `SOURCE.md` de chaque dossier
+
+    * **Auteur / Créateur :** Like tears in rain ; 𐰇𐱅𐰚𐰤 ; Rodrigogomesonetwo (comptes Wikimedia Commons, spectateurs qui ont filmé et placé leur vidéo sous licence libre)
+
+    * **Licence :** CC BY-SA 4.0 ; les extraits adaptés, affiches et vignettes sont publiés sous la même licence
+
+    * **Modifications apportées par l'équipe :** extraits, redimensionnés en 1280 × 720, réencodés en H.264 sans audio ; affiches et vignettes extraites des adaptations. Aucune retransmission télévisée : les vidéos de la DFL, de la FIFA et les autres vidéos aux droits non établis restent hors du dépôt
 
 ---
 
@@ -122,7 +134,7 @@ Rappel : L'usage des versions "latest" depuis les CDN est proscrit.
 
     * **Rôle dans le projet :** pilote Chrome pour les tests `npm test` et, depuis le sprint 6, pour la mesure des performances (`npm run bench`) ; outil de développement, jamais chargé par l'application
 
-*   **Bibliothèques :** serveur d'analyse du visualiseur de match (Python, extension hors de la version évaluée) : ultralytics 8.4.215 (AGPL-3.0), supervision 0.31.7 (MIT), trackers 2.7.0 (Apache-2.0), scenedetect 0.7.3 (BSD-3-Clause), umap-learn 0.6.0 et scikit-learn (BSD-3-Clause), transformers 5.13.0 et sentencepiece 0.2.3 (Apache-2.0), opencv-python 4.14 (Apache-2.0, avec FFmpeg sous LGPL-2.1), gdown 5.2.0 (MIT), Roboflow Sports au commit 42c80c0 (MIT), PyTorch 2.5.1 (BSD)
+*   **Bibliothèques :** serveur d'analyse du visualiseur de match (Python, extension intégrée à `main` le 25 novembre 2026, jamais publiée sur GitHub Pages) : ultralytics 8.4.215 (AGPL-3.0), supervision 0.31.7 (MIT), trackers 2.7.0 (Apache-2.0), scenedetect 0.7.3 (BSD-3-Clause), umap-learn 0.6.0 et scikit-learn (BSD-3-Clause), transformers 5.13.0 et sentencepiece 0.2.3 (Apache-2.0), opencv-python 4.14 (Apache-2.0, avec FFmpeg sous LGPL-2.1), gdown 5.2.2 (MIT), Roboflow Sports au commit 42c80c0 (MIT), PyTorch 2.14.1 et torchvision 0.29.1 (BSD-3-Clause ; PyTorch 2.5.1 jusqu'au 24 novembre 2026)
 
     * **Version fixée :** `analysis/requirements.txt` ; licences de toutes les dépendances, transitives comprises, dans `docs/opensource-research.md` (partie 7)
 
@@ -182,11 +194,11 @@ Visualiseur de match (extension) : aucun extrait copié. Roboflow Sports (`Socce
 
 L'utilisation d'IA est un outil de complétion. Elle doit être documentée et maîtrisée.
 
-Assistants utilisés : **Claude Code** (Anthropic), du 5 au 17 novembre 2026 (modèle indiqué dans le journal de développement : Claude Opus 5.5), pour l’implémentation, les tests et la documentation ; **ChatGPT** pour la reformulation de ce fichier d’attribution.
+Assistants utilisés : **Claude Code** (Anthropic), du 5 au 25 novembre 2026 (modèle indiqué dans le journal de développement : Claude Opus 5.5), pour l’implémentation, les tests, la documentation et la vérification des fusions et du déploiement ; **OpenAI Codex**, les 23 et 24 novembre 2026, pour la reprise de la PR #16 et la réalisation de la PR #17 (implémentation, corrections, tests, documentation) ; **ChatGPT** pour la reformulation de ce fichier d’attribution. Les noms de fichiers `.js` des déclarations historiques ci-dessous désignent les modules devenus `.mjs` le 23 novembre 2026 ([migration-mjs.md](docs/migration-mjs.md)).
 
 **Bilel Khlif — Responsable du sprint 1, pilotage technique, intégration WebXR/WebGPU et validation.** Responsable du sprint 1, il assure la conduite technique documentée des sprints 1 à 6 : découpage des travaux, formalisation des contraintes, interaction avec l’assistant de développement, revue des livrables, essais sur appareils physiques et intégration sur GitHub. Son rôle couvre notamment les arbitrages entre rendu WebGPU de production et mode WebGL de test, ainsi que la traduction des exigences pédagogiques en critères de validation.
 
-**Iyed Rachdi et Ghassen Dallekji — Contribution au cadrage collectif.** Avec Bilel Khlif, ils participent au cahier des charges de référence, qui définit les fonctionnalités, les contraintes d’architecture et les scénarios de démonstration. La répartition individuelle des autres travaux n’est pas détaillée dans le journal initial. Les essais collectifs sur téléphone prévus aux sprints 3 et 4 restent à mener.
+**Iyed Rachdi et Ghassen Dalleji — Contribution au cadrage collectif.** Avec Bilel Khlif, ils participent au cahier des charges de référence, qui définit les fonctionnalités, les contraintes d’architecture et les scénarios de démonstration. La répartition individuelle des autres travaux n’est pas détaillée dans le journal initial. Les essais collectifs sur téléphone prévus aux sprints 3 et 4 restent à mener.
 
 **Modalité de développement.** Le travail d’implémentation, notamment la génération du code des sprints 1 à 6, des tests et de la documentation, a été réalisé avec Claude Code à partir du cahier des charges collectif et sous le pilotage technique de Bilel Khlif. Les sprints 2 et 3 sont documentés comme intégralement générés par l’assistant. La contribution étudiante porte sur les spécifications, la direction des travaux, les arbitrages, la revue des livrables, les essais physiques et l’intégration.
 
@@ -244,9 +256,15 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 17 novembre 2026 (mo
 
 22. **Revue finale et livrables** : revue de la pull request #13 au regard du cahier des charges, demandée le 16 novembre 2026, avec fusion dans `main` si la revue réussissait (fusionnée le même jour) ; puis, le 17 novembre 2026, demande de rendre le projet prêt pour l'évaluation, sans nouvelle fonctionnalité et sans résultat physique inventé, en ne laissant à l'équipe que les essais sur téléphone et le tournage de la vidéo.
 
-23. **Visualiseur de match** : demande du 17 novembre 2026 d'étendre le projet en visualiseur de match par IA. Rechercher d'abord les solutions libres (Roboflow Sports, SoccerNet, Ultralytics, ByteTrack…) en vérifiant licences et maintenance, puis construire un prototype qui traite une vraie vidéo téléversée, sans coordonnées inventées, avec le terrain 3D du projet posé dans la vidéo ; branche séparée, aucune fusion sans son accord.
+23. **Retours d’évaluation du professeur** (23 novembre 2026) : transmission des trois exigences (interface plus intuitive sur mobile et en AR, refus des flèches incohérentes, modules en `.mjs`), consignes données à Claude Code, puis reprise confiée à Codex après une limite d’usage ; fusion de la PR #16 autorisée.
 
-24. **Revue critique du visualiseur** : demande du 17 novembre 2026 de revoir la pull request #15 avant toute fusion : exigences de la vision d'origine, vitesse rapportée à la durée réelle, méthode de mesure de la calibration, vidéos réelles supplémentaires, licences de chaque paquet et de chaque poids, ce fichier, application AR intacte, place sur le disque, tous les tests ; recommander une étiquette de version avant toute intégration dans `main`.
+24. **Espaces de coaching** (24 novembre 2026) : organisation de l’interface en sept espaces, réalisée avec Codex (PR #17) ; revue finale demandée avant toute fusion ; fusion autorisée explicitement le 24 novembre 2026, avec vérification du déploiement.
+
+25. **Visualiseur de match** : demande du 17 novembre 2026 d'étendre le projet en visualiseur de match par IA. Rechercher d'abord les solutions libres (Roboflow Sports, SoccerNet, Ultralytics, ByteTrack…) en vérifiant licences et maintenance, puis construire un prototype qui traite une vraie vidéo téléversée, sans coordonnées inventées, avec le terrain 3D du projet posé dans la vidéo ; branche séparée, aucune fusion sans son accord.
+
+26. **Revue critique du visualiseur** : demande du 17 novembre 2026 de revoir la pull request #15 avant toute fusion : exigences de la vision d'origine, vitesse rapportée à la durée réelle, méthode de mesure de la calibration, vidéos réelles supplémentaires, licences de chaque paquet et de chaque poids, ce fichier, application AR intacte, place sur le disque, tous les tests ; recommander une étiquette de version avant toute intégration dans `main`.
+
+27. **Interface « verre », démonstrations réelles et dossier d’évaluation** (25 novembre 2026) : demande d’une interface translucide originale en thème clair et sombre sans perte de fonctionnalité, de nouvelles démonstrations réelles dont les droits sont vérifiés, d’une amélioration mesurée du suivi, et d’un dossier d’évaluation fondé sur le cahier des charges ; interdiction d’attribuer sans preuve, de publier une vidéo aux droits non vérifiés et de valider l’AR physique par émulation ; fusion autorisée si toutes les vérifications réussissent.
 
 **Déclaration détaillée par composant**
 
@@ -348,7 +366,7 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 17 novembre 2026 (mo
 
         **Périmètre technique :** Système tactique : deux équipes, quatre formations, Strategy et Observer, transitions par numéro de maillot, interpolation dans le temps, placement final exact, mise à jour dans la boucle de rendu et préférence de réduction des animations.
 
-    * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a lancé le sprint à partir des critères collectifs définis avec Iyed Rachdi et Ghassen Dallekji. Les résultats ci-dessous sont automatisés ; la validation physique par l’équipe reste à réaliser :
+    * **Axe de vérification appliqué par l’étudiant :** Bilel Khlif a lancé le sprint à partir des critères collectifs définis avec Iyed Rachdi et Ghassen Dalleji. Les résultats ci-dessous sont automatisés ; la validation physique par l’équipe reste à réaliser :
 
         * `npm test` le 14 novembre 2026 : 94 tests unitaires réussis sur 94, puis 44 vérifications de bout en bout réussies sur 44. Elles couvrent les règles de placement des quatre formations, le changement de formation par les boutons pour les deux équipes au millimètre, la transition animée, le scénario de démonstration, la préférence « réduire les animations », et les formations en AR émulée sur le terrain posé, en WebGPU et en mode test WebGL ;
 
@@ -424,9 +442,9 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 17 novembre 2026 (mo
 
         * `npm test` le 17 novembre 2026 : 182 tests unitaires et 79 vérifications de bout en bout réussis.
 
-*   **Composant ou Shader concerné :** visualiseur de match (extension après le projet, branche `feature/visualiseur-match`, pull request #15, hors de la version évaluée) : `analysis/` (serveur d'analyse Python), `visualizer.html`, `src/visualizer/`, `tests/visualizer-tests.mjs`, `tests/unit/visualizer.test.mjs`, `tests/fixtures/visualizer/`, `docs/opensource-research.md`, `docs/visualiseur-match.md`, partie du README ; compléments des 23 et 24 novembre 2026 : analyse par segments reprenable, correction des échanges d'identifiants, démonstration publique synthétique et export statique (`demo/`, `static_export.py`, `demo_match.py`, `src/visualizer/static-source.mjs`), mode local sécurisé et interruption (`local-source.mjs`, `server.py`, `jobs.py`). Détail des rôles et preuves : `docs/attribution-visualiseur.md`
+*   **Composant ou Shader concerné :** visualiseur de match (extension après le projet, branche `feature/visualiseur-match`, pull request #15 ; intégré à `main` le 25 novembre 2026 par les PR #19, #20, #21 et #23) : `analysis/` (serveur d'analyse Python), `visualizer.html`, `src/visualizer/`, `tests/visualizer-tests.mjs`, `tests/unit/visualizer.test.mjs`, `tests/fixtures/visualizer/`, `docs/opensource-research.md`, `docs/visualiseur-match.md`, partie du README ; compléments des 23 et 24 novembre 2026 : analyse par segments reprenable, correction des échanges d'identifiants, démonstration publique synthétique et export statique (`demo/`, `static_export.py`, `demo_match.py`, `src/visualizer/static-source.mjs`), mode local sécurisé et interruption (`local-source.mjs`, `server.py`, `jobs.py`). Détail des rôles et preuves : `docs/attribution-visualiseur.md`
 
-    * **Prompt ou usage principal :** demandes de Bilel Khlif (contributions 23 et 24) : réutiliser les solutions libres éprouvées plutôt que réécrire la vision par ordinateur, ne jamais inventer de positions, puis revoir le tout de façon critique. Code, tests et documents générés par l'assistant ; composants libres utilisés comme bibliothèques. Travaux des 23 et 24 novembre 2026 faits à sa demande, avec les mêmes règles (aucune donnée inventée, publication limitée à ce qui est redistribuable) ; ils restent réalisés par Claude Code : voir `docs/attribution-visualiseur.md`.
+    * **Prompt ou usage principal :** demandes de Bilel Khlif (contributions 25 et 26) : réutiliser les solutions libres éprouvées plutôt que réécrire la vision par ordinateur, ne jamais inventer de positions, puis revoir le tout de façon critique. Code, tests et documents générés par l'assistant ; composants libres utilisés comme bibliothèques. Travaux des 23 et 24 novembre 2026 faits à sa demande, avec les mêmes règles (aucune donnée inventée, publication limitée à ce qui est redistribuable) ; ils restent réalisés par Claude Code : voir `docs/attribution-visualiseur.md`.
 
         **Périmètre technique :** Recherche et comparaison des projets libres ; analyse vidéo (détection, suivi, équipes votées par trajectoire, homographie RANSAC avec erreur hors échantillon et causes d'échec, horodatage du conteneur) ; format de données commun au fichier et au direct ; serveur local ; visualiseur WebGPU qui réutilise le terrain, les pions instanciés, le ballon, les flèches et le raycasting du projet ; placement automatique ; synchronisation image par image.
 
@@ -443,6 +461,24 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 17 novembre 2026 (mo
         * défaut constaté et seulement signalé, non corrigé : sur une vidéo avec soleil et ombre marqués (`573e61_0`), des joueurs classés dans la mauvaise équipe avec des votes unanimes ; un indicateur d'équilibre des équipes l'annonce désormais ;
 
         * vidéos libres de Wikimedia Commons non téléchargeables (réponse « 429 ») : autres angles de caméra non testés.
+
+*   **Composant ou Shader concerné :** retours d’évaluation, 23 novembre 2026 (PR #16) : modules applicatifs en `.mjs`, `sw.mjs` et script de migration `sw.js`, `src/arrow-rules.mjs`, interaction tactique, saisie au doigt, interface à icônes, aide de première visite, raccourcis, tests, `docs/regles-des-fleches.md`, `docs/ergonomie.md`, `docs/migration-mjs.md`
+
+    * **Prompt ou usage principal :** huit commits du 23 novembre 2026, de `1fb4fc4` à `d4d3f6b` (preuve Git) ; d’après les comptes rendus des assistants, six de Claude Code (`1fb4fc4` à `770d1e8`), puis deux de Codex (`5f6a108`, `d4d3f6b`) : voir `docs/attribution-proposee.md`.
+
+    * **Axe de vérification appliqué par l’étudiant :** consignes et exigences transmises par Bilel Khlif ; fusion par `27eff23` (preuve Git). 226 tests unitaires et 104 vérifications de navigateur rapportés par les assistants à la fusion (`docs/conformite.md`, addendum). Aucun essai sur téléphone de cette version n’est consigné.
+
+*   **Composant ou Shader concerné :** sept espaces de coaching, 24 novembre 2026 (PR #17) : `index.html`, `src/workspace-controller.mjs`, `src/workspace-navigation.mjs`, modifications de `src/main.mjs`, `src/scene.mjs`, `src/onboarding.mjs`, `src/styles.css` et `sw.mjs` ; tests (`tests/workspace-tests.mjs`, `tests/coaching-workflow-tests.mjs`, `tests/final-ux-review-tests.mjs`, `tests/safe-area-review-tests.mjs`, `tests/workspace-test-helpers.mjs`, `tests/unit/workspace-controller.test.mjs`) ; `docs/espaces-coaching.md`, `docs/revue-finale-pr17.md`, `docs/integration-future-visualiseur.md`, captures de `docs/images/sidebar/` et `docs/images/revue/`
+
+    * **Prompt ou usage principal :** commits `2885bd2` et `94bee9e` du 24 novembre 2026 (preuve Git). Demande de Bilel Khlif d’organiser l’application en espaces de coaching autour de la scène existante, sans perdre de fonctionnalité ; code, tests, revue finale et documents réalisés par Codex, d’après les sessions du 24 novembre et `docs/revue-finale-pr17.md`.
+
+    * **Axe de vérification appliqué par l’étudiant :** demande, revue finale exigée et fusion autorisée par Bilel Khlif ; fusion par `48c293d` à la tête approuvée `94bee9e` (preuve Git), puis vérification du déploiement par Claude Code. 229 tests unitaires et 140 vérifications de navigateur rapportés par les assistants, mesures de rendu et de mémoire (`docs/validation/revue-pr17-mesures.json`). Aucun essai sur téléphone n’est consigné.
+
+*   **Composant ou Shader concerné :** interface « verre », démonstrations réelles et dossier d’évaluation, 25 novembre 2026 (contribution 27) : jetons de conception et thèmes clair, sombre et automatique (`src/styles.css`, `src/theme.mjs`, `src/visualizer/visualizer.css`) ; galerie des démonstrations et masquage des positions d’une calibration rejetée (`src/visualizer/demo-gallery.mjs`, `visualizer.html`, `src/visualizer/visualizer-main.mjs`, `src/visualizer/static-source.mjs`) ; stabilisation de la calibration et calibration de référence (`analysis/football_analysis/calibration.py`, `reference_calibration.py`, `incremental_pipeline.py`, `metrics.py`, `incremental_metrics.py`, `static_export.py`) ; trois démonstrations réelles de Wikimedia Commons (`demo/matches/`, `demo/media-licenses.json`) ; tests ; `docs/stabilisation-homographie.md`, `docs/conformite-cahier-des-charges.md`, `docs/matrice-contributions-academiques.md`, `docs/explications-techniques.md`, `docs/guide-demonstration-soutenance.md`, `docs/dossier-evaluation.md`, README
+
+    * **Prompt ou usage principal :** contribution 27 de Bilel Khlif. Code, analyses GPU, vérification des droits, exports, tests, captures et documents réalisés par Claude Code. Aucun code tiers copié : flux optique de Lucas-Kanade, homographie RANSAC et détection de coupures appelés comme fonctions d’OpenCV et de PySceneDetect.
+
+    * **Axe de vérification appliqué par l’étudiant :** consignes, interdits et condition de fusion fixés par Bilel Khlif. Vérifications faites par l’assistant, aucune sur téléphone : droits relus sur Wikimedia Commons et par son API ; analyses réelles sur la RTX 2050 ; contrôle visuel de la calibration par superposition des lignes, qui a montré que la calibration automatique de France–Allemagne et du Brésil est fausse (positions masquées, verdict publié) ; résultats et nombres de tests dans `docs/dossier-evaluation.md`.
 
 *   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles des sprints 2 à 6, et `assets/screenshots/`), figures du rapport (`docs/etat-de-l-art/figures/`)
 
@@ -491,5 +527,8 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 17 novembre 2026 (mo
 | Sprint 6 | 261/261 | Exigences détaillées du sprint final ; fusion réservée à son approbation |
 | Revue finale et livrables | 261/261 | Revue et fusion de la PR #13 demandées ; consignes de finalisation, sans résultat physique inventé |
 | Visualiseur de match (extension, PR #15) | 331/331 | Demande d'extension, puis revue critique ; priorité à la réutilisation, aucune donnée inventée, fusion réservée à son approbation |
+| Retours d’évaluation (PR #16) | 330/330 (rapporté) | Exigences du professeur transmises ; fusion autorisée |
+| Espaces de coaching (PR #17) | 369/369 (rapporté) | Demande, revue finale exigée, fusion autorisée |
+| Interface verre et démonstrations réelles (25 novembre) | voir `docs/dossier-evaluation.md` | Consignes et interdits fixés ; fusion conditionnée aux vérifications |
 
 **État de validation matérielle au 17 novembre 2026 :** rendu 3D WebGPU vérifié sur le PC ASUS TUF A15 ; parcours AR WebGPU vérifié en émulation, interaction tactique du sprint 5 et séquence animée du sprint 6 comprises ; AR rendue en WebGPU vérifiée sur un téléphone, le TECNO POVA 6 Pro 5G (essai physique réussi) ; AR sur Galaxy S10e vérifiée uniquement dans le mode de test WebGL. Aucune validation physique des sprints 4, 5 et 6 n’est consignée à cette date : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde restent à mesurer sur téléphone (`docs/recette.md`). Les résultats automatisés ci-dessus proviennent du journal de développement.

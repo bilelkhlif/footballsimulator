@@ -7,7 +7,7 @@
 | | |
 | --- | --- |
 | Cadre | SUP'COM, département SIA, module Réalité Étendue, projet WebXR, 2026–2027 |
-| Équipe | Iyed Rachdi, Bilel Khlif, Ghassen Dallekji |
+| Équipe | Iyed Rachdi, Bilel Khlif, Ghassen Dalleji |
 | Encadrant | Dr. Ing. Mohamed-Bécha Kaâniche |
 | Version | Branche `main` du dépôt, 17 novembre 2026 |
 | Application | https://bilelkhlif.github.io/footballsimulator/ |

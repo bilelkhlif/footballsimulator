@@ -28,7 +28,7 @@ La description dit ce que fait la fonction. `@param` et `@returns` décrivent se
 
 ## 2. Responsable et assistance à l'implémentation
 
-Toutes les fonctions actuelles ont pour responsable Bilel Khlif, auteur de tous les commits du dépôt et chargé de la conduite technique des sprints 1 à 4 (ATTRIBUTION.md, §4). Iyed Rachdi et Ghassen Dallekji ont contribué, avec Bilel Khlif, au cahier des charges, qui définit les fonctionnalités, les contraintes d'architecture et les scénarios de démonstration. La répartition des rôles du cahier (§5.2), reprise dans le README, décrit l'organisation prévue. Les en-têtes des fonctions suivent l'historique Git et ATTRIBUTION.md.
+Toutes les fonctions actuelles ont pour responsable Bilel Khlif, auteur de tous les commits du dépôt et chargé de la conduite technique des sprints 1 à 4 (ATTRIBUTION.md, §4). Iyed Rachdi et Ghassen Dalleji ont contribué, avec Bilel Khlif, au cahier des charges, qui définit les fonctionnalités, les contraintes d'architecture et les scénarios de démonstration. La répartition des rôles du cahier (§5.2), reprise dans le README, décrit l'organisation prévue. Les en-têtes des fonctions suivent l'historique Git et ATTRIBUTION.md.
 
 La consigne parle du nom de l'auteur. L'implémentation a été réalisée avec un assistant de développement (ATTRIBUTION.md, §4) : la balise `@responsable` nomme donc le membre de l'équipe qui répond de la fonction, et non l'auteur de chaque ligne.
 

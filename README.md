@@ -10,6 +10,37 @@
 
 ---
 
+## En deux minutes
+
+**Ce que c'est.** Un tableau tactique de football en réalité augmentée, ouvert depuis un lien : le téléphone
+pose un terrain 3D de 60 × 39 cm sur une vraie table, l'entraîneur y place deux équipes, déplace joueurs et
+ballon, trace passes et courses, annule, et anime une action pas à pas. Rendu **WebGPU sans repli WebGL**,
+**WebXR** (hit test, ancre, DOM Overlay), application installable et utilisable hors-ligne.
+
+**Pour évaluer.** Commencer par le [dossier d'évaluation](docs/dossier-evaluation.md) : ordre de lecture,
+preuves, résultats et limites. Puis la [matrice de conformité au cahier des charges](docs/conformite-cahier-des-charges.md),
+le [guide de démonstration](docs/guide-demonstration-soutenance.md) et la
+[matrice des contributions](docs/matrice-contributions-academiques.md).
+
+| Point | État au 25 novembre 2026 |
+|---|---|
+| Besoins BF1 à BF9 du cahier | Tous implémentés ; AR vérifiée en émulation, et sur téléphone pour des versions antérieures |
+| Exigences du cahier (54 tracées) | 44 vérifiées, 8 partielles (mesures sur téléphone), 1 non faite (vidéo), 1 sans objet |
+| Tests automatisés | 285 unitaires, 226 vérifications dans Chrome, 144 tests Python : tous réussis |
+| Essais sur téléphone de la version actuelle | **À faire par l'équipe** (protocole P0 à P10 de [recette.md](docs/recette.md)) |
+| Vidéo de démonstration | **À tourner** ([storyboard](docs/video-demonstration.md)) |
+
+**Nouveautés du 25 novembre.** Interface « verre » originale, thèmes clair, sombre et automatique, sans perte
+de fonctionnalité ([captures avant / après](docs/images/glass/)). Visualiseur de match (Bêta) : galerie de
+trois vraies vidéos aux droits vérifiés et d'un match synthétique ; calibration stabilisée (déplacements
+invraisemblables ramenés de 70,6 % à 11,2 % sur France–Allemagne, de 29,2 % à 5,0 % sur Samsunspor–Altınordu) ;
+calibrations fausses détectées par contrôle visuel et masquées plutôt qu'affichées
+([explication](docs/stabilisation-homographie.md)).
+
+**Équipe.** Iyed Rachdi, Bilel Khlif, Ghassen Dalleji ; encadrant : Dr. Ing. Mohamed-Bécha Kaâniche. Le code
+a été réalisé avec des assistants d'IA (Claude Code, Codex) sur les consignes de Bilel Khlif, qui a relu,
+testé sur téléphone et fusionné : tout est déclaré dans [ATTRIBUTION.md](ATTRIBUTION.md).
+
 ## En bref
 
 - **Le besoin.** Les entraîneurs amateurs expliquent la tactique sur un tableau blanc : une vue de dessus en 2D, des déplacements difficiles à montrer, aucun partage à distance.
@@ -27,7 +58,7 @@
 - **Espaces de coaching.** Rail sombre compact et sept espaces fonctionnels : Accueil, Équipes et formations, Outils tactiques, Animation et séquences, Réalité augmentée, Plus d'outils, Réglages et aide. Une seule scène, un seul tableau et un seul historique sont conservés entre les espaces. Navigation basse en portrait, panneaux défilants et contrôles de vue persistants. L'[inventaire, l'architecture, les correspondances et les captures avant / après](docs/espaces-coaching.md) détaillent cette évolution.
 - **Testé.** 369 tests automatisés sur PC le 24 novembre 2026 : 229 unitaires et 140 de bout en bout, dont le parcours complet d'un entraîneur de la 3D vers l'AR émulée, tous réussis sans cas ignoré ([revue critique, mesures et limites](docs/revue-finale-pr17.md)). Les anciens essais physiques du 12 et du 14 novembre concernent des versions précédentes : AR WebGPU sur TECNO POVA 6 Pro 5G, mode test WebGL sur Galaxy S10e. Cette nouvelle interface n'a pas été testée sur téléphone réel. Restent à mesurer : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde ([recette](docs/recette.md)).
 
-- **Analyse de match intégrée.** Le visualiseur Bêta s'ouvre depuis le rail principal ou Plus d'outils, dans un nouvel onglet : la tactique en cours reste intacte. Une [vraie vidéo France–Allemagne 2018](docs/visualiseur-demos-reelles.md), créditée sous CC BY-SA 4.0, ouvre le catalogue ; la démo synthétique de 36 s reste disponible. Les deux se lisent sans Python ni calcul IA hébergé. Vos propres vidéos utilisent le serveur local, ses poids vérifiés et votre matériel. Vérification indépendante du 25 novembre : **277 unitaires, 224 contrôles Chrome, 129 tests Python**, 50 contrôles de perte GPU et 12 étapes CUDA, tous réussis sans cas ignoré ; 14 contrôles ciblés passent aussi dans Edge. Les limites de précision, le risque résiduel de PyTorch et les décisions de licence sont détaillés dans le [rapport de livraison](docs/visualiseur-livraison-2026-11-25.md). L'application académique attend toujours l'accord de licence des coauteurs ([LICENSING.md](LICENSING.md)).
+- **Analyse de match intégrée.** Le visualiseur Bêta s'ouvre depuis le rail principal ou Plus d'outils, dans un nouvel onglet : la tactique en cours reste intacte. Sa galerie propose [trois vraies vidéos](docs/visualiseur-demos-reelles.md) de Wikimedia Commons, créditées sous CC BY-SA 4.0, et la démo synthétique de 36 s ; Samsunspor–Altınordu s'ouvre par défaut. Sur France–Allemagne et le Brésil, la calibration automatique est fausse : positions, vitesses et distances y sont masquées. Les deux se lisent sans Python ni calcul IA hébergé. Vos propres vidéos utilisent le serveur local, ses poids vérifiés et votre matériel. Vérification indépendante du matin du 25 novembre : 277 unitaires, 224 contrôles Chrome, 129 tests Python, 50 contrôles de perte GPU et 12 étapes CUDA ; le soir, après l'interface verre et les nouvelles démos : **285 unitaires, 226 contrôles Chrome, 144 tests Python**, tous réussis sans cas ignoré. Les limites de précision, le risque résiduel de PyTorch et les décisions de licence sont détaillés dans le [rapport de livraison](docs/visualiseur-livraison-2026-11-25.md). L'application académique attend toujours l'accord de licence des coauteurs ([LICENSING.md](LICENSING.md)).
 
 ## Aperçu
 
@@ -256,9 +287,9 @@ La vidéo d'origine s'affiche annotée. Le terrain 3D de l'application, en WebGP
 
 L'analyse réutilise des composants libres (Roboflow Sports, Ultralytics, ByteTrack, PySceneDetect, OpenCV). Elle tourne sur un serveur Python local ([analysis/](analysis/README.md)), avec un GPU NVIDIA de préférence. L'application AR n'en dépend pas : elle n'y ajoute qu'un lien, masqué pendant une session AR. Le visualiseur n'est pas dans la coquille hors ligne de l'application.
 
-Deux modes, une seule interface : **Explorer la démo** lit les exports statiques de `demo/` (un vrai extrait France–Allemagne de 26 s, analysé sur PC, et un match synthétique de 36 s, sans Python ni serveur d'analyse, compatibles GitHub Pages) ; **Analyser ma vidéo** utilise le serveur local (téléversement, progression, résultats partiels, interruption et reprise).
+Deux modes, une seule interface : **Explorer la démo** lit les exports statiques de `demo/` (trois vrais extraits de 26 à 30 s sous CC BY-SA 4.0, analysés sur PC, et un match synthétique de 36 s, sans Python ni serveur d'analyse, compatibles GitHub Pages ; chaque carte de la galerie affiche le verdict du contrôle visuel de sa calibration et ses indicateurs de qualité) ; **Analyser ma vidéo** utilise le serveur local (téléversement, progression, résultats partiels, interruption et reprise).
 
-Pour essayer la démonstration, ouvrez `visualizer.html` sur un serveur statique local, ou sur le site GitHub Pages une fois cette version déployée (elle ne l'est pas encore) : aucun serveur Python n'est nécessaire. Pour analyser vos vidéos, installez le serveur local sur un PC avec GPU NVIDIA ([analysis/README.md](analysis/README.md) : environnement, vérification des modèles, sécurité), lancez `python -m football_analysis serve`, puis ouvrez l'adresse affichée.
+Pour essayer la démonstration, ouvrez [visualizer.html sur le site publié](https://bilelkhlif.github.io/footballsimulator/visualizer.html) ou sur un serveur statique local : aucun serveur Python n'est nécessaire. Pour analyser vos vidéos, installez le serveur local sur un PC avec GPU NVIDIA ([analysis/README.md](analysis/README.md) : environnement, vérification des modèles, sécurité), lancez `python -m football_analysis serve`, puis ouvrez l'adresse affichée.
 
 - Démonstration, export statique, analyse locale, sécurité et licences de redistribution : [docs/visualiseur-modes.md](docs/visualiseur-modes.md)
 - Licences, composants livrés et décisions réservées au propriétaire : [docs/licences-et-distribution.md](docs/licences-et-distribution.md), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
@@ -266,6 +297,7 @@ Pour essayer la démonstration, ouvrez `visualizer.html` sur un serveur statique
 - Recherche des composants, licences et choix : [docs/opensource-research.md](docs/opensource-research.md)
 - Fiabilité des équipes sous soleil et ombre : [recherche et comparaison des variantes](docs/equipes-lumiere-recherche.md)
 - Architecture, format des données et validation sur de vraies vidéos : [docs/visualiseur-match.md](docs/visualiseur-match.md)
+- Stabilisation de la calibration, contrôle visuel et calibration de référence : [docs/stabilisation-homographie.md](docs/stabilisation-homographie.md)
 
 ## Application installable (PWA)
 
