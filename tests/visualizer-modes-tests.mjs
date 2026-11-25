@@ -180,8 +180,8 @@ async function testDemoMode(browser, subPathUrl, record) {
   const page = await context.newPage();
   const errors = collectErrors(page);
   try {
-    await step(record, 'démo ouverte par défaut sous /footballsimulator/, sans serveur ni Python', async () => {
-      await page.goto(`${subPathUrl}visualizer.html`);
+    await step(record, 'démo synthétique ouverte explicitement sous /footballsimulator/, sans serveur ni Python', async () => {
+      await page.goto(`${subPathUrl}visualizer.html?demo=${DEMO_ID}`);
       await page.waitForFunction(() => window.__matchVisualizer?.snapshot().window, null, { timeout: 30000 });
       const state = await page.evaluate(() => window.__matchVisualizer.snapshot());
       const banner = await page.textContent('#provenance-banner');

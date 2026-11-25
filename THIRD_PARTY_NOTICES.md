@@ -6,6 +6,13 @@ composant ci-dessous reste sous sa propre licence. Les liens pointent vers les s
 
 ## Livré dans le site (GitHub Pages)
 
+**Vidéo réelle France–Allemagne 2018 :** Like tears in rain, CC BY-SA 4.0, création personnelle
+publiée sur [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Match_de_football_France-Allemagne_-_16_octobre_2018_-_Penalty_d%27Antoine_Griezmann.ogv).
+Extrait de 2 à 28 s, réduit en 1280 × 720, H.264 à 25 images/s, sans audio ; poster extrait de la
+vidéo adaptée, sous la même licence. [Crédit, transformations et empreintes](demo/matches/france-allemagne-2018/SOURCE.md),
+[licence](https://creativecommons.org/licenses/by-sa/4.0/). Aucune approbation du projet par le
+créateur ou les équipes n'est revendiquée. Le code garde sa licence distincte.
+
 | Composant | Version | Licence et titulaire | Emplacement |
 | --- | --- | --- | --- |
 | three.js, build WebGPU, avec `OrbitControls` | r187 | MIT, « Copyright © 2010-2026 three.js authors » ; texte conservé | `src/vendor/three-r187/` (inchangé) |

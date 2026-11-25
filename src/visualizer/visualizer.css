@@ -109,6 +109,9 @@ body {
   background: #24301f; border: 1px solid #4b5f33; color: #e8f0d8;
 }
 .vz-banner[data-kind="analysis"] { background: #1d2a33; border-color: #36576d; color: #dbe9f3; }
+.vz-media-credit { display: block; margin-top: 4px; overflow-wrap: anywhere; }
+.vz-media-credit a { color: inherit; text-decoration: underline; }
+.vz-analysis-note { display: block; margin-top: 4px; color: #ffdda5; }
 
 /* Écrans tactiles (téléphone en paysage compris) : cibles d'au moins 40 px */
 @media (pointer: coarse) {

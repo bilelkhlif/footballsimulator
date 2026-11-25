@@ -22,6 +22,9 @@ export async function runVisualizerReviewTests(browser, url, record) {
     await context.route('**/manifest.json', async (route) => {
       const response = await route.fetch(); const body = await response.json();
       if (body.teams) body.teams[0].color = '#fff"><img src="data:image/png;base64,AA==" onerror="window.__auditInjection=true">';
+      if (body.provenance) body.provenance.media = { title: '<img src=x onerror="window.__auditInjection=true">',
+        author: '<script>window.__auditInjection=true</script>', license: '<img src=x>',
+        sourceUrl: 'javascript:window.__auditInjection=true', licenseUrl: 'data:text/html,<script>alert(1)</script>' };
       await route.fulfill({ response, json: body });
     });
     const page = await context.newPage();
@@ -29,6 +32,8 @@ export async function runVisualizerReviewTests(browser, url, record) {
     await page.waitForFunction(() => window.__matchVisualizer?.snapshot().window);
     await page.waitForTimeout(400);
     reports.xss = await page.evaluate(() => ({ injected: window.__auditInjection === true, images: document.querySelectorAll('#team-legend img').length }));
+    reports.credit = await page.evaluate(() => ({ images: document.querySelectorAll('#provenance-banner img').length,
+      links: document.querySelectorAll('#provenance-banner a').length, text: document.querySelector('#provenance-banner').textContent }));
     const errors = []; page.on('pageerror', (error) => errors.push(error.message));
     await page.evaluate(() => { document.getElementById('match-video').play = () => Promise.reject(new DOMException('audit decode failure', 'AbortError')); });
     await page.click('#play'); await page.waitForTimeout(200); reports.uiPlay = { errors: [...errors], message: await page.textContent('#job-status') };
@@ -94,6 +99,7 @@ export async function runVisualizerReviewTests(browser, url, record) {
   }
   const checks = [
     ['couleur hostile traitée comme donnée, aucun HTML exécuté', !reports.xss.injected && reports.xss.images === 0, reports.xss],
+    ['crédits tiers affichés comme texte et protocoles exécutables refusés', reports.credit.images === 0 && reports.credit.links === 0 && reports.credit.text.includes('<script>'), reports.credit],
     ['rejet de Lecture affiché sans promesse non traitée', reports.uiPlay.errors.length === 0 && reports.uiPlay.message.includes('audit decode failure'), reports.uiPlay],
     ['rejet tardif de Lecture ignoré après fermeture de sa session', reports.obsoletePlay.errors.length === 0 && reports.obsoletePlay.unchanged, reports.obsoletePlay],
     ['fermeture et réouverture de la même vidéo sans déplacement obsolète', reports.staleSeek.before.time === 0 && reports.staleSeek.after === 0, reports.staleSeek],

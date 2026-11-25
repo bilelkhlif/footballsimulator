@@ -728,6 +728,32 @@ class MatchVisualizer {
       banner.textContent = `Export statique d'une analyse réelle (exporté le ${String(provenance.exportedAt ?? '').slice(0, 10)}) : `
         + 'résultats figés, mesures de qualité et limites ci-contre.';
     }
+    if (provenance?.media) {
+      const media = provenance.media;
+      const credit = document.createElement('span');
+      credit.className = 'vz-media-credit';
+      credit.append(document.createTextNode(`Vidéo : ${String(media.title ?? '')} — ${String(media.author ?? '')}. `));
+      for (const [label, address] of [[String(media.license ?? 'Licence'), media.licenseUrl], ['Source', media.sourceUrl]]) {
+        try {
+          const url = new URL(address);
+          if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) continue;
+          const link = document.createElement('a');
+          link.href = url.href;
+          link.textContent = label;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          credit.append(link, document.createTextNode(' · '));
+        } catch { /* Une adresse invalide reste du texte et ne devient jamais un lien exécutable. */ }
+      }
+      if (media.changes) credit.append(document.createTextNode(String(media.changes)));
+      banner.append(credit);
+    }
+    if (Array.isArray(provenance?.notes)) {
+      const note = document.createElement('span');
+      note.className = 'vz-analysis-note';
+      note.textContent = provenance.notes.slice(0, 2).map(String).join(' ');
+      banner.append(note);
+    }
     banner.dataset.kind = provenance?.kind ?? '';
     banner.hidden = !provenance;
   }

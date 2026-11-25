@@ -3,6 +3,14 @@
  "version": 1,
  "matches": [
   {
+   "id": "france-allemagne-2018",
+   "title": "France–Allemagne 2018 — penalty, vidéo réelle",
+   "path": "matches/france-allemagne-2018/",
+   "kind": "analysis",
+   "duration": 26.0,
+   "description": "Vidéo réelle CC BY-SA 4.0, analysée sur RTX 2050. Vue de tribune : limites de calibration et de vitesse à consulter."
+  },
+  {
    "id": "match-synthetique",
    "title": "Match synthétique de démonstration",
    "path": "matches/match-synthetique/",
