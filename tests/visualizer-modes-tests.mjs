@@ -81,7 +81,18 @@ async function seekDemo(page, frame) {
   return page.evaluate(async (target) => {
     const app = window.__matchVisualizer;
     const video = document.getElementById('match-video');
-    const seeked = new Promise((resolve) => video.addEventListener('seeked', resolve, { once: true }));
+    const seeked = new Promise((resolve, reject) => {
+      if (video.error) {
+        reject(new Error(`déplacement impossible : erreur vidéo ${video.error.code} (${video.error.message})`));
+        return;
+      }
+      const onSeeked = () => { clearTimeout(timer); resolve(); };
+      const timer = setTimeout(() => {
+        video.removeEventListener('seeked', onSeeked);
+        reject(new Error('déplacement vidéo sans événement seeked après 10 s'));
+      }, 10000);
+      video.addEventListener('seeked', onSeeked, { once: true });
+    });
     video.currentTime = (target + 0.5) / 25;
     await seeked;
     const time = video.currentTime;
@@ -592,6 +603,131 @@ async function testAcademicNavigation(browser, url, record) {
     record('Visualiseur, modes : intégré, navigation sans erreur dans la console', unexpected.length ? 'échec' : 'ok', unexpected.slice(0, 3).join(' | '));
   } finally {
     await context.close();
+  }
+}
+
+/**
+ * Perte du processus GPU de Chrome, cause de l'échec intermittent du parcours GPU manuel : l'arrêt
+ * brutal du serveur d'analyse pendant un calcul CUDA réinitialise parfois le pilote du GPU partagé.
+ * Chrome perd alors son processus GPU : périphérique WebGPU perdu, décodeur vidéo déconnecté
+ * (erreur 3, PIPELINE_ERROR_DISCONNECTED), et le play() suivant est rejeté par la pause interne du
+ * lecteur (« interrupted by a call to pause() »). Reproduit de façon déterministe par le protocole
+ * DevTools (Browser.crashGpuProcess), dans un navigateur à part pour ne pas toucher aux autres tests.
+ * @param {() => Promise<import('playwright-core').Browser>} launch lance un navigateur comme la suite
+ * @param {string} url
+ * @param {(name: string, status: string, detail?: string) => void} record
+ * @responsable Bilel Khlif
+ * @date 2026-11-24
+ * @role Tests de bout en bout du visualiseur — perte du processus GPU
+ */
+export async function testVisualizerGpuReset(launch, url, record) {
+  const browser = await launch();
+  try {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await context.route('http://127.0.0.1:8765/**', (route) => route.abort('connectionrefused'));
+    await serveDemoVideoLikePages(context);
+    await context.addInitScript(installDemoFrameReader);
+    const page = await context.newPage();
+    const errors = collectErrors(page);
+    const cdp = await browser.newBrowserCDPSession();
+    await step(record, 'processus GPU perdu : terrain 3D arrêté avec un message', async () => {
+      await page.goto(`${url}visualizer.html?demo=${DEMO_ID}`);
+      await page.waitForFunction(() => window.__matchVisualizer?.snapshot().window, null, { timeout: 30000 });
+      const before = await seekDemo(page, 250);
+      await cdp.send('Browser.crashGpuProcess');
+      await page.waitForFunction(() => window.__matchVisualizer.snapshot().gpuLost, null, { timeout: 15000 });
+      const after = await page.evaluate(() => ({ webgpu: window.__matchVisualizer.snapshot().webgpu,
+        message: document.getElementById('pitch-view').textContent }));
+      return [before.webgpu && before.displayedFrame === 250 && !after.webgpu && /rechargez la page/.test(after.message),
+        `avant : WebGPU ${before.webgpu}, image ${before.displayedFrame} ; après : ${JSON.stringify(after)}`];
+    });
+    await step(record, 'processus GPU perdu : décodeur perdu, vidéo rechargée à la même image, lecture relancée', async () => {
+      const frame = 450;
+      // Écoute en phase de capture : avant le visualiseur, dont le rechargement efface video.error.
+      const failure = await page.evaluate(({ target, fps }) => new Promise((resolve, reject) => {
+        const video = document.getElementById('match-video');
+        if (video.error) {
+          resolve(`erreur ${video.error.code} : ${video.error.message}`);
+          return;
+        }
+        const finish = (value) => {
+          clearTimeout(timer);
+          document.removeEventListener('error', onError, true);
+          video.removeEventListener('seeked', onSeeked);
+          resolve(value);
+        };
+        const onError = (event) => {
+          if (event.target === video) {
+            finish(`erreur ${video.error?.code} : ${video.error?.message}`);
+          }
+        };
+        const onSeeked = () => finish(null);
+        const timer = setTimeout(() => {
+          document.removeEventListener('error', onError, true);
+          video.removeEventListener('seeked', onSeeked);
+          reject(new Error('ni erreur ni déplacement vidéo terminé après 10 s'));
+        }, 10000);
+        document.addEventListener('error', onError, true);
+        video.addEventListener('seeked', onSeeked, { once: true });
+        video.currentTime = (target + 0.5) / fps;
+      }), { target: frame, fps: FPS });
+      await page.waitForFunction(({ target, fps }) => {
+        const video = document.getElementById('match-video');
+        return !video.error && !video.seeking && video.readyState >= 2 && Math.abs(video.currentTime - (target + 0.5) / fps) < 0.02;
+      }, { target: frame, fps: FPS }, { timeout: 15000 });
+      const status = await page.textContent('#job-status');
+      const restored = await seekDemo(page, frame);
+      const played = await page.evaluate(async () => {
+        const video = document.getElementById('match-video');
+        const start = video.currentTime;
+        await video.play();
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        video.pause();
+        return Number((video.currentTime - start).toFixed(2));
+      });
+      const recovered = failure === null || (/^erreur 3/.test(failure) && /rechargée à 0:18,0/.test(status));
+      return [recovered && restored.displayedFrame === frame && played > 0.3,
+        `${failure ?? 'aucune erreur de décodage'} ; état : « ${status} » ; image ${frame}→${restored.displayedFrame} ; lecture +${played} s`];
+    });
+    await step(record, 'processus GPU perdu : synchronisation et sélection sur la vidéo conservées', async () => {
+      const report = [];
+      let ok = true;
+      for (const frame of [125, 800]) {
+        const state = await seekDemo(page, frame);
+        ok &&= state.displayedFrame === frame && Math.abs(state.analysedTime - frame / FPS) <= 0.08 + 1e-6;
+        report.push(`${frame}→${state.displayedFrame}`);
+      }
+      const state = await seekDemo(page, 150);
+      const stage = await page.evaluate(() => document.getElementById('stage').getBoundingClientRect().toJSON());
+      let target = null;
+      for (const object of state.objects.filter((candidate) => candidate.box[3] - candidate.box[1] > 24)) {
+        const point = await boxCentre(page, object.box);
+        const { panel } = state;
+        const insidePanel = point.x >= stage.left + panel.x && point.x <= stage.left + panel.x + panel.width
+          && point.y >= stage.top + panel.y && point.y <= stage.top + panel.y + panel.height;
+        if (!insidePanel) {
+          target = { id: object.id, point };
+          break;
+        }
+      }
+      const { point } = target;
+      await page.mouse.click(point.x, point.y);
+      await page.waitForTimeout(250);
+      const selected = await page.evaluate(() => window.__matchVisualizer.selectedId);
+      return [ok && selected === target.id, `images ${report.join(', ')} ; sélection ${selected} (attendu ${target.id})`];
+    });
+    await step(record, 'processus GPU perdu : après rechargement de la page, terrain 3D de retour', async () => {
+      await page.reload();
+      await page.waitForFunction(() => window.__matchVisualizer?.snapshot().window, null, { timeout: 30000 });
+      const state = await seekDemo(page, 300);
+      return [state.webgpu && !state.gpuLost && state.displayedFrame === 300 && state.overlay?.placed >= 5,
+        `WebGPU ${state.webgpu}, image ${state.displayedFrame}, ${state.overlay?.placed} posés`];
+    });
+    const unexpected = errors.filter((text) => !/Périphérique WebGPU perdu|127\.0\.0\.1:8765|ERR_CONNECTION_REFUSED/.test(text));
+    record('Visualiseur, modes : processus GPU perdu, aucune autre erreur dans la console',
+      unexpected.length ? 'échec' : 'ok', unexpected.slice(0, 3).join(' | '));
+  } finally {
+    await browser.close();
   }
 }
 

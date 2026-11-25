@@ -27,7 +27,7 @@
 - **Espaces de coaching.** Rail sombre compact et sept espaces fonctionnels : Accueil, Équipes et formations, Outils tactiques, Animation et séquences, Réalité augmentée, Plus d'outils, Réglages et aide. Une seule scène, un seul tableau et un seul historique sont conservés entre les espaces. Navigation basse en portrait, panneaux défilants et contrôles de vue persistants. L'[inventaire, l'architecture, les correspondances et les captures avant / après](docs/espaces-coaching.md) détaillent cette évolution.
 - **Testé.** 369 tests automatisés sur PC le 24 novembre 2026 : 229 unitaires et 140 de bout en bout, dont le parcours complet d'un entraîneur de la 3D vers l'AR émulée, tous réussis sans cas ignoré ([revue critique, mesures et limites](docs/revue-finale-pr17.md)). Les anciens essais physiques du 12 et du 14 novembre concernent des versions précédentes : AR WebGPU sur TECNO POVA 6 Pro 5G, mode test WebGL sur Galaxy S10e. Cette nouvelle interface n'a pas été testée sur téléphone réel. Restent à mesurer : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde ([recette](docs/recette.md)).
 
-- **Analyse de match intégrée.** Le visualiseur de match (PR #15) s'ouvre depuis l'espace Plus d'outils, dans un nouvel onglet : la tactique en cours reste intacte. La démonstration synthétique se lit sans serveur ; vos propres vidéos passent par le serveur d'analyse local. Le 24 novembre 2026, sur PC : 267 tests unitaires, 197 vérifications dans Chrome et 113 tests Python, tous réussis ; détail et limites dans le [compte rendu d'intégration](docs/integration-visualiseur.md).
+- **Analyse de match intégrée.** Le visualiseur de match (PR #15) s'ouvre depuis l'espace Plus d'outils, dans un nouvel onglet : la tactique en cours reste intacte. La démonstration synthétique se lit sans serveur ; vos propres vidéos passent par le serveur d'analyse local. Le 25 novembre 2026, sur PC : 267 tests unitaires, 202 vérifications dans Chrome et 113 tests Python, tous réussis. La perte du GPU est signalée et le lecteur vidéo récupère une erreur de décodage ; détail et limites dans le [compte rendu d'intégration](docs/integration-visualiseur.md).
 
 ## Aperçu
 
@@ -387,7 +387,7 @@ Les vérifications faites sur PC sont automatisées. Prérequis : Node.js 18 ou 
 npm install         # une seule fois : installe playwright-core 1.64.1
 npm test            # tests unitaires, puis tests de bout en bout
 npm run test:unit   # 267 tests unitaires, sans navigateur (doublures de WebXR et WebGPU)
-npm run test:e2e    # 197 vérifications dans Chrome, sans interface
+npm run test:e2e    # 202 vérifications dans Chrome, sans interface
 npm run bench       # mesure des performances (sprint 6), hors de npm test : 1 à 2 minutes
 npm run shell-version  # recalcule SHELL_VERSION dans sw.mjs après une modification de l'application
 ```

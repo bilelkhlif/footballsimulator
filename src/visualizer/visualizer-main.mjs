@@ -55,6 +55,14 @@ const CONNECTION_LABELS = {
   failed: 'Échec de l\'analyse',
 };
 
+/** Erreurs du lecteur vidéo (MediaError.code), en clair. */
+const VIDEO_ERRORS = Object.freeze({
+  1: 'Lecture vidéo interrompue.',
+  2: 'Vidéo interrompue : erreur réseau pendant son chargement.',
+  3: 'Vidéo illisible : le navigateur ne parvient pas à la décoder.',
+  4: 'Vidéo illisible : format non pris en charge par ce navigateur.',
+});
+
 /**
  * Vrai si la page a été servie par le serveur d'analyse Python : il ajoute l'en-tête
  * « Server-Timing: football-analysis », lisible sans requête dans la mesure de navigation.
@@ -98,6 +106,10 @@ class MatchVisualizer {
     this.stage = byId('stage');
     this.store = null;
     this.overlay = null;
+    /** Vrai après la perte du périphérique WebGPU : terrain 3D arrêté jusqu'au rechargement. */
+    this.gpuLost = false;
+    /** Vidéo déjà rechargée après une erreur de décodage (une seule fois par vidéo). */
+    this.videoRecovery = null;
     this.selectedId = null;
     this.openGeneration = 0;
     this.manifestTimer = null;
@@ -136,6 +148,7 @@ class MatchVisualizer {
     try {
       this.overlay = await OverlayPitch.create(byId('pitch-view'), (id) => this.select(id));
       this.overlay.resize(byId('pitch-view').clientWidth, byId('pitch-view').clientHeight);
+      this.overlay.renderer.onDeviceLost = (info) => this.#stopOverlay(info);
     } catch (error) {
       byId('pitch-view').textContent = 'Le terrain 3D a besoin de WebGPU, absent ou inutilisable dans ce navigateur : '
         + 'ouvrez la page dans Chrome ou Edge à jour.';
@@ -827,7 +840,56 @@ class MatchVisualizer {
     }
     this.video.src = source;
     this.video.dataset.analysis = id ?? '';
+    this.videoRecovery = null;
     byId('stage-empty').hidden = true;
+  }
+
+  /**
+   * Erreur du lecteur vidéo. Une erreur de décodage peut venir du navigateur, pas de la vidéo :
+   * quand le pilote du GPU est réinitialisé, Chrome perd son processus GPU, donc son décodeur, et le
+   * play() en attente est rejeté par la pause interne du lecteur. Ce cas se répare en rechargeant la
+   * même vidéo à la même image, une seule fois par vidéo ; la lecture reste à relancer. Sinon, ou si
+   * l'erreur revient, sa cause est affichée.
+   * @responsable Bilel Khlif
+   * @date 2026-11-24
+   * @role Visualiseur de match — fiabilité de la lecture
+   */
+  #recoverVideo() {
+    const { error } = this.video;
+    const source = this.video.getAttribute('src');
+    if (!error || !source) {
+      return;
+    }
+    if (error.code !== MediaError.MEDIA_ERR_DECODE || this.videoRecovery === source) {
+      this.setStatus(VIDEO_ERRORS[error.code] ?? `Vidéo illisible : ${error.message}`, 'error');
+      return;
+    }
+    this.videoRecovery = source;
+    const time = this.video.currentTime;
+    this.video.addEventListener('loadedmetadata', () => {
+      if (this.video.getAttribute('src') === source) {
+        this.video.currentTime = time;
+      }
+    }, { once: true });
+    this.video.load();
+    this.setStatus(`Décodeur vidéo du navigateur perdu : vidéo rechargée à ${formatTime(time)} ; relancez la lecture.`, 'error');
+  }
+
+  /**
+   * Périphérique WebGPU perdu (pilote du GPU réinitialisé, processus GPU du navigateur redémarré).
+   * Comme l'application AR (src/main.mjs), le terrain 3D s'arrête avec un message ; il revient au
+   * rechargement de la page. La vidéo, ses annotations et la sélection restent utilisables.
+   * @param {object} info détails donnés par three.js
+   * @responsable Bilel Khlif
+   * @date 2026-11-24
+   * @role Visualiseur de match — fiabilité du terrain 3D
+   */
+  #stopOverlay(info) {
+    console.error('Périphérique WebGPU perdu :', info?.message ?? info);
+    this.overlay?.renderer.setAnimationLoop(null);
+    this.overlay = null;
+    this.gpuLost = true;
+    byId('pitch-view').textContent = 'Terrain 3D arrêté : le processeur graphique a été réinitialisé ; rechargez la page.';
   }
 
   /**
@@ -1198,6 +1260,7 @@ class MatchVisualizer {
       this.select(this.annotations.pick(event.clientX - rect.left, event.clientY - rect.top));
     });
     this.video.addEventListener('loadedmetadata', () => this.layout());
+    this.video.addEventListener('error', () => this.#recoverVideo());
     this.video.addEventListener('seeking', () => this.#ensureWindow(this.video.currentTime));
     byId('resume-analysis').addEventListener('click', async () => {
       const id = this.currentAnalysis;
@@ -1302,6 +1365,8 @@ class MatchVisualizer {
       options: { ...this.options, locked: this.frame.locked, minimized: this.frame.minimized },
       overlay: this.lastUpdate,
       webgpu: this.overlay?.usesWebGpu ?? false,
+      gpuLost: this.gpuLost,
+      videoError: this.video.error?.code ?? null,
       teams: this.store?.teams ?? [],
       loadedFrames: this.store?.frames.length ?? 0,
       window: this.store?.window ?? null,

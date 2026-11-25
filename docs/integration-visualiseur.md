@@ -7,6 +7,10 @@ Elle réunit `main`, la correction du Service Worker (PR #19) et le visualiseur 
 Cette note remplace, pour l'intégration, la [note différée](integration-future-visualiseur.md), qui reste
 comme trace historique.
 
+Complément du 25 novembre : l'échec intermittent du lecteur est expliqué et pris en charge dans
+la [correction de perte du GPU](#perte-du-gpu--cause-correction-et-validation-du-25-novembre-2026).
+La PR #20 reste un brouillon et dépend toujours de la PR #19 ; aucune fusion supplémentaire n'est autorisée.
+
 ## Points de départ
 
 | Référence | Commit |
@@ -137,6 +141,100 @@ modèles : rien n'est versionné ni publié. Résultat : 12 étapes réussies en
 - Export statique de l'analyse réelle (125 images, 5 segments, 25 trajectoires), vérifié, puis lu en mode
   démonstration, serveur arrêté. L'export reste dans un dossier temporaire, supprimé à la fin.
 
+## Perte du GPU : cause, correction et validation du 25 novembre 2026
+
+### Origine de l'échec
+
+Le parcours manuel arrête volontairement le serveur Python pendant un calcul CUDA : `server.kill()`
+emploie `TerminateProcess` sous Windows. Sur le GPU partagé RTX 2050, cet arrêt a coïncidé avec des
+événements NVIDIA `nvlddmkm` 153. Dans le parcours instrumenté en échec, les deux entrées du journal
+Système sont datées du 24 novembre à 21:29:36, près de l'arrêt du serveur.
+
+La panne observée dans Chrome est la perte de son processus GPU : le périphérique WebGPU devient
+inutilisable et le décodeur vidéo matériel se déconnecte. Le déplacement ou `play()` suivant déclenche
+une erreur média de code 3 (`PIPELINE_ERROR_DISCONNECTED`, parfois `PIPELINE_ERROR_DECODE`). Chrome met
+alors la vidéo en pause **en interne** et rejette la promesse avec `AbortError: The play() request was
+interrupted by a call to pause()`.
+
+La trace vérifiée suit `play()` → `seeking` → `play` → `waiting` → erreur média → événement `pause` →
+rejet de la promesse. Elle ne contient, à ce moment, aucun appel JavaScript à `pause()` ou `load()`, ni
+changement de `src`. Le clip H.264 de 10 s ne contient aucune piste audio. Ce diagnostic ne repose donc
+pas sur une pause audio ou sur une pause appelée par le visualiseur.
+
+Le déclencheur se situe dans l'environnement et l'arrêt forcé du harnais. Le défaut de l'application
+était différent : aucune prise en charge d'une erreur vidéo ou de la perte WebGPU, donc vidéo et terrain
+3D devenaient inutilisables sans explication. Les événements du pilote étayent le lien avec l'arrêt CUDA ;
+la reproduction DevTools démontre directement la chaîne de panne au niveau du navigateur.
+
+### Preuves et correction
+
+- Diagnostic du 24 novembre : deux échecs sur sept parcours GPU complets. Les 25 lectures ciblées sans
+  nouveau calcul GPU (dont réouverture, transition vers « terminée », interruption et reprise) sont
+  passées ; certaines recouvraient pourtant `play()`, `openAnalysis(keepVideo)` et le déplacement vidéo.
+- `Browser.crashGpuProcess` reproduit la panne sans serveur Python : perte WebGPU, erreur média et pause
+  interne. Le nouvel essai sur `a42b429`, avec uniquement le fichier de test ajouté, échoue sur **4 des 5
+  vérifications**. Seul le rechargement complet de la page rétablit le terrain.
+- Sur l'arbre corrigé, **10 répétitions sur 10 passent : 50 vérifications réussies, zéro échec**.
+
+Dans `visualizer-main.mjs` :
+
+- `VIDEO_ERRORS` explique les causes usuelles du lecteur.
+- `#recoverVideo`, relié à l'événement `error`, recharge la même vidéo une fois par source pour le code 3.
+  L'instant est restauré après `loadedmetadata`, seulement si la source est toujours la même. Le message
+  demande de relancer la lecture. Une erreur répétée ou un autre code affiche sa cause sans boucle de
+  rechargement ; `#showVideo` réarme la récupération quand la source change.
+- `#stopOverlay`, relié à `renderer.onDeviceLost`, journalise la perte, arrête le rendu et indique que le
+  terrain 3D demande un rechargement de page. La vidéo, les annotations et la sélection restent
+  utilisables. Aucun repli WebGL n'est ajouté : le comportement suit celui de l'application académique.
+- `snapshot()` expose `gpuLost` et `videoError` pour les diagnostics.
+
+### Test de régression et harnais réel
+
+`testVisualizerGpuReset` lance son propre navigateur, pour que l'arrêt de son processus GPU ne touche
+pas les autres vérifications. Ses cinq contrôles portent sur :
+
+1. le terrain arrêté et le message de rechargement ;
+2. l'erreur du décodeur, le rechargement vidéo à l'image 450 et la reprise de lecture ;
+3. la synchronisation aux images 125 et 800, ainsi que la sélection sur la vidéo ;
+4. le retour du terrain 3D après rechargement de la page ;
+5. l'absence d'autres erreurs de console.
+
+Les attentes d'événements vidéo sont bornées. L'essai sur l'ancienne version a révélé une attente sans
+fin quand l'erreur était déjà survenue ; le test rapporte maintenant cette erreur et échoue au lieu de
+rester bloqué.
+
+Dans `tests/visualizer-local-ai.mjs`, un rejet de `play()` reste un échec et inclut le code/message de
+`video.error`, `snapshot().gpuLost` et le texte de `#job-status`. Si la perte du GPU est déjà constatée
+après l'analyse terminée, le harnais exige d'abord le message « rechargez la page », consigne ce cas,
+recharge la même analyse et exige le retour de WebGPU avant de continuer. Les erreurs ne sont pas
+supprimées du journal ; seul le message de perte WebGPU ainsi confirmé est attendu. Toute autre erreur reste fatale.
+L'arrêt brutal et l'ordre du parcours ne sont pas supprimés pour faire passer le test.
+
+### Résultats de la reprise
+
+| Vérification du 25 novembre 2026 | Résultat |
+| --- | --- |
+| `npm run shell-version -- --check` | Conforme : `d8d1fcf84bd5635f`, coquille inchangée |
+| Test GPU sur `a42b429`, sans le correctif applicatif | 1 parcours en échec : 4 contrôles refusés, 1 réussi |
+| Répétitions du correctif | 10 parcours réussis sur 10 ; 50 contrôles réussis, 0 échec |
+| `npm test` | 267 tests unitaires et 202 vérifications Chrome réussis ; aucun échec ni cas ignoré |
+| Python : `python -m unittest discover -s tests` | 113 tests réussis |
+| Vrai parcours CUDA, vidéo H.264 de 10 s sans audio | 12 étapes réussies ; analyse terminée après reprise en 178 s |
+
+Ce dernier parcours utilise Chrome 158.0.8127.37 sur le même PC. Il vérifie des résultats partiels
+après 21 s (23 objets, dont 16 placés), un serveur arrêté détecté en 92 ms, puis la lecture et la sélection
+après reprise (23 objets et 23 placés). L'export réel contient 125 images, 5 segments et 25 trajectoires :
+il est vérifié puis lu sans serveur. L'origine HTTPS publique est simulée dans Chrome par `page.route` ;
+les requêtes vers le serveur local, le CORS et l'autorisation réseau local sont réels.
+
+Aucune perte WebGPU n'a eu lieu pendant ce parcours (`gpuReset: false`) : sa branche de rechargement
+conditionnel n'y a donc pas été exercée. La panne applicative est couverte séparément par les dix arrêts
+contrôlés du processus GPU. Le nombre d'étapes du parcours réel serait augmenté d'une étape de
+diagnostic si cette branche était prise.
+
+Les traces, modèles, vidéos et bases SQLite restent hors des fichiers suivis. Les essais sont faits sur
+PC dans Chrome, sans validation physique sur téléphone, Firefox ou Safari.
+
 ## Limites et risques restants
 
 - **Aucun essai sur téléphone réel.** Les profils mobiles et l'AR sont des émulations sur PC. Firefox et
@@ -152,6 +250,8 @@ modèles : rien n'est versionné ni publié. Résultat : 12 étapes réussies en
   la seconde, la numérotation sera à revoir par l'équipe : ce fichier ne se modifie que sur sa demande.
 - **Chrome et le réseau local.** Depuis le site public, l'accès à `127.0.0.1` demande l'autorisation
   « accès au réseau local » de Chrome. Sans elle, le visualiseur affiche « indisponible ».
+- **Perte du GPU.** La panne est expliquée et prise en charge ; le terrain 3D demande encore un
+  rechargement de page après une perte du périphérique. Le correctif ne répare pas le pilote NVIDIA.
 
 ## Séquence Git recommandée
 

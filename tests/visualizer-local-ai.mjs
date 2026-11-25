@@ -99,11 +99,22 @@ async function waitState(page, wanted, timeout = 900000) {
  * @role Vérification de bout en bout — lecture et terrain 3D
  */
 async function playAndSelect(page) {
-  await page.evaluate(async () => {
-    const video = document.getElementById('match-video');
-    video.currentTime = 0;
-    await video.play();
-  });
+  try {
+    await page.evaluate(async () => {
+      const video = document.getElementById('match-video');
+      video.currentTime = 0;
+      await video.play();
+    });
+  } catch (error) {
+    // Le rejet reste un échec ; ces données distinguent une pause JS d'un décodeur déconnecté.
+    const diagnostic = await page.evaluate(() => {
+      const video = document.getElementById('match-video');
+      return { videoError: video.error ? { code: video.error.code, message: video.error.message } : null,
+        gpuLost: window.__matchVisualizer.snapshot().gpuLost,
+        status: document.getElementById('job-status').textContent };
+    }).catch((failure) => ({ diagnosticUnavailable: failure.message }));
+    throw new Error(`lecture refusée : ${error.message} ; diagnostic : ${JSON.stringify(diagnostic)}`, { cause: error });
+  }
   await page.waitForFunction(() => document.getElementById('match-video').currentTime > 2, null, { timeout: 30000 });
   await page.evaluate(() => document.getElementById('match-video').pause());
   await page.waitForTimeout(400);
@@ -225,15 +236,32 @@ async function run(video) {
     report.analysis = { status: status.status, processing: status.metrics?.processing ?? null, identity: status.metrics?.identity ?? null,
       calibration: status.metrics?.calibration ?? null, teams: status.metrics?.teams ?? null };
 
+    const gpuReset = await page.evaluate(() => ({ lost: window.__matchVisualizer.snapshot().gpuLost,
+      message: document.getElementById('pitch-view').textContent }));
+    if (gpuReset.lost) {
+      if (!/rechargez la page/.test(gpuReset.message)) {
+        throw new Error(`perte du GPU sans message de reprise : ${JSON.stringify(gpuReset)}`);
+      }
+      note('GPU réinitialisé après l’arrêt brutal du serveur : message affiché, rechargement demandé', gpuReset);
+      await page.goto(`http://127.0.0.1:${port}/visualizer.html?analyse=${encodeURIComponent(jobId)}`);
+      await waitState(page, 'completed', 120000);
+      await page.waitForFunction(() => window.__matchVisualizer.snapshot().webgpu
+        && !window.__matchVisualizer.snapshot().gpuLost, null, { timeout: 30000 });
+    }
     const playback = await playAndSelect(page);
-    if (!playback.objects || !playback.placed || playback.selected === null) {
+    if (!playback.objects || !playback.placed || playback.selected === null || !playback.webgpu) {
       throw new Error(`lecture locale incomplète : ${JSON.stringify(playback)}`);
     }
     note('lecture : annotations, terrain 3D dans la vidéo et sélection d\'un joueur', playback);
-    if (log.errors.length) {
-      throw new Error(`erreurs de console : ${log.errors.slice(0, 3).join(' | ')}`);
+    // Seul le message du périphérique perdu, confirmé ci-dessus, est attendu après le hard kill.
+    // Le journal complet reste conservé ; tout autre message fait toujours échouer le parcours.
+    const expectedGpuErrors = gpuReset.lost ? log.errors.filter((text) => /^Périphérique WebGPU perdu :/.test(text)) : [];
+    const unexpectedErrors = log.errors.filter((text) => !expectedGpuErrors.includes(text));
+    if (unexpectedErrors.length) {
+      throw new Error(`erreurs de console : ${unexpectedErrors.slice(0, 3).join(' | ')}`);
     }
-    note('aucune erreur de console hors de l\'arrêt volontaire du serveur', { pendantArret: log.downtime.length });
+    note('aucune erreur de console hors de l\'arrêt volontaire du serveur et de sa perte GPU confirmée',
+      { pendantArret: log.downtime.length, gpuReset: gpuReset.lost, gpuErrors: expectedGpuErrors });
     await context.close();
 
     // 2. Depuis l'origine publique GitHub Pages, vers la même boucle locale.
