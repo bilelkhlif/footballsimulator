@@ -14,10 +14,14 @@ Les composants installés à part (Ultralytics, PyTorch et les autres paquets Py
 téléchargés par l'utilisateur ne sont pas dans le dépôt. Ils sont inventoriés dans
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-**Exception média réel.** La vidéo et le poster de France–Allemagne 2018 sont de Like tears in rain,
-sous **CC BY-SA 4.0**, avec transformations décrites dans
-[leur notice](demo/matches/france-allemagne-2018/SOURCE.md). Ils ne sont pas relicenciés sous AGPL.
-La correspondance REUSE les distingue du code ; le texte CC est dans `LICENSES/CC-BY-SA-4.0.txt`.
+**Exception médias réels.** Les trois vidéos réelles de la démonstration, leurs affiches et leurs vignettes
+sont sous **CC BY-SA 4.0**, la licence choisie par les spectateurs qui les ont filmées :
+France–Allemagne 2018 de Like tears in rain ([notice](demo/matches/france-allemagne-2018/SOURCE.md)),
+Samsunspor–Altınordu 2023 de 𐰇𐱅𐰚𐰤 ([notice](demo/matches/samsunspor-altinordu-2023/SOURCE.md)) et
+Brésil–Afrique du Sud 2016 de Rodrigogomesonetwo ([notice](demo/matches/bresil-afrique-du-sud-2016/SOURCE.md)).
+Les captures du visualiseur de `docs/images/glass/` montrent des images de ces vidéos : elles suivent la
+même licence. Rien de cela n'est relicencié sous AGPL. La correspondance REUSE les distingue du code ; le
+texte CC est dans `LICENSES/CC-BY-SA-4.0.txt`.
 
 ## Pourquoi l'AGPL-3.0 pour l'IA
 

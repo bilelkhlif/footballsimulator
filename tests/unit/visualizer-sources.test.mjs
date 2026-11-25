@@ -70,15 +70,31 @@ test('démonstration : catalogue, manifeste au format du suivi, vidéo et affich
 
 test('démonstration réelle : première entrée, provenance d\'analyse et crédit distinct de la démo synthétique', async () => {
   const source = demoSource();
-  const [demo] = await source.listAnalyses();
-  assert.equal(demo.id, 'france-allemagne-2018');
+  const demos = await source.listAnalyses();
+  const [demo] = demos;
+  // Ouverte par défaut : la démo dont la calibration a passé le contrôle visuel.
+  assert.equal(demo.id, 'samsunspor-altinordu-2023');
+  assert.equal(demo.calibrationCheck.verdict, 'approximate');
+  assert.equal(demo.category, 'Vue large');
+  assert.match(demo.thumbnailUrl, /\/demo\/matches\/samsunspor-altinordu-2023\/thumbnail\.jpg$/);
+  assert.equal(typeof demo.quality.implausibleSpeedShare, 'number');
   const manifest = await source.getTrackingManifest(demo.id);
   assert.equal(manifest.provenance.kind, 'analysis');
-  assert.equal(manifest.provenance.media.author, 'Like tears in rain');
+  assert.equal(manifest.provenance.media.author, '𐰇𐱅𐰚𐰤');
   assert.equal(manifest.provenance.media.licenseUrl, 'https://creativecommons.org/licenses/by-sa/4.0/');
-  assert.equal(manifest.source.duration, 26);
+  assert.equal(manifest.source.duration, 29.8);
   const window = await source.getTrackingWindow(demo.id, 2, 4);
   assert.ok(window.frames.some((frame) => frame.objects.some((object) => object.pitch)));
+  // Calibrations rejetées au contrôle visuel : signalées dans le catalogue, données intactes.
+  for (const id of ['france-allemagne-2018', 'bresil-afrique-du-sud-2016']) {
+    const entry = demos.find((candidate) => candidate.id === id);
+    assert.equal(entry.calibrationCheck.verdict, 'rejected', id);
+    assert.ok(entry.calibrationCheck.note.length > 20, id);
+  }
+  const france = await source.getTrackingManifest('france-allemagne-2018');
+  assert.equal(france.provenance.media.author, 'Like tears in rain');
+  assert.equal(demos.at(-1).id, 'match-synthetique');
+  assert.equal(demos.at(-1).calibrationCheck.verdict, 'exact');
 });
 
 test('démonstration : fenêtre comme l\'API locale, voisines comprises, trajectoires présentes et sélection', async () => {

@@ -2,6 +2,21 @@
   "version": 1,
   "verifiedAt": "2026-11-25",
   "matches": {
+    "bresil-afrique-du-sud-2016": {
+      "title": "Brésil–Afrique du Sud, Jeux olympiques de Rio, 4 août 2016 : coup franc de Neymar",
+      "author": "Rodrigogomesonetwo",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Neymar_takes_a_free_kick_-_BRA_v._RSA,_Rio_2016.ogv",
+      "changes": "Vidéo entière (26,1 s) ; redimensionnée en 1280 × 720, H.264, 30 images/s, sans audio. Vidéo adaptée sous CC BY-SA 4.0.",
+      "spdx": "CC-BY-SA-4.0",
+      "reviewedSource": "Déclaration de création personnelle (modèle « own ») et licence de l'auteur (modèle « self », CC BY-SA 4.0) relues sur la page Wikimedia Commons et par son API le 25 novembre 2026 ; aucune demande de suppression ni revue de licence en cours.",
+      "files": {
+        "video.mp4": "4cec9258b74ddfd12f17964b8d779007b441c96851e369092f612de1fc7379d9",
+        "poster.jpg": "ef27efa2e697d319b4de03d39985c3804dd86f2d4680cbd113a2a198a86547fe",
+        "thumbnail.jpg": "72fec6e55f0784295a3b72bfcf4afa75be7f09ed0c134fb3adfb1bb435ff20e5"
+      }
+    },
     "france-allemagne-2018": {
       "title": "Match de football France–Allemagne — penalty d'Antoine Griezmann, 16 octobre 2018",
       "author": "Like tears in rain",
@@ -10,10 +25,26 @@
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Match_de_football_France-Allemagne_-_16_octobre_2018_-_Penalty_d%27Antoine_Griezmann.ogv",
       "changes": "Extrait de 2 à 28 s ; redimensionné en 1280 × 720, H.264, 25 images/s, sans audio. Vidéo adaptée sous CC BY-SA 4.0.",
       "spdx": "CC-BY-SA-4.0",
-      "reviewedSource": "Déclaration de création personnelle et licence du créateur sur Wikimedia Commons, consultées le 25 novembre 2026.",
+      "reviewedSource": "Déclaration de création personnelle (modèle « own ») et licence de l'auteur (modèle « self », CC BY-SA 4.0) relues sur la page Wikimedia Commons et par son API le 25 novembre 2026 ; aucune demande de suppression ni revue de licence en cours.",
       "files": {
         "video.mp4": "777a9914fee5e0c3cd42239032c0d4d4157968d4f859297ae88de689a6bdf5d8",
-        "poster.jpg": "e3783e87b52d3c820296efc0f4897181725d12d232e82d1aab5962a48c1a1f54"
+        "poster.jpg": "e3783e87b52d3c820296efc0f4897181725d12d232e82d1aab5962a48c1a1f54",
+        "thumbnail.jpg": "367bb7db1cab4eee517a8249cd48fe355139508d7303f42c46df05d324febe12"
+      }
+    },
+    "samsunspor-altinordu-2023": {
+      "title": "Samsunspor–Altınordu, 24 mars 2023 : penalty de Douglas Tanque (68e minute)",
+      "author": "𐰇𐱅𐰚𐰤",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Samsunspor-Alt%C4%B1nordu_ma%C3%A7%C4%B1_(24.3.23)_penalt%C4%B1_gol%C3%BC.webm",
+      "changes": "Extrait de 13,0 à 42,8 s ; redimensionné en 1280 × 720, H.264, 30 images/s, sans audio. Vidéo adaptée sous CC BY-SA 4.0.",
+      "spdx": "CC-BY-SA-4.0",
+      "reviewedSource": "Déclaration de création personnelle (modèle « own ») et licence de l'auteur (modèle « self », CC BY-SA 4.0) relues sur la page Wikimedia Commons et par son API le 25 novembre 2026 ; aucune demande de suppression ni revue de licence en cours.",
+      "files": {
+        "video.mp4": "d0deee315c00843d58106be27eafb3e22d9448f4b80f300234798262d991baf3",
+        "poster.jpg": "1c0b6b669bd169aafa3295ebc6dc3ef50122df7f3945257e82482784300a2151",
+        "thumbnail.jpg": "1bc22bd054871a0824a59f8eb8cdf17069a0316a58f25d4971902083b176fc41"
       }
     }
   }

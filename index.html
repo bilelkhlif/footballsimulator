@@ -10,12 +10,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Football Simulator</title>
   <meta name="description" content="Tableau tactique de football en réalité augmentée, dans le navigateur.">
-  <meta name="theme-color" content="#0f4a2a">
+  <meta name="theme-color" content="#0e1311">
+  <meta name="color-scheme" content="dark light">
 
   <!-- Application installable : manifeste et icônes -->
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+
+  <!-- Thème choisi dans les réglages, posé avant le premier affichage (src/theme.mjs) -->
+  <script>try{var t=localStorage.getItem('football-simulator:theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
 
   <!-- Feuille de style principale -->
   <link rel="stylesheet" href="src/styles.css">
@@ -194,6 +198,7 @@
         <p class="onboarding__keys">Au clavier : D, P, C pour les outils ; Échap abandonne ; Ctrl+Z annule.</p>
         <button id="onboarding-close" class="button" type="button">Commencer</button>
       </section></div>
+          <div class="summary-card appearance"><h3 id="theme-title">Apparence</h3><div class="segmented" role="group" aria-labelledby="theme-title"><button type="button" class="segmented__option" data-theme-choice="auto" aria-pressed="true">Auto</button><button type="button" class="segmented__option" data-theme-choice="light" aria-pressed="false">Clair</button><button type="button" class="segmented__option" data-theme-choice="dark" aria-pressed="false">Sombre</button></div><p id="theme-status" class="panel-note" role="status">Automatique : comme le système.</p></div>
           <button class="button button--secondary rail-preference" type="button" data-expand-rail aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-panel"/></svg>Afficher les libellés du rail</button>
           <h3>Raccourcis clavier</h3><dl class="shortcut-list"><div><dt>Déplacer</dt><dd><kbd>D</kbd></dd></div><div><dt>Passe</dt><dd><kbd>P</kbd></dd></div><div><dt>Course</dt><dd><kbd>C</kbd></dd></div><div><dt>Abandonner / fermer</dt><dd><kbd>Échap</kbd></dd></div><div><dt>Annuler</dt><dd><kbd>Ctrl Z</kbd></dd></div><div><dt>Rétablir</dt><dd><kbd>Ctrl Y</kbd> ou <kbd>Ctrl Maj Z</kbd></dd></div></dl><p class="panel-note">Sur Mac, utilisez Cmd à la place de Ctrl. Tab parcourt les commandes ; les flèches parcourent le rail.</p><p id="motion-preference" class="panel-note"></p>
         </section>

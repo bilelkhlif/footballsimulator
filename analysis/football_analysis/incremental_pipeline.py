@@ -23,7 +23,8 @@ import numpy as np
 import supervision as sv
 
 from . import contract, identity
-from .calibration import foot_points, pitch_status
+from .calibration import HomographyStabilizer, calibration_from_record, foot_points, pitch_status
+from .reference_calibration import ReferenceCalibrator, file_sha256, load_reference
 from .chunk_storage import ChunkStore
 from .incremental_metrics import quality_metrics_stream
 from .metrics import describe_limitations
@@ -198,16 +199,18 @@ def analysis_signature(path: Path, options: AnalysisOptions) -> dict:
     @date 2026-11-23
     @role Analyse incrémentale — compatibilité des points de reprise
     """
-    settings = {key: value for key, value in asdict(options).items() if key not in ("models_dir", "device")}
+    settings = {key: value for key, value in asdict(options).items()
+                if key not in ("models_dir", "device", "reference_calibration")}
     names = ("players", "pitch", "ball") if options.use_ball_model else ("players", "pitch")
     weights = {name: sha256(model_path(name, options.models_dir)) if model_path(name, options.models_dir).is_file()
                else None for name in names}
-    return {"schema": 1, "sourceSha256": sha256(path), "settings": settings, "weights": weights,
+    reference = None if options.reference_calibration is None else file_sha256(options.reference_calibration)
+    return {"schema": 1, "sourceSha256": sha256(path), "settings": settings, "weights": weights, "reference": reference,
             "teamWeights": {key: MODEL_LOCK["backbones"][options.team_backbone][key]
                             for key in ("repository", "revision", "sha256")},
             "implementation": {name: sha256(Path(__file__).with_name(name + ".py")) for name in (
                 "incremental_pipeline", "pipeline", "tracking", "teams", "streaming_teams", "calibration",
-                "detection", "contract", "chunk_storage", "identity")},
+                "detection", "contract", "chunk_storage", "identity", "reference_calibration")},
             "versions": {name: version(name) for name in ("trackers", "scenedetect", "opencv-python", "numpy",
                 "supervision", "ultralytics", "torch", "transformers", "scikit-learn", "umap-learn")}}
 
@@ -254,7 +257,8 @@ def _detections(event: dict) -> sv.Detections:
 
 
 def detect_chunks(path: Path, store: ChunkStore, video: dict, options: AnalysisOptions,
-                  detector: Any, calibrator: Any, meter: Any, progress: Progress) -> None:
+                  detector: Any, calibrator: Any, meter: Any, progress: Progress,
+                  reference: dict | None = None) -> None:
     """Détecte, suit et publie des segments ; rejoue le préfixe enregistré lors d'une reprise.
 
     @responsable Bilel Khlif
@@ -265,6 +269,9 @@ def detect_chunks(path: Path, store: ChunkStore, video: dict, options: AnalysisO
     store.recover_previews()
     stride = max(1, round(fps / options.target_fps))
     tracker, cuts, frame_clock = BoundedPeopleTracker(fps / stride), CutDetector(fps / stride), FrameClock(fps)
+    stabilizer: HomographyStabilizer | None = None
+    # Référence annotée : elle remplace la calibration automatique, qui reste mesurée pour comparaison.
+    referee = None if reference is None else ReferenceCalibrator(reference, (video["width"], video["height"]))
     checkpoint = store.checkpoint() or {}
     last_committed = checkpoint.get("index", -1)
     seq = checkpoint.get("seq", -1) + 1
@@ -291,12 +298,19 @@ def detect_chunks(path: Path, store: ChunkStore, video: dict, options: AnalysisO
             cut = cuts.is_cut(image)
             if cut:
                 tracker.new_shot()
+            if stabilizer is None:
+                stabilizer = HomographyStabilizer((image.shape[1], image.shape[0]))
             if index <= last_committed:
                 old_frame, event = next(replay)
                 tracked = tracker.update(_detections(event), timestamp=instant)
                 if (old_frame["index"] != index or abs(old_frame["time"] - instant) > 0.00006
                         or old_frame["cut"] != cut or [int(i) for i in tracked.tracker_id] != event["ids"]):
                     raise VideoError("Le suivi rejoué diffère du point de reprise ; les données sont conservées.")
+                # Même état de lissage qu'une analyse sans interruption : la mesure brute est rejouée.
+                if referee is not None:
+                    referee.update(image, index, None, new_shot=cut)
+                else:
+                    stabilizer.update(image, calibration_from_record(old_frame["calibration"]), new_shot=cut)
                 if index == last_committed:
                     progress("reprise", None, f"Suivi restauré jusqu'à {instant:.2f} s")
                 elif index % (stride * 100) == 0:
@@ -304,7 +318,9 @@ def detect_chunks(path: Path, store: ChunkStore, video: dict, options: AnalysisO
                 continue
             people, ball = detector.detect(image)
             tracked = tracker.update(people, timestamp=instant)
-            calibration = calibrator.calibrate(image)
+            measured = calibrator.calibrate(image)
+            calibration = (referee.update(image, index, measured, new_shot=cut) if referee is not None
+                           else stabilizer.update(image, measured, new_shot=cut))
             positions = calibration.project(foot_points(tracked.xyxy)) if calibration.ok else None
             objects, crop_boxes = [], []
             for k in range(len(tracked)):
@@ -567,11 +583,19 @@ def analyse_to_store(path: Path, output: Path, options: AnalysisOptions | None =
     signature = analysis_signature(path, options)
     video = probe_video(path)
     stride = max(1, round(video["fps"] / options.target_fps))
+    reference = None
+    if options.reference_calibration is not None:
+        reference = load_reference(options.reference_calibration, (video["width"], video["height"]),
+                                   video_sha256=signature["sourceSha256"], stride=stride)
     header = {"format": contract.FORMAT, "version": contract.VERSION,
               "source": {"kind": "file", "name": name or path.name, **video, "constantFrameRate": False},
               "analysis": {"createdAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                            "stride": stride, "fps": round(video["fps"] / stride, 4),
-                           "chunkSeconds": options.chunk_seconds, "teamFitSeconds": options.team_fit_seconds},
+                           "chunkSeconds": options.chunk_seconds, "teamFitSeconds": options.team_fit_seconds,
+                           # Origine des positions sur le terrain : points clés stabilisés, ou référence annotée.
+                           "calibration": ({"source": "reference", "keyframes": sorted(reference),
+                                            "points": sum(r.keypoints for r in reference.values())}
+                                           if reference else {"source": "keypoints", "stabilized": True})},
               "pitch": dict(contract.PITCH)}
     with ChunkStore(output, header, signature) as store:
         if store.manifest()["complete"]:
@@ -583,7 +607,7 @@ def analyse_to_store(path: Path, output: Path, options: AnalysisOptions | None =
             started = time.perf_counter()
             detector, calibrator, models = _load_models(options, device)
             store.save_state(models=models, model_seconds=store.state("model_seconds", 0) + time.perf_counter() - started)
-            detect_chunks(path, store, video, options, detector, calibrator, meter, progress)
+            detect_chunks(path, store, video, options, detector, calibrator, meter, progress, reference)
             del detector, calibrator
             if device.startswith("cuda"):
                 import torch

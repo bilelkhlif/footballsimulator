@@ -35,7 +35,7 @@ l'AGPL-3.0 : MIT, MIT-CMU, BSD, 0BSD, ISC, Apache-2.0, PSF-2.0, MPL-2.0, Zlib, B
 D'après l'historique Git, Bilel Khlif est l'auteur de tous les commits (136 au 25 novembre 2026, sous deux adresses), sans coauteur déclaré.
 `ATTRIBUTION.md` précise aussi les contributions de chacun :
 
-- **Visualiseur et serveur d'analyse.** Ajoutés par Bilel Khlif après le projet (contributions 23 et 24) : il peut les licencier seul. C'est fait, sous AGPL-3.0-only.
+- **Visualiseur et serveur d'analyse.** Ajoutés par Bilel Khlif après le projet (contributions 25 et 26 d'ATTRIBUTION.md) : il peut les licencier seul. C'est fait, sous AGPL-3.0-only.
 - **Application académique et documents de l'équipe.** Le cahier des charges est collectif, et le terrain, les pions et le ballon sont déclarés « Équipe Football Simulator ». Le rapport final et la présentation sont signés par les trois membres. Aucune licence ne peut donc être accordée sans l'accord écrit d'Iyed Rachdi et de Ghassen Dalleji ([demande prête](demande-accord-licence.md)). En attendant, ces fichiers sont publiés pour consultation, tous droits réservés.
 - **Éléments de tiers.** Le logo de SUP'COM appartient à SUP'COM, et les captures d'outils tiers du rapport d'état de l'art restent soumises aux droits de leurs éditeurs.
 
@@ -91,12 +91,14 @@ Aucun autre accord n'est nécessaire pour publier le code, le site et le serveur
 
 ## Attribution
 
-`ATTRIBUTION.md` et la PR #18 restent inchangés. La PR #20 hérite de 46 ajouts et d'une suppression
-venus de #15, dont les contributions 23 et 24. La PR #18 propose les mêmes numéros pour d'autres
-contributions ; à sa revue, elles deviendraient 25 et 26, avec leurs renvois.
+La PR #20 avait hérité de #15 les contributions 23 et 24 du visualiseur, alors que la PR #18 proposait
+ces numéros pour d'autres contributions. Le 25 novembre 2026, les propositions de la PR #18 ont été
+intégrées à `ATTRIBUTION.md` : contributions 23 et 24 (PR #16 et #17), visualiseur renuméroté 25 et 26,
+renvois compris, et contribution 27 pour le travail du 25 novembre.
 
 L'équipe est Bilel Khlif, Iyed Rachdi et Ghassen Dalleji ; l'orthographe « Dalleji » a été confirmée par
-Bilel Khlif. Le tableau de l'équipe du README l'emploie. Les mentions « Dallekji » de `ATTRIBUTION.md` et
-du rapport final, documents datés, sont signalées pour la revue de la PR #18 et ne sont pas réécrites.
+Bilel Khlif. Depuis le 25 novembre 2026, `ATTRIBUTION.md` (avec une note sur l'ancienne graphie « Dallekji »),
+le README, le rapport final et le script de la vidéo l'emploient ; seuls le rapport LaTeX d'état de l'art et
+la présentation PDF gardent l'ancienne graphie, à corriger dans leurs sources puis à réexporter.
 L'assistance des outils d'IA à ces corrections et à ces essais est déclarée dans les descriptions des
 pull requests ; aucun essai sur téléphone ni travail humain non établi n'est revendiqué.

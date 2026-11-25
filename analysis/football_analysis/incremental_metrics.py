@@ -11,7 +11,25 @@ import sqlite3
 from collections import Counter
 from typing import Iterable
 
-from .metrics import _share
+from .metrics import AUTOMATIC_AGREEMENT_M, _share
+
+
+def _calibration_source(connection: sqlite3.Connection, reference_frames: int, calibrated: int, rejected: int,
+                        motion_lost: int, automatic_frames: int, automatic_ok: int, automatic_close: int) -> dict:
+    """Origine de la calibration et mesures qui en dépendent (stabilisation, ou comparaison à la référence).
+
+    @responsable Bilel Khlif
+    @date 2026-11-25
+    @role Analyse incrémentale — qualité de la calibration
+    """
+    if not reference_frames:
+        return {"source": "keypoints", "rejectedMeasurementShare": _share(rejected, calibrated)}
+    return {"source": "reference", "motionLostShare": _share(motion_lost, calibrated),
+            "maxReferenceDriftM": quantile(connection, "referenceDriftM", 1.0, 2),
+            "automatic": {"calibratedShare": _share(automatic_ok, automatic_frames),
+                          "medianGapM": quantile(connection, "automaticGapM", digits=2),
+                          "p90GapM": quantile(connection, "automaticGapM", .9, 2),
+                          "agreementShare": _share(automatic_close, automatic_ok)}}
 
 
 def quantile(connection: sqlite3.Connection, kind: str, q: float = 0.5, digits: int | None = None) -> float | None:
@@ -52,6 +70,7 @@ def quality_metrics_stream(chunks: Iterable[list[dict]]) -> dict:
         CREATE TABLE shots(id INTEGER PRIMARY KEY,peak INTEGER);
     """)
     count = ball = calibrated = observations = placed = outside = pairs = jumps = players = known = 0
+    rejected = motion_lost = reference_frames = automatic_frames = automatic_ok = automatic_close = 0
     roles, failures = Counter(), Counter()
     try:
         for chunk in chunks:
@@ -67,8 +86,21 @@ def quality_metrics_stream(chunks: Iterable[list[dict]]) -> dict:
                         for key in ("fitErrorPx", "fitErrorM", "holdoutErrorPx", "holdoutErrorM"):
                             if calibration.get(key) is not None:
                                 samples.append((key, calibration[key]))
+                        rejected += bool(calibration.get("measurementRejected"))
+                        motion_lost += bool(calibration.get("motionLost"))
+                        if calibration.get("referenceDriftM") is not None:
+                            samples.append(("referenceDriftM", calibration["referenceDriftM"]))
                     else:
                         failures[calibration.get("reason")] += 1
+                    if calibration.get("source") == "reference":
+                        reference_frames += 1
+                        automatic = calibration.get("automatic") or {}
+                        automatic_frames += 1
+                        if automatic.get("status") == "ok":
+                            automatic_ok += 1
+                            if automatic.get("gapM") is not None:
+                                samples.append(("automaticGapM", automatic["gapM"]))
+                                automatic_close += automatic["gapM"] <= AUTOMATIC_AGREEMENT_M
                     classified = Counter()
                     current_players = 0
                     for obj in frame["objects"]:
@@ -124,7 +156,9 @@ def quality_metrics_stream(chunks: Iterable[list[dict]]) -> dict:
                 "medianHoldoutErrorPx": quantile(connection, "holdoutErrorPx", digits=2),
                 "p90HoldoutErrorPx": quantile(connection, "holdoutErrorPx", .9, 2),
                 "medianHoldoutErrorM": quantile(connection, "holdoutErrorM", digits=3),
-                "p90HoldoutErrorM": quantile(connection, "holdoutErrorM", .9, 3)},
+                "p90HoldoutErrorM": quantile(connection, "holdoutErrorM", .9, 3),
+                **_calibration_source(connection, reference_frames, calibrated, rejected, motion_lost,
+                                      automatic_frames, automatic_ok, automatic_close)},
             "positions": {"placedShare": _share(placed, observations), "outsidePitchShare": _share(outside, observations),
                 "implausibleSpeedShare": _share(jumps, pairs), "medianSpeed": quantile(connection, "speed", digits=2)},
             "teams": {"tracksByTeam": dict(connection.execute("SELECT team,COUNT(*) FROM memberships GROUP BY team ORDER BY team")),

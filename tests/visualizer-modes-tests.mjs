@@ -18,7 +18,8 @@ import { testVisualizerAsyncRegressions } from './visualizer-async-regressions.m
 
 const DEMO_ID = 'match-synthetique';
 /** Le scénario synthétique reste la fixture contrôlée ; la première entrée publique est réelle. */
-const PUBLIC_DEMO_ID = 'france-allemagne-2018';
+// Démonstration ouverte par défaut : la première du catalogue (ordre 0), dont la calibration a passé le contrôle visuel.
+const PUBLIC_DEMO_ID = 'samsunspor-altinordu-2023';
 const FPS = 25;
 const MANIFEST = JSON.parse(readFileSync(fileURLToPath(new URL(`../demo/matches/${DEMO_ID}/manifest.json`, import.meta.url)), 'utf8'));
 const CONTACT = MANIFEST.metrics.identity.scriptedContacts[0];

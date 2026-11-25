@@ -19,6 +19,8 @@ import { StaticAnalysisSource } from './static-source.mjs';
 import { applyHomography, AutoPlacer, candidateRects, scoreRegions, WEIGHTS } from './auto-placement.mjs';
 import { OverlayFrame } from './overlay-frame.mjs';
 import { OverlayPitch } from './overlay-pitch.mjs';
+import { markSelected, maskUncalibrated, renderGallery, VERDICT_LABELS } from './demo-gallery.mjs';
+import { createThemeControl } from '../theme.mjs';
 import { describeCalibration, describeIdentityCheck, describeIdentityValues, formatNumber, formatShare, formatTime } from './format.mjs';
 import { TrackingStore } from './tracking-store.mjs';
 import { PagedTrackingStore } from './paged-tracking-store.mjs';
@@ -77,6 +79,21 @@ function servedByAnalysisServer() {
 }
 
 /**
+ * Stockage local du navigateur, ou null s'il est refusé (navigation privée, données bloquées).
+ * @returns {Storage|null}
+ * @responsable Bilel Khlif
+ * @date 2026-11-25
+ * @role Visualiseur de match — thème
+ */
+function readStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Raccourci de document.getElementById.
  * @param {string} id
  * @returns {HTMLElement}
@@ -113,6 +130,9 @@ class MatchVisualizer {
     /** Révision du chargement média : invalide une restauration après fermeture, même si l'URL revient. */
     this.videoLoadRevision = 0;
     this.selectedId = null;
+    /** Contrôle visuel de la calibration du match ouvert (catalogue) ; « rejected » masque les positions. */
+    this.calibrationCheck = null;
+    this.demoEntries = new Map();
     this.openGeneration = 0;
     this.manifestTimer = null;
     this.lastWindowCheck = 0;
@@ -224,6 +244,7 @@ class MatchVisualizer {
     byId('mode-demo').setAttribute('aria-pressed', String(mode === 'demo'));
     byId('mode-local').setAttribute('aria-pressed', String(mode === 'local'));
     byId('demo-controls').hidden = mode !== 'demo';
+    byId('demo-gallery-section').hidden = mode !== 'demo';
     byId('local-controls').hidden = mode !== 'local';
     byId('mode-help').hidden = true;
     document.body.dataset.mode = mode;
@@ -304,6 +325,9 @@ class MatchVisualizer {
     byId('tracking-availability').textContent = '';
     byId('analysis-select').value = '';
     byId('demo-select').value = '';
+    this.calibrationCheck = null;
+    this.#renderMask();
+    markSelected(byId('demo-gallery'), null);
     this.#renderControls(0);
     this.setStatus('');
   }
@@ -325,7 +349,17 @@ class MatchVisualizer {
         return;
       }
       select.replaceChildren(...demos.map((demo) => new Option(demo.name, demo.id)));
+      this.demoEntries = new Map(demos.map((demo) => [demo.id, demo]));
       const chosen = demos.find((demo) => demo.id === open) ?? demos[0];
+      renderGallery(byId('demo-gallery'), demos, {
+        selectedId: chosen?.id ?? null,
+        onSelect: (id) => {
+          if (id !== this.currentAnalysis || this.source !== this.demo) {
+            byId('demo-select').value = id;
+            this.openAnalysis(id);
+          }
+        },
+      });
       if (!chosen) {
         this.setStatus('Aucune démonstration disponible.', 'error');
         return;
@@ -680,6 +714,9 @@ class MatchVisualizer {
         ? new PagedTrackingStore(manifest, (from, to, options) => source.getTrackingWindow(id, from, to, options))
         : TrackingStore.fromDocument(tracking);
       this.currentAnalysis = id;
+      this.calibrationCheck = source.kind === 'demo' ? this.demoEntries.get(id)?.calibrationCheck ?? null : null;
+      this.#renderMask();
+      markSelected(byId('demo-gallery'), source.kind === 'demo' ? id : null);
       this.selectedId = null;
       this.placer.reset();
       this.overlay?.setTeams(this.store.teams);
@@ -1016,9 +1053,11 @@ class MatchVisualizer {
       content: this.content, source: this.store.source, teamColor: (team) => this.store.teamColor(team),
       selectedId: this.selectedId, visible: this.options.annotations,
     });
-    this.lastUpdate = this.overlay?.update(sample, {
-      selectedId: this.selectedId, velocities, histories, showTrails: this.options.trails,
-      showArrows: this.options.arrows, centroids: teamCentroids(sample.objects),
+    const masked = this.#positionsMasked();
+    this.lastUpdate = this.overlay?.update(masked ? maskUncalibrated(sample) : sample, {
+      selectedId: this.selectedId, velocities: masked ? new Map() : velocities, histories: masked ? new Map() : histories,
+      showTrails: this.options.trails, showArrows: this.options.arrows,
+      centroids: masked ? new Map() : teamCentroids(sample.objects),
     }) ?? null;
     this.#autoPlace(time);
     // Panneaux : aussitôt que l'image analysée change (après un déplacement), sinon 5 fois par seconde.
@@ -1061,7 +1100,8 @@ class MatchVisualizer {
         boxes.push({ ...boxToDisplay(frame.ball.box, this.content, source), weight: WEIGHTS.ball / frames.length });
       }
     }
-    const homography = frames[0].calibration?.status === 'ok' ? frames[0].calibration.homography : null;
+    const homography = frames[0].calibration?.status === 'ok' && !this.#positionsMasked()
+      ? frames[0].calibration.homography : null;
     const isOnPitch = homography ? (x, y) => {
       const point = applyHomography(homography, ((x - this.content.x) / this.content.width) * source.width,
         ((y - this.content.y) / this.content.height) * source.height);
@@ -1078,6 +1118,31 @@ class MatchVisualizer {
   }
 
   /**
+   * Vrai si les positions du match ouvert doivent être masquées (calibration rejetée au contrôle visuel).
+   * @returns {boolean}
+   * @responsable Bilel Khlif
+   * @date 2026-11-25
+   * @role Visualiseur de match — calibration rejetée
+   */
+  #positionsMasked() {
+    return this.calibrationCheck?.verdict === 'rejected';
+  }
+
+  /**
+   * Affiche ou retire l'explication du masquage dans le panneau du terrain 3D.
+   * @responsable Bilel Khlif
+   * @date 2026-11-25
+   * @role Visualiseur de match — calibration rejetée
+   */
+  #renderMask() {
+    const note = byId('pitch-mask-note');
+    note.hidden = !this.#positionsMasked();
+    note.textContent = this.#positionsMasked()
+      ? `Positions masquées : ${this.calibrationCheck.note}` : '';
+    byId('pitch-panel').dataset.masked = String(this.#positionsMasked());
+  }
+
+  /**
    * Met à jour les panneaux latéraux : image affichée et joueur sélectionné.
    * @param {object} sample
    * @param {Map<number, object>} velocities
@@ -1086,7 +1151,10 @@ class MatchVisualizer {
    * @role Visualiseur de match — interface
    */
   #renderFrameInfo(sample, velocities) {
-    byId('frame-calibration').textContent = describeCalibration(sample.frame?.calibration ?? null);
+    byId('frame-calibration').textContent = this.#positionsMasked()
+      ? `Calibration automatique rejetée au contrôle visuel : ${this.calibrationCheck.note} `
+        + 'Positions, vitesses et distances masquées ; les détections restent affichées sur la vidéo.'
+      : describeCalibration(sample.frame?.calibration ?? null);
     byId('frame-counts').textContent = sample.frame
       ? `${sample.objects.length} personnes suivies, ballon ${sample.ball ? 'détecté' : 'non détecté'}${sample.frame.cut ? ', nouveau plan' : ''}.`
       : '';
@@ -1111,9 +1179,10 @@ class MatchVisualizer {
       : `${team === 0 ? 'A' : 'B'} (votes : ${formatShare(object?.teamConfidence ?? track?.teamConfidence)})`;
     byId('sel-team-chip').style.background = color ?? 'transparent';
     byId('sel-visible').textContent = object ? `oui (détection ${formatShare(object.confidence)})` : 'non, à cet instant';
-    byId('sel-position').textContent = object?.pitch ? `x ${formatNumber(object.pitch[0])} m, y ${formatNumber(object.pitch[1])} m` : 'indisponible';
-    byId('sel-speed').textContent = identityValues.speed;
-    byId('sel-distance').textContent = identityValues.distance;
+    const hidden = this.#positionsMasked() ? 'masquée (calibration rejetée)' : null;
+    byId('sel-position').textContent = hidden ?? (object?.pitch ? `x ${formatNumber(object.pitch[0])} m, y ${formatNumber(object.pitch[1])} m` : 'indisponible');
+    byId('sel-speed').textContent = hidden ?? identityValues.speed;
+    byId('sel-distance').textContent = hidden ?? identityValues.distance;
     byId('sel-identity').textContent = identityValues.note ?? 'suivie (pas de contact corrigé à cet instant)';
     byId('sel-span').textContent = track ? `${formatTime(track.firstTime)} – ${formatTime(track.lastTime)} (${track.observations} images)` : '—';
   }
@@ -1142,7 +1211,18 @@ class MatchVisualizer {
       ['Erreur hors échantillon', synthetic ? notApplicable
         : `${formatNumber(calibration.medianHoldoutErrorPx)} px, ${formatNumber(calibration.medianHoldoutErrorM, 2)} m `
         + `(médianes ; 90 % sous ${formatNumber(calibration.p90HoldoutErrorM, 2)} m), sur les repères du terrain`],
-      ['Positions sur le terrain', formatShare(positions.placedShare)],
+      ...(this.calibrationCheck ? [['Contrôle visuel de la calibration',
+        `${VERDICT_LABELS[this.calibrationCheck.verdict] ?? this.calibrationCheck.verdict}. ${this.calibrationCheck.note}`]] : []),
+      ['Origine de la calibration', synthetic ? notApplicable : calibration.source === 'reference'
+        ? 'référence annotée à la main, suivie par le mouvement de la caméra'
+        : calibration.rejectedMeasurementShare === undefined ? 'points clés, image par image'
+          : `points clés stabilisés dans le temps (${formatShare(calibration.rejectedMeasurementShare)} des mesures écartées)`],
+      ['Positions sur le terrain', this.#positionsMasked() ? 'masquées : calibration rejetée' : formatShare(positions.placedShare)],
+      ['Déplacements > 12 m/s', synthetic ? notApplicable : `${formatShare(positions.implausibleSpeedShare)} des déplacements mesurés `
+        + '(tremblement de calibration ou échange d\'identité ; vitesses non validées physiquement)'],
+      ['Continuité du suivi', `trajectoire médiane ${formatNumber(tracking.medianTrackSeconds)} s, `
+        + `${formatShare(tracking.shortTrackShare)} de trajectoires de moins d'une seconde`],
+      ['Coupures de plan', tracking.shots ? String(Math.max(0, tracking.shots - 1)) : '—'],
       ['Ballon détecté', `${formatShare(detection.ballFrameShare)} des images`],
       ['Trajectoires', `${tracking.tracks ?? '—'}, fragmentation ${formatNumber(tracking.fragmentation, 2)}`],
       ['Identités', describeIdentityCheck(metrics.identity)],
@@ -1260,6 +1340,18 @@ class MatchVisualizer {
       }
     });
     byId('demo-select').addEventListener('change', (event) => event.target.value && this.openAnalysis(event.target.value));
+    // Thème partagé avec le tableau tactique : Auto, Clair, Sombre, mémorisé si le navigateur le permet.
+    const themeButton = byId('theme-toggle');
+    const themeLabels = { auto: 'Auto', light: 'Clair', dark: 'Sombre' };
+    const theme = createThemeControl({
+      root: document.documentElement, buttons: [], storage: readStorage(),
+      matchMedia: window.matchMedia?.bind(window), meta: document.querySelector('meta[name="theme-color"]'),
+      onChange: (resolved, choice) => {
+        themeButton.textContent = `Thème : ${themeLabels[choice]}`;
+        themeButton.setAttribute('aria-label', `Thème ${themeLabels[choice].toLowerCase()} ; changer`);
+      },
+    });
+    themeButton.addEventListener('click', () => theme.select({ auto: 'light', light: 'dark', dark: 'auto' }[theme.choice()]));
     byId('mode-demo').addEventListener('click', () => this.mode !== 'demo' && this.setMode('demo'));
     byId('mode-local').addEventListener('click', () => this.mode !== 'local' && this.setMode('local'));
     byId('server-form').addEventListener('submit', (event) => {
@@ -1421,6 +1513,9 @@ class MatchVisualizer {
       connection: this.connection,
       source: this.source?.kind ?? null,
       analysis: this.currentAnalysis,
+      calibrationCheck: this.calibrationCheck?.verdict ?? null,
+      gallery: [...document.querySelectorAll('#demo-gallery .vz-match')].map((card) => ({
+        id: card.dataset.demoId, pressed: card.getAttribute('aria-pressed') === 'true' })),
     };
   }
 }

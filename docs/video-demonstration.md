@@ -13,7 +13,7 @@ Le déroulé suit le scénario de démonstration du cahier (§4.1, étapes 1 à 
 **Diapositives prêtes à l'emploi** : [diapositive d'ouverture](presentation/diapositive-ouverture.png) et [diapositive de fin](presentation/diapositive-fin.png), en 1920 × 1080. Ce sont les diapositives 1 et 13 de la [présentation](presentation/). L'ouverture porte :
 
 - le titre « Football Simulator » ;
-- l'équipe : Iyed Rachdi, Bilel Khlif, Ghassen Dallekji ;
+- l'équipe : Iyed Rachdi, Bilel Khlif, Ghassen Dalleji ;
 - l'encadrant : Dr. Ing. Mohamed-Bécha Kaâniche ;
 - SUP'COM ;
 - la date : « Novembre 2026 ».

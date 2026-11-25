@@ -33,6 +33,9 @@ export function createArView({ scene, table, pitchGroup, controls, reticle = nul
 
   /**
    * Remet le terrain au centre de la scène, à plat, comme dans la vue 3D.
+   * @responsable Bilel Khlif
+   * @date 2026-11-14
+   * @role Réalité augmentée — scène pendant la session
    */
   function resetPitchPose() {
     pitchGroup.position.set(0, 0, 0);

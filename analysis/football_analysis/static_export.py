@@ -309,8 +309,63 @@ def catalog_problems(catalog: Any) -> list[str]:
             problems.append(f"{where}.kind doit valoir analysis ou synthetic")
         if not isinstance(entry.get("title"), str) or not entry["title"].strip():
             problems.append(f"{where}.title absent")
+        problems.extend(_gallery_problems(entry, where))
         problems.extend(path_problems(entry, where))
     return problems
+
+
+#: Verdicts du contrôle humain de la calibration, par superposition des lignes du terrain à l'image :
+#: « approximate » (lignes proches, écart de quelques mètres), « rejected » (calibration fausse :
+#: le visualiseur masque positions, vitesses et distances), « exact » (vidéo synthétique).
+CALIBRATION_VERDICTS = ("approximate", "rejected", "exact")
+
+
+def _gallery_problems(entry: dict, where: str) -> list[str]:
+    """Contrôle les champs facultatifs de la galerie : catégorie, vignette, crédit, ordre, qualité, contrôle.
+
+    @responsable Bilel Khlif
+    @date 2026-11-25
+    @role Analyse vidéo — export statique (galerie)
+    """
+    problems = []
+    for key in ("category", "credit"):
+        if key in entry and (not isinstance(entry[key], str) or not entry[key].strip()):
+            problems.append(f"{where}.{key} doit être un texte")
+    if "thumbnail" in entry and not _relative_file(entry["thumbnail"]):
+        problems.append(f"{where}.thumbnail doit être un fichier relatif")
+    if "order" in entry and (not isinstance(entry["order"], int) or isinstance(entry["order"], bool) or entry["order"] < 0):
+        problems.append(f"{where}.order doit être un entier positif")
+    check = entry.get("calibrationCheck")
+    if check is not None and (not isinstance(check, dict) or check.get("verdict") not in CALIBRATION_VERDICTS
+                              or not isinstance(check.get("note"), str)):
+        problems.append(f"{where}.calibrationCheck : verdict {CALIBRATION_VERDICTS} et note attendus")
+    quality = entry.get("quality")
+    if quality is not None and (not isinstance(quality, dict)
+                                or any(value is not None and not _number(value, 0) for value in quality.values())):
+        problems.append(f"{where}.quality : nombres positifs ou null attendus")
+    return problems
+
+
+def gallery_quality(metrics: dict) -> dict:
+    """Indicateurs des cartes de la galerie, lus dans les mesures de l'export (rien n'est saisi à la main).
+
+    @responsable Bilel Khlif
+    @date 2026-11-25
+    @role Analyse vidéo — export statique (galerie)
+    """
+    detection, tracking = metrics.get("detection") or {}, metrics.get("tracking") or {}
+    calibration, positions = metrics.get("calibration") or {}, metrics.get("positions") or {}
+    identity = metrics.get("identity") or {}
+    shots = tracking.get("shots")
+    return {
+        "playersPerFrame": (detection.get("peoplePerFrame") or {}).get("player"),
+        "ballShare": detection.get("ballFrameShare"),
+        "calibratedShare": calibration.get("calibratedShare"),
+        "medianTrackSeconds": tracking.get("medianTrackSeconds"),
+        "uncertainIdentitySeconds": identity.get("uncertainSeconds"),
+        "implausibleSpeedShare": positions.get("implausibleSpeedShare"),
+        "cuts": None if shots is None else max(0, shots - 1),
+    }
 
 
 def _write_json(path: Path, value: Any) -> tuple[str, int]:
@@ -626,8 +681,13 @@ def verify_bundle(directory: Path) -> list[str]:
     return problems
 
 
-def update_catalog(catalog: Path, bundle: Path, manifest: dict, description: str | None = None) -> dict:
+def update_catalog(catalog: Path, bundle: Path, manifest: dict, description: str | None = None, *,
+                   gallery: dict | None = None) -> dict:
     """Ajoute ou remplace l'entrée d'un export dans le catalogue de démonstration, de façon atomique.
+
+    gallery : champs de la galerie (category, credit, order, calibrationCheck) ; ceux qui manquent
+    sont repris de l'entrée précédente. La qualité est recalculée à partir des mesures du manifeste,
+    et la vignette (thumbnail.jpg) est référencée si elle existe dans l'export.
 
     @responsable Bilel Khlif
     @date 2026-11-24
@@ -644,11 +704,20 @@ def update_catalog(catalog: Path, bundle: Path, manifest: dict, description: str
         problems = catalog_problems(data)
         if problems:
             raise ExportError(f"Catalogue invalide : {problems[0]}")
+    previous = next((match for match in data["matches"] if match["id"] == manifest["id"]), {})
     entry = {"id": manifest["id"], "title": manifest["title"], "path": f"{relative}/",
              "kind": manifest["provenance"]["kind"], "duration": manifest["source"].get("duration"),
-             "description": description or ""}
+             "description": description if description is not None else previous.get("description", "")}
+    for key in ("category", "credit", "order", "calibrationCheck"):
+        value = (gallery or {}).get(key, previous.get(key))
+        if value is not None:
+            entry[key] = value
+    if (bundle / "thumbnail.jpg").is_file():
+        entry["thumbnail"] = f"{relative}/thumbnail.jpg"
+    entry["quality"] = gallery_quality(manifest.get("metrics") or {})
+    # Ordre de la galerie : d'abord les entrées numérotées, puis par identifiant.
     data["matches"] = sorted([match for match in data["matches"] if match["id"] != entry["id"]] + [entry],
-                             key=lambda match: match["id"])
+                             key=lambda match: (match.get("order", 1000), match["id"]))
     problems = catalog_problems(data)
     if problems:
         raise ExportError(f"Catalogue invalide : {problems[0]}")

@@ -51,6 +51,7 @@ import { createRenderLoop } from './render-loop.mjs';
 import { describeAdapter, WebGpuUnavailableError, WEBGPU_ERROR_REASONS } from './webgpu.mjs';
 import { getRequestedRenderMode, RENDER_MODES, WebGlTestModeUnavailableError } from './webgl-test-mode.mjs';
 import { WorkspaceController } from './workspace-controller.mjs';
+import { createThemeControl, THEME_COLORS } from './theme.mjs';
 import { createWorkspaceNavigation, createWorkspaceSummary, createWorkspaceStatus } from './workspace-navigation.mjs';
 
 /** Réglage de Chrome qui active la liaison WebXR/WebGPU (Chrome 157, Android et Windows). */
@@ -144,6 +145,22 @@ async function init(renderMode) {
   const sceneContext = await createSceneContext(container, { renderMode });
   const { renderer, scene, camera, controls, pitchGroup, table, resetView, resize } = sceneContext;
   showRendererStatus(renderer, renderMode);
+
+  // Thème clair ou sombre (réglages) : la couleur du fond 3D est modifiée en place, si bien que la
+  // vue AR, qui sauvegarde puis restaure ce même objet, retrouve le fond du thème en cours.
+  const sceneBackground = scene.background;
+  createThemeControl({
+    root: document.documentElement,
+    buttons: document.querySelectorAll('[data-theme-choice]'),
+    storage: readLocalStorage(),
+    matchMedia: window.matchMedia?.bind(window),
+    meta: document.querySelector('meta[name="theme-color"]'),
+    status: document.getElementById('theme-status'),
+    onChange: (resolved) => {
+      sceneBackground?.set?.(THEME_COLORS[resolved].scene);
+      table.material?.color?.set?.(THEME_COLORS[resolved].table);
+    },
+  });
 
   pitchGroup.add(createPitch(renderer));
 

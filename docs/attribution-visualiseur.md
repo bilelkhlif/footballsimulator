@@ -14,7 +14,7 @@ nom de Bilel Khlif ; ce nom ne prouve pas à lui seul qui a écrit le code.
 
 | Contributeur | Rôle documenté sur le visualiseur | Preuves |
 | --- | --- | --- |
-| **Bilel Khlif** | Demande de l'extension (17 novembre 2026) ; exigences : réutiliser les solutions libres, ne jamais inventer de position, publier seulement ce qui est redistribuable ; demande de revue critique avant toute fusion ; références fournies (trois publications LinkedIn) ; priorités et contraintes des travaux du 23 et du 24 novembre (analyse reprenable, échanges d'identifiants, mode démo et mode local, isolement des branches) ; fusion réservée à son accord | ATTRIBUTION.md (contributions 23 et 24), descriptions de la PR #15, [sports-analytics-references.md](sports-analytics-references.md) |
+| **Bilel Khlif** | Demande de l'extension (17 novembre 2026) ; exigences : réutiliser les solutions libres, ne jamais inventer de position, publier seulement ce qui est redistribuable ; demande de revue critique avant toute fusion ; références fournies (trois publications LinkedIn) ; priorités et contraintes des travaux du 23 et du 24 novembre (analyse reprenable, échanges d'identifiants, mode démo et mode local, isolement des branches) ; fusion réservée à son accord | ATTRIBUTION.md (contributions 25 et 26, numérotées 23 et 24 avant le 25 novembre 2026), descriptions de la PR #15, [sports-analytics-references.md](sports-analytics-references.md) |
 | **Claude Code** (Anthropic, modèle Claude Opus 5.5 d'après le journal de développement) | Recherche des composants libres ; architecture ; code Python et JavaScript ; tests ; validations sur vidéos réelles ; documentation ; diagnostics et corrections ; le 24 novembre 2026, reprise des corrections de Codex interrompu par sa limite d'usage : reproduction indépendante sur le code d'origine, compléments, vérification complète et commits | Commits de la branche (tableau ci-dessous) ; journaux de validation datés dans `docs/` |
 | **OpenAI Codex** | Deux revues indépendantes, puis, à la demande de Bilel Khlif le 24 novembre 2026, corrections commencées et laissées sans commit à sa limite d'usage : interruption atomique, normalisation des routes, confinement des exports, réponses asynchrones et remise à zéro des panneaux ; tests de non-régression et plan d'intégration. Correction du Service Worker préparée séparément depuis `main` | Tests de non-régression dans `analysis/tests/` et `tests/visualizer-modes-tests.mjs`, historique des corrections après `84463ad`, [visualiseur-modes.md](visualiseur-modes.md). Travail académique antérieur dans les PR #16 et #17 ; proposition académique de la PR #18 non modifiée |
 | **ChatGPT** | Aucun usage connu sur le visualiseur | — |
@@ -50,8 +50,8 @@ dans Chrome), **P** physique (téléphone) ; aucune vérification P n'est faite 
 
 ## Points à confirmer par l'équipe
 
-- Orthographe confirmée par Bilel Khlif le 24 novembre 2026 : **Ghassen Dalleji**. ATTRIBUTION.md et
-  d'autres documents historiques écrivent encore « Dallekji » ; ils sont listés pour relecture dans la
-  proposition d'attribution académique (PR #18), sans être corrigés ici.
+- Orthographe confirmée par Bilel Khlif le 24 novembre 2026 : **Ghassen Dalleji**. Appliquée le
+  25 novembre 2026 à ATTRIBUTION.md (avec une note sur l'ancienne graphie « Dallekji »), au rapport final et
+  au script de la vidéo ; le rapport LaTeX d'état de l'art et la présentation PDF restent à réexporter.
 - Si le visualiseur doit un jour entrer dans la version évaluée : l'inscrire alors dans ATTRIBUTION.md
   de `main`, avec ce tableau et les commits de la fusion.

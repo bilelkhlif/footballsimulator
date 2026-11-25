@@ -17,7 +17,7 @@ SPDX-FileCopyrightText = "2010-2026 three.js authors"
 SPDX-License-Identifier = "MIT"
 
 # 3. Visualiseur de match et serveur d'analyse par IA, ajoutés au projet par Bilel Khlif, seul
-#    auteur des commits (ATTRIBUTION.md, contributions 23 et 24). AGPL-3.0-only, voie libre exigée
+#    auteur des commits (ATTRIBUTION.md, contributions 25 et 26). AGPL-3.0-only, voie libre exigée
 #    par la licence d'Ultralytics pour un projet qui l'utilise.
 [[annotations]]
 path = [
@@ -46,6 +46,7 @@ path = [
   "docs/licences-et-distribution.md",
   "docs/opensource-research.md",
   "docs/revue-independante-pr19-pr20.md",
+  "docs/stabilisation-homographie.md",
   "docs/sports-analytics-references.md",
   "docs/validation-*.json",
   "docs/visualiseur-*.md",
@@ -58,7 +59,36 @@ SPDX-License-Identifier = "AGPL-3.0-only"
 # 4. Vidéo de tribune publiée par son créateur sur Wikimedia Commons ; adaptation et poster
 #    sous la même licence, distincte de celle du code. Crédit et modifications : SOURCE.md.
 [[annotations]]
-path = ["demo/matches/france-allemagne-2018/video.mp4", "demo/matches/france-allemagne-2018/poster.jpg"]
+path = ["demo/matches/france-allemagne-2018/video.mp4", "demo/matches/france-allemagne-2018/poster.jpg",
+  "demo/matches/france-allemagne-2018/thumbnail.jpg"]
 precedence = "override"
 SPDX-FileCopyrightText = "2018 Like tears in rain"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+# 5. Deux autres vidéos de spectateurs publiées par leurs créateurs sur Wikimedia Commons, le
+#    25 novembre 2026 : extraits, affiches et vignettes sous la même licence (SOURCE.md de chaque dossier).
+[[annotations]]
+path = ["demo/matches/samsunspor-altinordu-2023/video.mp4", "demo/matches/samsunspor-altinordu-2023/poster.jpg",
+  "demo/matches/samsunspor-altinordu-2023/thumbnail.jpg"]
+precedence = "override"
+SPDX-FileCopyrightText = "2023 𐰇𐱅𐰚𐰤 (Wikimedia Commons)"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+[[annotations]]
+path = ["demo/matches/bresil-afrique-du-sud-2016/video.mp4", "demo/matches/bresil-afrique-du-sud-2016/poster.jpg",
+  "demo/matches/bresil-afrique-du-sud-2016/thumbnail.jpg"]
+precedence = "override"
+SPDX-FileCopyrightText = "2016 Rodrigogomesonetwo (Wikimedia Commons)"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+# 6. Captures du visualiseur : elles montrent des images de ces vidéos, donc sous CC BY-SA 4.0.
+[[annotations]]
+path = "docs/images/glass/*-viz-*.jpg"
+precedence = "override"
+SPDX-FileCopyrightText = [
+  "2018 Like tears in rain (Wikimedia Commons)",
+  "2023 𐰇𐱅𐰚𐰤 (Wikimedia Commons)",
+  "2016 Rodrigogomesonetwo (Wikimedia Commons)",
+  "2026 Bilel Khlif",
+]
 SPDX-License-Identifier = "CC-BY-SA-4.0"

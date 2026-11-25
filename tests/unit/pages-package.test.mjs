@@ -59,8 +59,10 @@ test('la préparation Pages contient la coquille et tout le visualiseur, sans se
     }
     const files = listFiles(output);
     assert.deepEqual(files.filter((file) => /\.(?:pt|pth|onnx|safetensors|sqlite3?|db)$/i.test(file)), [], 'aucun poids ni base');
+    // Vidéos publiées : celles du registre des droits relus, plus la démonstration synthétique générée.
+    const reviewed = Object.keys(JSON.parse(readFileSync(path.join(REPO_ROOT, 'demo/media-licenses.json'), 'utf8')).matches);
     assert.deepEqual(files.filter((file) => /\.(?:mp4|webm|mov)$/i.test(file)),
-      ['demo/matches/france-allemagne-2018/video.mp4', 'demo/matches/match-synthetique/video.mp4'],
+      [...reviewed, 'match-synthetique'].map((id) => `demo/matches/${id}/video.mp4`).sort(),
       'seules les vidéos publiques relues sont publiées');
     assert.throws(() => preparePages({ output }), /existe déjà/);
   } finally {

@@ -8,6 +8,10 @@
 -->
 <html lang="fr">
 <head>
+  <meta name="theme-color" content="#0e1311">
+  <meta name="color-scheme" content="dark light">
+  <!-- Thème choisi dans les réglages, posé avant le premier affichage (src/theme.mjs) -->
+  <script>try{var t=localStorage.getItem('football-simulator:theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Visualiseur de match – Football Simulator</title>
@@ -33,6 +37,7 @@
   <header class="vz-bar">
     <a id="back-to-board" class="vz-button vz-back" href="index.html" title="Revenir au tableau tactique">Tableau tactique</a>
     <h1 class="vz-title">Visualiseur de match <span class="vz-beta" title="Fonction en version bêta">Bêta</span></h1>
+    <button id="theme-toggle" class="vz-chip vz-theme" type="button" aria-label="Thème automatique ; changer">Thème : Auto</button>
     <div class="vz-modes" role="group" aria-label="Mode du visualiseur">
       <button id="mode-demo" class="vz-mode" type="button" aria-pressed="false">Explorer la démo</button>
       <button id="mode-local" class="vz-mode" type="button" aria-pressed="false">Analyser ma vidéo</button>
@@ -67,8 +72,6 @@
 
   <main class="vz-main">
     <section class="vz-player" aria-label="Vidéo du match">
-      <!-- Provenance des données affichées : démonstration synthétique ou export d'une analyse réelle -->
-      <p id="provenance-banner" class="vz-banner" role="note" hidden></p>
       <!-- Scène : la vidéo, le calque d'annotations et le panneau du terrain 3D -->
       <div id="stage" class="vz-stage">
         <video id="match-video" class="vz-video" playsinline muted preload="auto"></video>
@@ -85,6 +88,7 @@
             <button id="pitch-recentre" class="vz-icon" type="button" title="Vue de départ" aria-label="Vue de départ">⟲</button>
             <button id="pitch-minimise" class="vz-icon" type="button" title="Réduire" aria-label="Réduire le terrain 3D">–</button>
           </div>
+          <p id="pitch-mask-note" class="vz-panel-note" role="note" hidden></p>
           <div id="pitch-view" class="vz-panel-view"></div>
           <div id="pitch-panel-resize" class="vz-resize" title="Redimensionner" aria-hidden="true"></div>
         </div>
@@ -108,10 +112,20 @@
         <button id="toggle-annotations" class="vz-chip" type="button" aria-pressed="true">Annotations</button>
         <span id="team-legend" class="vz-legend"></span>
       </div>
+      <!-- Provenance des données affichées : démonstration synthétique ou export d'une analyse réelle -->
+      <p id="provenance-banner" class="vz-banner" role="note" hidden></p>
     </section>
 
     <!-- Panneaux : joueur sélectionné, image affichée, qualité de l'analyse et limites -->
     <aside class="vz-side">
+    <!-- Galerie : matchs de démonstration du catalogue (vignette, catégorie, crédit, qualité mesurée) -->
+    <section id="demo-gallery-section" class="vz-gallery" aria-labelledby="demo-gallery-title" hidden>
+      <div class="vz-gallery__head">
+        <h2 id="demo-gallery-title">Matchs de démonstration</h2>
+        <p class="vz-muted">Vidéos réelles sous licence libre analysées sur GPU, et un match synthétique. Les indicateurs de chaque carte viennent des mesures de son analyse.</p>
+      </div>
+      <ul id="demo-gallery" class="vz-gallery__list" role="list"></ul>
+    </section>
       <section class="vz-card">
         <h2>Joueur sélectionné</h2>
         <p id="selection-empty" class="vz-muted">Cliquez sur un joueur, sur la vidéo ou sur le terrain 3D.</p>
