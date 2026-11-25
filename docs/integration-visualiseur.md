@@ -12,8 +12,9 @@ Complément du 25 novembre : l'échec intermittent du lecteur est expliqué et p
 la [correction de perte du GPU](#perte-du-gpu--cause-correction-et-validation-du-25-novembre-2026).
 Complément du 25 novembre, préparation de la publication : sécurité du serveur et des modèles,
 PyTorch 2.14.1, site statique préparé et fusion répétée, dans la
-[section dédiée](#préparation-de-la-publication-25-novembre-2026). La PR #20 reste un brouillon et
-dépend toujours de la PR #19 ; aucune fusion n'est faite sans autorisation.
+[section dédiée](#préparation-de-la-publication-25-novembre-2026). Les PR #19 et #20 ont été
+fusionnées dans `main` le 25 novembre 2026, sur autorisation explicite de Bilel Khlif ; le site publié
+a ensuite été vérifié ([publication](#publication-du-25-novembre-2026)).
 
 ## Points de départ
 
@@ -320,8 +321,7 @@ termine 151 s après le téléversement.
 
 ## Séquence Git recommandée
 
-Séquence vérifiée le 25 novembre 2026 dans un worktree isolé, sans rien publier ; chaque fusion
-reste soumise à l'autorisation du propriétaire :
+Séquence répétée le 25 novembre 2026 dans un worktree isolé, puis exécutée le même jour (section suivante) :
 
 1. Fusionner la PR #19 (`47d4a75`) dans `main` par **commit de fusion**. Un squash ou un rebase
    recréerait ses commits ; la PR #20 garderait alors son diff.
@@ -334,6 +334,42 @@ reste soumise à l'autorisation du propriétaire :
 
 L'historique de la proposition initiale (nouvelle branche et `cherry-pick`) n'est plus nécessaire : la
 PR #20 porte déjà la répétition, les corrections et leurs preuves.
+
+## Publication du 25 novembre 2026
+
+| Étape | Résultat |
+| --- | --- |
+| PR #19, commit de fusion | `1cbd087`, parents `48c293d` et `47d4a75` |
+| PR #20, commit de fusion | `3077a2e`, parents `1cbd087` et `bea35f1` ; arbre identique à `bea35f1`, testé |
+| PR #15 et PR #21 | Marquées fusionnées par GitHub : leurs têtes `801ffc9` et `5610e16` sont dans `main` |
+| PR #18 | Ouverte, inchangée ; commentaire de revue sur la numérotation 23/24 |
+| GitHub Pages, « deploy from a branch », `main` | Construit en 41 s, sans erreur |
+
+Vérification du site publié, dans Chrome 158, serveur Python arrêté :
+
+- page en HTTP 200, puis les sept espaces de coaching ;
+- Service Worker `sw.mjs` actif, coquille `d8d1fcf84bd5635f` ;
+- ouverture du visualiseur depuis Plus d'outils, tactique conservée ;
+- démonstration lue avec annotations et terrain 3D WebGPU ;
+- images 800, 125 et 450 retrouvées exactement après déplacement, et sélection d'un joueur ;
+- avis de licence AGPL-3.0 affiché ;
+- aucune vidéo en cache, 53 modules `.mjs` en `text/javascript`, coquille rechargée hors ligne ;
+- profil mobile émulé de 390 × 844 sans débordement horizontal ;
+- aucune erreur. Total : **13 sur 13**.
+
+Le même site public pilote aussi le serveur local, sur la RTX 2050 :
+
+- `/api/health` annonce `AGPL-3.0-only` et l'adresse du code source ;
+- sans l'autorisation « accès au réseau local », le visualiseur affiche « indisponible » et son aide ;
+- avec elle, une vidéo de 10 s est téléversée depuis `https://bilelkhlif.github.io`, analysée en 120 s, lue avec le terrain 3D, puis un joueur est sélectionné ;
+- l'analyse est exportée en fichiers statiques, puis vérifiée. Total : **4 sur 4**.
+
+Le premier passage de la vérification du site comptait deux échecs, tous deux dus au script de recette :
+
+- l'avis de licence était tronqué à 120 caractères avant le contrôle ;
+- un clic était donné pendant que le panneau 3D finissait son placement automatique. Il touchait le panneau, comme il se doit.
+
+Une fois le script corrigé, toutes les vérifications passent. Aucun serveur IA public n'est déployé : l'analyse reste locale.
 
 ## À vérifier sur téléphone réel
 
