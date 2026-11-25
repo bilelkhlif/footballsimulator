@@ -27,7 +27,7 @@ from .calibration import foot_points, pitch_status
 from .chunk_storage import ChunkStore
 from .incremental_metrics import quality_metrics_stream
 from .metrics import describe_limitations
-from .models import model_path, sha256
+from .models import MODEL_LOCK, model_path, sha256
 from .pipeline import (AnalysisOptions, FrameClock, Progress, ResourceMeter, VideoError,
                        _ball_record, _load_models, choose_device, probe_video)
 from .streaming_teams import FrozenTeamModel, TeamState
@@ -203,6 +203,8 @@ def analysis_signature(path: Path, options: AnalysisOptions) -> dict:
     weights = {name: sha256(model_path(name, options.models_dir)) if model_path(name, options.models_dir).is_file()
                else None for name in names}
     return {"schema": 1, "sourceSha256": sha256(path), "settings": settings, "weights": weights,
+            "teamWeights": {key: MODEL_LOCK["backbones"][options.team_backbone][key]
+                            for key in ("repository", "revision", "sha256")},
             "implementation": {name: sha256(Path(__file__).with_name(name + ".py")) for name in (
                 "incremental_pipeline", "pipeline", "tracking", "teams", "streaming_teams", "calibration",
                 "detection", "contract", "chunk_storage", "identity")},

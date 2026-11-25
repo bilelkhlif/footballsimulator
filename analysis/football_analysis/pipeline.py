@@ -26,7 +26,7 @@ from . import contract
 from .calibration import CalibrationSettings, PitchCalibrator, foot_points, pitch_status
 from .detection import DetectionSettings, FootballDetector
 from .metrics import describe_limitations, quality_metrics
-from .models import MODELS_DIR, model_path, verified_models, require_secure_torch
+from .models import MODEL_LOCK, MODELS_DIR, model_path, verified_models, require_secure_torch
 from .teams import (BACKBONES, MIN_CROPS_TO_FIT, CropCollector, TeamAssignment, assign_player_teams,
                     build_classifier, resolve_goalkeepers, team_colour)
 from .tracking import CutDetector, PeopleTracker
@@ -188,6 +188,8 @@ def _load_models(options: AnalysisOptions, device: str) -> tuple[FootballDetecto
     calibrator = PitchCalibrator(pitch, CalibrationSettings(), predict)
     crop_method = "torse" if options.team_backbone == "siglip" else "personne entière"
     described["teams"] = {"embeddings": BACKBONES[options.team_backbone],
+                          "revision": MODEL_LOCK["backbones"][options.team_backbone]["revision"],
+                          "sha256": MODEL_LOCK["backbones"][options.team_backbone]["sha256"],
                           "method": f"{crop_method} + UMAP + KMeans, vote par trajectoire"}
     return detector, calibrator, described
 

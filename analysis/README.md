@@ -24,6 +24,7 @@ Depuis le dossier `analysis/`, dans PowerShell :
 
 ```powershell
 python -m venv .venv
+.venv\Scripts\python -m pip install --upgrade pip==26.3
 .venv\Scripts\python -m pip install torch==2.14.1 torchvision==0.29.1 --index-url https://download.pytorch.org/whl/cu126
 .venv\Scripts\python -m pip install -r requirements.txt
 .venv\Scripts\python -m pip check
