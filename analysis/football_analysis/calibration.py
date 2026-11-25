@@ -95,6 +95,20 @@ class CalibrationResult:
     holdout_error_px: float | None = None
     holdout_error_m: float | None = None
     image_to_pitch: np.ndarray | None = None
+    #: Homographie mesurée sur les points clés de cette seule image, avant stabilisation temporelle ;
+    #: image_to_pitch contient alors l'homographie stabilisée (HomographyStabilizer).
+    measured_image_to_pitch: np.ndarray | None = None
+    #: Vrai si la mesure de cette image a été écartée : l'homographie est alors la seule prédiction.
+    measurement_rejected: bool = False
+    #: « reference » pour une calibration annotée à la main et suivie (reference_calibration.py) ;
+    #: None pour la calibration automatique par points clés.
+    source: str | None = None
+    #: Calibration automatique de la même image, comparée à la référence (statut, écart en mètres).
+    automatic: dict[str, Any] | None = None
+    #: Dérive du suivi mesurée en arrivant sur une image clé, en mètres.
+    reference_drift_m: float | None = None
+    #: Vrai si le mouvement de la caméra n'a pas pu être mesuré : la référence est reprise telle quelle.
+    motion_lost: bool = False
 
     @property
     def ok(self) -> bool:
@@ -126,8 +140,23 @@ class CalibrationResult:
                 "holdoutErrorM": None if self.holdout_error_m is None else round(float(self.holdout_error_m), 3),
                 "homography": [float(f"{v:.6g}") for v in self.image_to_pitch.ravel()],
             })
+            # La mesure brute reste enregistrée en pleine précision : une reprise reconstruit exactement le
+            # même état de lissage (HomographyStabilizer), sans écart d'arrondi sur les positions.
+            raw = self.image_to_pitch if self.measured_image_to_pitch is None else self.measured_image_to_pitch
+            record["stabilized"] = self.measured_image_to_pitch is not None
+            record["measuredHomography"] = [float(v) for v in raw.ravel()]
+            if self.measurement_rejected:
+                record["measurementRejected"] = True
+            if self.reference_drift_m is not None:
+                record["referenceDriftM"] = round(float(self.reference_drift_m), 2)
+            if self.motion_lost:
+                record["motionLost"] = True
         else:
             record["reason"] = self.reason
+        if self.source is not None:
+            record["source"] = self.source
+        if self.automatic is not None:
+            record["automatic"] = self.automatic
         return record
 
     def project(self, points: np.ndarray) -> np.ndarray:
@@ -336,3 +365,200 @@ class PitchCalibrator:
         usable = ((confidence >= self.settings.min_keypoint_confidence)
                   & (xy[:, 0] > 1) & (xy[:, 1] > 1) & (xy[:, 0] < width - 1) & (xy[:, 1] < height - 1))
         return estimate_homography(xy[usable], TEMPLATE_M[usable], (width, height), self.settings)
+
+
+#: Poids de la mesure d'une image face à la prédiction par le mouvement de la caméra. 1 désactive la
+#: stabilisation ; 0,2 a été retenu sur la vidéo de tribune France–Allemagne (docs/stabilisation-homographie.md).
+STABILIZER_MEASUREMENT_WEIGHT = 0.2
+
+#: Écart médian, en mètres, entre mesure et prédiction au-delà duquel la mesure est jugée aberrante.
+STABILIZER_OUTLIER_M = 4.0
+
+#: Mesures écartées successives, cohérentes entre elles, qui prouvent que la prédiction a décroché
+#: (coupure non détectée, mouvement perdu) : le filtre repart alors de la dernière mesure. Des mesures
+#: écartées mais dispersées (drapeau devant l'objectif, points clés confondus) ne suffisent pas.
+STABILIZER_CONFIRMATIONS = 3
+
+
+def _normalized(homography: np.ndarray) -> np.ndarray:
+    """Homographie ramenée à h33 = 1.
+
+    @responsable Bilel Khlif
+    @date 2026-11-25
+    @role Analyse vidéo — calibration (stabilisation temporelle)
+    """
+    return homography / homography[2, 2]
+
+
+def _image_motion(previous: np.ndarray, current: np.ndarray, scale: float) -> np.ndarray | None:
+    """Mouvement de la caméra entre deux images en niveaux de gris réduites : homographie image → image.
+
+    Flux optique de Lucas-Kanade sur les coins du décor, puis homographie RANSAC : les joueurs, petits
+    et mobiles, sont écartés comme points aberrants. Renvoie la transformation en pixels de l'image
+    d'origine, ou None si le décor manque de texture (moins de 20 correspondances cohérentes).
+
+    @responsable Bilel Khlif
+    @date 2026-11-25
+    @role Analyse vidéo — calibration (mouvement de la caméra)
+    """
+    corners = cv2.goodFeaturesToTrack(previous, maxCorners=400, qualityLevel=0.01, minDistance=8, blockSize=7)
+    if corners is None or len(corners) < 20:
+        return None
+    moved, found, _ = cv2.calcOpticalFlowPyrLK(previous, current, corners, None, winSize=(21, 21), maxLevel=3)
+    kept = found.ravel() == 1
+    if kept.sum() < 20:
+        return None
+    motion, inliers = cv2.findHomography(corners[kept], moved[kept], cv2.RANSAC, 2.0)
+    if motion is None or inliers is None or int(inliers.sum()) < 20:
+        return None
+    to_small = np.diag([scale, scale, 1.0])
+    full = np.linalg.inv(to_small) @ motion @ to_small
+    return full / full[2, 2]
+
+
+class HomographyStabilizer:
+    """Stabilise dans le temps l'homographie image → terrain d'un même plan.
+
+    Chaque homographie mesurée vient des points clés d'une seule image : leur bruit fait sauter tout le
+    terrain d'une image à l'autre. Sur la vidéo de tribune France–Allemagne, ce mouvement commun à tous
+    les joueurs atteignait 22 m/s en médiane, l'essentiel des vitesses jugées invraisemblables. Le
+    mouvement réel de la caméra, lui, se mesure de façon lisse entre deux images, par le flux optique du
+    décor. Le filtre prédit l'homographie par ce mouvement, puis la rapproche de la mesure avec un poids
+    faible : filtre complémentaire, sans retard pendant un panoramique, car la prédiction suit la caméra.
+
+    La fusion se fait sur douze points d'ancrage de la moitié basse de l'image, projetés sur le terrain,
+    puis une homographie est réajustée sur ces points. Une mesure qui contredit fortement la prédiction
+    est écartée (drapeau devant l'objectif, points clés confondus) ; si plusieurs mesures écartées de
+    suite concordent entre elles, c'est la prédiction qui a décroché et le filtre repart de la mesure.
+    Sans mouvement mesurable (décor masqué), la caméra est supposée immobile. Une coupure de plan remet
+    le filtre à zéro. Aucune position n'est inventée : une image dont la calibration échoue reste sans
+    position, même si le filtre continue de suivre la caméra.
+
+    @responsable Bilel Khlif
+    @date 2026-11-25
+    @role Analyse vidéo — calibration (stabilisation temporelle)
+    """
+
+    def __init__(self, image_size: tuple[int, int], weight: float = STABILIZER_MEASUREMENT_WEIGHT,
+                 outlier_m: float = STABILIZER_OUTLIER_M, confirmations: int = STABILIZER_CONFIRMATIONS):
+        """Prépare le filtre pour des images de la taille donnée (largeur, hauteur).
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Analyse vidéo — calibration (stabilisation temporelle)
+        """
+        width, height = image_size
+        xs, ys = np.meshgrid(np.linspace(0.1 * width, 0.9 * width, 4), np.linspace(0.45 * height, 0.95 * height, 3))
+        self.anchors = np.stack([xs.ravel(), ys.ravel()], axis=1).astype(np.float64)
+        self.scale = min(1.0, 640.0 / max(width, height))
+        self.weight = weight
+        self.outlier_m = outlier_m
+        self.confirmations_needed = confirmations
+        self.reset()
+
+    def reset(self) -> None:
+        """Oublie l'état : nouveau plan ou reprise sans historique.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Analyse vidéo — calibration (stabilisation temporelle)
+        """
+        self.previous_gray: np.ndarray | None = None
+        self.smoothed: np.ndarray | None = None
+        #: Dernière mesure écartée, suivie avec la caméra, et nombre de mesures écartées concordantes.
+        self.candidate: np.ndarray | None = None
+        self.confirmations = 0
+
+    def _project(self, homography: np.ndarray) -> np.ndarray:
+        """Projette les points d'ancrage sur le terrain.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Analyse vidéo — calibration (stabilisation temporelle)
+        """
+        return cv2.perspectiveTransform(self.anchors.reshape(-1, 1, 2), homography).reshape(-1, 2)
+
+    def _gap(self, first: np.ndarray, second: np.ndarray) -> float:
+        """Écart médian, en mètres, entre deux homographies sur les points d'ancrage.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Analyse vidéo — calibration (stabilisation temporelle)
+        """
+        return float(np.median(np.linalg.norm(self._project(first) - self._project(second), axis=1)))
+
+    def _restart(self, measured: CalibrationResult) -> CalibrationResult:
+        """Repart de la mesure, telle quelle : début de plan, ou prédiction démentie.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Analyse vidéo — calibration (stabilisation temporelle)
+        """
+        self.smoothed = measured.image_to_pitch.copy()
+        self.candidate, self.confirmations = None, 0
+        return measured
+
+    def update(self, image: np.ndarray, measured: CalibrationResult, new_shot: bool) -> CalibrationResult:
+        """Renvoie la calibration stabilisée de cette image ; la mesure brute y reste attachée.
+
+        @responsable Bilel Khlif
+        @date 2026-11-25
+        @role Analyse vidéo — calibration (stabilisation temporelle)
+        """
+        small = cv2.resize(image, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_AREA)
+        gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY) if small.ndim == 3 else small
+        if new_shot:
+            self.reset()
+        motion = None if self.previous_gray is None else _image_motion(self.previous_gray, gray, self.scale)
+        self.previous_gray = gray
+        # Mouvement introuvable (décor masqué, flou) : caméra supposée immobile ; les mesures suivantes
+        # confirment l'état ou, si elles concordent contre lui, le remplacent.
+        step = np.eye(3) if motion is None else np.linalg.inv(motion)
+        prediction = None if self.smoothed is None else _normalized(self.smoothed @ step)
+        if self.candidate is not None:
+            self.candidate = _normalized(self.candidate @ step)
+        if not measured.ok or getattr(measured, "image_to_pitch", None) is None:
+            # Échec, ou calibration sans matrice (double de test, enregistrement ancien) : rien à stabiliser.
+            self.smoothed = prediction
+            return measured
+        if prediction is None:
+            return self._restart(measured)
+        anchors_measured = self._project(measured.image_to_pitch)
+        anchors_predicted = self._project(prediction)
+        gap = float(np.median(np.linalg.norm(anchors_measured - anchors_predicted, axis=1)))
+        rejected = gap > self.outlier_m
+        if rejected:
+            agrees = self.candidate is not None and self._gap(measured.image_to_pitch, self.candidate) <= self.outlier_m
+            self.confirmations = self.confirmations + 1 if agrees else 1
+            self.candidate = measured.image_to_pitch.copy()
+            if self.confirmations >= self.confirmations_needed:
+                return self._restart(measured)
+            fused = anchors_predicted
+        else:
+            self.candidate, self.confirmations = None, 0
+            fused = (1.0 - self.weight) * anchors_predicted + self.weight * anchors_measured
+        stabilized, _ = cv2.findHomography(self.anchors, fused, 0)
+        if stabilized is None:
+            return self._restart(measured)
+        self.smoothed = _normalized(stabilized)
+        return CalibrationResult(status=measured.status, reason=measured.reason, keypoints=measured.keypoints,
+                                 inliers=measured.inliers, fit_error_px=measured.fit_error_px, fit_error_m=measured.fit_error_m,
+                                 holdout_error_px=measured.holdout_error_px, holdout_error_m=measured.holdout_error_m,
+                                 image_to_pitch=self.smoothed, measured_image_to_pitch=measured.image_to_pitch,
+                                 measurement_rejected=rejected)
+
+
+def calibration_from_record(record: dict) -> CalibrationResult:
+    """Reconstruit la calibration mesurée d'une image enregistrée (reprise d'une analyse).
+
+    @responsable Bilel Khlif
+    @date 2026-11-25
+    @role Analyse vidéo — calibration (reprise de la stabilisation)
+    """
+    if record.get("status") != "ok":
+        return failed(record.get("reason") or "unknown", record.get("keypoints", 0))
+    raw = record.get("measuredHomography") or record.get("homography")
+    return CalibrationResult(status="ok", keypoints=record.get("keypoints", 0), inliers=record.get("inliers", 0),
+                             fit_error_px=record.get("fitErrorPx"), fit_error_m=record.get("fitErrorM"),
+                             holdout_error_px=record.get("holdoutErrorPx"), holdout_error_m=record.get("holdoutErrorM"),
+                             image_to_pitch=None if raw is None else np.array(raw, dtype=np.float64).reshape(3, 3))

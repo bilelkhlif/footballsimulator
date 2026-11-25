@@ -62,6 +62,8 @@ class AnalysisOptions:
     seed: int = 0
     chunk_seconds: float = 10.0
     team_fit_seconds: float = 30.0
+    #: Fichier de calibration de référence (reference_calibration.py) ; None : points clés stabilisés.
+    reference_calibration: Path | None = None
 
 
 def probe_video(path: Path) -> dict[str, Any]:

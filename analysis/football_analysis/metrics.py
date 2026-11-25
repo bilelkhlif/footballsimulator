@@ -157,6 +157,41 @@ def calibration_metrics(frames: list[dict[str, Any]]) -> dict[str, Any]:
         "p90HoldoutErrorPx": None if not holdout_px else round(_quantile(holdout_px, 0.9), 2),
         "medianHoldoutErrorM": None if not holdout_m else round(median(holdout_m), 3),
         "p90HoldoutErrorM": None if not holdout_m else round(_quantile(holdout_m, 0.9), 3),
+        **calibration_source_metrics(calibrations),
+    }
+
+
+#: Écart, en mètres, sous lequel la calibration automatique est jugée d'accord avec la référence.
+AUTOMATIC_AGREEMENT_M = 4.0
+
+
+def calibration_source_metrics(calibrations: list[dict[str, Any]]) -> dict[str, Any]:
+    """Origine de la calibration et mesures qui en dépendent.
+
+    Points clés : part des mesures écartées par la stabilisation. Référence annotée : dérive du suivi
+    aux images clés, images suivies sans mouvement mesuré, et écart de la calibration automatique à
+    la référence, seule mesure de sa justesse.
+
+    @responsable Bilel Khlif
+    @date 2026-11-25
+    @role Analyse vidéo — mesures de qualité (calibration)
+    """
+    ok = [c for c in calibrations if c["status"] == "ok"]
+    reference = [c for c in calibrations if c.get("source") == "reference"]
+    if not reference:
+        return {"source": "keypoints", "rejectedMeasurementShare": _share(sum(bool(c.get("measurementRejected")) for c in ok), len(ok))}
+    drifts = [c["referenceDriftM"] for c in ok if c.get("referenceDriftM") is not None]
+    automatic = [c.get("automatic") or {} for c in reference]
+    automatic_ok = [a for a in automatic if a.get("status") == "ok"]
+    gaps = [a["gapM"] for a in automatic_ok if a.get("gapM") is not None]
+    return {
+        "source": "reference",
+        "motionLostShare": _share(sum(bool(c.get("motionLost")) for c in ok), len(ok)),
+        "maxReferenceDriftM": None if not drifts else round(max(drifts), 2),
+        "automatic": {"calibratedShare": _share(len(automatic_ok), len(automatic)),
+                      "medianGapM": None if not gaps else round(median(gaps), 2),
+                      "p90GapM": None if not gaps else round(_quantile(gaps, 0.9), 2),
+                      "agreementShare": _share(sum(g <= AUTOMATIC_AGREEMENT_M for g in gaps), len(automatic_ok))},
     }
 
 
@@ -257,6 +292,27 @@ def describe_limitations(metrics: dict[str, Any]) -> list[str]:
             calibration["failureReasons"].items(), key=lambda item: -item[1]))
         notes.append(f"Calibration impossible sur {round((1 - share) * 100)} % des images analysées "
                      f"({reasons}) : aucune position sur le terrain n'est donnée pour ces images.")
+    if calibration.get("source") == "reference":
+        notes.append("Positions calculées avec une calibration de référence : repères du terrain annotés à la main "
+                     "sur une ou plusieurs images clés, puis suivis par le mouvement de la caméra (flux optique).")
+        automatic = calibration.get("automatic") or {}
+        gap = automatic.get("medianGapM")
+        if gap is not None:
+            agreement = round((automatic.get("agreementShare") or 0) * 100)
+            verdict = ("elle est fausse sur ce clip." if gap > AUTOMATIC_AGREEMENT_M
+                       else "elle concorde avec la référence.")
+            notes.append(f"La calibration automatique (points clés) s'écarte de la référence de {gap:g} m en médiane "
+                         f"(à moins de {AUTOMATIC_AGREEMENT_M:g} m sur {agreement} % des images) : {verdict}")
+        drift = calibration.get("maxReferenceDriftM")
+        if drift is not None:
+            notes.append(f"Dérive du suivi de la référence, mesurée aux images clés : {drift:g} m au plus.")
+    else:
+        rejected = calibration.get("rejectedMeasurementShare")
+        if rejected:
+            notes.append(f"Stabilisation : {round(rejected * 100)} % des mesures de calibration écartées, trop éloignées "
+                         "de la prédiction par le mouvement de la caméra.")
+        notes.append("Calibration automatique sans référence : sur une vue de tribune basse ou en coin, le modèle peut "
+                     "confondre des lignes (ligne de but et ligne médiane) sans que l'erreur hors échantillon le révèle.")
     ball = metrics["detection"]["ballFrameShare"]
     if ball is not None and ball < 0.9:
         notes.append(f"Ballon détecté sur {round(ball * 100)} % des images analysées seulement.")
