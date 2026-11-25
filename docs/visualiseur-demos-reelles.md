@@ -56,6 +56,12 @@ précision scientifique garantie.
   une ancienne analyse partielle peut demander un nouveau calcul après changement d'implémentation.
 - L'installateur `pip` de l'environnement isolé passe de 24.0 à 26.3 après détection d'avis de sécurité.
   Aucun paquet ni poids de l'ancien environnement partagé n'est remplacé.
+- Une répétition forcée de perte GPU révèle aussi une course dans le test par coordonnées : après
+  un saut vidéo, `frame.rect` indique déjà la destination du panneau, mais son déplacement CSS dure
+  450 ms. Le diagnostic d'un échec montre `pick=18` et `elementFromPoint=pitch-view` : le clic est
+  intercepté par le panneau encore présent, pas perdu par le lecteur. Le test attend maintenant
+  que le vrai hit-test atteigne les annotations et le joueur attendu. Il conserve l'égalité exacte
+  de sélection après le clic ; aucun délai arbitraire ni relance automatique du test n'est ajouté.
 
 La préparation ne publie aucun serveur, poids ou base privée et ne modifie pas les réglages Pages.
 `SHELL_VERSION` reste celui de la carte Bêta de la PR #23 : `10ab6aeb23c96386`. La vidéo ne rejoint pas

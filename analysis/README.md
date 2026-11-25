@@ -108,6 +108,15 @@ un service public.
 
 **PyTorch 2.14.1.** Cette version corrige [GHSA-53q9-r3pm-6pq6](https://github.com/pytorch/pytorch/security/advisories/GHSA-53q9-r3pm-6pq6) (≤ 2.5.1) et [GHSA-63cw-57p8-fm3p](https://github.com/pytorch/pytorch/security/advisories/GHSA-63cw-57p8-fm3p) (≤ 2.9.1), deux exécutions de code au chargement ; une analyse refuse de démarrer sous 2.10.0. Elle est touchée par [GHSA-v32g-mr63-3j83](https://github.com/pytorch/pytorch/security/advisories/GHSA-v32g-mr63-3j83) (≥ 2.14.0) : un checkpoint malveillant peut lire des fichiers texte même avec `weights_only=True`, par la classe `traceback.FrameSummary`. La correction, 2.15.0, n'est publiée qu'en CUDA 13.2 et 13.4 ; le pilote de l'essai (566.07) ne va que jusqu'à CUDA 12.7. Ici, seuls les trois poids épinglés atteignent `torch.load`, et aucun ne référence cette classe. Passer à 2.15.0 demande une mise à jour du pilote NVIDIA, puis une nouvelle validation.
 
+**Alternative de validation.** La roue officielle `torch 2.13.0+cu126` existe pour Python 3.11/Windows,
+et cette version est hors des plages des trois avis de chargement cités ci-dessus. Elle reste un
+candidat à tester avec torchvision 0.28.0 et le pipeline complet, pas une recette GPU validée ici.
+Le contrôle de stockage du 25 novembre relève seulement 2,26 Go libres ; la roue seule fait
+2 594 548 547 octets. Un nouvel environnement isolé ne tient donc pas dans l'espace disponible.
+Prévoir environ 10 Go libres ou un autre disque avant cette validation, sans supprimer les
+environnements existants. Les résultats actuels concernent la recette 2.14.1 restreinte aux poids
+approuvés ; ils ne déclarent pas cette dépendance exempte de vulnérabilité.
+
 **Serveur HTTP.** Le serveur refuse :
 
 - les chemins et encodages hostiles (traversée, séparateurs Windows, lecteurs, UNC, double encodage, octets de contrôle, UTF-8 invalide) ;
