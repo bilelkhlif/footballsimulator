@@ -46,7 +46,7 @@ jobs:
         run: node tests/shell-version.mjs --check
       - name: Site public (pages:prepare)
         run: node tests/prepare-pages.mjs _site
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
