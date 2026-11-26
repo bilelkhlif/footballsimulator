@@ -82,7 +82,7 @@ Tournez autour de la table : vous voyez la tactique sous tous les angles, et le 
 
 ## 5. Choisir les formations
 
-Ouvrez **Équipes et formations**, ou touchez la pastille d'une équipe en haut de l'écran. Sept formations sont proposées par équipe : 4-4-2, 4-3-3, 3-5-2, 4-2-3-1, 4-1-4-1 (bloc compact avec une sentinelle devant la défense), 3-4-3 (largeur donnée par les pistons) et 5-3-2 (bloc bas, deux attaquants pour contre-attaquer). Les joueurs rejoignent leurs nouvelles places en glissant. Le changement est confirmé dans l'aide du geste et reste annulable. La formation est rappelée sur la pastille de l'équipe. Dépliez « Positions des 22 joueurs » pour lire leurs coordonnées actuelles.
+Ouvrez **Équipes et formations**, ou touchez la pastille d'une équipe en haut de l'écran. Huit formations sont proposées par équipe : 4-4-2, 4-3-3, 3-5-2, 4-2-3-1, 4-1-4-1 (bloc compact avec une sentinelle devant la défense), 3-4-3 (largeur donnée par les pistons), 5-3-2 (bloc bas, deux attaquants pour contre-attaquer) et 4-4-2 en losange (supériorité dans l'axe). Les joueurs rejoignent leurs nouvelles places en glissant. Le changement est confirmé dans l'aide du geste et reste annulable. La formation est rappelée sur la pastille de l'équipe. Dépliez « Positions des 22 joueurs » pour lire leurs coordonnées actuelles.
 
 ![Le panneau des formations sur le terrain posé : Bleus en 4-4-2, Rouges en 4-3-3](images/sprint4-ar-formations.jpg)
 

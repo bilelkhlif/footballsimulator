@@ -18,6 +18,7 @@ import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { REPO_ROOT, startServer } from './serve.mjs';
 import { readShellVersion } from './shell-version.mjs';
+import { FORMATIONS } from '../src/formations.mjs';
 import { clickUi, tapUi, installAimTools, openWorkspace } from './workspace-test-helpers.mjs';
 import { runWorkspaceTests, verifyArWorkspaces } from './workspace-tests.mjs';
 import { runFinalUxReviewTests } from './final-ux-review-tests.mjs';
@@ -540,7 +541,8 @@ async function testFormationButtons(browser, url) {
     const opened = await page.evaluate(() => !document.getElementById('formation-panel').hidden
       && document.getElementById('formations-toggle').getAttribute('aria-expanded') === 'true');
     const buttonCount = await page.locator('.formation-button').count();
-    record('Formations : panneau ouvert par « Formations », 4 boutons par équipe', closedAtStart && opened && buttonCount === 8 ? 'ok' : 'échec',
+    record('Formations : panneau ouvert par « Formations », un bouton par formation et par équipe', closedAtStart && opened
+      && buttonCount === 2 * Object.keys(FORMATIONS).length ? 'ok' : 'échec',
       `fermé au départ : ${closedAtStart}, ouvert : ${opened}, ${buttonCount} boutons`);
 
     // Transition animée : à mi-parcours, les joueurs sont en route.

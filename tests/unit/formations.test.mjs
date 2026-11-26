@@ -19,7 +19,19 @@ const CENTER_CIRCLE_RADIUS = 9.15;
 const TOKEN_DIAMETER = PLAYER_SIZE.radius * 2.8;
 
 test('les formations sont enregistrées, dans l\'ordre des boutons', () => {
-  assert.deepEqual(Object.keys(FORMATIONS), ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '4-1-4-1', '3-4-3', '5-3-2']);
+  assert.deepEqual(Object.keys(FORMATIONS), ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '4-1-4-1', '3-4-3', '5-3-2', '4-4-2 losange']);
+});
+
+test('4-4-2 losange : quatre milieux dans le couloir central, en losange, contre deux dans le 4-4-2 à plat', () => {
+  const central = (name) => FORMATIONS[name].computePositions()
+    .filter((p) => /Milieu|Sentinelle|Meneur/.test(p.role) && p.y >= 0.25 && p.y <= 0.75);
+  const diamond = central('4-4-2 losange');
+  assert.equal(diamond.length, 4, 'les quatre milieux du losange sont dans l\'axe');
+  assert.equal(central('4-4-2').length, 2, 'le 4-4-2 à plat n\'a que deux milieux axiaux');
+  const base = diamond.find((p) => p.role === 'Sentinelle');
+  const tip = diamond.find((p) => p.role === 'Meneur de jeu');
+  assert.ok(base.y === 0.5 && tip.y === 0.5 && tip.x > base.x, 'sentinelle et meneur sur l\'axe, le meneur devant');
+  for (const p of diamond.filter((m) => m.role === 'Milieu relayeur')) assert.ok(p.x > base.x && p.x < tip.x);
 });
 
 test('5-3-2 : bloc bas de cinq défenseurs à hauteur de la surface, milieu à trois resserré, deux attaquants', () => {

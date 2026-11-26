@@ -450,10 +450,59 @@ export class Formation532 extends FormationStrategy {
   }
 }
 
+/**
+ * 4-4-2 en losange : supériorité dans l'axe. Les quatre milieux restent dans le couloir central
+ * (entre les demi-espaces) : une sentinelle à la base, deux relayeurs dans les demi-espaces et un
+ * meneur de jeu à la pointe, derrière deux attaquants proches. La largeur revient aux latéraux.
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Logique métier — patron Strategy : formation concrète
+ */
+export class Formation442Diamond extends FormationStrategy {
+  /**
+   * @returns {string}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : formation concrète
+   */
+  get name() {
+    return '4-4-2 losange';
+  }
+
+  /**
+   * @returns {Array<object>}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : formation concrète
+   */
+  get lines() {
+    return [
+      GOALKEEPER_LINE,
+      BACK_FOUR,
+      {
+        x: 0.31,
+        slots: [
+          { y: 0.5, number: 6, role: 'Sentinelle', x: 0.245 },
+          { y: 0.3, number: 8, role: 'Milieu relayeur' },
+          { y: 0.7, number: 7, role: 'Milieu relayeur' },
+          { y: 0.5, number: 10, role: 'Meneur de jeu', x: 0.37 },
+        ],
+      },
+      {
+        x: 0.44,
+        slots: [
+          { y: 0.37, number: 11, role: 'Attaquant' },
+          { y: 0.63, number: 9, role: 'Attaquant' },
+        ],
+      },
+    ];
+  }
+}
+
 /** Formations disponibles, indexées par leur nom, dans l'ordre des boutons de l'interface. */
 export const FORMATIONS = Object.freeze(Object.fromEntries(
   [new Formation442(), new Formation433(), new Formation352(), new Formation4231(), new Formation4141(), new Formation343(),
-    new Formation532()]
+    new Formation532(), new Formation442Diamond()]
     .map((formation) => [formation.name, formation]),
 ));
 
