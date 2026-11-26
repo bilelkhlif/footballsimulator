@@ -107,6 +107,7 @@ export class OffsideLayer {
   sync() {
     for (const [teamId, line] of this.#lines) {
       line.position.x = computeOffside(this.#board, teamId, this.#teams).x;
+      line.material.color.setHex(this.#board.getIdentity(teamId).color);
     }
   }
 

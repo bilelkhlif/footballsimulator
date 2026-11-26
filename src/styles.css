@@ -196,8 +196,8 @@ h1 { margin: 0; font-size: 1.55rem; font-weight: 600; letter-spacing: -.035em; }
 .team-chip { display: inline-flex; align-items: center; gap: 9px; min-height: 42px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--surface-chip); box-shadow: inset 0 1px var(--highlight), var(--shadow-sm); color: var(--ink); font-size: .875rem; transition: background-color var(--dur-fast) var(--ease-out); }
 .team-chip:hover { background: var(--surface-control-hover); }
 .team-chip::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--team-color); }
-.team-chip--blue { --team-color: #7795ff; }
-.team-chip--red { --team-color: #ff968a; }
+.team-chip--blue { --team-color: var(--kit-blue, #7795ff); }
+.team-chip--red { --team-color: var(--kit-red, #ff968a); }
 .team-chip strong { padding-left: 3px; font-weight: 600; }
 .team-chip strong { white-space: nowrap; }
 .connection-status { display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
@@ -255,15 +255,15 @@ a.button { text-decoration: none; }
 .formation-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
 .formation-row__team { grid-column: 1 / -1; display: flex; align-items: center; gap: 9px; font-size: .875rem; font-weight: 600; margin-bottom: 3px; }
 .formation-row__team::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--team-color); }
-.formation-row--blue { --team-color: #7795ff; }
-.formation-row--red { --team-color: #ff968a; }
+.formation-row--blue { --team-color: var(--kit-blue, #7795ff); }
+.formation-row--red { --team-color: var(--kit-red, #ff968a); }
 .formation-button { min-width: 0; min-height: 46px; font-size: .875rem; font-weight: 600; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--ink); background: var(--raised); transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-spring); }
 .formation-button:hover { border-color: var(--team-color); }
 .formation-button[aria-pressed="true"] { color: var(--ink); font-weight: 700; border-color: var(--team-color); background: var(--surface-pressed); box-shadow: inset 0 -3px var(--team-color); }
 /* Bascule de disposition (base, en possession, hors possession), sous les formations de chaque équipe. */
 .phase-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 8px 0 14px; }
-.phase-row--blue { --team-color: #7795ff; }
-.phase-row--red { --team-color: #ff968a; }
+.phase-row--blue { --team-color: var(--kit-blue, #7795ff); }
+.phase-row--red { --team-color: var(--kit-red, #ff968a); }
 .phase-button { min-width: 0; min-height: 44px; font-size: .8125rem; font-weight: 600; line-height: 1.2; padding: 6px 4px; border: 1px dashed var(--border); border-radius: var(--radius-sm); color: var(--ink); background: transparent; transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out); }
 .phase-button:hover { border-color: var(--team-color); }
 /* Analyse tactique : une ligne par mesure, une colonne par équipe. */
@@ -271,6 +271,13 @@ a.button { text-decoration: none; }
 .analysis-table th, .analysis-table td { padding: 5px 6px; text-align: right; border-bottom: 1px solid var(--border); }
 .analysis-table th[scope="row"], .analysis-table thead th:first-child { text-align: left; font-weight: 500; }
 .offside-summary { margin-top: 12px; }
+/* Équipes : nom et maillot de chaque équipe. */
+.team-identity { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 6px 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.team-identity label { display: grid; gap: 3px; font-size: .8125rem; font-weight: 500; }
+.team-identity input, .team-identity select { min-height: 40px; min-width: 0; padding: 6px 8px; font: inherit; color: var(--ink); background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.team-identity--blue input { box-shadow: inset 4px 0 var(--kit-blue, #7795ff); }
+.team-identity--red input { box-shadow: inset 4px 0 var(--kit-red, #ff968a); }
+.team-identity p { grid-column: 1 / -1; margin: 0; font-size: .8125rem; }
 .offside-summary h4 { margin: 0 0 4px; font-size: .875rem; }
 .offside-summary p { margin: 0 0 6px; font-size: .8125rem; line-height: 1.4; }
 .phase-button[aria-pressed="true"] { font-weight: 700; border-style: solid; border-color: var(--team-color); background: var(--surface-pressed); }

@@ -31,7 +31,9 @@ import { createFormationPanel } from './formation-panel.mjs';
 import { createAnalysisPanel } from './analysis-panel.mjs';
 import { OffsideLayer } from './offside-layer.mjs';
 import { MarkingLayer } from './marking-layer.mjs';
-import { ChangeFormationCommand, ChangePhaseCommand, CommandHistory } from './commands.mjs';
+import { followTeamKits } from './team-kits-view.mjs';
+import { createTeamPanel } from './team-panel.mjs';
+import { ChangeFormationCommand, ChangePhaseCommand, ChangeTeamIdentityCommand, CommandHistory } from './commands.mjs';
 import { MOVE_DURATION_MS, TacticalView } from './tactical-view.mjs';
 import { TacticalInteraction } from './tactical-interaction.mjs';
 import { attachKeyboardShortcuts } from './keyboard-shortcuts.mjs';
@@ -56,6 +58,7 @@ import { describeAdapter, WebGpuUnavailableError, WEBGPU_ERROR_REASONS } from '.
 import { getRequestedRenderMode, RENDER_MODES, WebGlTestModeUnavailableError } from './webgl-test-mode.mjs';
 import { WorkspaceController } from './workspace-controller.mjs';
 import { createThemeControl, THEME_COLORS } from './theme.mjs';
+import { followTeamNames, teamName } from './team-identity.mjs';
 import { createWorkspaceNavigation, createWorkspaceSummary, createWorkspaceStatus } from './workspace-navigation.mjs';
 
 /** Réglage de Chrome qui active la liaison WebXR/WebGPU (Chrome 157, Android et Windows). */
@@ -171,6 +174,8 @@ async function init(renderMode) {
   // Tableau tactique : formations (sprint 4), places des joueurs, ballon et flèches (sprint 5).
   // Les actions de l'utilisateur passent par l'historique des commandes (patron Command).
   const board = new TacticsBoard(DEFAULT_FORMATIONS);
+  // Noms des équipes dans les textes : suivis avant tout autre observateur du tableau.
+  followTeamNames(board);
   const history = new CommandHistory();
   // Déplacements animés ; directs si l'utilisateur demande moins d'animations.
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -181,13 +186,17 @@ async function init(renderMode) {
   // Pions instanciés (sprint 6) : 3 appels de dessin par équipe, mis à jour seulement quand un
   // joueur bouge.
   const teamMeshes = [];
+  const teamMeshesById = {};
   for (const team of Object.values(TEAMS)) {
     teamGroups[team.id] = createTeam(team, board.getFormation(team.id), playerFactory);
     pitchGroup.add(teamGroups[team.id]);
     const meshes = playerFactory.createTeamMeshes(team, teamGroups[team.id].children);
     pitchGroup.add(meshes.group);
     teamMeshes.push(meshes);
+    teamMeshesById[team.id] = meshes;
   }
+  // Maillots : couleur de chaque pion (gardien distinct), numéros et pastilles de l'interface.
+  followTeamKits({ board, teamMeshes: teamMeshesById, playerFactory, root: document.documentElement });
   const ball = createBall();
   pitchGroup.add(ball);
 
@@ -210,13 +219,13 @@ async function init(renderMode) {
     chips: Object.fromEntries(Object.keys(TEAMS).map((id) => [id, document.getElementById(`formation-${id}`)])),
     choose: (teamId, name) => {
       if (history.execute(new ChangeFormationCommand({ board, teamId, formation: name }))) {
-        hint.flash(`${TEAMS[teamId].label} : formation ${name} appliquée.`, 'success');
+        hint.flash(`${teamName(teamId)} : formation ${name} appliquée.`, 'success');
       }
     },
     choosePhase: (teamId, phase) => {
       const command = new ChangePhaseCommand({ board, teamId, phase });
       if (history.execute(command)) {
-        hint.flash(`${TEAMS[teamId].label} : ${command.label.split(' pour ')[0].toLowerCase()}.`, 'success');
+        hint.flash(`${teamName(teamId)} : ${command.label.split(' pour ')[0].toLowerCase()}.`, 'success');
       }
     },
   });
@@ -227,6 +236,20 @@ async function init(renderMode) {
   // Marquages individuels : traits replacés à chaque image (tâche de la boucle de rendu).
   const markingLayer = new MarkingLayer({ pitchGroup, board, teamGroups });
   createAnalysisPanel({ root: document.getElementById('analysis-panel'), board, teams: Object.values(TEAMS), offsideLayer });
+  // Noms et maillots des équipes : une commande annulable ; un refus est expliqué dans le bandeau.
+  createTeamPanel({
+    root: document.getElementById('team-panel'),
+    board,
+    choose: (teamId, identity) => {
+      try {
+        if (history.execute(new ChangeTeamIdentityCommand({ board, teamId, ...identity }))) {
+          hint.flash(`${teamName(teamId)} : nom et maillot appliqués.`, 'success');
+        }
+      } catch (error) {
+        hint.flash(error.message, 'invalid');
+      }
+    },
+  });
 
   // Interaction tactique (sprint 5) : un seul rayon, orienté par la souris, le doigt ou l'AR.
   const interaction = new TacticalInteraction({ board, history, pitchGroup, getHitboxes: () => tacticalView.hitboxes });

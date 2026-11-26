@@ -23,7 +23,8 @@
 import { EventEmitter } from './events.mjs';
 import { getFormation, PHASES } from './formations.mjs';
 import { computeTeamTargets } from './formation-transition.mjs';
-import { BALL_RADIUS, BOARD_LENGTH, BOARD_WIDTH, PITCH_LENGTH, PITCH_WIDTH, PLAYER_SIZE, TEAMS } from './config.mjs';
+import { BALL_RADIUS, BOARD_LENGTH, BOARD_WIDTH, DEFAULT_KITS, PITCH_LENGTH, PITCH_WIDTH, PLAYER_SIZE, TEAMS } from './config.mjs';
+import { checkKitContrast, goalkeeperKit, KIT_PALETTE } from './team-colors.mjs';
 
 /** Demi-longueur et demi-largeur du plateau (terrain et bande de gazon), en mètres. */
 export const BOARD_HALF_EXTENTS = Object.freeze({ x: BOARD_LENGTH / 2, z: BOARD_WIDTH / 2 });
@@ -33,6 +34,24 @@ export const PITCH_HALF_EXTENTS = Object.freeze({ x: PITCH_LENGTH / 2, z: PITCH_
 
 /** Tolérance au bord du terrain : un point posé sur une ligne est sur le terrain (1 mm). */
 export const LINE_TOLERANCE = 0.001;
+
+/** Longueur maximale du nom d'une équipe, en caractères. */
+export const TEAM_NAME_MAX_LENGTH = 24;
+
+/**
+ * Nom d'équipe nettoyé (espaces resserrés), ou null s'il est vide, trop long ou contient un
+ * caractère de contrôle.
+ * @param {unknown} name
+ * @returns {string|null}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Logique métier — identité des équipes
+ */
+export function normalizeTeamName(name) {
+  if (typeof name !== 'string' || /[\u0000-\u001f\u007f]/.test(name)) return null;
+  const clean = name.trim().replace(/\s+/g, ' ');
+  return clean.length >= 1 && clean.length <= TEAM_NAME_MAX_LENGTH ? clean : null;
+}
 
 /** Distance sous laquelle deux extrémités de flèche sont confondues (doublon), en mètres (5 mm). */
 export const DUPLICATE_TOLERANCE = 0.005;
@@ -203,6 +222,9 @@ export class TacticsBoard extends EventEmitter {
   /** @type {Map<string, string>} marquages individuels : clé du défenseur → clé de l'attaquant marqué */
   #markings = new Map();
 
+  /** @type {Map<string, {name: string, kit: string}>} nom et maillot de chaque équipe */
+  #identities = new Map();
+
   #teams;
   #initialState;
 
@@ -219,6 +241,9 @@ export class TacticsBoard extends EventEmitter {
   constructor(initialFormations, { teams = TEAMS } = {}) {
     super();
     this.#teams = teams;
+    for (const teamId of Object.keys(initialFormations)) {
+      this.#identities.set(teamId, { name: teams[teamId]?.label ?? teamId, kit: DEFAULT_KITS[teamId] ?? Object.keys(KIT_PALETTE)[0] });
+    }
     for (const [teamId, name] of Object.entries(initialFormations)) {
       this.#formations.set(teamId, getFormation(name));
       this.#phases.set(teamId, PHASES.BASE);
@@ -454,6 +479,68 @@ export class TacticsBoard extends EventEmitter {
   }
 
   /**
+   * Identité d'une équipe : son nom, son maillot, et celui de son gardien, choisi pour rester
+   * distinct des deux maillots de champ, du gazon et de l'autre gardien, pour tout le monde.
+   * @param {string} teamId
+   * @returns {{name: string, kit: string, color: number, ui: string, goalkeeperKit: string, goalkeeperColor: number}}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — identité des équipes
+   */
+  getIdentity(teamId) {
+    this.getFormation(teamId);
+    const [first, second] = this.teamIds;
+    const kitOf = (id) => this.#identities.get(id).kit;
+    // Le premier gardien choisit d'abord ; le second exclut sa couleur.
+    const firstKeeper = goalkeeperKit(kitOf(first), kitOf(second));
+    const keeper = teamId === first ? firstKeeper : goalkeeperKit(kitOf(second), kitOf(first), [firstKeeper]);
+    const { name, kit } = this.#identities.get(teamId);
+    return {
+      name, kit, color: KIT_PALETTE[kit].hex, ui: KIT_PALETTE[kit].ui, goalkeeperKit: keeper, goalkeeperColor: KIT_PALETTE[keeper].hex,
+    };
+  }
+
+  /**
+   * Change le nom et le maillot d'une équipe. Le nom compte 1 à 24 caractères et diffère de celui
+   * de l'adversaire ; le maillot vient de la palette et se distingue du maillot adverse et du gazon
+   * pour les trois daltonismes (src/team-colors.mjs). Refus : RangeError, avec un message à afficher.
+   * @param {string} teamId
+   * @param {{name: string, kit: string}} identity
+   * @returns {boolean} faux si rien ne change
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — identité des équipes
+   */
+  setIdentity(teamId, { name, kit }) {
+    this.getFormation(teamId);
+    const clean = normalizeTeamName(name);
+    if (!clean) {
+      throw new RangeError(`Nom d’équipe invalide : 1 à ${TEAM_NAME_MAX_LENGTH} caractères.`);
+    }
+    if (!Object.hasOwn(KIT_PALETTE, kit)) {
+      throw new RangeError(`Maillot inconnu : ${kit}`);
+    }
+    const opponent = this.teamIds.find((id) => id !== teamId);
+    if (opponent && this.#identities.get(opponent).name.toLocaleLowerCase('fr') === clean.toLocaleLowerCase('fr')) {
+      throw new RangeError('Les deux équipes doivent porter des noms différents.');
+    }
+    if (opponent) {
+      const contrast = checkKitContrast(kit, this.#identities.get(opponent).kit);
+      if (!contrast.ok) {
+        throw new RangeError(contrast.message);
+      }
+    }
+    const current = this.#identities.get(teamId);
+    if (current.name === clean && current.kit === kit) {
+      return false;
+    }
+    this.#identities.set(teamId, { name: clean, kit });
+    this.emit('identitychange', { teamId });
+    this.emit('change', { type: 'identity', teamId });
+    return true;
+  }
+
+  /**
    * Marquages individuels en place : chaque défenseur et l'adversaire qu'il marque.
    * @returns {Array<{defender: {teamId: string, number: number}, attacker: {teamId: string, number: number}}>}
    * @responsable Iyed Rachdi
@@ -570,6 +657,7 @@ export class TacticsBoard extends EventEmitter {
       ball: this.getBallPosition(),
       arrows: this.getArrows(),
       markings: [...this.#markings],
+      identities: Object.fromEntries([...this.#identities].map(([teamId, { name, kit }]) => [teamId, { name, kit }])),
     };
   }
 
@@ -598,6 +686,14 @@ export class TacticsBoard extends EventEmitter {
     // Les identifiants ne reculent jamais : une flèche rétablie ne peut pas en remplacer une autre.
     this.#nextArrowId = Math.max(this.#nextArrowId, ...this.#arrows.map(({ id }) => id + 1));
     this.#markings = new Map((snapshot.markings ?? []).map(([defender, attacker]) => [defender, attacker]));
+    // Identités : celles de l'instantané, sinon celles du départ (tactique plus ancienne).
+    for (const [teamId, identity] of Object.entries(snapshot.identities ?? this.#initialState?.identities ?? {})) {
+      const current = this.#identities.get(teamId);
+      if (current && (current.name !== identity.name || current.kit !== identity.kit)) {
+        this.#identities.set(teamId, { name: identity.name, kit: identity.kit });
+        this.emit('identitychange', { teamId });
+      }
+    }
     this.emit('change', { type: 'restore' });
   }
 

@@ -8,6 +8,7 @@
  */
 import { measureTeam } from './tactical-metrics.mjs';
 import { computeOffside, describeOffside } from './offside.mjs';
+import { teamName } from './team-identity.mjs';
 
 /** Lignes du tableau : clé de la mesure, libellé, unité. */
 export const METRIC_ROWS = Object.freeze([
@@ -51,10 +52,11 @@ export function createAnalysisPanel({ root, board, teams, offsideLayer = null })
   caption.textContent = 'Mesures tactiques de chaque équipe, en mètres réels';
   const head = document.createElement('thead');
   const headRow = document.createElement('tr');
-  for (const text of ['Mesure', ...teams.map((team) => team.label)]) {
+  for (const [teamId, text] of [[null, 'Mesure'], ...teams.map((team) => [team.id, team.label])]) {
     const cell = document.createElement('th');
     cell.scope = 'col';
     cell.textContent = text;
+    if (teamId) cell.dataset.team = teamId;
     headRow.append(cell);
   }
   head.append(headRow);
@@ -110,6 +112,7 @@ export function createAnalysisPanel({ root, board, teams, offsideLayer = null })
   /** Recalcule et affiche les mesures des deux équipes. */
   const render = () => {
     const metrics = Object.fromEntries(teams.map((team) => [team.id, measureTeam(board, team.id)]));
+    for (const cell of headRow.querySelectorAll('th[data-team]')) cell.textContent = teamName(cell.dataset.team);
     for (const row of body.children) {
       const [, , unit] = METRIC_ROWS.find(([key]) => key === row.dataset.metric);
       for (const cell of row.querySelectorAll('td')) {

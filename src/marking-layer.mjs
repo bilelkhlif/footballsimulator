@@ -80,6 +80,9 @@ export class MarkingLayer {
    * @role Scène 3D — marquage individuel (observateur, tâche de la boucle de rendu)
    */
   sync() {
+    for (const [teamId, material] of Object.entries(this.#materials)) {
+      material.color.setHex(this.#board.getIdentity(teamId).color);
+    }
     const wanted = new Map(this.#board.getMarkings().map((marking) => [
       `${marking.defender.teamId}:${marking.defender.number}>${marking.attacker.teamId}:${marking.attacker.number}`, marking,
     ]));

@@ -749,6 +749,67 @@ async function testShotArrow(browser, url) {
 }
 
 /**
+ * Équipes dans la page : renommer les Rouges et leur donner un maillot jaune par le panneau ; les
+ * pions changent de couleur (gardien distinct), le nom suit dans les formations ; un maillot trop
+ * proche de l'adversaire pour un daltonien est refusé avec sa raison ; Ctrl+Z rend l'identité.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Tests de bout en bout — noms et maillots des équipes
+ */
+async function testTeamIdentity(browser, url) {
+  const name = 'Équipes : nom et maillot par le panneau, gardien distinct, maillot trop proche refusé, annulation';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    await clickUi(page, '#formations-toggle');
+    await page.fill('[data-team-name="red"]', 'Espérance');
+    await page.selectOption('[data-team-kit="red"]', 'jaune');
+    await page.waitForTimeout(300);
+    const applied = await page.evaluate(() => {
+      const app = window.__footballSimulator;
+      const mesh = app.teamMeshes[1].meshes[2];
+      const players = app.pitchGroup.getObjectByName('team-red').children;
+      const colorOf = (number) => {
+        const color = mesh.instanceColor ? new mesh.instanceColor.constructor(0) : null;
+        const index = players.findIndex((p) => p.userData.number === number);
+        return [mesh.instanceColor.getX(index), mesh.instanceColor.getY(index), mesh.instanceColor.getZ(index), color === null];
+      };
+      return {
+        identity: app.board.getIdentity('red'),
+        nine: colorOf(9),
+        keeper: colorOf(1),
+        row: document.querySelector('[data-team-label="red"]')?.textContent ?? '',
+      };
+    });
+    await page.selectOption('[data-team-kit="red"]', 'violet');
+    await page.waitForTimeout(300);
+    const refused = await page.evaluate(() => ({
+      kit: window.__footballSimulator.board.getIdentity('red').kit,
+      select: document.querySelector('[data-team-kit="red"]').value,
+      hint: document.getElementById('hint').textContent,
+    }));
+    // Les raccourcis se taisent dans un champ de saisie : l'entraîneur quitte d'abord le champ.
+    await page.evaluate(() => document.activeElement?.blur());
+    await page.keyboard.press('Control+z');
+    const undone = await page.evaluate(() => window.__footballSimulator.board.getIdentity('red').kit);
+    const problems = [];
+    if (applied.identity.name !== 'Espérance' || applied.identity.kit !== 'jaune') problems.push(`identité ${JSON.stringify(applied.identity)}`);
+    if (JSON.stringify(applied.nine) === JSON.stringify(applied.keeper)) problems.push('gardien de la même couleur');
+    if (applied.row !== 'Espérance') problems.push(`ligne des formations « ${applied.row} »`);
+    if (refused.kit !== 'jaune' || refused.select !== 'jaune' || !/trop proches/.test(refused.hint)) problems.push(`refus : ${JSON.stringify(refused)}`);
+    if (undone !== 'rouge') problems.push(`après Ctrl+Z : ${undone}`);
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || `gardien ${applied.identity.goalkeeperKit} ; refus : « ${refused.hint} »`);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Sauvegarde automatique : une tactique modifiée (formation par son bouton, joueur déplacé, image
  * clé) est enregistrée dans le vrai IndexedDB de Chrome peu après le changement, puis rétablie
  * après un vrai rechargement du navigateur, avec un message ; « Réinitialiser » repart toujours des formations de départ.
@@ -2303,6 +2364,7 @@ async function main() {
     await testPhaseToggle(browser, root.url);
     await testAnalysisAndOffside(browser, root.url);
     await testShotArrow(browser, root.url);
+    await testTeamIdentity(browser, root.url);
     await testTacticalBoard(browser, root.url);
     await testTacticalMobile(browser, root.url);
     await testArrowRules(browser, root.url);

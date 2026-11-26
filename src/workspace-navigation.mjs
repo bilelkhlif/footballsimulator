@@ -5,6 +5,7 @@
  */
 import { WORKSPACES } from './workspace-controller.mjs';
 import { postOfNumber } from './formations.mjs';
+import { teamName } from './team-identity.mjs';
 
 /** Une seule liaison par racine, même en cas de demande répétée. */
 const BINDINGS = new WeakMap();
@@ -179,7 +180,7 @@ export function createWorkspaceSummary({ root, board, interaction }) {
     const selection = interaction.selection;
     const snapshot = board.snapshot();
     /** « Bleus · n° 6 · MDC » : équipe, numéro et poste normalisé dans la formation en place. */
-    const label = (teamId, number) => `${teamId === 'blue' ? 'Bleus' : 'Rouges'} · n° ${number} · ${postOfNumber(board.getFormation(teamId), number)}`;
+    const label = (teamId, number) => `${teamName(teamId)} · n° ${number} · ${postOfNumber(board.getFormation(teamId), number)}`;
     const identity = selection?.type === 'ball' ? 'Ballon' : selection ? label(selection.teamId, selection.number) : null;
     const position = selection?.type === 'ball' ? snapshot.ball : selection ? snapshot.players[`${selection.teamId}:${selection.number}`] : null;
     for (const element of root.querySelectorAll('[data-selection-summary]')) {

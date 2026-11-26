@@ -16,6 +16,7 @@
 import { PITCH_LENGTH, TEAMS } from './config.mjs';
 import { postOfNumber } from './formations.mjs';
 import { toRealMeters } from './tactical-metrics.mjs';
+import { teamName, teamOf } from './team-identity.mjs';
 
 /** Tolérance de hauteur : à moins de 1 mm de maquette (17 cm réels), le joueur est « à hauteur ». */
 export const LEVEL_TOLERANCE = 0.001;
@@ -79,8 +80,8 @@ export function computeOffside(board, attackingTeamId, teams = TEAMS) {
  * @role Logique métier — ligne de hors-jeu (loi 11)
  */
 export function describeOffside(result, teams = TEAMS) {
-  const attackers = teams[result.attackingTeamId].label;
-  const goal = `du but des ${teams[result.defendingTeamId].label}`;
+  const attackers = teamName(result.attackingTeamId);
+  const goal = `du but ${teamOf(result.defendingTeamId)}`;
   const reason = {
     [OFFSIDE_LIMITS.DEFENDER]: `avant-dernier défenseur : n° ${result.secondLast.number}${result.secondLast.post ? ` (${result.secondLast.post})` : ''}`,
     [OFFSIDE_LIMITS.BALL]: 'fixée par le ballon',

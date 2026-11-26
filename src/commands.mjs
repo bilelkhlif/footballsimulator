@@ -14,8 +14,8 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { EventEmitter } from './events.mjs';
-import { TEAMS } from './config.mjs';
 import { PHASE_LABELS } from './formations.mjs';
+import { teamFor, teamOf } from './team-identity.mjs';
 
 /** Libellé, dans l'historique, du tracé de chaque type de flèche. */
 const ARROW_LABELS = Object.freeze({
@@ -24,18 +24,6 @@ const ARROW_LABELS = Object.freeze({
 
 /** Nombre maximal d'actions gardées pour l'annulation. */
 export const HISTORY_LIMIT = 100;
-
-/**
- * Nom affiché d'une équipe, par exemple « Bleus ».
- * @param {string} teamId
- * @returns {string}
- * @responsable Bilel Khlif
- * @date 2026-11-15
- * @role Logique métier — patron Command : libellés des actions
- */
-function teamLabel(teamId) {
-  return TEAMS[teamId]?.label ?? teamId;
-}
 
 /**
  * Commande de base : une action annulable.
@@ -116,7 +104,7 @@ export class MovePlayerCommand extends Command {
    * @role Logique métier — patron Command : déplacement d'un joueur
    */
   get label() {
-    return `Déplacer le n° ${this.#number} des ${teamLabel(this.#teamId)}`;
+    return `Déplacer le n° ${this.#number} ${teamOf(this.#teamId)}`;
   }
 
   /**
@@ -311,7 +299,7 @@ export class ChangeFormationCommand extends Command {
    * @role Logique métier — patron Command : changement de formation
    */
   get label() {
-    return `Formation ${this.#formation} des ${teamLabel(this.#teamId)}`;
+    return `Formation ${this.#formation} ${teamOf(this.#teamId)}`;
   }
 
   /**
@@ -380,7 +368,7 @@ export class ChangePhaseCommand extends Command {
    */
   get label() {
     const formation = this.#board.getFormation(this.#teamId);
-    return `${PHASE_LABELS[this.#phase]} (${formation.shapeName(this.#phase)}) pour les ${teamLabel(this.#teamId)}`;
+    return `${PHASE_LABELS[this.#phase]} (${formation.shapeName(this.#phase)}) ${teamFor(this.#teamId)}`;
   }
 
   /**
@@ -457,7 +445,7 @@ export class MarkPlayerCommand extends Command {
    * @role Logique métier — patron Command : marquage individuel
    */
   get label() {
-    const who = `n° ${this.#defender.number} des ${teamLabel(this.#defender.teamId)}`;
+    const who = `n° ${this.#defender.number} ${teamOf(this.#defender.teamId)}`;
     return this.#removed ? `Retirer le marquage du ${who}` : `Marquage du n° ${this.#attacker.number} par le ${who}`;
   }
 
@@ -485,6 +473,69 @@ export class MarkPlayerCommand extends Command {
     } else {
       this.#board.removeMarking(this.#defender);
     }
+  }
+}
+
+/**
+ * Nom et maillot d'une équipe. Annulable : l'annulation rend le nom et le maillot d'avant. Un nom
+ * déjà pris par l'adversaire ou un maillot trop proche du sien est refusé par le tableau, avant
+ * toute modification.
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Logique métier — patron Command : identité des équipes
+ */
+export class ChangeTeamIdentityCommand extends Command {
+  #board;
+  #teamId;
+  #identity;
+  #previous = null;
+
+  /**
+   * @param {object} options
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board
+   * @param {string} options.teamId
+   * @param {string} options.name
+   * @param {string} options.kit clé de KIT_PALETTE
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : identité des équipes
+   */
+  constructor({ board, teamId, name, kit }) {
+    super();
+    this.#board = board;
+    this.#teamId = teamId;
+    this.#identity = { name, kit };
+  }
+
+  /**
+   * @returns {string}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : identité des équipes
+   */
+  get label() {
+    return `Nom et maillot ${teamOf(this.#teamId)}`;
+  }
+
+  /**
+   * @returns {boolean}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : identité des équipes
+   */
+  execute() {
+    const { name, kit } = this.#board.getIdentity(this.#teamId);
+    this.#previous = { name, kit };
+    return this.#board.setIdentity(this.#teamId, this.#identity);
+  }
+
+  /**
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : identité des équipes
+   */
+  undo() {
+    this.#board.setIdentity(this.#teamId, this.#previous);
   }
 }
 

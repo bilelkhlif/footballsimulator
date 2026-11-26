@@ -15,6 +15,7 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { FORMATIONS, PHASE_LABELS, PHASES } from './formations.mjs';
+import { teamName } from './team-identity.mjs';
 
 /**
  * Remplit le panneau des formations et le relie au tableau tactique.
@@ -47,6 +48,7 @@ export function createFormationPanel({
 
     const label = document.createElement('span');
     label.className = 'formation-row__team';
+    label.dataset.teamLabel = team.id;
     label.textContent = team.label;
     row.append(label);
 
@@ -86,6 +88,8 @@ export function createFormationPanel({
       const current = board.getFormation(button.dataset.team).name;
       button.setAttribute('aria-pressed', String(current === button.dataset.formation));
     }
+    // Nom actuel de chaque équipe (panneau Équipes).
+    for (const label of root.querySelectorAll('[data-team-label]')) label.textContent = teamName(label.dataset.teamLabel);
     for (const button of phaseButtons) {
       const { team, phase } = button.dataset;
       const formation = board.getFormation(team);
@@ -103,6 +107,7 @@ export function createFormationPanel({
   };
   board.on('formationchange', showCurrentFormations);
   board.on('phasechange', showCurrentFormations);
+  board.on('identitychange', showCurrentFormations);
   showCurrentFormations();
   return { buttons, phaseButtons };
 }

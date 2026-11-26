@@ -32,26 +32,39 @@ function createLabelTexture(team, number) {
   const canvas = document.createElement('canvas');
   canvas.width = LABEL_TEXTURE_SIZE;
   canvas.height = LABEL_TEXTURE_SIZE;
+  drawLabel(canvas, team.cssColor, number);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+/**
+ * Dessine, ou redessine, le disque d'un numéro : blanc, cerclé et chiffré de la couleur donnée.
+ * @param {HTMLCanvasElement} canvas
+ * @param {string} cssColor couleur du cercle et du chiffre
+ * @param {number} number numéro du maillot
+ * @responsable Bilel Khlif
+ * @date 2026-11-05
+ * @role Scène 3D — joueurs (patron Factory)
+ */
+function drawLabel(canvas, cssColor, number) {
   const ctx = canvas.getContext('2d');
   const center = LABEL_TEXTURE_SIZE / 2;
+  ctx.clearRect?.(0, 0, LABEL_TEXTURE_SIZE, LABEL_TEXTURE_SIZE);
 
   ctx.beginPath();
   ctx.arc(center, center, center - 7, 0, 2 * Math.PI);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
   ctx.lineWidth = 10;
-  ctx.strokeStyle = team.cssColor;
+  ctx.strokeStyle = cssColor;
   ctx.stroke();
 
-  ctx.fillStyle = team.cssColor;
+  ctx.fillStyle = cssColor;
   ctx.font = `700 ${number >= 10 ? 56 : 66}px system-ui, "Segoe UI", Roboto, Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(String(number), center, center + 4);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
 }
 
 /**
@@ -119,9 +132,28 @@ export class PlayerFactory {
    */
   getBodyMaterial(team) {
     if (!this.bodyMaterials.has(team.id)) {
-      this.bodyMaterials.set(team.id, new THREE.MeshStandardMaterial({ color: team.color, roughness: 0.45, metalness: 0.05 }));
+      // Blanc : la couleur du maillot est celle de chaque instance (TeamMeshes.setKitColors), ce qui
+      // donne au gardien un maillot distinct dans le même appel de dessin.
+      this.bodyMaterials.set(team.id, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45, metalness: 0.05 }));
     }
     return this.bodyMaterials.get(team.id);
+  }
+
+  /**
+   * Redessine les numéros d'une équipe dans une nouvelle couleur (changement de maillot).
+   * @param {string} teamId
+   * @param {string} cssColor couleur du cercle et du chiffre, lisible sur le disque blanc
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Scène 3D — joueurs (patron Factory)
+   */
+  setLabelColor(teamId, cssColor) {
+    for (const [key, material] of this.labelMaterials) {
+      const [id, number] = key.split('-');
+      if (id !== teamId || !material.map?.image) continue;
+      drawLabel(material.map.image, cssColor, Number(number));
+      material.map.needsUpdate = true;
+    }
   }
 
   /**
@@ -185,9 +217,9 @@ export class PlayerFactory {
       team,
       players,
       parts: [
-        [this.baseGeometry, this.getBodyMaterial(team)],
-        [this.markerGeometry, this.markerMaterial],
-        [this.bodyGeometry, this.getBodyMaterial(team)],
+        [this.baseGeometry, this.getBodyMaterial(team), true],
+        [this.markerGeometry, this.markerMaterial, false],
+        [this.bodyGeometry, this.getBodyMaterial(team), true],
       ],
     });
   }
@@ -206,13 +238,16 @@ export class TeamMeshes {
   #meshes;
   /** Dernière pose écrite de chaque joueur : x, y, z et angle autour de Y. */
   #written;
+  /** Maillages qui prennent la couleur du maillot (socle et corps). */
+  #kitMeshes;
 
   /**
    * @param {object} options
    * @param {{id: string}} options.team
    * @param {THREE.Object3D[]} options.players joueurs de l'équipe
-   * @param {Array<[THREE.BufferGeometry, THREE.Material]>} options.parts géométrie et matériau de
-   *   chaque partie du pion, partagés avec la fabrique
+   * @param {Array<[THREE.BufferGeometry, THREE.Material, boolean?]>} options.parts géométrie et
+   *   matériau de chaque partie du pion, partagés avec la fabrique ; vrai si la partie prend la
+   *   couleur du maillot (socle et corps), faux pour la flèche d'orientation
    * @responsable Bilel Khlif
    * @date 2026-11-16
    * @role Scène 3D — joueurs (instanciation)
@@ -230,8 +265,31 @@ export class TeamMeshes {
       this.group.add(mesh);
       return mesh;
     });
+    this.#kitMeshes = this.#meshes.filter((mesh, index) => parts[index][2]);
     this.#written = new Float64Array(players.length * 4).fill(Number.NaN);
+    // Couleurs d'instance créées avant le premier rendu : le matériau les prend en compte dès sa
+    // compilation. Ensuite, un changement de maillot ne fait que réécrire ces couleurs.
+    this.setKitColors({ kit: team.color ?? 0xffffff, goalkeeper: team.color ?? 0xffffff });
     this.update();
+  }
+
+  /**
+   * Couleur du maillot de chaque instance : celle de l'équipe, et une couleur distincte pour le
+   * gardien (n° 1).
+   * @param {{kit: number, goalkeeper: number}} colors couleurs sRGB (0xRRGGBB)
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Scène 3D — joueurs (instanciation)
+   */
+  setKitColors({ kit, goalkeeper }) {
+    const kitColor = new THREE.Color(kit);
+    const keeperColor = new THREE.Color(goalkeeper);
+    for (const mesh of this.#kitMeshes) {
+      for (let index = 0; index < this.#players.length; index += 1) {
+        mesh.setColorAt(index, this.#players[index].userData.number === 1 ? keeperColor : kitColor);
+      }
+      mesh.instanceColor.needsUpdate = true;
+    }
   }
 
   /**

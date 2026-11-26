@@ -34,6 +34,7 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { PITCH_LENGTH, PITCH_SCALE, TEAMS } from './config.mjs';
+import { teamOf } from './team-identity.mjs';
 import { ARROW_KINDS, isOnBoard, isOnPitch, MIN_ARROW_LENGTH, sameArrowPath } from './tactics-board.mjs';
 
 /**
@@ -149,7 +150,7 @@ export function sameTarget(a, b) {
  * @role Règles des flèches — noms affichés
  */
 export function targetLabel(target) {
-  return target.type === 'ball' ? 'le ballon' : `le n° ${target.number} des ${TEAMS[target.teamId]?.label ?? target.teamId}`;
+  return target.type === 'ball' ? 'le ballon' : `le n° ${target.number} ${teamOf(target.teamId)}`;
 }
 
 /**
