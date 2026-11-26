@@ -14,7 +14,8 @@
  *
  * `tactic` est exactement la tactique de la sauvegarde automatique et des tactiques enregistrées
  * (captureTactic, src/tactic-storage.mjs) : formations, phases, places des joueurs et du ballon,
- * flèches, marquages, noms et maillots des équipes, et images clés de la séquence.
+ * flèches, marquages, noms et maillots des équipes, apparence des joueurs personnalisés (coupe et
+ * couleur des cheveux) et images clés de la séquence.
  *
  * Un fichier importé n'est jamais cru sur parole : JSON lisible, format et version reconnus, puis
  * tactique vérifiée par isValidTactic contre le tableau en cours, avant toute modification du
@@ -77,7 +78,7 @@ function copyPlayers(players) {
 
 /**
  * Reconstruit une tactique déjà vérifiée (isValidTactic) avec ses seuls champs connus. Les champs
- * facultatifs absents (phases, marquages, identités d'un fichier plus ancien) restent absents : le
+ * facultatifs absents (phases, marquages, identités, apparences d'un fichier plus ancien) restent absents : le
  * tableau leur donne alors leur valeur de départ.
  * @param {{version: number, board: object, keyframes: object[]}} tactic
  * @returns {{version: number, board: object, keyframes: object[]}}
@@ -97,6 +98,10 @@ function rebuildTactic({ board, keyframes }) {
   }
   if (board.markings !== undefined) {
     clean.markings = board.markings.map(([defender, attacker]) => [defender, attacker]);
+  }
+  if (board.appearances !== undefined) {
+    clean.appearances = Object.fromEntries(Object.entries(board.appearances)
+      .map(([key, { hair, color, skin }]) => [key, skin === undefined ? { hair, color } : { hair, color, skin }]));
   }
   if (board.identities !== undefined) {
     clean.identities = Object.fromEntries(Object.entries(board.identities).map(([teamId, { name, kit }]) => [teamId, { name, kit }]));

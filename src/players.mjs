@@ -21,7 +21,9 @@ import { PLAYER_SIZE } from './config.mjs';
 import {
   createFootballerGeometries, createHairGeometries, createShirtNumberGeometry, FOOTBALLER_COLORS,
 } from './player-model.mjs';
-import { DEFAULT_APPEARANCE, HAIR_STYLE_IDS, hairColorToHex } from './player-appearance.mjs';
+import {
+  DEFAULT_APPEARANCE, HAIR_STYLE_IDS, hairColorToHex, skinToneColor,
+} from './player-appearance.mjs';
 
 /** Matrice d'une instance cachée : échelle nulle (un joueur dans le maillage d'une autre coupe). */
 const HIDDEN_INSTANCE = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -187,7 +189,8 @@ export class PlayerFactory {
     // Quatre coupes partagées (personnalisation) ; la couleur des cheveux vient de chaque instance.
     this.hairGeometries = createHairGeometries(height);
     this.bootsGeometry = footballer.boots;
-    this.skinMaterial = new THREE.MeshStandardMaterial({ color: FOOTBALLER_COLORS.skin, roughness: 0.7, metalness: 0 });
+    // Teint de chaque joueur porté par sa couleur d'instance (personnalisation) : matériau blanc partagé.
+    this.skinMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, metalness: 0 });
     this.hairMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, metalness: 0 });
     this.bootsMaterial = new THREE.MeshStandardMaterial({ color: FOOTBALLER_COLORS.boots, roughness: 0.5, metalness: 0.05 });
 
@@ -355,7 +358,8 @@ export class PlayerFactory {
    * Crée les pions visibles d'une équipe : neuf maillages instanciés (socle, flèche, tenue, peau,
    * quatre coupes de cheveux, chaussures), dont l'instance i suit le joueur i. Socle et tenue
    * prennent la couleur du maillot de chaque joueur ; chaque joueur n'apparaît que dans le
-   * maillage de sa coupe, avec sa couleur de cheveux ; peau et chaussures sont les mêmes pour tous.
+   * maillage de sa coupe, avec sa couleur de cheveux ; la peau prend le teint de chaque joueur ;
+   * les chaussures sont les mêmes pour tous.
    * @param {{id: string, color: number}} team
    * @param {THREE.Object3D[]} players joueurs de l'équipe (createPlayer), dans un groupe placé à
    *   l'origine du terrain, comme celui des maillages
@@ -372,9 +376,9 @@ export class PlayerFactory {
         [this.baseGeometry, this.getBodyMaterial(team), true],
         [this.markerGeometry, this.markerMaterial, false],
         [this.bodyGeometry, this.getBodyMaterial(team), true],
-        [this.skinGeometry, this.skinMaterial, false],
+        [this.skinGeometry, this.skinMaterial, false, { skin: true }],
         // Une coupe par maillage : chaque joueur n'est visible que dans celui de sa coupe.
-        ...HAIR_STYLE_IDS.map((style) => [this.hairGeometries[style], this.hairMaterial, false, style]),
+        ...HAIR_STYLE_IDS.map((style) => [this.hairGeometries[style], this.hairMaterial, false, { hair: style }]),
         [this.bootsGeometry, this.bootsMaterial, false],
       ],
     });
@@ -400,15 +404,18 @@ export class TeamMeshes {
   #hairMeshes;
   /** Coupe de chaque joueur, par indice d'instance. */
   #hairStyles;
+  /** Maillages de la peau (teint de chaque joueur). */
+  #skinMeshes;
 
   /**
    * @param {object} options
    * @param {{id: string}} options.team
    * @param {THREE.Object3D[]} options.players joueurs de l'équipe
-   * @param {Array<[THREE.BufferGeometry, THREE.Material, boolean?, string?]>} options.parts géométrie
-   *   et matériau de chaque partie du pion, partagés avec la fabrique ; vrai si la partie prend la
-   *   couleur du maillot (socle et tenue), faux sinon ; enfin, pour une coupe de cheveux, son
-   *   identifiant (HAIR_STYLE_IDS) : seuls les joueurs de cette coupe y sont visibles
+   * @param {Array<[THREE.BufferGeometry, THREE.Material, boolean?, {hair?: string, skin?: boolean}?]>} options.parts
+   *   géométrie et matériau de chaque partie du pion, partagés avec la fabrique ; vrai si la partie
+   *   prend la couleur du maillot (socle et tenue), faux sinon ; enfin, son rôle dans l'apparence :
+   *   `hair`, l'identifiant d'une coupe (seuls les joueurs de cette coupe y sont visibles) ; `skin`,
+   *   la peau (teint de chaque joueur)
    * @responsable Bilel Khlif
    * @date 2026-11-16
    * @role Scène 3D — joueurs (instanciation)
@@ -428,8 +435,9 @@ export class TeamMeshes {
     });
     this.#kitMeshes = this.#meshes.filter((mesh, index) => parts[index][2]);
     this.#hairMeshes = this.#meshes
-      .map((mesh, index) => ({ mesh, style: parts[index][3] ?? null }))
+      .map((mesh, index) => ({ mesh, style: parts[index][3]?.hair ?? null }))
       .filter(({ style }) => style !== null);
+    this.#skinMeshes = this.#meshes.filter((mesh, index) => parts[index][3]?.skin === true);
     this.#hairStyles = players.map(() => DEFAULT_APPEARANCE.hair);
     this.#written = new Float64Array(players.length * 4).fill(Number.NaN);
     // Couleurs d'instance créées avant le premier rendu : le matériau les prend en compte dès sa
@@ -462,15 +470,16 @@ export class TeamMeshes {
 
   /**
    * Apparence d'un joueur, reconnu par son numéro : sa coupe (seul le maillage de cette coupe le
-   * montre) et la couleur de ses cheveux. Les autres joueurs ne changent pas.
+   * montre), la couleur de ses cheveux et son teint. Les autres joueurs ne changent pas.
    * @param {number} number numéro du joueur
-   * @param {{hair: string, color: string}} appearance coupe et couleur « #rrggbb »
+   * @param {{hair: string, color: string, skin?: string}} appearance coupe, couleur « #rrggbb » et
+   *   identifiant du teint (teint par défaut s'il manque ou est inconnu)
    * @returns {boolean} faux si aucun joueur de l'équipe ne porte ce numéro
    * @responsable Iyed Rachdi
    * @date 2026-11-26
    * @role Scène 3D — joueurs (instanciation)
    */
-  setAppearance(number, { hair, color }) {
+  setAppearance(number, { hair, color, skin }) {
     const index = this.#players.findIndex((player) => player.userData.number === number);
     if (index < 0) {
       return false;
@@ -478,6 +487,12 @@ export class TeamMeshes {
     const hairColor = new THREE.Color(hairColorToHex(color));
     for (const { mesh } of this.#hairMeshes) {
       mesh.setColorAt(index, hairColor);
+      mesh.instanceColor.needsUpdate = true;
+    }
+    // Teint : toute la peau du joueur (tête, cou, bras, mains, jambes), et rien d'autre.
+    const skinColor = new THREE.Color(hairColorToHex(skinToneColor(skin)));
+    for (const mesh of this.#skinMeshes) {
+      mesh.setColorAt(index, skinColor);
       mesh.instanceColor.needsUpdate = true;
     }
     if (this.#hairStyles[index] !== hair) {

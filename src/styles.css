@@ -504,7 +504,11 @@ body[data-point-of-view="active"][data-pointer-locked="true"] #scene-container c
 .hair-choice span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hair-choice[aria-pressed="true"] { border-color: var(--accent-line, var(--accent)); box-shadow: 0 0 0 2px var(--accent); font-weight: 600; }
 .hair-choice__art { width: 44px; height: 44px; }
-.hair-choice__head { fill: #c8916c; }
+.hair-choice__head { fill: var(--skin-color, #c8916c); }
+.skin-tones { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+.skin-swatch { aspect-ratio: 1; min-width: 0; width: 100%; max-width: 40px; justify-self: center; padding: 0; background: var(--swatch); border: 1px solid rgba(0, 0, 0, .18); border-radius: 50%; cursor: pointer; transition: transform var(--dur-fast) var(--ease-out); }
+.skin-swatch:hover { transform: scale(1.08); }
+.skin-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--surface-strong), 0 0 0 4px var(--accent); }
 .hair-choice__hair { fill: var(--hair-color, #2a1c14); }
 .customize-panel__color { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; font-size: .8125rem; font-weight: 600; }
 .customize-panel__color input { width: 48px; height: 36px; padding: 0 2px; background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }

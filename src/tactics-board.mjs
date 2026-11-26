@@ -232,7 +232,7 @@ export class TacticsBoard extends EventEmitter {
   #identities = new Map();
 
   /**
-   * Apparence des joueurs personnalisés (coupe et couleur des cheveux), par clé équipe:numéro.
+   * Apparence des joueurs personnalisés (coupe, couleur des cheveux, teint), par clé équipe:numéro.
    * Un joueur absent a l'apparence par défaut (DEFAULT_APPEARANCE).
    * @type {Map<string, {hair: string, color: string}>}
    */
@@ -514,11 +514,11 @@ export class TacticsBoard extends EventEmitter {
   }
 
   /**
-   * Apparence d'un joueur : sa coupe et la couleur de ses cheveux, ou l'apparence par défaut s'il
-   * n'a jamais été personnalisé.
+   * Apparence d'un joueur : sa coupe, la couleur de ses cheveux et son teint, ou l'apparence par
+   * défaut s'il n'a jamais été personnalisé.
    * @param {string} teamId
    * @param {number} number
-   * @returns {{hair: string, color: string}} copie
+   * @returns {{hair: string, color: string, skin: string}} copie
    * @responsable Iyed Rachdi
    * @date 2026-11-26
    * @role Logique métier — apparence des joueurs
@@ -533,7 +533,8 @@ export class TacticsBoard extends EventEmitter {
    * redevient « jamais personnalisé ».
    * @param {string} teamId
    * @param {number} number
-   * @param {{hair: string, color: string}} appearance une des quatre coupes, couleur « #rrggbb »
+   * @param {{hair: string, color: string, skin?: string}} appearance une des quatre coupes, couleur
+   *   « #rrggbb », teint proposé (SKIN_TONES) ; sans teint, le teint par défaut
    * @returns {boolean} faux si rien ne change
    * @responsable Iyed Rachdi
    * @date 2026-11-26
@@ -542,7 +543,7 @@ export class TacticsBoard extends EventEmitter {
   setAppearance(teamId, number, appearance) {
     this.#requirePlayer(teamId, number);
     if (!isValidAppearance(appearance)) {
-      throw new RangeError('Apparence inconnue : choisissez une des quatre coupes et une couleur.');
+      throw new RangeError('Apparence inconnue : choisissez une des quatre coupes, une couleur et un teint proposé.');
     }
     if (sameAppearance(appearance, this.getAppearance(teamId, number))) {
       return false;

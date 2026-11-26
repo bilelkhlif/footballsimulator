@@ -1,6 +1,7 @@
 /**
  * Panneau « Personnaliser le joueur » (phase 5) : quatre coupes de cheveux, chacune avec un petit
- * aperçu dessiné, et un sélecteur de couleur libre pour les cheveux.
+ * aperçu dessiné, un sélecteur de couleur libre pour les cheveux, et une palette de teints de peau,
+ * du plus clair au plus foncé (pas de couleur libre pour la peau : seulement des teints réels).
  *
  * Chaque choix s'affiche aussitôt sur le joueur en 3D, en aperçu (src/player-appearance-view.mjs),
  * sans toucher au tableau tactique. « Appliquer » garde la personnalisation : une seule commande
@@ -12,7 +13,9 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { copyAppearance, HAIR_STYLES, isHairColor, sameAppearance } from './player-appearance.mjs';
+import {
+  copyAppearance, HAIR_STYLES, isHairColor, sameAppearance, SKIN_TONES, skinToneColor,
+} from './player-appearance.mjs';
 
 /** Dessin de chaque coupe pour les boutons : une tête de profil vue de trois quarts, sans visage. */
 const HAIR_PREVIEWS = Object.freeze({
@@ -61,6 +64,7 @@ export function createPlayerCustomizationPanel({
   const styles = root.querySelector('[data-hair-styles]');
   const colorInput = root.querySelector('[data-hair-color]');
   const colorValue = root.querySelector('[data-hair-color-value]');
+  const skinTones = root.querySelector('[data-skin-tones]');
   let target = null;
   let original = null;
   let draft = null;
@@ -77,11 +81,30 @@ export function createPlayerCustomizationPanel({
     return button;
   });
 
-  /** Met l'interface à jour d'après le brouillon : coupe cochée, couleur affichée. */
+  // Teints : une pastille par teint, du plus clair au plus foncé, choisie d'un clic.
+  const swatches = SKIN_TONES.map(({ id, label, color }) => {
+    const swatch = document.createElement('button');
+    swatch.type = 'button';
+    swatch.className = 'skin-swatch';
+    swatch.dataset.skinTone = id;
+    swatch.title = label;
+    swatch.setAttribute('aria-label', `Teint : ${label}`);
+    swatch.setAttribute('aria-pressed', 'false');
+    swatch.style.setProperty('--swatch', color);
+    swatch.addEventListener('click', () => choose({ skin: id }));
+    skinTones.append(swatch);
+    return swatch;
+  });
+
+  /** Met l'interface à jour d'après le brouillon : coupe et teint cochés, couleur affichée. */
   const render = () => {
     for (const button of buttons) {
       button.setAttribute('aria-pressed', String(button.dataset.hairStyle === draft.hair));
     }
+    for (const swatch of swatches) {
+      swatch.setAttribute('aria-pressed', String(swatch.dataset.skinTone === draft.skin));
+    }
+    root.style.setProperty('--skin-color', skinToneColor(draft.skin));
     colorInput.value = draft.color;
     colorValue.textContent = draft.color.toUpperCase();
     root.style.setProperty('--hair-color', draft.color);
