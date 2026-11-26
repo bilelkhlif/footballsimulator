@@ -39,8 +39,8 @@ Dr. Ing. Mohamed-Bécha Kaâniche. Version décrite : `main` après la fusion de
 
 | Suite | Résultat | Commande |
 |---|---|---|
-| Tests unitaires JavaScript | **386 réussis sur 386** | `npm run test:unit` |
-| Vérifications dans Chrome (3D, AR émulée, PWA, espaces, visualiseur) | **233 réussies sur 234**, aucune ignorée. L'échec, « Interface 568 × 320 » du tableau (délai d'un toucher dépassé), se reproduit sur `main` (`bc5beb0`) sans les changements du 26 novembre | `npm run test:e2e` |
+| Tests unitaires JavaScript | **393 réussis sur 393** | `npm run test:unit` |
+| Vérifications dans Chrome (3D, AR émulée, PWA, espaces, visualiseur) | **234 réussies sur 234**, aucune ignorée, avec la correction des actions du joueur sélectionné (`docs/ergonomie.md`, §4). Sans elle, six vérifications « Interface » du tableau échouaient sur `main` (`936fa78`) | `npm run test:e2e` |
 | Tests Python (analyse, export, stabilisation, référence, sécurité du serveur, équipes) | **150 réussis sur 150** | `python -m unittest discover -s tests` dans `analysis/` |
 | Parcours réel sur GPU (serveur local, interruption, arrêt brutal, reprise, lecture, export) | **12 étapes réussies sur 12** le 25 novembre, non relancé le 26 (clip de 12 s sous CC BY-SA ; reprise après arrêt brutal comprise, 155 s) | `node tests/visualizer-local-ai.mjs <vidéo>` |
 | Licences des fichiers (REUSE 3.3) | 443 fichiers sur 443 avec licence et droits ; conforme à REUSE 3.3 | `reuse lint` |

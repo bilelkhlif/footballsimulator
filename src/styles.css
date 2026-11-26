@@ -338,12 +338,24 @@ kbd { display: inline-block; padding: 3px 5px; border: 1px solid var(--line-stro
 .pitch-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .active-tool { display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--surface-chip); box-shadow: inset 0 1px var(--highlight), var(--shadow-sm); color: var(--accent); font-size: .875rem; }
 .selection-meta { font-size: .75rem; color: var(--muted); max-width: 260px; }
-.status-line { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 44px; padding: 5px 0; }
+.status-line { container: status-line / inline-size; display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 44px; padding: 5px 0; }
 .hint { color: var(--muted); font-size: .8125rem; line-height: 1.5; margin: 0; max-width: 550px; }
 .hint[data-feedback="success"] { color: var(--accent); }
 .hint[data-feedback="invalid"] { color: var(--invalid); }
 .chip-button { flex: none; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: var(--radius-pill); color: var(--ink); background: var(--surface-chip); box-shadow: inset 0 1px var(--highlight), var(--shadow-sm); font-size: .8125rem; font-weight: 600; transition: background-color var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-spring); }
 .chip-button .icon { width: 17px; height: 17px; }
+/* « Point de vue » et « Personnaliser le joueur » : icône seule de 44 px tant que la barre d'état
+   n'a pas la place de leur libellé à côté de l'aide et de « Désélectionner » ; leur nom accessible
+   reste l'aria-label posé par src/main.mjs. Sans cela, sur téléphone, le dernier sortait de l'écran
+   et l'aide, écrasée, faisait grandir la barre au-dessus du terrain. */
+.status-line .chip-button--icon { width: 44px; padding: 0; justify-content: center; }
+.status-line .chip-button--icon .icon { display: block; width: 19px; height: 19px; }
+.chip-button--icon > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@container status-line (min-width: 46rem) {
+  .status-line .chip-button--icon { width: auto; padding: 8px 14px; }
+  .status-line .chip-button--icon .icon { width: 17px; height: 17px; }
+  .chip-button--icon > span { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+}
 .view-controls { display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface-chip); box-shadow: inset 0 1px var(--highlight), var(--shadow-sm); }
 .view-controls__divider { width: 1px; height: 20px; background: var(--line-strong); }
 .ar-session-actions { display: contents; }
@@ -456,7 +468,7 @@ body.is-ready .loader { opacity: 0; pointer-events: none; }
   .chip-button { min-height: 44px; padding: 7px 10px; }
   .chip-button .icon { display: none; }
   .chip-button [data-cancel-label] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  .chip-button::after { content: 'Annuler'; }
+  #cancel-draft::after { content: 'Annuler'; }
   .view-controls { position: fixed; top: max(7px, env(safe-area-inset-top)); left: calc(var(--rail) + var(--panel-space) + 15px); padding: 0; }
   .view-controls #zoom-in, .view-controls #zoom-out, .view-controls__divider { display: none; }
   .global-notices, .diagnostics { top: 65px; }
