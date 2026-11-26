@@ -31,6 +31,18 @@ export const FOOTBALLER_COLORS = Object.freeze({
 export const EYE_LEVEL = 0.925;
 
 /**
+ * Numéro dans le dos du maillot, en fractions de la hauteur du joueur : centré sur la colonne
+ * vertébrale, entre les omoplates et la taille, juste derrière le dos du torse (le torse est un
+ * cylindre aplati d'avant en arrière : rayon 0,104 H à cette hauteur, profondeur × 0,55).
+ */
+export const SHIRT_NUMBER = Object.freeze({
+  size: 0.125,
+  y: 0.665,
+  depth: 0.104 * 0.55,
+  gap: 0.006,
+});
+
+/**
  * Cylindre vertical, éventuellement aplati (sx, sz), entre deux hauteurs.
  * @param {number} H hauteur du joueur
  * @param {{top: number, bottom: number, from: number, to: number, x?: number, z?: number,
@@ -162,4 +174,23 @@ export function createFootballerGeometries(height) {
   hair.translate(-0.004 * H, (EYE_LEVEL - 0.005) * H, 0);
 
   return { kit: mergeParts(kit), skin: mergeParts(skin), hair: mergeParts([hair]), boots: mergeParts(boots) };
+}
+
+/**
+ * Plan du numéro dans le dos : carré, tourné vers l'arrière du joueur (-X), posé juste derrière le
+ * maillot pour ne jamais disparaître dans le torse ni scintiller contre lui. Partagé par tous les
+ * joueurs ; seul le matériau (la texture du chiffre) change d'un joueur à l'autre.
+ * @param {number} height hauteur du joueur, en mètres de la maquette (PLAYER_SIZE.height)
+ * @returns {THREE.PlaneGeometry}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Scène 3D — modèle du footballeur
+ */
+export function createShirtNumberGeometry(height) {
+  const H = height;
+  const geometry = new THREE.PlaneGeometry(SHIRT_NUMBER.size * H, SHIRT_NUMBER.size * H);
+  // Le plan regarde vers +Z : un quart de tour l'oriente vers -X, le dos du joueur.
+  geometry.rotateY(-Math.PI / 2);
+  geometry.translate(-(SHIRT_NUMBER.depth + SHIRT_NUMBER.gap) * H, SHIRT_NUMBER.y * H, 0);
+  return geometry;
 }

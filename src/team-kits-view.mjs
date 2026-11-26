@@ -1,7 +1,7 @@
 /**
  * Maillots dans la scène et l'interface : observateur du tableau tactique (patron Observer). À
  * chaque changement d'identité, il recolore les pions (couleur d'instance, gardien distinct), les
- * disques des numéros et les pastilles de l'interface (variables CSS --kit-<équipe>). Il ne modifie
+ * disques des numéros, les numéros de dos et les pastilles de l'interface (variables CSS --kit-<équipe>). Il ne modifie
  * jamais le tableau.
  *
  * Le maillot d'une équipe peut changer le gardien de l'autre (les deux gardiens restent distincts) :
@@ -31,7 +31,8 @@ export function labelInk(color) {
  * @param {object} options
  * @param {import('./tactics-board.mjs').TacticsBoard} options.board
  * @param {Record<string, {setKitColors: Function}>} options.teamMeshes pions instanciés de chaque équipe
- * @param {{setLabelColor: Function}} options.playerFactory fabrique des joueurs (numéros)
+ * @param {{setLabelColor: Function, setShirtNumberColors?: Function}} options.playerFactory fabrique des
+ *   joueurs (numéros au-dessus de la tête et dans le dos)
  * @param {{style: {setProperty: Function}}|null} [options.root] élément qui porte les variables CSS
  * @returns {() => void} arrête le suivi
  * @responsable Iyed Rachdi
@@ -45,6 +46,7 @@ export function followTeamKits({ board, teamMeshes, playerFactory, root = null }
       const identity = board.getIdentity(teamId);
       teamMeshes[teamId]?.setKitColors({ kit: identity.color, goalkeeper: identity.goalkeeperColor });
       playerFactory.setLabelColor(teamId, labelInk(identity.color));
+      playerFactory.setShirtNumberColors?.(teamId, { kit: identity.color, goalkeeper: identity.goalkeeperColor });
       root?.style.setProperty(`--kit-${teamId}`, identity.ui);
     }
   };
