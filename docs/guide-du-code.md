@@ -440,7 +440,9 @@ Deux outils de développement s'ajoutent dans `tests/` : `benchmark.mjs` (`npm r
 - **`src/tactics-board.mjs`** : la phase de jeu de chaque équipe (`getPhase`, `setPhase`), dans les instantanés ; un changement de formation garde la phase.
 - **`src/commands.mjs`** : `ChangePhaseCommand`, la bascule annulable entre base, possession et hors possession.
 - **`src/tactical-metrics.mjs`** : fonctions pures. Largeur, profondeur, distance entre les lignes et surface occupée (enveloppe convexe), en mètres réels. Les lignes se lisent sur le terrain, d'après le nom de la disposition en place (« 4-5-1 » : les 4 joueurs de champ les plus bas, les 5 suivants, le dernier).
-- **`src/analysis-panel.mjs`** : le tableau « Analyse tactique » de l'espace Équipes et formations, recalculé à chaque changement du tableau (observateur).
+- **`src/offside.mjs`** : la ligne de hors-jeu (loi 11), fonction pure : la plus avancée de l'avant-dernier défenseur (gardien compris), du ballon et de la ligne médiane ; un joueur à hauteur n'est pas hors-jeu.
+- **`src/offside-layer.mjs`** : les deux lignes de hors-jeu en 3D, dans le repère du terrain, masquées par défaut ; elles suivent le tableau (observateur).
+- **`src/analysis-panel.mjs`** : le tableau « Analyse tactique » de l'espace Équipes et formations, recalculé à chaque changement du tableau (observateur), avec une phrase de hors-jeu par équipe et le bouton qui affiche les lignes.
 
 ### Fichiers du dépôt
 

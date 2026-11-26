@@ -270,6 +270,9 @@ a.button { text-decoration: none; }
 .analysis-table { width: 100%; border-collapse: collapse; font-size: .875rem; font-variant-numeric: tabular-nums; }
 .analysis-table th, .analysis-table td { padding: 5px 6px; text-align: right; border-bottom: 1px solid var(--border); }
 .analysis-table th[scope="row"], .analysis-table thead th:first-child { text-align: left; font-weight: 500; }
+.offside-summary { margin-top: 12px; }
+.offside-summary h4 { margin: 0 0 4px; font-size: .875rem; }
+.offside-summary p { margin: 0 0 6px; font-size: .8125rem; line-height: 1.4; }
 .phase-button[aria-pressed="true"] { font-weight: 700; border-style: solid; border-color: var(--team-color); background: var(--surface-pressed); }
 .positions { border-top: 1px solid var(--border); padding-top: 15px; }
 .positions summary { cursor: pointer; min-height: 44px; font-size: .875rem; font-weight: 600; padding: 10px 0; }

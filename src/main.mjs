@@ -29,6 +29,7 @@ import { TacticsBoard } from './tactics-board.mjs';
 import { FormationAnimator, TRANSITION_DURATION_MS } from './formation-transition.mjs';
 import { createFormationPanel } from './formation-panel.mjs';
 import { createAnalysisPanel } from './analysis-panel.mjs';
+import { OffsideLayer } from './offside-layer.mjs';
 import { ChangeFormationCommand, ChangePhaseCommand, CommandHistory } from './commands.mjs';
 import { MOVE_DURATION_MS, TacticalView } from './tactical-view.mjs';
 import { TacticalInteraction } from './tactical-interaction.mjs';
@@ -220,7 +221,9 @@ async function init(renderMode) {
   });
 
   // Analyse tactique : largeur, profondeur, lignes et surface de chaque équipe, en mètres réels.
-  createAnalysisPanel({ root: document.getElementById('analysis-panel'), board, teams: Object.values(TEAMS) });
+  // Lignes de hors-jeu en 3D, dans le repère du terrain ; affichées depuis la carte d'analyse.
+  const offsideLayer = new OffsideLayer({ pitchGroup, board });
+  createAnalysisPanel({ root: document.getElementById('analysis-panel'), board, teams: Object.values(TEAMS), offsideLayer });
 
   // Interaction tactique (sprint 5) : un seul rayon, orienté par la souris, le doigt ou l'AR.
   const interaction = new TacticalInteraction({ board, history, pitchGroup, getHitboxes: () => tacticalView.hitboxes });
@@ -418,7 +421,7 @@ async function init(renderMode) {
   document.body.classList.add('is-ready');
   return {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer,
     get diagnostics() { return diagnostics; },
   };
 }
@@ -781,7 +784,7 @@ async function start() {
   }
   const {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer,
   } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
   const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding, workspaces, navigation });
@@ -802,6 +805,7 @@ async function start() {
     sequencePlayer,
     teamMeshes,
     autosave,
+    offsideLayer,
     xrDevice: emulator?.xrDevice ?? null,
     get placement() {
       return arState.placement;

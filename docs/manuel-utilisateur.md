@@ -88,6 +88,8 @@ Sous les formations, trois boutons par équipe montrent la même équipe dans le
 
 La carte **Analyse tactique**, dans le même espace, donne pour chaque équipe sa largeur, sa profondeur, la distance entre la défense et le milieu, puis entre le milieu et l'attaque, et la surface qu'elle occupe. Tout est en mètres réels, sur un terrain de 105 × 68 m, sans le gardien. Les valeurs suivent chaque déplacement, chaque formation et chaque bascule : comparez un 4-3-3 en possession (plus de 2 000 m²) et le même 4-3-3 sans le ballon (moins de 1 000 m²).
 
+Sous les mesures, la rubrique **Hors-jeu** donne, pour chaque équipe qui attaque, la distance de sa ligne de hors-jeu au but adverse et ce qui la fixe : l'avant-dernier défenseur (le gardien compte), le ballon s'il est plus avancé, ou la ligne médiane, car on n'est jamais hors-jeu dans sa moitié. Elle nomme les joueurs en position de hors-jeu ; un joueur à hauteur ne l'est pas. **Afficher les lignes de hors-jeu** les trace sur le terrain, à la couleur de l'équipe qui attaque, aussi en AR.
+
 ![Le panneau des formations sur le terrain posé : Bleus en 4-4-2, Rouges en 4-3-3](images/sprint4-ar-formations.jpg)
 
 ## 6. Déplacer un joueur ou le ballon

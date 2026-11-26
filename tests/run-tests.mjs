@@ -659,6 +659,45 @@ async function testPhaseToggle(browser, url) {
 }
 
 /**
+ * Analyse et hors-jeu dans la page : la carte « Analyse tactique » affiche des mesures et la ligne
+ * de hors-jeu des deux équipes ; un Bleu passé derrière la défense rouge y apparaît hors-jeu, et le
+ * bouton affiche les lignes sur le terrain.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Tests de bout en bout — analyse tactique et hors-jeu
+ */
+async function testAnalysisAndOffside(browser, url) {
+  const name = 'Analyse tactique : mesures en mètres réels, hors-jeu calculé et lignes affichées sur le terrain';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    await clickUi(page, '#formations-toggle');
+    await page.evaluate(() => window.__footballSimulator.board.setPlayerPosition('blue', 9, { x: 0.25, z: 0 }));
+    await clickUi(page, '#offside-toggle');
+    const state = await page.evaluate(() => ({
+      width: document.querySelector('#analysis-panel tr[data-metric="width"] td[data-team="blue"]')?.textContent ?? '',
+      blue: document.querySelector('[data-offside="blue"]')?.textContent ?? '',
+      red: document.querySelector('[data-offside="red"]')?.textContent ?? '',
+      visible: window.__footballSimulator.offsideLayer.visible,
+      pressed: document.getElementById('offside-toggle').getAttribute('aria-pressed'),
+    }));
+    const problems = [];
+    if (!/^\d+ m$/.test(state.width)) problems.push(`largeur « ${state.width} »`);
+    if (!/hors-jeu : n° 9 \(AT\)/.test(state.blue)) problems.push(`Bleus : « ${state.blue} »`);
+    if (!/^Rouges en attaque : ligne à \d+ m du but des Bleus/.test(state.red)) problems.push(`Rouges : « ${state.red} »`);
+    if (!state.visible || state.pressed !== 'true') problems.push('lignes non affichées');
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || `largeur des Bleus ${state.width} ; ${state.blue}`);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Sauvegarde automatique : une tactique modifiée (formation par son bouton, joueur déplacé, image
  * clé) est enregistrée dans le vrai IndexedDB de Chrome peu après le changement, puis rétablie
  * après un vrai rechargement du navigateur, avec un message ; « Réinitialiser » repart toujours des formations de départ.
@@ -2203,6 +2242,7 @@ async function main() {
     await testReducedMotion(browser, root.url);
     await testTacticAutosave(browser, root.url);
     await testPhaseToggle(browser, root.url);
+    await testAnalysisAndOffside(browser, root.url);
     await testTacticalBoard(browser, root.url);
     await testTacticalMobile(browser, root.url);
     await testArrowRules(browser, root.url);
