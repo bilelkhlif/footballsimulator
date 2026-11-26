@@ -19,7 +19,7 @@ import { StaticAnalysisSource } from './static-source.mjs';
 import { applyHomography, AutoPlacer, candidateRects, scoreRegions, WEIGHTS } from './auto-placement.mjs';
 import { OverlayFrame } from './overlay-frame.mjs';
 import { OverlayPitch } from './overlay-pitch.mjs';
-import { markSelected, maskUncalibrated, renderGallery, VERDICT_LABELS } from './demo-gallery.mjs';
+import { markSelected, maskUncalibrated, renderGallery, TEAM_VERDICT_LABELS, VERDICT_LABELS } from './demo-gallery.mjs';
 import { createThemeControl } from '../theme.mjs';
 import { describeCalibration, describeIdentityCheck, describeIdentityValues, formatNumber, formatShare, formatTime } from './format.mjs';
 import { TrackingStore } from './tracking-store.mjs';
@@ -132,6 +132,8 @@ class MatchVisualizer {
     this.selectedId = null;
     /** Contrôle visuel de la calibration du match ouvert (catalogue) ; « rejected » masque les positions. */
     this.calibrationCheck = null;
+    /** Contrôle visuel des équipes du match ouvert (catalogue). */
+    this.teamCheck = null;
     this.demoEntries = new Map();
     this.openGeneration = 0;
     this.manifestTimer = null;
@@ -326,6 +328,7 @@ class MatchVisualizer {
     byId('analysis-select').value = '';
     byId('demo-select').value = '';
     this.calibrationCheck = null;
+    this.teamCheck = null;
     this.#renderMask();
     markSelected(byId('demo-gallery'), null);
     this.#renderControls(0);
@@ -715,6 +718,7 @@ class MatchVisualizer {
         : TrackingStore.fromDocument(tracking);
       this.currentAnalysis = id;
       this.calibrationCheck = source.kind === 'demo' ? this.demoEntries.get(id)?.calibrationCheck ?? null : null;
+      this.teamCheck = source.kind === 'demo' ? this.demoEntries.get(id)?.teamCheck ?? null : null;
       this.#renderMask();
       markSelected(byId('demo-gallery'), source.kind === 'demo' ? id : null);
       this.selectedId = null;
@@ -1228,6 +1232,8 @@ class MatchVisualizer {
       ['Identités', describeIdentityCheck(metrics.identity)],
       ['Équipe connue', `${formatShare(teams.knownTeamShare)} des observations`],
       ['Équilibre des équipes', `${formatShare(teams.medianMajorityShare)} des joueurs d'une image dans la même équipe (vers 50 % attendu)`],
+      ...(this.teamCheck ? [['Contrôle visuel des équipes',
+        `${TEAM_VERDICT_LABELS[this.teamCheck.verdict] ?? this.teamCheck.verdict}. ${this.teamCheck.note}`]] : []),
       ['Traitement', processing.synthetic ? 'aucun : rien n\'a été analysé (démonstration synthétique)'
         : `${formatNumber(processing.slowdown)} fois la durée de la vidéo (${formatNumber(processing.analysedFramesPerSecond)} images analysées/s, ${processing.device ?? '—'})`],
     ];
@@ -1514,6 +1520,7 @@ class MatchVisualizer {
       source: this.source?.kind ?? null,
       analysis: this.currentAnalysis,
       calibrationCheck: this.calibrationCheck?.verdict ?? null,
+      teamCheck: this.teamCheck?.verdict ?? null,
       gallery: [...document.querySelectorAll('#demo-gallery .vz-match')].map((card) => ({
         id: card.dataset.demoId, pressed: card.getAttribute('aria-pressed') === 'true' })),
     };

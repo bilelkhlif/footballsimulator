@@ -18,6 +18,18 @@ export const VERDICT_LABELS = Object.freeze({
 });
 
 /**
+ * Libellés courts des verdicts du contrôle visuel des équipes (planche d'une vignette par trajectoire,
+ * rangée par équipe attribuée) : aucune erreur relevée, quelques erreurs chiffrées dans la note,
+ * équipes fausses, ou vidéo synthétique annotée.
+ */
+export const TEAM_VERDICT_LABELS = Object.freeze({
+  verified: 'Équipes vérifiées',
+  partial: 'Équipes : quelques erreurs',
+  wrong: 'Équipes fausses',
+  exact: 'Équipes exactes',
+});
+
+/**
  * Durée lisible : 26 s, 1 min 05 s.
  * @param {number|null|undefined} seconds
  * @returns {string}
@@ -75,6 +87,17 @@ export function describeQuality(quality, check = null) {
       key: 'implausible', label: '> 12 m/s', value: percent(share),
       tone: share < 0.1 ? 'good' : share < 0.3 ? 'warn' : 'bad',
       title: 'Part des déplacements mesurés au-delà de 12 m/s : tremblement de calibration ou échange d\'identité',
+    });
+  }
+  if (typeof quality.knownTeamShare === 'number') {
+    // Deux équipes attendues : un classement où presque tous les joueurs d'une image sont dans la même
+    // équipe trahit un regroupement faux, même avec beaucoup de joueurs « classés ».
+    const balanced = typeof quality.teamMajorityShare !== 'number' || quality.teamMajorityShare <= 0.7;
+    chips.push({
+      key: 'teams', label: 'Équipes', value: percent(quality.knownTeamShare),
+      tone: !balanced ? 'bad' : quality.knownTeamShare >= 0.85 ? 'good' : 'warn',
+      title: balanced ? 'Part des observations de joueurs dont l\'équipe est connue'
+        : `Équipes déséquilibrées : ${percent(quality.teamMajorityShare)} des joueurs d'une image dans la même équipe`,
     });
   }
   if (quality.medianTrackSeconds !== undefined && quality.medianTrackSeconds !== null) {
@@ -154,13 +177,27 @@ export function renderGallery(list, demos, { selectedId = null, onSelect }) {
     title.className = 'vz-match__title';
     title.textContent = demo.name;
     body.append(title);
+    const verdicts = document.createElement('span');
+    verdicts.className = 'vz-match__verdicts';
     if (demo.calibrationCheck) {
       const verdict = document.createElement('span');
       verdict.className = 'vz-match__verdict';
       verdict.dataset.verdict = demo.calibrationCheck.verdict;
       verdict.textContent = VERDICT_LABELS[demo.calibrationCheck.verdict] ?? demo.calibrationCheck.verdict;
       verdict.title = demo.calibrationCheck.note;
-      body.append(verdict);
+      verdicts.append(verdict);
+    }
+    if (demo.teamCheck) {
+      const verdict = document.createElement('span');
+      verdict.className = 'vz-match__verdict';
+      verdict.dataset.kind = 'teams';
+      verdict.dataset.verdict = demo.teamCheck.verdict;
+      verdict.textContent = TEAM_VERDICT_LABELS[demo.teamCheck.verdict] ?? demo.teamCheck.verdict;
+      verdict.title = demo.teamCheck.note;
+      verdicts.append(verdict);
+    }
+    if (verdicts.childElementCount) {
+      body.append(verdicts);
     }
     const chips = describeQuality(demo.quality, demo.calibrationCheck);
     if (chips.length) {

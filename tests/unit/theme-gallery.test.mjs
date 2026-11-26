@@ -143,8 +143,11 @@ test('les cartes de la galerie lisent seulement des champs bien typés et des fi
   assert.equal(fields.thumbnailUrl, 'https://exemple.test/footballsimulator/demo/matches/a/thumbnail.jpg');
   assert.deepEqual(fields.quality, { calibratedShare: 0.95, implausibleSpeedShare: 0.11, cuts: 1, empty: null });
   assert.deepEqual(fields.calibrationCheck, { verdict: 'rejected', note: 'ligne de but prise pour la ligne médiane' });
-  const hostile = galleryFields({ thumbnail: '../../secret.jpg', order: -2, category: '  ', calibrationCheck: { verdict: 'parfait' } }, inside);
-  assert.deepEqual(hostile, { category: null, credit: null, order: null, thumbnailUrl: null, calibrationCheck: null, quality: null });
+  const hostile = galleryFields({ thumbnail: '../../secret.jpg', order: -2, category: '  ', calibrationCheck: { verdict: 'parfait' },
+    teamCheck: { verdict: 'parfaites' } }, inside);
+  assert.deepEqual(hostile, { category: null, credit: null, order: null, thumbnailUrl: null, calibrationCheck: null, teamCheck: null, quality: null });
+  assert.deepEqual(galleryFields({ teamCheck: { verdict: 'verified', note: 'aucune erreur' } }, inside).teamCheck,
+    { verdict: 'verified', note: 'aucune erreur' });
 });
 
 test('les indicateurs de qualité ont un ton qui dit la fiabilité, et une calibration rejetée reste signalée', () => {
@@ -155,6 +158,12 @@ test('les indicateurs de qualité ont un ton qui dit la fiabilité, et une calib
   const rejected = describeQuality({ calibratedShare: 0.95, implausibleSpeedShare: 0.31 }, { verdict: 'rejected' });
   assert.deepEqual(rejected.map((chip) => chip.tone), ['bad', 'bad']);
   assert.deepEqual(describeQuality(null), []);
+  const teams = (quality) => describeQuality(quality).find((chip) => chip.key === 'teams');
+  assert.deepEqual([teams({ knownTeamShare: 0.97, teamMajorityShare: 0.55 }).value, teams({ knownTeamShare: 0.97, teamMajorityShare: 0.55 }).tone],
+    ['97 %', 'good']);
+  assert.equal(teams({ knownTeamShare: 0.88, teamMajorityShare: 0.89 }).tone, 'bad', 'presque tous dans la même équipe : faux');
+  assert.equal(teams({ knownTeamShare: 0.6, teamMajorityShare: 0.5 }).tone, 'warn');
+  assert.equal(teams({ calibratedShare: 1 }), undefined, "sans mesure des équipes, pas d'indicateur");
   assert.equal(formatDuration(26.04), '26 s');
   assert.equal(formatDuration(65), '1 min 05 s');
   assert.equal(formatDuration(null), '—');

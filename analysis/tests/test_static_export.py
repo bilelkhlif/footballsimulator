@@ -292,10 +292,16 @@ class StaticExportTest(unittest.TestCase):
         self.assertEqual(entry["quality"]["cuts"], None if shots is None else shots - 1)
         full = {"detection": {"peoplePerFrame": {"player": 11.8}, "ballFrameShare": 0.84},
                 "tracking": {"shots": 2, "medianTrackSeconds": 2.8}, "calibration": {"calibratedShare": 0.95},
-                "positions": {"implausibleSpeedShare": 0.11}, "identity": {"uncertainSeconds": 0}}
-        self.assertEqual(gallery_quality(full), {"playersPerFrame": 11.8, "ballShare": 0.84, "calibratedShare": 0.95,
+                "positions": {"implausibleSpeedShare": 0.11}, "identity": {"uncertainSeconds": 0},
+                "teams": {"knownTeamShare": 0.97, "medianMajorityShare": 0.55}}
+        self.assertEqual(gallery_quality(full), {"knownTeamShare": 0.97, "teamMajorityShare": 0.55,
+                                                 "playersPerFrame": 11.8, "ballShare": 0.84, "calibratedShare": 0.95,
                                                  "medianTrackSeconds": 2.8, "uncertainIdentitySeconds": 0,
                                                  "implausibleSpeedShare": 0.11, "cuts": 1})
+        teams = {"verdict": "verified", "note": "40 trajectoires contrôlées, aucune erreur"}
+        catalog = update_catalog(demo / "index.json", bundle, manifest, gallery={"teamCheck": teams})
+        self.assertEqual(catalog["matches"][0]["teamCheck"], teams)
+        self.assertEqual(catalog["matches"][0]["calibrationCheck"], check, "verdict précédent conservé")
         again = update_catalog(demo / "index.json", bundle, manifest)["matches"][0]
         for key in ("category", "credit", "order", "calibrationCheck", "description"):
             self.assertEqual(again[key], entry[key], key)
@@ -304,7 +310,8 @@ class StaticExportTest(unittest.TestCase):
         bad["matches"][0]["calibrationCheck"] = {"verdict": "parfait", "note": ""}
         bad["matches"][0]["order"] = -1
         bad["matches"][0]["quality"]["cuts"] = "deux"
-        self.assertEqual(len(catalog_problems(bad)), 3)
+        bad["matches"][0]["teamCheck"] = {"verdict": "parfaites"}
+        self.assertEqual(len(catalog_problems(bad)), 4)
 
     def test_export_file_names_are_relative_on_windows_and_posix(self):
         """UNC, adresse réseau, lecteur relatif, flux Windows et chemin absolu sont refusés.
