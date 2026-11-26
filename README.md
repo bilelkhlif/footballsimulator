@@ -27,7 +27,7 @@ le [guide de démonstration](docs/guide-demonstration-soutenance.md) et la
 |---|---|
 | Besoins BF1 à BF9 du cahier | Tous implémentés ; AR vérifiée en émulation, et sur téléphone pour des versions antérieures |
 | Exigences du cahier (54 tracées) | 44 vérifiées, 8 partielles (mesures sur téléphone), 1 non faite (vidéo), 1 sans objet |
-| Tests automatisés (26 novembre) | 386 unitaires et 150 tests Python réussis ; 233 vérifications dans Chrome sur 234 : l'échec (interface 568 × 320 du tableau) se reproduit sur `main` (`bc5beb0`) |
+| Tests automatisés (26 novembre) | 393 unitaires et 150 tests Python réussis ; 234 vérifications dans Chrome sur 234 |
 | Essais sur téléphone de la version actuelle | **À faire par l'équipe** (protocole P0 à P10 de [recette.md](docs/recette.md)) |
 | Vidéo de démonstration | **À tourner** ([storyboard](docs/video-demonstration.md)) |
 

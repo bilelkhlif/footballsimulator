@@ -123,6 +123,18 @@ Le test `testResponsivePanels` couvre **320 × 568, 360 × 740, 390 × 844, 568 
 
 Les sessions AR émulées vérifient aussi les panneaux à 320 × 568 et 568 × 320, en WebGPU et en mode test WebGL. Cela ne mesure pas la caméra, les barres système ou les gestes d’un téléphone réel.
 
+### Actions du joueur sélectionné (26 novembre 2026)
+
+Après l’ajout de « Personnaliser le joueur » (PR #38), la barre d’état d’un joueur sélectionné portait sur une seule ligne l’aide, « Désélectionner », « Point de vue » et « Personnaliser le joueur ». Six des sept dimensions de `testResponsivePanels` échouaient alors sur `main` (`936fa78`) :
+
+- sur téléphone (320 × 568, 360 × 740, 390 × 844) et à 740 × 360, « Personnaliser le joueur » sortait de l’écran ; en paysage court, la règle qui écrit « Annuler » sur l’abandon s’appliquait aussi aux deux nouveaux boutons (« Point de vue Annuler ») ;
+- à 1280 × 800, panneau ouvert, l’aide écrasée faisait passer la barre de 44 à 127 px, et le recadrage qui suit sortait un coin du terrain de l’écran ;
+- à 568 × 320, un seul toucher sur un joueur ouvrait son point de vue : la sélection se fait au relâchement du doigt, la barre grandit aussitôt, et le clic que le navigateur synthétise ensuite tombait sur « Point de vue », apparu sous le doigt.
+
+« Point de vue » et « Personnaliser le joueur » deviennent des icônes de 44 px (un œil, une silhouette au crayon) tant que la barre d’état n’a pas 46 rem de large (requête de conteneur). Leur nom accessible reste l’aria-label (« Point de vue du n° 1 des Bleus ») et une infobulle donne leur libellé à la souris ; sur un bureau sans panneau ouvert, les libellés restent écrits. La règle « Annuler » ne vise plus que l’abandon. Enfin, `src/pointer-input.mjs` annule la fin du toucher (`touchend`) quand ce toucher a servi de tap, ce qui supprime le clic synthétisé : le point de vue ne s’ouvre plus que sur son bouton, comme prévu. La nouvelle mise en page suffit à faire réussir la vérification à 568 × 320, mais la barre grandit encore au-dessus du terrain pendant une sélection (de 60 à 118 px à cette dimension) : sans cette annulation, un joueur touché au bas du terrain pourrait se retrouver sous un bouton.
+
+La croix d’abandon de 40 × 40 px décrite plus haut n’existe plus depuis la réorganisation en sept espaces (`2885bd2`, 24 novembre) : à 320 px, « Désélectionner » reste écrit et l’aide passe sur cinq lignes. Les sept dimensions réussissent de nouveau, avec les 234 vérifications de `npm run test:e2e` ; le confort sur un téléphone réel reste à juger (§5).
+
 ### Plusieurs flèches
 
 ![Deux passes dorées et dix courses en tirets, mode Course actif, historique disponible](images/ux-reprise-nombreuses-fleches.jpg)
