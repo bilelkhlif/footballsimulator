@@ -27,6 +27,7 @@ import { createBall } from './ball.mjs';
 import { DEFAULT_FORMATIONS, TEAMS } from './config.mjs';
 import { TacticsBoard } from './tactics-board.mjs';
 import { FormationAnimator, TRANSITION_DURATION_MS } from './formation-transition.mjs';
+import { postOfNumber } from './formations.mjs';
 import { createFormationPanel } from './formation-panel.mjs';
 import { createAnalysisPanel } from './analysis-panel.mjs';
 import { OffsideLayer } from './offside-layer.mjs';
@@ -36,7 +37,8 @@ import { createTeamPanel } from './team-panel.mjs';
 import { buildScenarioState, loadScenarioLibrary } from './scenarios.mjs';
 import { createScenarioPanel } from './scenario-panel.mjs';
 import {
-  ChangeFormationCommand, ChangePhaseCommand, ChangeTeamIdentityCommand, CommandHistory, LoadScenarioCommand,
+  ChangeFormationCommand, ChangePhaseCommand, ChangeTeamIdentityCommand, CommandHistory, LoadSavedTacticCommand,
+  LoadScenarioCommand,
 } from './commands.mjs';
 import { MOVE_DURATION_MS, TacticalView } from './tactical-view.mjs';
 import { TacticalInteraction } from './tactical-interaction.mjs';
@@ -47,7 +49,11 @@ import { PointerInput } from './pointer-input.mjs';
 import { routeXrSelect, SELECT_ROUTES, XrTacticalInput } from './xr-input.mjs';
 import { DiagnosticsPanel, isDiagnosticsRequested } from './diagnostics.mjs';
 import { TacticalSequence } from './tactical-sequence.mjs';
-import { attachTacticAutosave, createTacticStore } from './tactic-storage.mjs';
+import {
+  attachTacticAutosave, captureTactic, createTacticStore, isValidTactic,
+} from './tactic-storage.mjs';
+import { createTacticLibrary } from './tactic-library.mjs';
+import { createSavedTacticsPanel } from './saved-tactics-panel.mjs';
 import { SequencePlayer } from './sequence-player.mjs';
 import { createSequencePanel } from './sequence-panel.mjs';
 import { installEmulatorIfRequested } from './dev-emulator.mjs';
@@ -58,6 +64,7 @@ import { createArView } from './ar-view.mjs';
 import { SurfacePlacement } from './ar-surface.mjs';
 import { createReticle } from './reticle.mjs';
 import { createRenderLoop } from './render-loop.mjs';
+import { PointOfView } from './point-of-view.mjs';
 import { describeAdapter, WebGpuUnavailableError, WEBGPU_ERROR_REASONS } from './webgpu.mjs';
 import { getRequestedRenderMode, RENDER_MODES, WebGlTestModeUnavailableError } from './webgl-test-mode.mjs';
 import { WorkspaceController } from './workspace-controller.mjs';
@@ -199,6 +206,10 @@ async function init(renderMode) {
     teamMeshes.push(meshes);
     teamMeshesById[team.id] = meshes;
   }
+
+  // Point de vue d'un joueur : la même scène, vue à hauteur d'homme depuis la place du joueur
+  // sélectionné. Mode d'affichage seulement : rien du tableau tactique ne change.
+  const pointOfView = new PointOfView({ renderer, pitchGroup, teamGroups, teamMeshes: teamMeshesById, controls });
   // Maillots : couleur de chaque pion (gardien distinct), numéros et pastilles de l'interface.
   followTeamKits({ board, teamMeshes: teamMeshesById, playerFactory, root: document.documentElement });
   const ball = createBall();
@@ -264,7 +275,8 @@ async function init(renderMode) {
     camera,
     raycaster,
     interaction,
-    isPresenting: () => renderer.xr.isPresenting,
+    // Pendant le point de vue, un clic sert à regarder autour : il ne sélectionne ni ne déplace rien.
+    isPresenting: () => renderer.xr.isPresenting || pointOfView.active,
   }).attach();
 
   // Bandeau d'aide : l'aide de l'état courant, et quelques instants le retour de chaque geste.
@@ -311,6 +323,56 @@ async function init(renderMode) {
     controls.touches.TWO = aiming ? TOUCH.DOLLY_ROTATE : TOUCH.DOLLY_PAN;
   });
 
+  // « Point de vue » : action du joueur sélectionné, à côté de « Désélectionner ». Le point de vue
+  // ne s'ouvre que sur ce bouton, jamais à la simple sélection.
+  const pointOfViewButton = document.getElementById('point-of-view');
+  const pointOfViewBar = document.getElementById('point-of-view-bar');
+  const pointOfViewTitle = pointOfViewBar.querySelector('[data-pov-title]');
+  const pointOfViewHelp = pointOfViewBar.querySelector('[data-pov-help]');
+  /** Le bouton suit la sélection : un joueur sélectionné, hors AR et hors point de vue. */
+  const refreshPointOfViewButton = () => {
+    const selection = interaction.selection;
+    pointOfViewButton.hidden = selection?.type !== 'player' || renderer.xr.isPresenting || pointOfView.active;
+    if (!pointOfViewButton.hidden) {
+      pointOfViewButton.setAttribute('aria-label', `Point de vue du n° ${selection.number} des ${teamName(selection.teamId)}`);
+    }
+  };
+  /** Aide du bandeau selon l'état du curseur. */
+  const describeLook = (locked) => (locked
+    ? 'Bougez la souris pour regarder autour · Échap rend le curseur.'
+    : 'Cliquez sur le terrain puis bougez la souris, ou glissez au doigt, pour regarder autour.');
+  interaction.on('statechange', refreshPointOfViewButton);
+  pointOfViewButton.addEventListener('click', () => {
+    const selection = interaction.selection;
+    if (!pointOfView.enter(selection)) {
+      hint.flash('Point de vue indisponible pour cette sélection.', 'invalid');
+    }
+  });
+  document.getElementById('point-of-view-exit').addEventListener('click', () => pointOfView.exit());
+  pointOfView.on('change', ({ active, target }) => {
+    pointOfViewBar.hidden = !active;
+    if (active) {
+      document.body.dataset.pointOfView = 'active';
+      pointOfViewTitle.textContent = `${teamName(target.teamId)} · n° ${target.number} · ${postOfNumber(board.getFormation(target.teamId), target.number)}`;
+      pointOfViewHelp.textContent = describeLook(false);
+    } else {
+      delete document.body.dataset.pointOfView;
+      delete document.body.dataset.pointerLocked;
+      hint.flash('Retour au terrain : la tactique est inchangée.', 'info');
+    }
+    refreshPointOfViewButton();
+  });
+  pointOfView.on('lockchange', ({ locked }) => {
+    document.body.dataset.pointerLocked = String(locked);
+    pointOfViewHelp.textContent = describeLook(locked);
+  });
+  // Une session AR ferme le point de vue : la vue appartient alors au téléphone.
+  renderer.xr.addEventListener?.('sessionstart', () => {
+    pointOfView.exit();
+    refreshPointOfViewButton();
+  });
+  renderer.xr.addEventListener?.('sessionend', refreshPointOfViewButton);
+
   // Aide au premier lancement, rouverte par « ? ».
   const onboarding = createOnboarding({
     card: document.getElementById('onboarding'),
@@ -330,8 +392,9 @@ async function init(renderMode) {
       },
       undo: toolbar.undo,
       redo: toolbar.redo,
-      // Échap : confirmation, geste, guide de prise en main, puis panneau de l'espace.
-      cancel: () => toolbar.disarmReset() || cancelDraft() || closeOnboarding(onboarding) || navigation.close(),
+      // Échap : point de vue (le curseur verrouillé est rendu par le navigateur au premier Échap),
+      // confirmation, geste, guide de prise en main, puis panneau de l'espace.
+      cancel: () => pointOfView.exit() || toolbar.disarmReset() || cancelDraft() || closeOnboarding(onboarding) || navigation.close(),
     },
   });
 
@@ -359,11 +422,32 @@ async function init(renderMode) {
 
   // Sauvegarde automatique : la tactique du dernier lancement est rétablie, une fois la scène et
   // les panneaux abonnés au tableau ; elle est enregistrée dans IndexedDB quand la page est masquée.
+  // Un seul magasin IndexedDB : la tactique en cours et les tactiques enregistrées y ont chacune
+  // leur clé.
+  const tacticStore = createTacticStore(readIndexedDb());
   const autosave = await attachTacticAutosave({
     board,
     sequence,
-    store: createTacticStore(readIndexedDb()),
+    store: tacticStore,
     target: document,
+  });
+
+  // Tactiques enregistrées (phase 5) : l'entraîneur nomme la tactique en cours et la garde sur
+  // l'appareil ; l'ouverture est vérifiée contre le tableau, puis passe par une commande annulable.
+  // Export et import en fichier JSON : un fichier importé est vérifié contre le tableau en cours.
+  createSavedTacticsPanel({
+    root: document.getElementById('saved-tactics-panel'),
+    library: createTacticLibrary(tacticStore),
+    capture: () => captureTactic(board, sequence),
+    getReference: () => board.snapshot(),
+    open: (name, tactic) => {
+      if (!isValidTactic(tactic, board.snapshot())) {
+        return false;
+      }
+      history.execute(new LoadSavedTacticCommand({ board, sequence, name, tactic }));
+      return true;
+    },
+    onFeedback: ({ kind, message }) => hint.flash(message, kind),
   });
 
   // Bibliothèque de situations : chargée sans retarder le lancement ; une situation se charge par
@@ -431,6 +515,8 @@ async function init(renderMode) {
     tacticalView,
     markingLayer,
     ...teamMeshes,
+    // Après les pions : le point de vue masque l'instance du joueur regardé et place sa caméra.
+    pointOfView,
   ];
   if (diagnostics) {
     tasks.push(diagnostics);
@@ -459,11 +545,13 @@ async function init(renderMode) {
     animator,
     getArPlacement: () => arState.placement,
     tasks,
+    getViewCamera: () => pointOfView.viewCamera,
   }));
   document.body.classList.add('is-ready');
   return {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
     sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer,
+    pointOfView,
     get diagnostics() { return diagnostics; },
   };
 }

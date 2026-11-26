@@ -219,8 +219,14 @@ function promisify(request) {
 /**
  * Magasin IndexedDB de la tactique en cours. Toutes les erreurs sont absorbées : la lecture rend
  * null, l'écriture rend false. La base s'ouvre à la première utilisation.
+ * Depuis la phase 5, une autre clé que TACTIC_KEY peut être lue et écrite dans le même magasin :
+ * les tactiques enregistrées par l'entraîneur y sont rangées (src/tactic-library.mjs). La lecture
+ * « stricte » laisse passer l'erreur, pour qu'aucune écriture ne suive une lecture échouée.
  * @param {IDBFactory|null|undefined} indexedDB fabrique IndexedDB du navigateur, ou rien
- * @returns {{load: () => Promise<unknown>, save: (data: object) => Promise<boolean>}}
+ * @returns {{
+ *   load: (key?: string, options?: {strict?: boolean}) => Promise<unknown>,
+ *   save: (data: object, key?: string) => Promise<boolean>,
+ * }}
  * @responsable Iyed Rachdi
  * @date 2026-11-25
  * @role Persistance — sauvegarde automatique de la tactique
@@ -247,20 +253,23 @@ export function createTacticStore(indexedDB) {
   };
 
   return {
-    async load() {
+    async load(key = TACTIC_KEY, { strict = false } = {}) {
       try {
         const db = await open();
-        return await promisify(db.transaction(TACTIC_STORE_NAME, 'readonly').objectStore(TACTIC_STORE_NAME).get(TACTIC_KEY)) ?? null;
+        return await promisify(db.transaction(TACTIC_STORE_NAME, 'readonly').objectStore(TACTIC_STORE_NAME).get(key)) ?? null;
       } catch (error) {
+        if (strict) {
+          throw error;
+        }
         console.warn('Tactique enregistrée illisible : démarrage sur la tactique par défaut.', error);
         return null;
       }
     },
-    async save(data) {
+    async save(data, key = TACTIC_KEY) {
       try {
         const db = await open();
         const transaction = db.transaction(TACTIC_STORE_NAME, 'readwrite');
-        transaction.objectStore(TACTIC_STORE_NAME).put(data, TACTIC_KEY);
+        transaction.objectStore(TACTIC_STORE_NAME).put(data, key);
         // Validation immédiate : la page peut être déchargée juste après (rechargement, fermeture).
         transaction.commit?.();
         await new Promise((resolve, reject) => {

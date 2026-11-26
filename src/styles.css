@@ -285,6 +285,21 @@ a.button { text-decoration: none; }
 .team-identity--blue input { box-shadow: inset 4px 0 var(--kit-blue, #7795ff); }
 .team-identity--red input { box-shadow: inset 4px 0 var(--kit-red, #ff968a); }
 .team-identity p { grid-column: 1 / -1; margin: 0; font-size: .8125rem; }
+.saved-tactics__form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; }
+.saved-tactics__form label { display: grid; gap: 3px; font-size: .8125rem; font-weight: 500; }
+.saved-tactics__form input { min-height: 40px; min-width: 0; padding: 6px 8px; font: inherit; color: var(--ink); background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.saved-tactics__list { display: grid; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
+/* Une tactique par carte, en trois rangées : le nom sur une ligne (points de suspension s'il est
+   long), la date, puis les deux boutons côte à côte sur toute la largeur. Le panneau ne fait que
+   250 à 316 px : nom et boutons sur une même rangée ne laissaient au nom qu'une colonne de
+   quelques pixels. */
+.saved-tactics__item { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--raised); }
+.saved-tactics__item strong { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9375rem; }
+.saved-tactics__item .muted { font-size: .8125rem; }
+.saved-tactics__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+.saved-tactics__actions .button { min-width: 0; padding-inline: 10px; }
+.saved-tactics__transfer { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.summary-card .saved-tactics__actions .button, .summary-card .saved-tactics__transfer .button { margin-top: 0; }
 .offside-summary h4 { margin: 0 0 4px; font-size: .875rem; }
 .offside-summary p { margin: 0 0 6px; font-size: .8125rem; line-height: 1.4; }
 .phase-button[aria-pressed="true"] { font-weight: 700; border-style: solid; border-color: var(--team-color); background: var(--surface-pressed); }
@@ -465,6 +480,18 @@ body.is-ready .loader { opacity: 0; pointer-events: none; }
 
 /* Le DOM Overlay garde les mêmes objets. Sortie et repositionnement restent persistants. */
 body[data-xr="active"] #overlay { z-index: 1000; }
+/* Point de vue d'un joueur : la scène en plein écran, seul le bandeau du point de vue reste. */
+.pov-bar { position: fixed; z-index: 20; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(620px, calc(100vw - 24px)); display: flex; align-items: center; gap: 14px; padding: 10px 10px 10px 16px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface-glass); box-shadow: inset 0 1px var(--highlight), var(--shadow-md); }
+.pov-bar[hidden] { display: none; }
+.pov-bar__text { flex: 1; min-width: 0; }
+.pov-bar .eyebrow { margin-bottom: 2px; }
+.pov-bar__title { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; }
+.pov-bar__help { margin: 2px 0 0; color: var(--muted); font-size: .8125rem; line-height: 1.4; }
+.pov-bar .button { flex: none; }
+body[data-point-of-view="active"] #overlay > :not(#point-of-view-bar) { display: none !important; }
+body[data-point-of-view="active"] #scene-container canvas { cursor: grab; touch-action: none; }
+body[data-point-of-view="active"][data-pointer-locked="true"] #scene-container canvas { cursor: none; }
+@media (max-width: 560px) { .pov-bar { flex-direction: column; align-items: stretch; gap: 8px; } .pov-bar .button { width: 100%; } }
 body[data-xr="active"] #scene-container { inset: 0; }
 body[data-xr="active"] .topbar__start, body[data-xr="active"] .connection-status,
 body[data-xr="active"] .onboarding-container, body[data-xr="active"] .view-controls,
