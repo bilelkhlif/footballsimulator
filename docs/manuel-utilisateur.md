@@ -155,6 +155,8 @@ Ouvrez **Animation et séquences**. Le principe est celui d'un dessin animé : v
 4. **« Recommencer »** revient au début ; **0,5×**, **1×** et **2×** règlent la vitesse.
 5. **« Effacer »** vide la séquence ; « Annuler » la rétablit.
 
+**Situations de jeu.** Dans l'espace Animation et séquences, la carte **Situations de jeu** propose des actions toutes prêtes : chaque carte donne le thème, le titre et le principe. **Charger** place les deux équipes, le ballon, les flèches, les marquages et les images clés de la situation ; « Lecture » la joue. Les noms et maillots de vos équipes sont gardés, et le chargement s'annule comme toute action.
+
 La ligne du haut du panneau indique où vous en êtes, par exemple « Lecture : étape 1 sur 2, vitesse 1×. »
 
 <table>

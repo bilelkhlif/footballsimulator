@@ -540,6 +540,74 @@ export class ChangeTeamIdentityCommand extends Command {
 }
 
 /**
+ * Charge une situation de la bibliothèque : formations, phases, places, ballon, flèches,
+ * marquages et images clés d'un coup. Les noms et maillots des équipes restent ceux de
+ * l'entraîneur. Annulable : l'annulation rend le tableau et la séquence d'avant.
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Logique métier — patron Command : bibliothèque de situations
+ */
+export class LoadScenarioCommand extends Command {
+  #board;
+  #sequence;
+  #title;
+  #state;
+  #previous = null;
+
+  /**
+   * @param {object} options
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board
+   * @param {import('./tactical-sequence.mjs').TacticalSequence} options.sequence
+   * @param {string} options.title titre de la situation
+   * @param {{board: object, keyframes: object[]}} options.state état construit par buildScenarioState
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : bibliothèque de situations
+   */
+  constructor({ board, sequence, title, state }) {
+    super();
+    this.#board = board;
+    this.#sequence = sequence;
+    this.#title = title;
+    this.#state = state;
+  }
+
+  /**
+   * @returns {string}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : bibliothèque de situations
+   */
+  get label() {
+    return `Charger la situation « ${this.#title} »`;
+  }
+
+  /**
+   * @returns {boolean}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : bibliothèque de situations
+   */
+  execute() {
+    const current = this.#board.snapshot();
+    this.#previous = { board: current, keyframes: this.#sequence.keyframes };
+    this.#board.restore({ ...this.#state.board, identities: current.identities });
+    this.#sequence.restore(this.#state.keyframes);
+    return true;
+  }
+
+  /**
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : bibliothèque de situations
+   */
+  undo() {
+    this.#board.restore(this.#previous.board);
+    this.#sequence.restore(this.#previous.keyframes);
+  }
+}
+
+/**
  * Réinitialiser le terrain (BF8) : formations de départ, joueurs à leurs places, ballon au centre,
  * flèches effacées. Annulable comme les autres actions.
  * @responsable Bilel Khlif

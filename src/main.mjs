@@ -33,7 +33,11 @@ import { OffsideLayer } from './offside-layer.mjs';
 import { MarkingLayer } from './marking-layer.mjs';
 import { followTeamKits } from './team-kits-view.mjs';
 import { createTeamPanel } from './team-panel.mjs';
-import { ChangeFormationCommand, ChangePhaseCommand, ChangeTeamIdentityCommand, CommandHistory } from './commands.mjs';
+import { buildScenarioState, loadScenarioLibrary } from './scenarios.mjs';
+import { createScenarioPanel } from './scenario-panel.mjs';
+import {
+  ChangeFormationCommand, ChangePhaseCommand, ChangeTeamIdentityCommand, CommandHistory, LoadScenarioCommand,
+} from './commands.mjs';
 import { MOVE_DURATION_MS, TacticalView } from './tactical-view.mjs';
 import { TacticalInteraction } from './tactical-interaction.mjs';
 import { attachKeyboardShortcuts } from './keyboard-shortcuts.mjs';
@@ -360,6 +364,17 @@ async function init(renderMode) {
     sequence,
     store: createTacticStore(readIndexedDb()),
     target: document,
+  });
+
+  // Bibliothèque de situations : chargée sans retarder le lancement ; une situation se charge par
+  // une commande annulable, puis se joue avec la séquence.
+  createScenarioPanel({
+    root: document.getElementById('scenario-panel'),
+    library: loadScenarioLibrary((url) => fetch(url)),
+    load: (scenario) => {
+      history.execute(new LoadScenarioCommand({ board, sequence, title: scenario.title, state: buildScenarioState(scenario) }));
+      hint.flash(`Situation « ${scenario.title} » chargée : « Lecture » pour la jouer.`, 'success');
+    },
   });
 
   // Réticule du hit test : en dehors du terrain, car il se déplace avant la pose.
