@@ -609,6 +609,55 @@ async function testReducedMotion(browser, url) {
 }
 
 /**
+ * Bascule attaque / défense dans la page : le bouton « En possession · 2-3-5 » des Bleus place
+ * l'équipe dans sa disposition en possession, la pastille l'affiche, puis Ctrl+Z la ramène à la base.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Tests de bout en bout — bascule attaque / défense
+ */
+async function testPhaseToggle(browser, url) {
+  const name = 'Formations : bascule en possession (4-3-3 → 2-3-5) par son bouton, puis annulation';
+  const context = await browser.newContext({ ...DESKTOP, reducedMotion: 'reduce' });
+  try {
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    await clickUi(page, '#formations-toggle');
+    const label = await page.textContent('.phase-button[data-team="blue"][data-phase="possession"]');
+    await clickUi(page, '.phase-button[data-team="blue"][data-phase="possession"]');
+    const after = await page.evaluate(async () => {
+      const { computeTeamTargets } = await import('./src/formation-transition.mjs');
+      const app = window.__footballSimulator;
+      const targets = computeTeamTargets(app.board.getFormation('blue'), true, 'possession');
+      const worst = Math.max(...[...targets].map(([number, { x, z }]) => {
+        const p = app.board.getPlayerPosition('blue', number);
+        return Math.hypot(p.x - x, p.z - z);
+      }));
+      return {
+        phase: app.board.getPhase('blue'),
+        worst,
+        chip: document.getElementById('formation-blue')?.textContent ?? '',
+        pressed: document.querySelector('.phase-button[data-team="blue"][data-phase="possession"]').getAttribute('aria-pressed'),
+      };
+    });
+    await page.keyboard.press('Control+z');
+    const undone = await page.evaluate(() => window.__footballSimulator.board.getPhase('blue'));
+    const problems = [];
+    if (!label.includes('2-3-5')) problems.push(`libellé « ${label} »`);
+    if (after.phase !== 'possession' || after.worst > 1e-9) problems.push(`phase ${after.phase}, écart ${after.worst}`);
+    if (!after.chip.includes('2-3-5')) problems.push(`pastille « ${after.chip} »`);
+    if (after.pressed !== 'true') problems.push('bouton non marqué');
+    if (undone !== 'base') problems.push(`après Ctrl+Z : ${undone}`);
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || `bouton « ${label} », pastille « ${after.chip} »`);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Sauvegarde automatique : une tactique modifiée (formation par son bouton, joueur déplacé, image
  * clé) est enregistrée dans le vrai IndexedDB de Chrome peu après le changement, puis rétablie
  * après un vrai rechargement du navigateur, avec un message ; « Réinitialiser » repart toujours des formations de départ.
@@ -2152,6 +2201,7 @@ async function main() {
     await testFormationButtons(browser, root.url);
     await testReducedMotion(browser, root.url);
     await testTacticAutosave(browser, root.url);
+    await testPhaseToggle(browser, root.url);
     await testTacticalBoard(browser, root.url);
     await testTacticalMobile(browser, root.url);
     await testArrowRules(browser, root.url);

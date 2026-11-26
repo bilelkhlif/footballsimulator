@@ -28,7 +28,7 @@ import { DEFAULT_FORMATIONS, TEAMS } from './config.mjs';
 import { TacticsBoard } from './tactics-board.mjs';
 import { FormationAnimator, TRANSITION_DURATION_MS } from './formation-transition.mjs';
 import { createFormationPanel } from './formation-panel.mjs';
-import { ChangeFormationCommand, CommandHistory } from './commands.mjs';
+import { ChangeFormationCommand, ChangePhaseCommand, CommandHistory } from './commands.mjs';
 import { MOVE_DURATION_MS, TacticalView } from './tactical-view.mjs';
 import { TacticalInteraction } from './tactical-interaction.mjs';
 import { attachKeyboardShortcuts } from './keyboard-shortcuts.mjs';
@@ -208,6 +208,12 @@ async function init(renderMode) {
     choose: (teamId, name) => {
       if (history.execute(new ChangeFormationCommand({ board, teamId, formation: name }))) {
         hint.flash(`${TEAMS[teamId].label} : formation ${name} appliquée.`, 'success');
+      }
+    },
+    choosePhase: (teamId, phase) => {
+      const command = new ChangePhaseCommand({ board, teamId, phase });
+      if (history.execute(command)) {
+        hint.flash(`${TEAMS[teamId].label} : ${command.label.split(' pour ')[0].toLowerCase()}.`, 'success');
       }
     },
   });

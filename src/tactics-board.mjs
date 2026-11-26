@@ -21,7 +21,7 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { EventEmitter } from './events.mjs';
-import { getFormation } from './formations.mjs';
+import { getFormation, PHASES } from './formations.mjs';
 import { computeTeamTargets } from './formation-transition.mjs';
 import { BALL_RADIUS, BOARD_LENGTH, BOARD_WIDTH, PITCH_LENGTH, PITCH_WIDTH, PLAYER_SIZE, TEAMS } from './config.mjs';
 
@@ -170,6 +170,9 @@ export class TacticsBoard extends EventEmitter {
   /** @type {Map<string, import('./formations.mjs').FormationStrategy>} */
   #formations = new Map();
 
+  /** @type {Map<string, string>} phase de jeu de chaque équipe : base, possession ou defense (PHASES) */
+  #phases = new Map();
+
   /** @type {Map<string, {x: number, z: number}>} place de chaque joueur, par clé équipe:numéro */
   #players = new Map();
 
@@ -197,6 +200,7 @@ export class TacticsBoard extends EventEmitter {
     this.#teams = teams;
     for (const [teamId, name] of Object.entries(initialFormations)) {
       this.#formations.set(teamId, getFormation(name));
+      this.#phases.set(teamId, PHASES.BASE);
       this.#placeTeamInFormation(teamId);
     }
     this.#initialState = this.snapshot();
@@ -230,8 +234,8 @@ export class TacticsBoard extends EventEmitter {
 
   /**
    * Change la formation d'une équipe et prévient les observateurs. Les 11 joueurs prennent les
-   * places de la nouvelle formation, même ceux que l'utilisateur avait déplacés. Sans effet si la
-   * formation demandée est déjà en place.
+   * places de la nouvelle formation, dans la phase de jeu en cours, même ceux que l'utilisateur
+   * avait déplacés. Sans effet si la formation demandée est déjà en place.
    * @param {string} teamId
    * @param {string} name nom d'une formation de FORMATIONS, par exemple « 4-4-2 »
    * @returns {import('./formations.mjs').FormationStrategy} la formation précédente
@@ -246,6 +250,44 @@ export class TacticsBoard extends EventEmitter {
       this.#formations.set(teamId, formation);
       this.#placeTeamInFormation(teamId);
       this.emit('formationchange', { teamId, formation, previous });
+      this.emit('change', { type: 'formation', teamId });
+    }
+    return previous;
+  }
+
+  /**
+   * Phase de jeu d'une équipe : base, en possession ou hors possession.
+   * @param {string} teamId
+   * @returns {string} une valeur de PHASES
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — bascule attaque / défense
+   */
+  getPhase(teamId) {
+    this.getFormation(teamId);
+    return this.#phases.get(teamId);
+  }
+
+  /**
+   * Fait basculer une équipe dans une phase de jeu : ses 11 joueurs prennent les places de la
+   * disposition de cette phase (le 4-3-3 en possession devient un 2-3-5). Sans effet si l'équipe y
+   * est déjà. Comme un changement de formation, la bascule replace aussi les joueurs déplacés.
+   * @param {string} teamId
+   * @param {string} phase une valeur de PHASES
+   * @returns {string} la phase précédente
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — bascule attaque / défense
+   */
+  setPhase(teamId, phase) {
+    const previous = this.getPhase(teamId);
+    if (!Object.values(PHASES).includes(phase)) {
+      throw new RangeError(`Phase de jeu inconnue : ${phase}`);
+    }
+    if (phase !== previous) {
+      this.#phases.set(teamId, phase);
+      this.#placeTeamInFormation(teamId);
+      this.emit('phasechange', { teamId, phase, previous });
       this.emit('change', { type: 'formation', teamId });
     }
     return previous;
@@ -391,11 +433,12 @@ export class TacticsBoard extends EventEmitter {
   }
 
   /**
-   * Instantané d'une équipe : sa formation et la place de chacun de ses joueurs. Il sert à annuler
-   * un changement de formation, y compris pendant la transition animée d'un changement précédent :
-   * il contient les places voulues, pas les positions intermédiaires de l'animation.
+   * Instantané d'une équipe : sa formation, sa phase de jeu et la place de chacun de ses joueurs.
+   * Il sert à annuler un changement de formation ou une bascule, y compris pendant la transition
+   * animée d'un changement précédent : il contient les places voulues, pas les positions
+   * intermédiaires de l'animation.
    * @param {string} teamId
-   * @returns {{teamId: string, formation: string, players: Array<[number, {x: number, z: number}]>}}
+   * @returns {{teamId: string, formation: string, phase: string, players: Array<[number, {x: number, z: number}]>}}
    * @responsable Bilel Khlif
    * @date 2026-11-15
    * @role Logique métier — instantanés pour l'annulation (patron Command)
@@ -403,18 +446,19 @@ export class TacticsBoard extends EventEmitter {
   captureTeam(teamId) {
     const formation = this.getFormation(teamId);
     const players = formation.computePositions().map(({ number }) => [number, this.getPlayerPosition(teamId, number)]);
-    return { teamId, formation: formation.name, players };
+    return { teamId, formation: formation.name, phase: this.getPhase(teamId), players };
   }
 
   /**
-   * Rétablit une équipe telle que captureTeam l'a décrite.
-   * @param {{teamId: string, formation: string, players: Array<[number, {x: number, z: number}]>}} snapshot
+   * Rétablit une équipe telle que captureTeam l'a décrite ; sans phase, elle revient à la base.
+   * @param {{teamId: string, formation: string, phase?: string, players: Array<[number, {x: number, z: number}]>}} snapshot
    * @responsable Bilel Khlif
    * @date 2026-11-15
    * @role Logique métier — instantanés pour l'annulation (patron Command)
    */
-  restoreTeam({ teamId, formation, players }) {
+  restoreTeam({ teamId, formation, phase = PHASES.BASE, players }) {
     this.#restoreFormation(teamId, formation);
+    this.#restorePhase(teamId, phase);
     for (const [number, position] of players) {
       this.#requirePlayer(teamId, number);
       this.#players.set(playerKey(teamId, number), copyPosition(position));
@@ -424,8 +468,8 @@ export class TacticsBoard extends EventEmitter {
 
   /**
    * Instantané complet du tableau, sous forme de données simples.
-   * @returns {{formations: Record<string, string>, players: Record<string, {x: number, z: number}>,
-   *   ball: {x: number, z: number}, arrows: Array<object>}}
+   * @returns {{formations: Record<string, string>, phases: Record<string, string>,
+   *   players: Record<string, {x: number, z: number}>, ball: {x: number, z: number}, arrows: Array<object>}}
    * @responsable Bilel Khlif
    * @date 2026-11-15
    * @role Logique métier — instantanés pour l'annulation (patron Command)
@@ -433,6 +477,7 @@ export class TacticsBoard extends EventEmitter {
   snapshot() {
     return {
       formations: Object.fromEntries([...this.#formations].map(([teamId, formation]) => [teamId, formation.name])),
+      phases: Object.fromEntries(this.#phases),
       players: Object.fromEntries([...this.#players].map(([key, position]) => [key, copyPosition(position)])),
       ball: this.getBallPosition(),
       arrows: this.getArrows(),
@@ -440,7 +485,8 @@ export class TacticsBoard extends EventEmitter {
   }
 
   /**
-   * Rétablit un instantané complet : formations, joueurs, ballon et flèches.
+   * Rétablit un instantané complet : formations, phases de jeu, joueurs, ballon et flèches. Un
+   * instantané sans phases (enregistré avant leur ajout) remet chaque équipe à la base.
    * @param {ReturnType<TacticsBoard['snapshot']>} snapshot
    * @responsable Bilel Khlif
    * @date 2026-11-15
@@ -449,6 +495,7 @@ export class TacticsBoard extends EventEmitter {
   restore(snapshot) {
     for (const [teamId, name] of Object.entries(snapshot.formations)) {
       this.#restoreFormation(teamId, name);
+      this.#restorePhase(teamId, snapshot.phases?.[teamId] ?? PHASES.BASE);
     }
     for (const [key, position] of Object.entries(snapshot.players)) {
       if (!this.#players.has(key)) {
@@ -491,7 +538,7 @@ export class TacticsBoard extends EventEmitter {
   }
 
   /**
-   * Place tous les joueurs d'une équipe aux places de sa formation.
+   * Place tous les joueurs d'une équipe aux places de sa formation, dans sa phase de jeu.
    * @param {string} teamId
    * @responsable Bilel Khlif
    * @date 2026-11-15
@@ -499,7 +546,7 @@ export class TacticsBoard extends EventEmitter {
    */
   #placeTeamInFormation(teamId) {
     const attacksPositiveX = this.#teams[teamId]?.attacksPositiveX ?? true;
-    for (const [number, { x, z }] of computeTeamTargets(this.getFormation(teamId), attacksPositiveX)) {
+    for (const [number, { x, z }] of computeTeamTargets(this.getFormation(teamId), attacksPositiveX, this.#phases.get(teamId))) {
       this.#players.set(playerKey(teamId, number), { x, z });
     }
   }
@@ -519,6 +566,26 @@ export class TacticsBoard extends EventEmitter {
     if (formation !== previous) {
       this.#formations.set(teamId, formation);
       this.emit('formationchange', { teamId, formation, previous });
+    }
+  }
+
+  /**
+   * Rétablit la phase de jeu d'une équipe, sans toucher aux places, et prévient les observateurs si
+   * elle change (boutons de l'interface).
+   * @param {string} teamId
+   * @param {string} phase
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — bascule attaque / défense
+   */
+  #restorePhase(teamId, phase) {
+    if (!Object.values(PHASES).includes(phase)) {
+      throw new RangeError(`Phase de jeu inconnue : ${phase}`);
+    }
+    const previous = this.#phases.get(teamId);
+    if (phase !== previous) {
+      this.#phases.set(teamId, phase);
+      this.emit('phasechange', { teamId, phase, previous });
     }
   }
 

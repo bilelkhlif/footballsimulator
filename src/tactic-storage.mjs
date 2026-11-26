@@ -17,7 +17,7 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { FORMATIONS } from './formations.mjs';
+import { FORMATIONS, PHASES } from './formations.mjs';
 import { MAX_KEYFRAMES } from './tactical-sequence.mjs';
 import {
   ARROW_KINDS, BALL_MARGIN, isOnBoard, isOnPitch, MIN_ARROW_LENGTH, PLAYER_MARGIN,
@@ -111,11 +111,17 @@ export function isValidTactic(data, reference) {
   if (!isRecord(data) || data.version !== TACTIC_FORMAT_VERSION || !isRecord(data.board)) {
     return false;
   }
-  const { formations, players, ball, arrows } = data.board;
+  const { formations, phases, players, ball, arrows } = data.board;
   const teamIds = Object.keys(reference.formations);
   const playerKeys = Object.keys(reference.players);
   if (!isRecord(formations) || !hasExactKeys(formations, teamIds)
     || !teamIds.every((teamId) => Object.hasOwn(FORMATIONS, formations[teamId]))) {
+    return false;
+  }
+  // Phases de jeu : absentes d'une tactique enregistrée avant leur ajout (chaque équipe reprend
+  // alors la base) ; présentes, une par équipe, et connues.
+  if (phases !== undefined && (!isRecord(phases) || !hasExactKeys(phases, teamIds)
+    || !teamIds.every((teamId) => Object.values(PHASES).includes(phases[teamId])))) {
     return false;
   }
   if (!arePlayersValid(players, playerKeys) || !isOnBoard(ball, BALL_MARGIN)) {

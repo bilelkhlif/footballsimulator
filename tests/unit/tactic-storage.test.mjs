@@ -157,6 +157,8 @@ test('une donnée invalide, ancienne ou étrangère est refusée et laisse le ta
     'flèche hors du terrain': variant((data) => { data.board.arrows[0].to = { x: 2, z: 0 }; }),
     'flèche trop courte': variant((data) => { data.board.arrows[0].to = { ...data.board.arrows[0].from }; }),
     'identifiants de flèche en double': variant((data) => { data.board.arrows.push({ ...data.board.arrows[0], to: { x: 0, z: 0 } }); }),
+    'phase inconnue': variant((data) => { data.board.phases.blue = 'pressing'; }),
+    "phase d'une équipe manquante": variant((data) => { delete data.board.phases.red; }),
     'images clés absentes': variant((data) => { delete data.keyframes; }),
     'trop d\'images clés': variant((data) => { data.keyframes = Array(MAX_KEYFRAMES + 1).fill(data.keyframes[0]); }),
     'image clé incomplète': variant((data) => { delete data.keyframes[0].players['blue:1']; }),

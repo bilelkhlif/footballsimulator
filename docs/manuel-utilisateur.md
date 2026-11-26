@@ -84,6 +84,8 @@ Tournez autour de la table : vous voyez la tactique sous tous les angles, et le 
 
 Ouvrez **Équipes et formations**, ou touchez la pastille d'une équipe en haut de l'écran. Huit formations sont proposées par équipe : 4-4-2, 4-3-3, 3-5-2, 4-2-3-1, 4-1-4-1 (bloc compact avec une sentinelle devant la défense), 3-4-3 (largeur donnée par les pistons), 5-3-2 (bloc bas, deux attaquants pour contre-attaquer) et 4-4-2 en losange (supériorité dans l'axe). Les joueurs rejoignent leurs nouvelles places en glissant. Le changement est confirmé dans l'aide du geste et reste annulable. La formation est rappelée sur la pastille de l'équipe. Dépliez « Positions des 22 joueurs » pour lire leurs coordonnées actuelles. Chaque joueur y est nommé par son numéro et son poste dans la formation en place, avec les abréviations du tableau noir : GB (gardien), DD, DC, DG (défenseurs), PD, PG (pistons), MDC, MC, MOC (milieux axiaux), MD, MG (milieux excentrés), AD, AG (ailiers) et AT (attaquant). Le joueur sélectionné est présenté de la même façon, par exemple « Bleus · n° 6 · MDC ».
 
+Sous les formations, trois boutons par équipe montrent la même équipe dans les trois phases du jeu : **Base** (placement du coup d'envoi), **En possession** et **Hors possession**. Chaque bouton indique la disposition obtenue : un 4-3-3 devient un 2-3-5 avec le ballon (latéraux rentrés à côté de la sentinelle, relayeurs dans les demi-espaces) et un 4-5-1 sans le ballon (ailiers redescendus). La pastille de l'équipe l'affiche, par exemple « 4-3-3 · 2-3-5 ». La bascule est annulable ; changer de formation garde la phase choisie.
+
 ![Le panneau des formations sur le terrain posé : Bleus en 4-4-2, Rouges en 4-3-3](images/sprint4-ar-formations.jpg)
 
 ## 6. Déplacer un joueur ou le ballon

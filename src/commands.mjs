@@ -15,6 +15,7 @@
  */
 import { EventEmitter } from './events.mjs';
 import { TEAMS } from './config.mjs';
+import { PHASE_LABELS } from './formations.mjs';
 
 /** Nombre maximal d'actions gardées pour l'annulation. */
 export const HISTORY_LIMIT = 100;
@@ -330,6 +331,72 @@ export class ChangeFormationCommand extends Command {
    * @responsable Bilel Khlif
    * @date 2026-11-15
    * @role Logique métier — patron Command : changement de formation
+   */
+  undo() {
+    this.#board.restoreTeam(this.#snapshot);
+  }
+}
+
+/**
+ * Bascule d'une équipe entre la base, la disposition en possession et celle hors possession
+ * (le 4-3-3 en 2-3-5 ou en 4-5-1). Annulable : l'annulation rend la phase précédente et les
+ * places exactes des joueurs, y compris ceux déplacés à la main.
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Logique métier — patron Command : bascule attaque / défense
+ */
+export class ChangePhaseCommand extends Command {
+  #board;
+  #teamId;
+  #phase;
+  #snapshot = null;
+
+  /**
+   * @param {object} options
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board
+   * @param {string} options.teamId
+   * @param {string} options.phase une valeur de PHASES
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : bascule attaque / défense
+   */
+  constructor({ board, teamId, phase }) {
+    super();
+    this.#board = board;
+    this.#teamId = teamId;
+    this.#phase = phase;
+  }
+
+  /**
+   * @returns {string}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : bascule attaque / défense
+   */
+  get label() {
+    const formation = this.#board.getFormation(this.#teamId);
+    return `${PHASE_LABELS[this.#phase]} (${formation.shapeName(this.#phase)}) pour les ${teamLabel(this.#teamId)}`;
+  }
+
+  /**
+   * @returns {boolean} faux si l'équipe est déjà dans cette phase
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : bascule attaque / défense
+   */
+  execute() {
+    if (this.#board.getPhase(this.#teamId) === this.#phase) {
+      return false;
+    }
+    this.#snapshot = this.#board.captureTeam(this.#teamId);
+    this.#board.setPhase(this.#teamId, this.#phase);
+    return true;
+  }
+
+  /**
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : bascule attaque / défense
    */
   undo() {
     this.#board.restoreTeam(this.#snapshot);
