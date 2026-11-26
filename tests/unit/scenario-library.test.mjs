@@ -132,3 +132,27 @@ test('dédoublement et centre en retrait : le latéral passe à l\'extérieur, c
   assert.deepEqual(lateRun.to, cross.to);
   assert.equal(shot.kind, 'shot');
 });
+
+test('corner offensif contre une défense en zone : trois cibles, trois courses, zone sans marquage, couverture', () => {
+  const { data } = load('corner-offensif-defense-en-zone');
+  const [ballX, ballZ] = data.ball;
+  assert.ok(Math.abs(52.5 - ballX) < 1 && Math.abs(34 - ballZ) < 1, 'ballon au point de corner droit');
+  const crosses = data.arrows.filter((a) => a.kind === 'cross').map((a) => a.to);
+  const runs = data.arrows.filter((a) => a.kind === 'run').map((a) => a.to);
+  const [nearPost, farPost, spot] = crosses;
+  // Premier poteau : côté du corner (z > 0), dans la surface de but ; second poteau : côté opposé.
+  assert.ok(nearPost[1] > 0 && 52.5 - nearPost[0] <= 5.5 && nearPost[1] <= 9.16, 'premier poteau');
+  assert.ok(farPost[1] < 0 && 52.5 - farPost[0] <= 5.5 && farPost[1] >= -9.16, 'second poteau');
+  assert.ok(Math.abs(52.5 - spot[0] - 11) <= 1 && Math.abs(spot[1]) <= 1, 'point de penalty, à 11 m');
+  assert.deepEqual(runs, crosses, 'une course lancée vers chaque cible');
+  // Défense en zone : aucun marquage ; trois Rouges alignés dans la surface de but, un au premier
+  // poteau, deux au point de penalty.
+  assert.equal(data.markings, undefined);
+  const red = Object.entries(data.players).filter(([key]) => key.startsWith('red:') && key !== 'red:1').map(([, p]) => p);
+  const sixYard = red.filter(([x, z]) => 52.5 - x <= 5.5 && Math.abs(z) <= 9.16);
+  assert.ok(sixYard.length >= 4, `${sixYard.length} Rouges dans la surface de but (ligne de trois et premier poteau)`);
+  assert.ok(red.filter(([x, z]) => Math.abs(52.5 - x - 11) <= 1.5 && Math.abs(z) <= 5).length >= 2, 'deux Rouges au point de penalty');
+  // Couverture de la contre-attaque : trois Bleus restent à moins de 10 m de la ligne médiane.
+  const rest = Object.entries(data.players).filter(([key, [x]]) => key.startsWith('blue:') && key !== 'blue:1' && x <= 10);
+  assert.equal(rest.length, 3);
+});
