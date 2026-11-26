@@ -1,4 +1,6 @@
 {
   "version": 1,
-  "scenarios": []
+  "scenarios": [
+    "contre-attaque-trois-passes.json"
+  ]
 }
