@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "verifiedAt": "2026-11-25",
+  "verifiedAt": "2026-11-26",
   "matches": {
     "bresil-afrique-du-sud-2016": {
       "title": "Brésil–Afrique du Sud, Jeux olympiques de Rio, 4 août 2016 : coup franc de Neymar",
@@ -10,7 +10,7 @@
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Neymar_takes_a_free_kick_-_BRA_v._RSA,_Rio_2016.ogv",
       "changes": "Vidéo entière (26,1 s) ; redimensionnée en 1280 × 720, H.264, 30 images/s, sans audio. Vidéo adaptée sous CC BY-SA 4.0.",
       "spdx": "CC-BY-SA-4.0",
-      "reviewedSource": "Déclaration de création personnelle (modèle « own ») et licence de l'auteur (modèle « self », CC BY-SA 4.0) relues sur la page Wikimedia Commons et par son API le 25 novembre 2026 ; aucune demande de suppression ni revue de licence en cours.",
+      "reviewedSource": "Déclaration de création personnelle (modèle « own ») et licence de l'auteur (modèle « self », CC BY-SA 4.0) relues sur la page Wikimedia Commons et par son API le 26 novembre 2026 ; aucune demande de suppression ni revue de licence en cours.",
       "files": {
         "video.mp4": "4cec9258b74ddfd12f17964b8d779007b441c96851e369092f612de1fc7379d9",
         "poster.jpg": "ef27efa2e697d319b4de03d39985c3804dd86f2d4680cbd113a2a198a86547fe",
@@ -25,7 +25,7 @@
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Match_de_football_France-Allemagne_-_16_octobre_2018_-_Penalty_d%27Antoine_Griezmann.ogv",
       "changes": "Extrait de 2 à 28 s ; redimensionné en 1280 × 720, H.264, 25 images/s, sans audio. Vidéo adaptée sous CC BY-SA 4.0.",
       "spdx": "CC-BY-SA-4.0",
-      "reviewedSource": "Déclaration de création personnelle (modèle « own ») et licence de l'auteur (modèle « self », CC BY-SA 4.0) relues sur la page Wikimedia Commons et par son API le 25 novembre 2026 ; aucune demande de suppression ni revue de licence en cours.",
+      "reviewedSource": "Déclaration de création personnelle (modèle « own ») et licence de l'auteur (modèle « self », CC BY-SA 4.0) relues sur la page Wikimedia Commons et par son API le 26 novembre 2026 ; aucune demande de suppression ni revue de licence en cours.",
       "files": {
         "video.mp4": "777a9914fee5e0c3cd42239032c0d4d4157968d4f859297ae88de689a6bdf5d8",
         "poster.jpg": "e3783e87b52d3c820296efc0f4897181725d12d232e82d1aab5962a48c1a1f54",
@@ -40,11 +40,56 @@
       "sourceUrl": "https://commons.wikimedia.org/wiki/File:Samsunspor-Alt%C4%B1nordu_ma%C3%A7%C4%B1_(24.3.23)_penalt%C4%B1_gol%C3%BC.webm",
       "changes": "Extrait de 13,0 à 42,8 s ; redimensionné en 1280 × 720, H.264, 30 images/s, sans audio. Vidéo adaptée sous CC BY-SA 4.0.",
       "spdx": "CC-BY-SA-4.0",
-      "reviewedSource": "Déclaration de création personnelle (modèle « own ») et licence de l'auteur (modèle « self », CC BY-SA 4.0) relues sur la page Wikimedia Commons et par son API le 25 novembre 2026 ; aucune demande de suppression ni revue de licence en cours.",
+      "reviewedSource": "Déclaration de création personnelle (modèle « own ») et licence de l'auteur (modèle « self », CC BY-SA 4.0) relues sur la page Wikimedia Commons et par son API le 26 novembre 2026 ; aucune demande de suppression ni revue de licence en cours.",
       "files": {
         "video.mp4": "d0deee315c00843d58106be27eafb3e22d9448f4b80f300234798262d991baf3",
         "poster.jpg": "1c0b6b669bd169aafa3295ebc6dc3ef50122df7f3945257e82482784300a2151",
         "thumbnail.jpg": "1bc22bd054871a0824a59f8eb8cdf17069a0316a58f25d4971902083b176fc41"
+      }
+    },
+    "samsunspor-fenerbahce-2025": {
+      "title": "Samsunspor–Fenerbahçe, 5 octobre 2025 : coup franc de Samsunspor (50e minute)",
+      "author": "𐰇𐱅𐰚𐰤",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Samsunspor-Fenerbah%C3%A7e_SK_ma%C3%A7%C4%B1_(5.10.25)_dk50.webm",
+      "changes": "Vidéo entière (22,7 s) ; redimensionnée en 1280 × 720, H.264, 30 images/s, sans audio. Vidéo adaptée sous CC BY-SA 4.0.",
+      "spdx": "CC-BY-SA-4.0",
+      "reviewedSource": "Déclaration de création personnelle (modèle « own ») et licence de l'auteur (modèle « self », CC BY-SA 4.0) relues sur la page Wikimedia Commons et par son API le 26 novembre 2026 ; aucune demande de suppression ni revue de licence en cours.",
+      "files": {
+        "video.mp4": "a1ae18fe8d339ed6dcbbb5945bd9655cd219b92e49073421671ec1df225b4579",
+        "poster.jpg": "99ee24c72b43fc4df7b65189127a8298c6b8a3ebba688b5091e1643a6776dbd1",
+        "thumbnail.jpg": "0afed3feb9a699fa847c57e7d15f0a7bafde65098239a38f4c22aee162b24017"
+      }
+    },
+    "samsunspor-rizespor-2024": {
+      "title": "Samsunspor–Çaykur Rizespor, 23 février 2024 : penalty d'Olivier Ntcham (troisième but du match)",
+      "author": "𐰇𐱅𐰚𐰤",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Samsunspor-%C3%87aykur_Rizespor_ma%C3%A7%C4%B1_(23.2.24)_%C3%BC%C3%A7%C3%BCnc%C3%BC_gol.webm",
+      "changes": "Extrait de 0 à 19,5 s ; redimensionné en 1280 × 720, H.264, 24 images/s, sans audio. Vidéo adaptée sous CC BY-SA 4.0.",
+      "spdx": "CC-BY-SA-4.0",
+      "reviewedSource": "Déclaration de création personnelle (modèle « own ») et licence de l'auteur (modèle « self », CC BY-SA 4.0) relues sur la page Wikimedia Commons et par son API le 26 novembre 2026 ; aucune demande de suppression ni revue de licence en cours.",
+      "files": {
+        "video.mp4": "fc4dd5d3c1fcffdb0c22c336bd73e3d0b867290bff3a3a1a4936a6e8320f81b8",
+        "poster.jpg": "f71fbf74f201cc09b9622b4e02624fd8455473c6e53c5183004df4d04a3afd1b",
+        "thumbnail.jpg": "92c469ad8d0bcbfcc998b937f36798572869dde1fe30e0fb009201f8263edc72"
+      }
+    },
+    "samsunspor-trabzonspor-2025": {
+      "title": "Samsunspor–Trabzonspor, 4 janvier 2025 : deuxième but de Samsunspor, sur corner",
+      "author": "𐰇𐱅𐰚𐰤",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Samsunspor-Trabzonspor_ma%C3%A7%C4%B1_(4.1.25)_ikinci_gol.webm",
+      "changes": "Vidéo entière (15,3 s) ; redimensionnée en 1280 × 720, H.264, 30 images/s, sans audio. Vidéo adaptée sous CC BY-SA 4.0.",
+      "spdx": "CC-BY-SA-4.0",
+      "reviewedSource": "Déclaration de création personnelle (modèle « own ») et licence de l'auteur (modèle « self », CC BY-SA 4.0) relues sur la page Wikimedia Commons et par son API le 26 novembre 2026 ; aucune demande de suppression ni revue de licence en cours.",
+      "files": {
+        "video.mp4": "d993021f1c0e5afd84943f97e9e8f622e7a0d2bcd705d21d3a2ecc51b45eb8ae",
+        "poster.jpg": "055509ac41b2363e2277875abaf717166edd429a4fb0e647e6606fd49f45b1ec",
+        "thumbnail.jpg": "97ef6d3d21cc39df7992e84854f9c9ffbb3304fe29c60996a7fc6c2054d9097c"
       }
     }
   }

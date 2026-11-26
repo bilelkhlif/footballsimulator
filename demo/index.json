@@ -8,7 +8,7 @@
    "path": "matches/samsunspor-altinordu-2023/",
    "kind": "analysis",
    "duration": 29.8,
-   "description": "Penalty filmé du haut de la tribune, vue large sur la surface : calibration automatique stabilisée et contrôlée visuellement. La démonstration la plus fiable du projet.",
+   "description": "Penalty filmé du haut de la tribune, vue large sur la surface : seule calibration qui passe le contrôle visuel, positions 3D affichées. Équipes fausses : arbitres en cyan contre tous les joueurs.",
    "category": "Vue large",
    "credit": "𐰇𐱅𐰚𐰤 · CC BY-SA 4.0 · Wikimedia Commons",
    "order": 0,
@@ -16,8 +16,14 @@
     "verdict": "approximate",
     "note": "Lignes projetées proches des lignes réelles sur six images contrôlées (écart estimé de 1 à 3 m) ; aucune vérité terrain mesurée."
    },
+   "teamCheck": {
+    "verdict": "wrong",
+    "note": "Planche d'une vignette par trajectoire suivie au moins 8 images : joueurs blancs et rayés noir et rouge réunis dans un seul groupe (70 trajectoires) ; l'autre réunit neuf trajectoires d'arbitres en cyan et un joueur. Limite documentée dans docs/analyse-incrementale.md."
+   },
    "thumbnail": "matches/samsunspor-altinordu-2023/thumbnail.jpg",
    "quality": {
+    "knownTeamShare": 0.991,
+    "teamMajorityShare": 0.889,
     "playersPerFrame": 17.03,
     "ballShare": 0.794,
     "calibratedShare": 1.0,
@@ -28,21 +34,120 @@
    }
   },
   {
+   "id": "samsunspor-trabzonspor-2025",
+   "title": "Samsunspor–Trabzonspor 2025 — corner",
+   "path": "matches/samsunspor-trabzonspor-2025/",
+   "kind": "analysis",
+   "duration": 15.3,
+   "description": "Corner de Samsunspor (rouge et blanc) contre Trabzonspor (bleu ciel), jusqu'au but : deux équipes nettement séparées sur la vidéo. Calibration fausse sur cette vue : positions 3D masquées.",
+   "category": "Corner",
+   "credit": "𐰇𐱅𐰚𐰤 · CC BY-SA 4.0 · Wikimedia Commons",
+   "order": 1,
+   "calibrationCheck": {
+    "verdict": "rejected",
+    "note": "filmé en biais, le modèle de points clés place la surface de réparation et le rond central loin des lignes réelles ; la mesure est souvent écartée par le filtre."
+   },
+   "teamCheck": {
+    "verdict": "partial",
+    "note": "Planche d'une vignette par trajectoire suivie au moins 8 images : 73 justes, 3 erreurs (gardien en vert sur deux trajectoires et drapeau de corner rangés avec les rouge et blanc), 3 trajectoires qui passent d'un joueur à l'autre dans les duels, 6 sans équipe."
+   },
+   "thumbnail": "matches/samsunspor-trabzonspor-2025/thumbnail.jpg",
+   "quality": {
+    "knownTeamShare": 0.93,
+    "teamMajorityShare": 0.615,
+    "playersPerFrame": 12.73,
+    "ballShare": 0.691,
+    "calibratedShare": 0.596,
+    "medianTrackSeconds": 0.9,
+    "uncertainIdentitySeconds": 0.73,
+    "implausibleSpeedShare": 0.335,
+    "cuts": 0
+   }
+  },
+  {
+   "id": "samsunspor-rizespor-2024",
+   "title": "Samsunspor–Rizespor 2024 — penalty",
+   "path": "matches/samsunspor-rizespor-2024/",
+   "kind": "analysis",
+   "duration": 19.5,
+   "description": "Penalty d'Olivier Ntcham vu du haut de la tribune : Rizespor en bleu, Samsunspor en rouge et blanc, gardiens et stadiers écartés des équipes. Calibration fausse sur cette vue : positions 3D masquées.",
+   "category": "Penalty",
+   "credit": "𐰇𐱅𐰚𐰤 · CC BY-SA 4.0 · Wikimedia Commons",
+   "order": 2,
+   "calibrationCheck": {
+    "verdict": "rejected",
+    "note": "vue du haut de la tribune : le modèle de points clés prend la surface de réparation pour le rond central et la ligne médiane."
+   },
+   "teamCheck": {
+    "verdict": "partial",
+    "note": "Planche d'une vignette par trajectoire suivie au moins 8 images : 28 justes, 1 erreur (l'arbitre en jaune avec les rouge et blanc), 1 trajectoire qui passe d'un joueur à l'autre, 5 sans équipe : deux gardiens et trois stadiers écartés par le groupe « autres »."
+   },
+   "thumbnail": "matches/samsunspor-rizespor-2024/thumbnail.jpg",
+   "quality": {
+    "knownTeamShare": 0.942,
+    "teamMajorityShare": 0.567,
+    "playersPerFrame": 15.29,
+    "ballShare": 0.662,
+    "calibratedShare": 0.991,
+    "medianTrackSeconds": 6.25,
+    "uncertainIdentitySeconds": 0.33,
+    "implausibleSpeedShare": 0.063,
+    "cuts": 0
+   }
+  },
+  {
+   "id": "samsunspor-fenerbahce-2025",
+   "title": "Samsunspor–Fenerbahçe 2025 — coup franc",
+   "path": "matches/samsunspor-fenerbahce-2025/",
+   "kind": "analysis",
+   "duration": 22.7,
+   "description": "Coup franc de Samsunspor (rouge et blanc) face au mur de Fenerbahçe (jaune), filmé de la tribune basse : équipes bien séparées, quelques trajectoires mêlées dans le mur. Calibration fausse : positions 3D masquées.",
+   "category": "Coup franc",
+   "credit": "𐰇𐱅𐰚𐰤 · CC BY-SA 4.0 · Wikimedia Commons",
+   "order": 3,
+   "calibrationCheck": {
+    "verdict": "rejected",
+    "note": "vue basse et rasante : les lignes projetées par le modèle de points clés ne suivent pas les lignes réelles du terrain."
+   },
+   "teamCheck": {
+    "verdict": "partial",
+    "note": "Planche d'une vignette par trajectoire suivie au moins 8 images : 53 justes, 3 erreurs (gardien adverse rangé avec les rouge et blanc, arbitre avec les jaunes), 4 trajectoires mêlées dans le mur, 6 sans équipe."
+   },
+   "thumbnail": "matches/samsunspor-fenerbahce-2025/thumbnail.jpg",
+   "quality": {
+    "knownTeamShare": 0.962,
+    "teamMajorityShare": 0.556,
+    "playersPerFrame": 17.47,
+    "ballShare": 0.387,
+    "calibratedShare": 0.727,
+    "medianTrackSeconds": 2.4,
+    "uncertainIdentitySeconds": 0.4,
+    "implausibleSpeedShare": 0.256,
+    "cuts": 0
+   }
+  },
+  {
    "id": "bresil-afrique-du-sud-2016",
    "title": "Brésil–Afrique du Sud 2016 — coup franc",
    "path": "matches/bresil-afrique-du-sud-2016/",
    "kind": "analysis",
    "duration": 26.1,
-   "description": "Coup franc de Neymar vu d'en haut, jusqu'au but. Détection et suivi réels ; la calibration automatique est fausse sur cette vue : positions 3D masquées.",
+   "description": "Coup franc de Neymar vu d'en haut, jusqu'au but : maillots jaunes et verts bien séparés. La calibration automatique est fausse sur cette vue : positions 3D masquées.",
    "category": "Coup franc",
    "credit": "Rodrigogomesonetwo · CC BY-SA 4.0 · Wikimedia Commons",
-   "order": 1,
+   "order": 4,
    "calibrationCheck": {
     "verdict": "rejected",
     "note": "sur cette vue plongeante, le modèle de points clés place la surface de réparation le long des panneaux publicitaires."
    },
+   "teamCheck": {
+    "verdict": "partial",
+    "note": "Planche d'une vignette par trajectoire de joueur suivie au moins 8 images : 52 justes, 3 erreurs (l'arbitre et deux Brésiliens avec l'Afrique du Sud), 2 douteuses, 10 sans équipe. Les « gardiens » détectés sont surtout des stadiers du bord du terrain (rôle mal détecté)."
+   },
    "thumbnail": "matches/bresil-afrique-du-sud-2016/thumbnail.jpg",
    "quality": {
+    "knownTeamShare": 0.897,
+    "teamMajorityShare": 0.667,
     "playersPerFrame": 8.29,
     "ballShare": 0.939,
     "calibratedShare": 0.834,
@@ -61,13 +166,19 @@
    "description": "Penalty filmé derrière le but, à travers des drapeaux : occlusions et faux changement de plan. Calibration automatique fausse sur cette vue : positions 3D masquées.",
    "category": "Suivi difficile",
    "credit": "Like tears in rain · CC BY-SA 4.0 · Wikimedia Commons",
-   "order": 2,
+   "order": 5,
    "calibrationCheck": {
     "verdict": "rejected",
     "note": "filmé derrière le but, le modèle de points clés prend la ligne de but pour la ligne médiane et l'arc de la surface pour le rond central."
    },
+   "teamCheck": {
+    "verdict": "partial",
+    "note": "Planche d'une vignette par trajectoire suivie au moins 8 images : 28 justes, 2 erreurs (les deux arbitres avec la France), 1 trajectoire mêlée, 3 sans équipe."
+   },
    "thumbnail": "matches/france-allemagne-2018/thumbnail.jpg",
    "quality": {
+    "knownTeamShare": 0.852,
+    "teamMajorityShare": 0.7,
     "playersPerFrame": 11.82,
     "ballShare": 0.837,
     "calibratedShare": 0.954,
@@ -86,13 +197,19 @@
    "description": "Vidéo de diffusion simulée (36 s) et annotations au format de l'analyse : équipes, coupure, plan non calibré et contact masqué d'identité incertaine.",
    "category": "Synthétique",
    "credit": "Généré pour ce dépôt · aucune image réelle",
-   "order": 3,
+   "order": 6,
    "calibrationCheck": {
     "verdict": "exact",
     "note": "Vidéo générée avec ses annotations : calibration exacte par construction."
    },
+   "teamCheck": {
+    "verdict": "exact",
+    "note": "Vidéo générée avec ses annotations : équipes exactes par construction, rien n'est classé par l'IA."
+   },
    "thumbnail": "matches/match-synthetique/thumbnail.jpg",
    "quality": {
+    "knownTeamShare": 0.993,
+    "teamMajorityShare": 0.778,
     "playersPerFrame": 9.1,
     "ballShare": 0.916,
     "calibratedShare": 0.889,

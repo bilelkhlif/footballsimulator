@@ -81,6 +81,29 @@ precedence = "override"
 SPDX-FileCopyrightText = "2016 Rodrigogomesonetwo (Wikimedia Commons)"
 SPDX-License-Identifier = "CC-BY-SA-4.0"
 
+# 5 bis. Trois autres vidéos du même spectateur (𐰇𐱅𐰚𐰤), ajoutées le 26 novembre 2026 pour montrer le
+#    classement des équipes : vidéos adaptées, affiches et vignettes sous la même licence (SOURCE.md).
+[[annotations]]
+path = ["demo/matches/samsunspor-trabzonspor-2025/video.mp4", "demo/matches/samsunspor-trabzonspor-2025/poster.jpg",
+  "demo/matches/samsunspor-trabzonspor-2025/thumbnail.jpg"]
+precedence = "override"
+SPDX-FileCopyrightText = "2025 𐰇𐱅𐰚𐰤 (Wikimedia Commons)"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+[[annotations]]
+path = ["demo/matches/samsunspor-rizespor-2024/video.mp4", "demo/matches/samsunspor-rizespor-2024/poster.jpg",
+  "demo/matches/samsunspor-rizespor-2024/thumbnail.jpg"]
+precedence = "override"
+SPDX-FileCopyrightText = "2024 𐰇𐱅𐰚𐰤 (Wikimedia Commons)"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+[[annotations]]
+path = ["demo/matches/samsunspor-fenerbahce-2025/video.mp4", "demo/matches/samsunspor-fenerbahce-2025/poster.jpg",
+  "demo/matches/samsunspor-fenerbahce-2025/thumbnail.jpg"]
+precedence = "override"
+SPDX-FileCopyrightText = "2025 𐰇𐱅𐰚𐰤 (Wikimedia Commons)"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
 # 6. Captures du visualiseur : elles montrent des images de ces vidéos, donc sous CC BY-SA 4.0.
 [[annotations]]
 path = "docs/images/glass/*-viz-*.jpg"

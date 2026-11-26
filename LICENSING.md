@@ -14,11 +14,14 @@ Les composants installés à part (Ultralytics, PyTorch et les autres paquets Py
 téléchargés par l'utilisateur ne sont pas dans le dépôt. Ils sont inventoriés dans
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-**Exception médias réels.** Les trois vidéos réelles de la démonstration, leurs affiches et leurs vignettes
+**Exception médias réels.** Les six vidéos réelles de la démonstration, leurs affiches et leurs vignettes
 sont sous **CC BY-SA 4.0**, la licence choisie par les spectateurs qui les ont filmées :
 France–Allemagne 2018 de Like tears in rain ([notice](demo/matches/france-allemagne-2018/SOURCE.md)),
-Samsunspor–Altınordu 2023 de 𐰇𐱅𐰚𐰤 ([notice](demo/matches/samsunspor-altinordu-2023/SOURCE.md)) et
-Brésil–Afrique du Sud 2016 de Rodrigogomesonetwo ([notice](demo/matches/bresil-afrique-du-sud-2016/SOURCE.md)).
+Brésil–Afrique du Sud 2016 de Rodrigogomesonetwo ([notice](demo/matches/bresil-afrique-du-sud-2016/SOURCE.md)),
+et quatre vidéos de 𐰇𐱅𐰚𐰤 : Samsunspor–Altınordu 2023 ([notice](demo/matches/samsunspor-altinordu-2023/SOURCE.md)),
+Samsunspor–Trabzonspor 2025 ([notice](demo/matches/samsunspor-trabzonspor-2025/SOURCE.md)),
+Samsunspor–Rizespor 2024 ([notice](demo/matches/samsunspor-rizespor-2024/SOURCE.md)) et
+Samsunspor–Fenerbahçe 2025 ([notice](demo/matches/samsunspor-fenerbahce-2025/SOURCE.md)).
 Les captures du visualiseur de `docs/images/glass/` montrent des images de ces vidéos : elles suivent la
 même licence. Rien de cela n'est relicencié sous AGPL. La correspondance REUSE les distingue du code ; le
 texte CC est dans `LICENSES/CC-BY-SA-4.0.txt`.
