@@ -39,7 +39,7 @@ jobs:
         with:
           # Exactement le commit dont les tests viennent de réussir.
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
       - name: Empreinte de la coquille à jour
