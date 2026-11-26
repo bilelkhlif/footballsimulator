@@ -36,7 +36,8 @@ import { createTeamPanel } from './team-panel.mjs';
 import { buildScenarioState, loadScenarioLibrary } from './scenarios.mjs';
 import { createScenarioPanel } from './scenario-panel.mjs';
 import {
-  ChangeFormationCommand, ChangePhaseCommand, ChangeTeamIdentityCommand, CommandHistory, LoadScenarioCommand,
+  ChangeFormationCommand, ChangePhaseCommand, ChangeTeamIdentityCommand, CommandHistory, LoadSavedTacticCommand,
+  LoadScenarioCommand,
 } from './commands.mjs';
 import { MOVE_DURATION_MS, TacticalView } from './tactical-view.mjs';
 import { TacticalInteraction } from './tactical-interaction.mjs';
@@ -47,7 +48,11 @@ import { PointerInput } from './pointer-input.mjs';
 import { routeXrSelect, SELECT_ROUTES, XrTacticalInput } from './xr-input.mjs';
 import { DiagnosticsPanel, isDiagnosticsRequested } from './diagnostics.mjs';
 import { TacticalSequence } from './tactical-sequence.mjs';
-import { attachTacticAutosave, createTacticStore } from './tactic-storage.mjs';
+import {
+  attachTacticAutosave, captureTactic, createTacticStore, isValidTactic,
+} from './tactic-storage.mjs';
+import { createTacticLibrary } from './tactic-library.mjs';
+import { createSavedTacticsPanel } from './saved-tactics-panel.mjs';
 import { SequencePlayer } from './sequence-player.mjs';
 import { createSequencePanel } from './sequence-panel.mjs';
 import { installEmulatorIfRequested } from './dev-emulator.mjs';
@@ -359,11 +364,30 @@ async function init(renderMode) {
 
   // Sauvegarde automatique : la tactique du dernier lancement est rétablie, une fois la scène et
   // les panneaux abonnés au tableau ; elle est enregistrée dans IndexedDB quand la page est masquée.
+  // Un seul magasin IndexedDB : la tactique en cours et les tactiques enregistrées y ont chacune
+  // leur clé.
+  const tacticStore = createTacticStore(readIndexedDb());
   const autosave = await attachTacticAutosave({
     board,
     sequence,
-    store: createTacticStore(readIndexedDb()),
+    store: tacticStore,
     target: document,
+  });
+
+  // Tactiques enregistrées (phase 5) : l'entraîneur nomme la tactique en cours et la garde sur
+  // l'appareil ; l'ouverture est vérifiée contre le tableau, puis passe par une commande annulable.
+  createSavedTacticsPanel({
+    root: document.getElementById('saved-tactics-panel'),
+    library: createTacticLibrary(tacticStore),
+    capture: () => captureTactic(board, sequence),
+    open: (name, tactic) => {
+      if (!isValidTactic(tactic, board.snapshot())) {
+        return false;
+      }
+      history.execute(new LoadSavedTacticCommand({ board, sequence, name, tactic }));
+      return true;
+    },
+    onFeedback: ({ kind, message }) => hint.flash(message, kind),
   });
 
   // Bibliothèque de situations : chargée sans retarder le lancement ; une situation se charge par

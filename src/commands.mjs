@@ -608,6 +608,74 @@ export class LoadScenarioCommand extends Command {
 }
 
 /**
+ * Ouvre une tactique enregistrée par l'entraîneur (phase 5) : formations, phases, places, ballon,
+ * flèches, marquages, noms et maillots, et images clés, exactement comme au moment de
+ * l'enregistrement. La tactique doit avoir été vérifiée (isValidTactic) avant. Annulable :
+ * l'annulation rend le tableau et la séquence d'avant.
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Logique métier — patron Command : tactiques enregistrées
+ */
+export class LoadSavedTacticCommand extends Command {
+  #board;
+  #sequence;
+  #name;
+  #tactic;
+  #previous = null;
+
+  /**
+   * @param {object} options
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board
+   * @param {import('./tactical-sequence.mjs').TacticalSequence} options.sequence
+   * @param {string} options.name nom donné à la tactique
+   * @param {{board: object, keyframes: object[]}} options.tactic tactique enregistrée (captureTactic)
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Logique métier — patron Command : tactiques enregistrées
+   */
+  constructor({ board, sequence, name, tactic }) {
+    super();
+    this.#board = board;
+    this.#sequence = sequence;
+    this.#name = name;
+    this.#tactic = tactic;
+  }
+
+  /**
+   * @returns {string}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Logique métier — patron Command : tactiques enregistrées
+   */
+  get label() {
+    return `Ouvrir la tactique « ${this.#name} »`;
+  }
+
+  /**
+   * @returns {boolean}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Logique métier — patron Command : tactiques enregistrées
+   */
+  execute() {
+    this.#previous = { board: this.#board.snapshot(), keyframes: this.#sequence.keyframes };
+    this.#board.restore(this.#tactic.board);
+    this.#sequence.restore(this.#tactic.keyframes);
+    return true;
+  }
+
+  /**
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Logique métier — patron Command : tactiques enregistrées
+   */
+  undo() {
+    this.#board.restore(this.#previous.board);
+    this.#sequence.restore(this.#previous.keyframes);
+  }
+}
+
+/**
  * Réinitialiser le terrain (BF8) : formations de départ, joueurs à leurs places, ballon au centre,
  * flèches effacées. Annulable comme les autres actions.
  * @responsable Bilel Khlif
