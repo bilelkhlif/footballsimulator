@@ -269,6 +269,37 @@ class ChunkPipelineTest(unittest.TestCase):
         self.assertTrue(all(track["distanceM"] == 0 for track in document["tracks"]))
         self.assertTrue(all(obj["team"] is not None for frame in document["frames"] for obj in frame["objects"]))
 
+    def test_players_beyond_the_fit_reserve_get_a_team_during_warmup(self):
+        """Clip plus court que l'amorçage : un joueur resté hors de la réserve d'apprentissage est prédit.
+
+        Régression du 26 novembre 2026 : une fois la réserve pleine (MAX_CROP_TRACKS trajectoires),
+        les joueurs suivants restaient sans équipe jusqu'à la fin de l'amorçage, donc jusqu'à la
+        fin d'un clip court. La réserve est ici réduite à trois trajectoires sur quatre.
+
+        @responsable Bilel Khlif
+        @date 2026-11-26
+        @role Tests incrémentaux — équipes pendant l'amorçage
+        """
+        target = self.root / "reserve.sqlite"
+        with patch("football_analysis.incremental_pipeline.MAX_CROP_TRACKS", 3), \
+                patch("football_analysis.streaming_teams.MIN_CROPS_TO_FIT", 10):
+            analyse_to_store(self.video, target, self.options)
+            with ChunkStore(target) as store:
+                reference = FrozenTeamModel.load(store.get_blob("team_reference"))
+        self.assertEqual(len(reference.initial_votes), 3, "trois trajectoires dans la réserve d'apprentissage")
+        teams, colours = {}, {}
+        for frame in self.document(target)["frames"]:
+            for obj in frame["objects"]:
+                teams.setdefault(obj["id"], set()).add(obj["team"])
+                colours[obj["id"]] = "rouge" if obj["box"][2] <= 48 else "bleu"
+        self.assertEqual(len(teams), 4)
+        self.assertEqual(len(set(teams) - set(reference.initial_votes)), 1, "un joueur hors de la réserve")
+        self.assertTrue(all(len(values) == 1 and None not in values for values in teams.values()), teams)
+        by_colour = {colour: {next(iter(teams[track])) for track in teams if colours[track] == colour}
+                     for colour in ("rouge", "bleu")}
+        self.assertEqual([len(by_colour["rouge"]), len(by_colour["bleu"])], [1, 1])
+        self.assertNotEqual(by_colour["rouge"], by_colour["bleu"])
+
     def test_signature_and_completed_job_prevent_accidental_reprocessing(self):
         """Une analyse finie n'est pas recalculée ; un réglage différent est refusé.
 

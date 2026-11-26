@@ -252,6 +252,9 @@ a { color: inherit; }
 }
 .vz-match__verdict[data-verdict="rejected"] { color: var(--vz-bad); background: color-mix(in srgb, var(--vz-bad) 14%, transparent); }
 .vz-match__verdict[data-verdict="exact"] { color: var(--vz-muted); background: var(--vz-surface-2); }
+.vz-match__verdicts { display: flex; flex-wrap: wrap; gap: 4px; }
+.vz-match__verdict[data-kind="teams"][data-verdict="partial"] { color: var(--vz-warn); background: color-mix(in srgb, var(--vz-warn) 14%, transparent); }
+.vz-match__verdict[data-kind="teams"][data-verdict="wrong"] { color: var(--vz-bad); background: color-mix(in srgb, var(--vz-bad) 14%, transparent); }
 .vz-match__quality { display: flex; flex-wrap: wrap; gap: 3px; }
 .vz-metric {
   padding: 0 6px; border-radius: 6px; font-size: .68rem; line-height: 1.6; font-variant-numeric: tabular-nums;

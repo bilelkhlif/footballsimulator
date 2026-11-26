@@ -12,7 +12,8 @@ en mémoire ; elle n'est plus appelée par le serveur ni par la commande habitue
 1. Vérifier l'empreinte de la source, des poids, du code d'analyse, des options et des dépendances.
 2. Décoder séquentiellement, détecter, suivre et calibrer. Valider un segment SQLite à la fois.
 3. Publier aussitôt ses images avec équipes inconnues : elles sont consultables avant la fin.
-4. Relire une réserve initiale de maillots et apprendre les deux groupes une seule fois.
+4. Relire une réserve initiale de maillots et apprendre les deux équipes une seule fois, avec un groupe
+   « autres » sans équipe quand il est démontré (arbitres, stadiers).
 5. Classer les segments, conserver les votes récents et calculer les distances cumulées.
 6. Calculer les indicateurs par lecture séquentielle ; valider ensuite le marqueur de fin.
 
@@ -176,6 +177,41 @@ le total devient zéro erreur et 13 inconnus. Deux clips ajoutent toutefois des 
 dont une sur le clip soleil/ombre : le critère strict de non-régression par clip échoue.
 **L'amorçage de 30 s reste donc la valeur par défaut.** Ce contrôle limité ne garantit pas
 la reconnaissance de tenues ou angles absents du début d'un match.
+
+### Équipes des clips courts et groupe « autres » (26 novembre 2026)
+
+**Défaut corrigé.** La réserve d'apprentissage des maillots s'arrête à 64 trajectoires. Un joueur
+apparu ensuite n'avait aucun vote tant que l'amorçage (30 s) n'était pas fini, donc jusqu'à la fin
+d'un clip plus court que l'amorçage. Il restait sans équipe sur toute sa durée. Sur Samsunspor–Trabzonspor (15,3 s,
+suivi très fragmenté), la réserve était pleine dès 4,3 s. 46 joueurs suivis au moins huit images
+restaient alors sans équipe, et seules 44,8 % des observations de joueurs avaient une équipe. Pendant
+l'amorçage, ces joueurs sont désormais prédits par les voisins figés, comme après l'amorçage
+(`classify_chunks`, `BoundedCrops(wanted=…)`). Le contrôle des masquages compte toujours toutes les
+boîtes de l'image. Après correction, 93,0 % des observations de ce clip ont une équipe. Test de
+non-régression : `test_players_beyond_the_fit_reserve_get_a_team_during_warmup`, qui échoue sur
+l'ancien code. Mêmes détections, même référence : 86,7 → 96,2 % sur Samsunspor–Fenerbahçe et
+52,5 → 89,7 % sur Brésil–Afrique du Sud. Les clips dont tous les joueurs entrent dans la réserve
+(Samsunspor–Rizespor, France–Allemagne) ne changent pas.
+
+**Groupe « autres ».** Le détecteur range parfois gardiens, arbitres et stadiers parmi les joueurs.
+Un regroupement en trois est essayé (`split_teams`). Son plus petit groupe ne vote pour aucune équipe
+s'il réunit au plus 15 % des images et si les deux grands groupes ne sont pas plus proches entre eux que
+de lui. Sur Samsunspor–Rizespor, deux gardiens en noir et trois stadiers quittent ainsi l'équipe
+blanche et rouge, et aucun joueur n'est écarté. Sur les huit vidéos de l'audit, le plus petit des trois
+groupes réunit 17,6 à 26,0 % des images : la règle ne s'y applique pas.
+**Limite constatée** sur Samsunspor–Altınordu : les deux équipes (blanche, rayée noir et rouge) sont
+plus proches l'une de l'autre que des arbitres en cyan. Le regroupement en deux y oppose donc
+« arbitres » et « joueurs », et les équipes restent fausses. Le verdict « équipes fausses » est affiché
+dans la galerie. Isoler ce groupe malgré tout traiterait de la même façon une petite équipe face à une
+équipe coupée en deux par l'ombre ; un détecteur d'arbitres fiable reste la vraie solution.
+
+**Non-régression.** Le protocole `validate_chunked_teams.py` a été relancé sur le code final, avec les
+mêmes suivis figés et les mêmes annotations : **444 justes, 0 erreur, 2 inconnus sur 446 observations**,
+identique clip par clip au contrôle du 24 novembre ; aucun échec du critère strict par clip. Sur ces huit
+clips, 21 à 64 joueurs apparaissent pendant l'amorçage : tous tiennent dans la réserve, et la correction
+des clips courts n'y change rien. Elle est contrôlée par le test ci-dessus et par les démonstrations.
+Le groupe « autres » ne s'y applique pas non plus (plus petit des trois groupes entre 17,6 et 26,0 %). Résultats :
+[validation-equipes-2026-11-26.json](validation-equipes-2026-11-26.json).
 
 ### Charge de stockage synthétique, sans modèle
 

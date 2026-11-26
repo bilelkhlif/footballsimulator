@@ -44,6 +44,15 @@ MIN_VOTE_SHARE = 2 / 3
 #: Nombre minimal d'images de joueurs pour apprendre les deux groupes.
 MIN_CROPS_TO_FIT = 20
 
+#: Étiquette du groupe « autres » : arbitres en tenue distincte, stadiers ou photographes détectés
+#: comme joueurs. Une image ou une trajectoire de ce groupe n'a pas d'équipe.
+OTHER = 2
+
+#: Part maximale des images d'apprentissage pour qu'un troisième groupe soit traité comme « autres ».
+#: Les arbitres et les personnes au bord du terrain sont peu nombreux ; un troisième groupe plus gros
+#: signale plutôt une équipe coupée en deux (ombre et soleil), et le regroupement en deux est gardé.
+MAX_OTHER_SHARE = 0.15
+
 
 @dataclass
 class TeamAssignment:
@@ -210,8 +219,55 @@ def extract_team_features(classifier: Any, crops: list[np.ndarray]) -> np.ndarra
     return np.concatenate(features)
 
 
+def split_teams(features: np.ndarray, projections: np.ndarray, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
+    """Regroupe les images en deux équipes, avec un groupe « autres » quand il est démontré.
+
+    Le regroupement en deux de Roboflow suppose que les images ne montrent que des joueurs. Or le
+    détecteur range parfois gardiens, arbitres et stadiers parmi les joueurs : sur Samsunspor–Rizespor,
+    deux gardiens en noir et trois stadiers rejoignaient l'équipe blanche et rouge. Un regroupement en
+    trois est donc essayé : son plus petit groupe devient « autres » s'il réunit au plus
+    MAX_OTHER_SHARE des images et si les deux grands groupes ne sont pas plus proches entre eux que de
+    lui (dans l'espace des plongements) ; sinon, c'est une équipe coupée en deux, et le regroupement
+    en deux est gardé, avec la numérotation de KMeans. Avec un groupe « autres », les deux équipes sont
+    numérotées par effectif décroissant.
+
+    Limite constatée : sur Samsunspor–Altınordu, les deux équipes (blanche, rayée noir et rouge) sont
+    plus proches l'une de l'autre que des arbitres en cyan. Le regroupement en deux, « arbitres »
+    contre « joueurs », est alors gardé et les équipes restent fausses. L'isoler malgré tout traiterait
+    de la même façon une petite équipe face à une équipe coupée en deux par l'ombre.
+
+    Returns:
+        les étiquettes (0, 1, ou OTHER) et les centres des groupes dans l'espace réduit.
+
+    @responsable Bilel Khlif
+    @date 2026-11-26
+    @role Analyse vidéo — équipes (regroupement avec groupe « autres »)
+    """
+    from sklearn.cluster import KMeans
+
+    two = KMeans(n_clusters=2, n_init=10, random_state=seed).fit(projections)
+    fallback = (np.asarray(two.labels_, dtype=np.int64), np.asarray(two.cluster_centers_, dtype=np.float64))
+    if len(projections) < 3 * MIN_CROPS_TO_FIT:
+        return fallback
+    three = KMeans(n_clusters=3, n_init=10, random_state=seed).fit(projections)
+    labels3 = np.asarray(three.labels_, dtype=np.int64)
+    sizes = np.bincount(labels3, minlength=3)
+    big, second, small = (int(group) for group in np.argsort(-sizes, kind="stable"))
+    if sizes[small] == 0 or sizes[small] > MAX_OTHER_SHARE * len(labels3):
+        return fallback
+    normalised = features / np.maximum(np.linalg.norm(features, axis=1, keepdims=True), 1e-12)
+    centre = {group: normalised[labels3 == group].mean(axis=0) for group in (big, second, small)}
+    distance = lambda a, b: float(np.linalg.norm(centre[a] - centre[b]))  # noqa: E731
+    if distance(big, second) < min(distance(big, small), distance(second, small)):
+        return fallback
+    mapping = np.empty(3, dtype=np.int64)
+    mapping[[big, second, small]] = [0, 1, OTHER]
+    centers = np.asarray(three.cluster_centers_, dtype=np.float64)[[big, second, small]]
+    return mapping[labels3], centers
+
+
 def cluster_crops(classifier: Any, crops: list[np.ndarray]) -> np.ndarray:
-    """Apprend les deux groupes sur les images et renvoie le groupe de chacune.
+    """Apprend les équipes sur les images et renvoie le groupe de chacune (0, 1 ou OTHER).
 
     Les plongements sont calculés une fois : apprentissage et votes portent sur les mêmes images.
 
@@ -221,7 +277,8 @@ def cluster_crops(classifier: Any, crops: list[np.ndarray]) -> np.ndarray:
     """
     features = extract_team_features(classifier, crops)
     projections = classifier.reducer.fit_transform(features)
-    return classifier.cluster_model.fit_predict(projections)
+    labels, _ = split_teams(features, projections, getattr(classifier.cluster_model, "random_state", 0) or 0)
+    return labels
 
 
 def vote(labels: Iterable[int], min_share: float = MIN_VOTE_SHARE) -> TeamAssignment:
@@ -237,6 +294,9 @@ def vote(labels: Iterable[int], min_share: float = MIN_VOTE_SHARE) -> TeamAssign
         return TeamAssignment(None, None, 0)
     team, best = counts.most_common(1)[0]
     share = best / total
+    if team == OTHER:
+        # Majorité « autres » (arbitre, stadier) : aucune équipe, même avec des votes unanimes.
+        return TeamAssignment(None, share, total)
     return TeamAssignment(team if share >= min_share else None, share, total)
 
 
@@ -259,7 +319,8 @@ def assign_player_teams(classifier: Any, crops: dict[int, list[np.ndarray]]) -> 
     by_team: dict[int, list[np.ndarray]] = defaultdict(list)
     for owner, label, image in zip(owners, labels, images):
         by_track[owner].append(int(label))
-        by_team[int(label)].append(image)
+        if int(label) != OTHER:
+            by_team[int(label)].append(image)
     return {track: vote(by_track.get(track, [])) for track in crops}, by_team
 
 

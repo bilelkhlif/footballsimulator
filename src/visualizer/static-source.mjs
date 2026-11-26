@@ -102,7 +102,8 @@ export function catalogProblems(catalog) {
  * @param {object} entry entrée du catalogue
  * @param {(file: string) => URL} resolve résout un fichier relatif dans la démonstration, ou lève
  * @returns {{category: string|null, credit: string|null, order: number|null, thumbnailUrl: string|null,
- *   calibrationCheck: {verdict: string, note: string}|null, quality: object|null}}
+ *   calibrationCheck: {verdict: string, note: string}|null, teamCheck: {verdict: string, note: string}|null,
+ *   quality: object|null}}
  * @responsable Bilel Khlif
  * @date 2026-11-25
  * @role Visualiseur de match — galerie des démonstrations
@@ -118,6 +119,7 @@ export function galleryFields(entry, resolve) {
     }
   }
   const check = entry?.calibrationCheck;
+  const teams = entry?.teamCheck;
   const quality = entry?.quality && typeof entry.quality === 'object' ? Object.fromEntries(
     Object.entries(entry.quality).filter(([, value]) => value === null || (typeof value === 'number' && Number.isFinite(value) && value >= 0)),
   ) : null;
@@ -128,6 +130,8 @@ export function galleryFields(entry, resolve) {
     thumbnailUrl,
     calibrationCheck: check && ['approximate', 'rejected', 'exact'].includes(check.verdict)
       ? { verdict: check.verdict, note: typeof check.note === 'string' ? check.note : '' } : null,
+    teamCheck: teams && ['verified', 'partial', 'wrong', 'exact'].includes(teams.verdict)
+      ? { verdict: teams.verdict, note: typeof teams.note === 'string' ? teams.note : '' } : null,
     quality,
   };
 }

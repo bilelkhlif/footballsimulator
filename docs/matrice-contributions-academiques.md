@@ -107,6 +107,10 @@ d'ATTRIBUTION.md). Rien ici ne lui attribue du code qu'il n'a pas écrit.
 - **Résultat** : déplacements invraisemblables ramenés de 70,6 % à 11,2 % (France–Allemagne) et de 29,2 % à
   5,0 % (Samsunspor–Altınordu) sur les mêmes détections ; calibrations fausses détectées et masquées
   ([stabilisation-homographie.md](stabilisation-homographie.md)) [A].
+- **26 novembre** : demande de démonstrations supplémentaires au bon classement des joueurs [É]. Trois
+  vidéos ajoutées, de 93 à 96 % d'observations classées et de 1 à 3 erreurs nettes au contrôle visuel
+  fait par l'assistant. Défaut des clips courts corrigé, groupe « autres » ajouté, audit des huit vidéos
+  inchangé ([visualiseur-demos-reelles.md](visualiseur-demos-reelles.md)) [A].
 
 ### 4.6 Traçabilité académique
 

@@ -29,9 +29,19 @@ export async function testRealDemo(browser, urls, record) {
       record(`Vidéo réelle (${scope}) : ouverte par défaut sans Python, auteur et licence accessibles`,
         initial.analysis === 'samsunspor-altinordu-2023' && initial.mode === 'demo' && initial.webgpu
           && initial.credit?.includes('𐰇𐱅𐰚𐰤') && initial.links.includes('https://creativecommons.org/licenses/by-sa/4.0/')
-          && initial.calibrationCheck === 'approximate' && initial.gallery.length === 4
+          && initial.calibrationCheck === 'approximate' && initial.gallery.length === 7
           && initial.gallery[0].id === 'samsunspor-altinordu-2023' && initial.gallery[0].pressed ? 'ok' : 'échec',
         JSON.stringify({ analysis: initial.analysis, mode: initial.mode, links: initial.links, gallery: initial.gallery }));
+      // Contrôle visuel des équipes : verdict et indicateur sur chaque carte réelle, sans saisie manuelle des taux.
+      const teamCards = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('#demo-gallery .vz-match')].map((card) => [
+        card.dataset.demoId, {
+          verdict: card.querySelector('.vz-match__verdict[data-kind="teams"]')?.dataset.verdict ?? null,
+          tone: card.querySelector('.vz-metric[data-metric="teams"]')?.dataset.tone ?? null }])));
+      record(`Vidéo réelle (${scope}) : verdicts et indicateurs des équipes dans la galerie`,
+        teamCards['samsunspor-trabzonspor-2025']?.tone === 'good' && teamCards['samsunspor-rizespor-2024']?.tone === 'good'
+          && teamCards['samsunspor-altinordu-2023']?.verdict === 'wrong' && teamCards['samsunspor-altinordu-2023']?.tone === 'bad'
+          && teamCards['match-synthetique']?.verdict === 'exact'
+          && Object.values(teamCards).every((card) => card.verdict) ? 'ok' : 'échec', JSON.stringify(teamCards));
 
       await page.click('#play');
       await page.waitForFunction(() => document.getElementById('match-video').currentTime > 2);

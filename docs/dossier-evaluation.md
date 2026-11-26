@@ -35,16 +35,16 @@ Dr. Ing. Mohamed-Bécha Kaâniche. Version décrite : `main` après la fusion de
 
 ## 3. Résultats vérifiables
 
-### Tests automatisés (25 novembre 2026, PC Windows, Chrome)
+### Tests automatisés (26 novembre 2026, PC Windows, Chrome)
 
 | Suite | Résultat | Commande |
 |---|---|---|
-| Tests unitaires JavaScript | **285 réussis sur 285** | `npm run test:unit` |
-| Vérifications dans Chrome (3D, AR émulée, PWA, espaces, visualiseur) | **226 réussies sur 226**, aucune ignorée | `npm run test:e2e` |
-| Tests Python (analyse, export, stabilisation, référence, sécurité du serveur) | **144 réussis sur 144** | `python -m unittest discover -s tests` dans `analysis/` |
-| Parcours réel sur GPU (serveur local, interruption, arrêt brutal, reprise, lecture, export) | **12 étapes réussies sur 12** (clip de 12 s sous CC BY-SA ; reprise après arrêt brutal comprise, 155 s) | `node tests/visualizer-local-ai.mjs <vidéo>` |
-| Licences des fichiers (REUSE 3.3) | 373 fichiers sur 373 avec licence et droits ; conforme à REUSE 3.3 | `reuse lint` |
-| Garde des droits avant publication | vidéos, affiches et vignettes conformes au registre relu | `npm run pages:prepare` |
+| Tests unitaires JavaScript | **386 réussis sur 386** | `npm run test:unit` |
+| Vérifications dans Chrome (3D, AR émulée, PWA, espaces, visualiseur) | **233 réussies sur 234**, aucune ignorée. L'échec, « Interface 568 × 320 » du tableau (délai d'un toucher dépassé), se reproduit sur `main` (`bc5beb0`) sans les changements du 26 novembre | `npm run test:e2e` |
+| Tests Python (analyse, export, stabilisation, référence, sécurité du serveur, équipes) | **150 réussis sur 150** | `python -m unittest discover -s tests` dans `analysis/` |
+| Parcours réel sur GPU (serveur local, interruption, arrêt brutal, reprise, lecture, export) | **12 étapes réussies sur 12** le 25 novembre, non relancé le 26 (clip de 12 s sous CC BY-SA ; reprise après arrêt brutal comprise, 155 s) | `node tests/visualizer-local-ai.mjs <vidéo>` |
+| Licences des fichiers (REUSE 3.3) | 443 fichiers sur 443 avec licence et droits ; conforme à REUSE 3.3 | `reuse lint` |
+| Garde des droits avant publication | vidéos, affiches et vignettes des six vidéos réelles conformes au registre relu | `npm run pages:prepare` |
 
 Les tests vérifient aussi que les erreurs sont détectées : erreurs introduites volontairement aux sprints 5
 et 6, toutes détectées. Les vérifications « AR » sont émulées (session WebXR de Chrome, IWER) : **elles ne
@@ -58,9 +58,9 @@ remplacent pas un essai sur téléphone.**
 | Images par seconde en AR émulée | 62,5 | PC, processeur ralenti 4 fois ; indicatif |
 | Chargement du tableau tactique | 0,69 s (médiane de 3 ; 1,76 s au premier chargement) | Chrome sur PC, serveur local, cache vide |
 | Ouverture du visualiseur jusqu'à la première image de la démo | 1,40 s (médiane de 3) ; changement de démonstration par la galerie : 0,32 s | idem |
-| Galerie : vignettes | 82 Kio au total ; chargées à la demande (loading=lazy) | quatre vignettes JPEG 480 × 270 |
-| Vidéos de démonstration | 6,1 Mo, 4,4 Mo et 10,6 Mo pour les vidéos réelles ; 1,3 Mo pour la synthétique | H.264 720p, sans audio, jamais mises en cache par le Service Worker |
-| Analyse GPU d'un clip de 26 à 30 s | 173 à 222 s (6,3 à 7,1 fois la durée) | RTX 2050 4 Gio, PyTorch 2.14.1+cu126 ; pic PyTorch 627 Mio |
+| Galerie : vignettes | 184 Kio au total ; chargées à la demande (loading=lazy) | sept vignettes JPEG 480 × 270 (26 novembre) |
+| Vidéos de démonstration | 4,4 à 10,6 Mo pour les six vidéos réelles (45,4 Mo au total) ; 1,3 Mo pour la synthétique | H.264 720p, sans audio, jamais mises en cache par le Service Worker |
+| Analyse GPU d'un clip de 15 à 30 s | 129 à 208 s (5,4 à 9,0 fois la durée) | RTX 2050 4 Gio, PyTorch 2.14.1+cu126 ; pic PyTorch 627 Mio ; six analyses du 26 novembre |
 
 ### Analyse vidéo : la correction mesurée
 
@@ -71,6 +71,26 @@ remplacent pas un essai sur téléphone.**
 | France–Allemagne 2018 | 70,6 % → 11,2 % | fausse, positions 3D masquées |
 
 Mêmes détections avant et après ; méthode et limites : [stabilisation-homographie.md](stabilisation-homographie.md).
+Les trois vidéos ajoutées le 26 novembre ont aussi une calibration fausse, masquée ; aucun rejeu sans
+stabilisation n'y a été fait.
+
+### Analyse vidéo : le classement des équipes (26 novembre)
+
+Contrôle visuel d'une planche par vidéo : une vignette par trajectoire de joueur suivie au moins
+8 images, rangée selon l'équipe attribuée, et cinq images le long de chaque trajectoire douteuse. Ce
+contrôle a été fait par l'assistant IA, sans revue humaine ; ce n'est pas une annotation de référence.
+
+| Vidéo | Observations de joueurs avec équipe | Justes | Erreurs nettes | Trajectoires mêlées ou douteuses | Sans équipe | Verdict |
+|---|---|---|---|---|---|---|
+| Samsunspor–Trabzonspor 2025 | 93 % (45 % avant correction) | 73 | 3 | 3 | 6 | quelques erreurs |
+| Samsunspor–Rizespor 2024 | 94 % | 28 | 1 | 1 | 5 | quelques erreurs |
+| Samsunspor–Fenerbahçe 2025 | 96 % (87 % avant) | 53 | 3 | 4 | 6 | quelques erreurs |
+| Brésil–Afrique du Sud 2016 | 90 % (53 % avant) | 52 | 3 | 2 | 10 | quelques erreurs |
+| France–Allemagne 2018 | 85 % | 28 | 2 | 1 | 3 | quelques erreurs |
+| Samsunspor–Altınordu 2023 | 99 % (88 % avant) | — | — | — | — | fausses : arbitres contre joueurs |
+
+Audit interne sur huit vidéos de la DFL (suivis figés) inchangé : 444 justes, 0 erreur, 2 inconnus sur
+446 observations ([analyse-incrementale.md](analyse-incrementale.md)).
 
 ## 4. Ce qui reste à faire, et par qui
 
@@ -92,8 +112,9 @@ Mêmes détections avant et après ; méthode et limites : [stabilisation-homogr
 - **Répartition dans l'équipe** : tous les commits sont publiés sous le nom de Bilel Khlif ; les rôles
   prévus pour Iyed Rachdi et Ghassen Dalleji ne sont pas prouvés par le dépôt.
 - **Visualiseur** : extension hors cahier (§2.5 exclut l'IA des joueurs du tableau, que l'application
-  respecte). Ses vitesses et distances ne sont pas validées physiquement ; deux des trois vidéos réelles ont
-  une calibration fausse, masquée.
+  respecte). Ses vitesses et distances ne sont pas validées physiquement ; cinq des six vidéos réelles ont
+  une calibration fausse, masquée. Les équipes de la démonstration ouverte par défaut (Altınordu) sont
+  fausses, et c'est affiché ; les contrôles visuels ont été faits par l'assistant IA.
 - **Dépendance** : PyTorch 2.14.1 reste concerné par l'avis GHSA-v32g (checkpoint hostile) ; les poids non
   approuvés sont refusés par empreinte avant chargement. Le correctif demande CUDA 13 et un pilote récent.
 

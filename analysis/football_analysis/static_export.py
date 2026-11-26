@@ -319,6 +319,11 @@ def catalog_problems(catalog: Any) -> list[str]:
 #: le visualiseur masque positions, vitesses et distances), « exact » (vidéo synthétique).
 CALIBRATION_VERDICTS = ("approximate", "rejected", "exact")
 
+#: Verdicts du contrôle visuel des équipes, sur une planche d'une vignette par trajectoire rangée par
+#: équipe attribuée : « verified » (aucune erreur relevée), « partial » (quelques erreurs, chiffrées
+#: dans la note), « wrong » (équipes fausses), « exact » (vidéo synthétique).
+TEAM_VERDICTS = ("verified", "partial", "wrong", "exact")
+
 
 def _gallery_problems(entry: dict, where: str) -> list[str]:
     """Contrôle les champs facultatifs de la galerie : catégorie, vignette, crédit, ordre, qualité, contrôle.
@@ -339,6 +344,10 @@ def _gallery_problems(entry: dict, where: str) -> list[str]:
     if check is not None and (not isinstance(check, dict) or check.get("verdict") not in CALIBRATION_VERDICTS
                               or not isinstance(check.get("note"), str)):
         problems.append(f"{where}.calibrationCheck : verdict {CALIBRATION_VERDICTS} et note attendus")
+    teams = entry.get("teamCheck")
+    if teams is not None and (not isinstance(teams, dict) or teams.get("verdict") not in TEAM_VERDICTS
+                              or not isinstance(teams.get("note"), str)):
+        problems.append(f"{where}.teamCheck : verdict {TEAM_VERDICTS} et note attendus")
     quality = entry.get("quality")
     if quality is not None and (not isinstance(quality, dict)
                                 or any(value is not None and not _number(value, 0) for value in quality.values())):
@@ -356,8 +365,11 @@ def gallery_quality(metrics: dict) -> dict:
     detection, tracking = metrics.get("detection") or {}, metrics.get("tracking") or {}
     calibration, positions = metrics.get("calibration") or {}, metrics.get("positions") or {}
     identity = metrics.get("identity") or {}
+    teams = metrics.get("teams") or {}
     shots = tracking.get("shots")
     return {
+        "knownTeamShare": teams.get("knownTeamShare"),
+        "teamMajorityShare": teams.get("medianMajorityShare"),
         "playersPerFrame": (detection.get("peoplePerFrame") or {}).get("player"),
         "ballShare": detection.get("ballFrameShare"),
         "calibratedShare": calibration.get("calibratedShare"),
@@ -685,7 +697,7 @@ def update_catalog(catalog: Path, bundle: Path, manifest: dict, description: str
                    gallery: dict | None = None) -> dict:
     """Ajoute ou remplace l'entrée d'un export dans le catalogue de démonstration, de façon atomique.
 
-    gallery : champs de la galerie (category, credit, order, calibrationCheck) ; ceux qui manquent
+    gallery : champs de la galerie (category, credit, order, calibrationCheck, teamCheck) ; ceux qui manquent
     sont repris de l'entrée précédente. La qualité est recalculée à partir des mesures du manifeste,
     et la vignette (thumbnail.jpg) est référencée si elle existe dans l'export.
 
@@ -708,7 +720,7 @@ def update_catalog(catalog: Path, bundle: Path, manifest: dict, description: str
     entry = {"id": manifest["id"], "title": manifest["title"], "path": f"{relative}/",
              "kind": manifest["provenance"]["kind"], "duration": manifest["source"].get("duration"),
              "description": description if description is not None else previous.get("description", "")}
-    for key in ("category", "credit", "order", "calibrationCheck"):
+    for key in ("category", "credit", "order", "calibrationCheck", "teamCheck"):
         value = (gallery or {}).get(key, previous.get(key))
         if value is not None:
             entry[key] = value

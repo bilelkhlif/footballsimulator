@@ -9,7 +9,7 @@ et même licence pour la vidéo adaptée. Aucun soutien de l'auteur, des équipe
 
 ## Droits vérifiés
 
-- Page Commons relue par son API le 25 novembre 2026 : source « own » (création personnelle), licence
+- Page Commons relue par son API le 26 novembre 2026 : source « own » (création personnelle), licence
   « self » CC BY-SA 4.0 posée par l'auteur, aucune demande de suppression ni revue de licence en cours.
 - Enregistrement d'un spectateur, pas une retransmission télévisée : le droit d'auteur sur la vidéo appartient
   à la personne qui filme, et c'est elle qui l'a placée sous licence libre. Usage académique, non commercial.
@@ -27,9 +27,10 @@ SHA-256 de la vidéo distribuée : `4cec9258b74ddfd12f17964b8d779007b441c96851e3
 
 Vrai pipeline, sans joueur, trajectoire ni mesure inventés : PyTorch 2.14.1+cu126, Ultralytics
 8.4.215, GPU NVIDIA RTX 2050 (4 Gio), poids et SigLIP vérifiés avant chargement.
-392 images analysées (15,0 images/s) en 196 s,
-soit 7,1 fois la durée du clip ; pic mémoire PyTorch 627 Mio,
-+1210 Mio sur la carte (nvidia-smi), 2693 Mio de mémoire vive au plus.
+Analyse du 26 novembre 2026, avec la correction des équipes des clips courts (docs/analyse-incrementale.md).
+392 images analysées (15,0 images/s) en 174 s,
+soit 6,4 fois la durée du clip ; pic mémoire PyTorch 627 Mio,
++903 Mio sur la carte (nvidia-smi), 2688 Mio de mémoire vive au plus.
 
 - Calibration : points clés du terrain stabilisés dans le temps (docs/stabilisation-homographie.md) ;
   83,4 % des images calibrées, 29,4 % des mesures écartées,
@@ -39,11 +40,13 @@ soit 7,1 fois la durée du clip ; pic mémoire PyTorch 627 Mio,
   sur les mêmes détections ; vitesse médiane 13,6 m/s puis 2,4 m/s.
 - Suivi : 179 trajectoires, durée médiane 0,6 s, fragmentation 6,16 ;
   0 coupure(s) de plan détectée(s). Les étiquettes sont des identifiants de suivi, pas des joueurs nommés.
-- Équipes connues pour 52 % des observations de joueurs ; dans une image typique,
+- Équipes connues pour 90 % des observations de joueurs ; dans une image typique,
   67 % des joueurs classés sont dans la même équipe (vers 50 % attendu).
+- Contrôle visuel des équipes (quelques erreurs) : Planche d'une vignette par trajectoire de joueur suivie au moins 8 images : 52 justes, 3 erreurs (l'arbitre et deux Brésiliens avec l'Afrique du Sud), 2 douteuses, 10 sans équipe. Les « gardiens » détectés sont surtout des stadiers du bord du terrain (rôle mal détecté).
 - Ballon détecté sur 94 % des images ; il est placé comme s'il était au sol.
 
-Les vitesses et distances sont exploratoires : aucune n'est validée physiquement.
+Les vitesses et distances sont exploratoires : aucune n'est validée physiquement. Les contrôles visuels
+(calibration, équipes) ont été faits par l'assistant IA sur des planches d'images, sans revue humaine.
 
 Assistance IA : préparation de l'extrait, vérification des droits, analyse, export, contrôles et rédaction
 effectués par Claude Code sur instruction de Bilel Khlif (ATTRIBUTION.md) ; aucune validation sur téléphone.

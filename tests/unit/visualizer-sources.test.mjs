@@ -95,6 +95,17 @@ test('démonstration réelle : première entrée, provenance d\'analyse et créd
   assert.equal(france.provenance.media.author, 'Like tears in rain');
   assert.equal(demos.at(-1).id, 'match-synthetique');
   assert.equal(demos.at(-1).calibrationCheck.verdict, 'exact');
+  // Équipes : verdict du contrôle visuel sur chaque démonstration ; taux lus dans les mesures de l'analyse.
+  assert.equal(demo.teamCheck.verdict, 'wrong', 'Altınordu : arbitres contre joueurs');
+  assert.ok(demos.every((entry) => entry.teamCheck && entry.teamCheck.note.length > 20), 'verdict et constat partout');
+  for (const id of ['samsunspor-trabzonspor-2025', 'samsunspor-rizespor-2024', 'samsunspor-fenerbahce-2025']) {
+    const entry = demos.find((candidate) => candidate.id === id);
+    assert.ok(['verified', 'partial'].includes(entry.teamCheck.verdict), id);
+    assert.ok(entry.quality.knownTeamShare >= 0.9 && entry.quality.teamMajorityShare <= 0.7, id);
+    assert.equal(entry.calibrationCheck.verdict, 'rejected', id);
+    const manifest = await source.getTrackingManifest(id);
+    assert.equal(manifest.provenance.media.author, '𐰇𐱅𐰚𐰤', id);
+  }
 });
 
 test('démonstration : fenêtre comme l\'API locale, voisines comprises, trajectoires présentes et sélection', async () => {

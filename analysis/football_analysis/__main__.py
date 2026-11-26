@@ -180,9 +180,11 @@ def command_export(arguments: argparse.Namespace) -> int:
         if arguments.catalog:
             check = None if arguments.calibration_check is None else {
                 "verdict": arguments.calibration_check, "note": arguments.calibration_note or ""}
+            teams = None if arguments.team_check is None else {
+                "verdict": arguments.team_check, "note": arguments.team_note or ""}
             gallery = {key: value for key, value in (
                 ("category", arguments.category), ("credit", arguments.credit), ("order", arguments.order),
-                ("calibrationCheck", check)) if value is not None}
+                ("calibrationCheck", check), ("teamCheck", teams)) if value is not None}
             update_catalog(Path(arguments.catalog), output, manifest, arguments.description, gallery=gallery)
     except ExportError as error:
         print(f"Export impossible : {error}", file=sys.stderr)
@@ -265,6 +267,9 @@ def main(argv: list[str] | None = None) -> int:
     export.add_argument("--calibration-check", choices=("approximate", "rejected", "exact"),
                         help="verdict du contrôle visuel de la calibration ; rejected masque les positions 3D")
     export.add_argument("--calibration-note", help="constat du contrôle visuel, affiché dans le visualiseur")
+    export.add_argument("--team-check", choices=("verified", "partial", "wrong", "exact"),
+                        help="verdict du contrôle visuel des équipes (planche des trajectoires par équipe)")
+    export.add_argument("--team-note", help="constat du contrôle des équipes, affiché dans le visualiseur")
     export.add_argument("--replace", action="store_true", help="remplace un export existant")
     export.add_argument("--other-video", action="store_true", help="accepte une vidéo transcodée, différente de la source")
     verify = commands.add_parser("verify-export", help="vérifier un export statique")

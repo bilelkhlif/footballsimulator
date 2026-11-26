@@ -27,7 +27,7 @@ le [guide de démonstration](docs/guide-demonstration-soutenance.md) et la
 |---|---|
 | Besoins BF1 à BF9 du cahier | Tous implémentés ; AR vérifiée en émulation, et sur téléphone pour des versions antérieures |
 | Exigences du cahier (54 tracées) | 44 vérifiées, 8 partielles (mesures sur téléphone), 1 non faite (vidéo), 1 sans objet |
-| Tests automatisés | 285 unitaires, 226 vérifications dans Chrome, 144 tests Python : tous réussis |
+| Tests automatisés (26 novembre) | 386 unitaires et 150 tests Python réussis ; 233 vérifications dans Chrome sur 234 : l'échec (interface 568 × 320 du tableau) se reproduit sur `main` (`bc5beb0`) |
 | Essais sur téléphone de la version actuelle | **À faire par l'équipe** (protocole P0 à P10 de [recette.md](docs/recette.md)) |
 | Vidéo de démonstration | **À tourner** ([storyboard](docs/video-demonstration.md)) |
 
@@ -37,6 +37,15 @@ trois vraies vidéos aux droits vérifiés et d'un match synthétique ; calibrat
 invraisemblables ramenés de 70,6 % à 11,2 % sur France–Allemagne, de 29,2 % à 5,0 % sur Samsunspor–Altınordu) ;
 calibrations fausses détectées par contrôle visuel et masquées plutôt qu'affichées
 ([explication](docs/stabilisation-homographie.md)).
+
+**Nouveautés du 26 novembre.** Trois vidéos de plus, choisies pour leur classement des joueurs en deux
+équipes (Samsunspor contre Trabzonspor, Rizespor et Fenerbahçe) : 93 à 96 % des observations de joueurs
+ont une équipe ; au contrôle visuel, affiché sur chaque carte de la galerie, 1 à 3 erreurs nettes par
+vidéo, plus 1 à 4 trajectoires qui passent d'un joueur à l'autre.
+Défaut corrigé : sur un clip plus court que l'amorçage (30 s), les joueurs apparus après les
+64 premières trajectoires restaient sans équipe. Les arbitres et stadiers isolés forment désormais un
+groupe « autres », sans équipe. Les équipes de Samsunspor–Altınordu restent fausses, et c'est affiché
+([détails](docs/visualiseur-demos-reelles.md)).
 
 **Équipe.** Iyed Rachdi, Bilel Khlif, Ghassen Dalleji ; encadrant : Dr. Ing. Mohamed-Bécha Kaâniche. Le code
 a été réalisé avec des assistants d'IA (Claude Code, Codex) sur les consignes de Bilel Khlif, qui a relu,
@@ -59,7 +68,7 @@ testé sur téléphone et fusionné : tout est déclaré dans [ATTRIBUTION.md](A
 - **Espaces de coaching.** Rail sombre compact et sept espaces fonctionnels : Accueil, Équipes et formations, Outils tactiques, Animation et séquences, Réalité augmentée, Plus d'outils, Réglages et aide. Une seule scène, un seul tableau et un seul historique sont conservés entre les espaces. Navigation basse en portrait, panneaux défilants et contrôles de vue persistants. L'[inventaire, l'architecture, les correspondances et les captures avant / après](docs/espaces-coaching.md) détaillent cette évolution.
 - **Testé.** 369 tests automatisés sur PC le 24 novembre 2026 : 229 unitaires et 140 de bout en bout, dont le parcours complet d'un entraîneur de la 3D vers l'AR émulée, tous réussis sans cas ignoré ([revue critique, mesures et limites](docs/archives/revue-finale-pr17.md)). Les anciens essais physiques du 12 et du 14 novembre concernent des versions précédentes : AR WebGPU sur TECNO POVA 6 Pro 5G, mode test WebGL sur Galaxy S10e. Cette nouvelle interface n'a pas été testée sur téléphone réel. Restent à mesurer : la stabilité d'une minute, les 9 essais sur 10 et les 30 images par seconde ([recette](docs/recette.md)).
 
-- **Analyse de match intégrée.** Le visualiseur Bêta s'ouvre depuis le rail principal ou Plus d'outils, dans un nouvel onglet : la tactique en cours reste intacte. Sa galerie propose [trois vraies vidéos](docs/visualiseur-demos-reelles.md) de Wikimedia Commons, créditées sous CC BY-SA 4.0, et la démo synthétique de 36 s ; Samsunspor–Altınordu s'ouvre par défaut. Sur France–Allemagne et le Brésil, la calibration automatique est fausse : positions, vitesses et distances y sont masquées. Les deux se lisent sans Python ni calcul IA hébergé. Vos propres vidéos utilisent le serveur local, ses poids vérifiés et votre matériel. Vérification indépendante du matin du 25 novembre : 277 unitaires, 224 contrôles Chrome, 129 tests Python, 50 contrôles de perte GPU et 12 étapes CUDA ; le soir, après l'interface verre et les nouvelles démos : **285 unitaires, 226 contrôles Chrome, 144 tests Python**, tous réussis sans cas ignoré. Les limites de précision, le risque résiduel de PyTorch et les décisions de licence sont détaillés dans le [rapport de livraison](docs/visualiseur-livraison-2026-11-25.md). L'application académique attend toujours l'accord de licence des coauteurs ([LICENSING.md](LICENSING.md)).
+- **Analyse de match intégrée.** Le visualiseur Bêta s'ouvre depuis le rail principal ou Plus d'outils, dans un nouvel onglet : la tactique en cours reste intacte. Sa galerie propose [six vraies vidéos](docs/visualiseur-demos-reelles.md) de Wikimedia Commons, créditées sous CC BY-SA 4.0, et la démo synthétique de 36 s ; Samsunspor–Altınordu s'ouvre par défaut, seule calibration qui passe le contrôle visuel. Sur les cinq autres, la calibration automatique est fausse : positions, vitesses et distances y sont masquées, mais détections, suivi et équipes restent visibles sur la vidéo. Chaque carte indique aussi le contrôle visuel des équipes. Les deux se lisent sans Python ni calcul IA hébergé. Vos propres vidéos utilisent le serveur local, ses poids vérifiés et votre matériel. Vérification indépendante du matin du 25 novembre : 277 unitaires, 224 contrôles Chrome, 129 tests Python, 50 contrôles de perte GPU et 12 étapes CUDA ; le soir, après l'interface verre et les nouvelles démos : **285 unitaires, 226 contrôles Chrome, 144 tests Python**, tous réussis sans cas ignoré. Les limites de précision, le risque résiduel de PyTorch et les décisions de licence sont détaillés dans le [rapport de livraison](docs/visualiseur-livraison-2026-11-25.md). L'application académique attend toujours l'accord de licence des coauteurs ([LICENSING.md](LICENSING.md)).
 
 ## Aperçu
 
