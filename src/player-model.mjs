@@ -31,6 +31,18 @@ export const FOOTBALLER_COLORS = Object.freeze({
 export const EYE_LEVEL = 0.925;
 
 /**
+ * Numéro dans le dos du maillot, en fractions de la hauteur du joueur : centré sur la colonne
+ * vertébrale, entre les omoplates et la taille, juste derrière le dos du torse (le torse est un
+ * cylindre aplati d'avant en arrière : rayon 0,104 H à cette hauteur, profondeur × 0,55).
+ */
+export const SHIRT_NUMBER = Object.freeze({
+  size: 0.125,
+  y: 0.665,
+  depth: 0.104 * 0.55,
+  gap: 0.006,
+});
+
+/**
  * Cylindre vertical, éventuellement aplati (sx, sz), entre deux hauteurs.
  * @param {number} H hauteur du joueur
  * @param {{top: number, bottom: number, from: number, to: number, x?: number, z?: number,
@@ -155,11 +167,157 @@ export function createFootballerGeometries(height) {
   skin.push(limb(H, { top: 0.03, bottom: 0.033, from: 0.79, to: 0.865 }));
   skin.push(ball(H, { r: 0.063, y: EYE_LEVEL - 0.01, sx: 1, sy: 1.1, sz: 0.95, width: 16, height: 12 }));
 
-  // Cheveux courts : une calotte sur le haut du crâne, basculée vers l'arrière pour dégager le front.
-  const hair = new THREE.SphereGeometry(0.068 * H, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.52);
-  hair.scale(1, 1.12, 0.98);
-  hair.rotateZ(0.32);
-  hair.translate(-0.004 * H, (EYE_LEVEL - 0.005) * H, 0);
+  // Cheveux : la coupe courte classique ; les quatre coupes sont dans createHairGeometries.
+  return { kit: mergeParts(kit), skin: mergeParts(skin), hair: createClassicHair(H), boots: mergeParts(boots) };
+}
 
-  return { kit: mergeParts(kit), skin: mergeParts(skin), hair: mergeParts([hair]), boots: mergeParts(boots) };
+/**
+ * Plan du numéro dans le dos : carré, tourné vers l'arrière du joueur (-X), posé juste derrière le
+ * maillot pour ne jamais disparaître dans le torse ni scintiller contre lui. Partagé par tous les
+ * joueurs ; seul le matériau (la texture du chiffre) change d'un joueur à l'autre.
+ * @param {number} height hauteur du joueur, en mètres de la maquette (PLAYER_SIZE.height)
+ * @returns {THREE.PlaneGeometry}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Scène 3D — modèle du footballeur
+ */
+export function createShirtNumberGeometry(height) {
+  const H = height;
+  const geometry = new THREE.PlaneGeometry(SHIRT_NUMBER.size * H, SHIRT_NUMBER.size * H);
+  // Le plan regarde vers +Z : un quart de tour l'oriente vers -X, le dos du joueur.
+  geometry.rotateY(-Math.PI / 2);
+  geometry.translate(-(SHIRT_NUMBER.depth + SHIRT_NUMBER.gap) * H, SHIRT_NUMBER.y * H, 0);
+  return geometry;
+}
+
+/** Centre et demi-axes de la tête, en fractions de la hauteur du joueur (voir la tête ci-dessus). */
+const HEAD = Object.freeze({ y: EYE_LEVEL - 0.01, rx: 0.063, ry: 0.063 * 1.1, rz: 0.063 * 0.95 });
+
+/**
+ * Calotte de cheveux : une portion de sphère sur le haut du crâne, basculée vers l'arrière pour
+ * dégager le front.
+ * @param {number} H hauteur du joueur
+ * @param {{radius: number, cover: number, tilt: number, sy?: number, sz?: number, x?: number, y: number}} spec
+ *   rayon et position en fractions de H ; cover : part de la sphère couverte, en demi-tours
+ * @returns {THREE.BufferGeometry}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Scène 3D — coupes de cheveux
+ */
+function hairCap(H, { radius, cover, tilt, sy = 1.12, sz = 0.98, x = -0.004, y }) {
+  const cap = new THREE.SphereGeometry(radius * H, 18, 9, 0, Math.PI * 2, 0, Math.PI * cover);
+  cap.scale(1, sy, sz);
+  cap.rotateZ(tilt);
+  cap.translate(x * H, y * H, 0);
+  return cap;
+}
+
+/**
+ * Coupe courte classique : cheveux courts et nets, répartis tout autour du crâne (la coupe de
+ * départ de tous les joueurs).
+ * @param {number} H hauteur du joueur
+ * @returns {THREE.BufferGeometry}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Scène 3D — coupes de cheveux
+ */
+function createClassicHair(H) {
+  return mergeParts([hairCap(H, { radius: 0.068, cover: 0.52, tilt: 0.32, y: EYE_LEVEL - 0.005 })]);
+}
+
+/**
+ * Coupe en brosse : côtés très courts, collés au crâne, et un dessus un peu plus long et plat.
+ * @param {number} H hauteur du joueur
+ * @returns {THREE.BufferGeometry}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Scène 3D — coupes de cheveux
+ */
+function createCrewHair(H) {
+  const sides = hairCap(H, { radius: 0.0655, cover: 0.47, tilt: 0.22, sy: 1.1, sz: 0.96, x: -0.002, y: HEAD.y });
+  const top = new THREE.SphereGeometry(0.047 * H, 16, 6);
+  top.scale(1.15, 0.36, 0.9);
+  top.translate(-0.002 * H, (HEAD.y + HEAD.ry - 0.004) * H, 0);
+  return mergeParts([sides, top]);
+}
+
+/**
+ * Cheveux bouclés : de petites boucles rondes sur tout le haut et l'arrière du crâne, au-dessus du
+ * front, sur une calotte courte qui comble les espaces.
+ * @param {number} H hauteur du joueur
+ * @returns {THREE.BufferGeometry}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Scène 3D — coupes de cheveux
+ */
+function createCurlyHair(H) {
+  const parts = [hairCap(H, { radius: 0.066, cover: 0.5, tilt: 0.3, y: EYE_LEVEL - 0.007 })];
+  // Anneaux de boucles, du sommet vers la nuque : angle depuis le haut, nombre de boucles.
+  const rings = [[0, 1], [24, 7], [46, 11], [68, 14], [90, 15], [108, 12]];
+  for (const [degrees, count] of rings) {
+    const theta = THREE.MathUtils.degToRad(degrees);
+    for (let index = 0; index < count; index += 1) {
+      const phi = (index / count) * Math.PI * 2 + (degrees % 48 ? Math.PI / count : 0);
+      const front = Math.cos(phi);
+      // Le visage reste dégagé : pas de boucle sur le front ni devant, sous le haut du crâne.
+      if (degrees >= 46 && front > 0.25) continue;
+      if (degrees >= 90 && front > -0.2) continue;
+      const curl = new THREE.SphereGeometry(0.021 * H, 7, 5);
+      curl.translate(
+        Math.sin(theta) * front * HEAD.rx * 1.02 * H,
+        (HEAD.y + Math.cos(theta) * HEAD.ry * 1.02) * H,
+        Math.sin(theta) * Math.sin(phi) * HEAD.rz * 1.02 * H,
+      );
+      parts.push(curl);
+    }
+  }
+  return mergeParts(parts);
+}
+
+/**
+ * Crête (iroquoise) : côtés rasés de très près, et une bande de cheveux plus longs du front jusqu'à
+ * l'arrière du crâne.
+ * @param {number} H hauteur du joueur
+ * @returns {THREE.BufferGeometry}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Scène 3D — coupes de cheveux
+ */
+function createMohawkHair(H) {
+  const parts = [hairCap(H, { radius: 0.0662, cover: 0.44, tilt: 0.3, sy: 1.1, sz: 0.96, y: HEAD.y })];
+  // Bande de la crête : du front (40°) à l'arrière du crâne (200°), dans le plan médian.
+  const steps = 9;
+  for (let index = 0; index < steps; index += 1) {
+    const angle = THREE.MathUtils.degToRad(40 + (160 * index) / (steps - 1));
+    const lift = 0.016 + 0.01 * Math.sin((Math.PI * index) / (steps - 1)); // plus haute au sommet
+    const piece = new THREE.SphereGeometry(0.026 * H, 10, 6);
+    piece.scale(1.1, 1.3, 0.34);
+    // Chaque touffe suit la courbe du crâne : son axe long pointe vers l'extérieur.
+    piece.rotateZ(angle - Math.PI / 2);
+    piece.translate(
+      Math.cos(angle) * (HEAD.rx + lift) * H,
+      (HEAD.y + Math.sin(angle) * (HEAD.ry + lift)) * H,
+      0,
+    );
+    parts.push(piece);
+  }
+  return mergeParts(parts);
+}
+
+/**
+ * Les quatre coupes de cheveux, posées sur la tête du modèle : des géométries partagées par tous
+ * les joueurs, la couleur venant de chaque instance.
+ * @param {number} height hauteur du joueur, en mètres de la maquette (PLAYER_SIZE.height)
+ * @returns {Record<'classic'|'crew'|'curly'|'mohawk', THREE.BufferGeometry>}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Scène 3D — coupes de cheveux
+ */
+export function createHairGeometries(height) {
+  return {
+    classic: createClassicHair(height),
+    crew: createCrewHair(height),
+    curly: createCurlyHair(height),
+    mohawk: createMohawkHair(height),
+  };
 }

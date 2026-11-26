@@ -305,7 +305,8 @@ export class PointOfView extends EventEmitter {
   }
 
   /**
-   * Rétablit le pion du joueur : numéro, zone de sélection et instance à sa pose.
+   * Rétablit le pion du joueur : numéro, zone de sélection et instance à sa pose (par les pions de
+   * l'équipe s'ils savent se réécrire, sinon directement).
    * @responsable Iyed Rachdi
    * @date 2026-11-26
    * @role Point de vue — mode et caméra
@@ -313,8 +314,16 @@ export class PointOfView extends EventEmitter {
   #restoreMarker() {
     const { teamId, index, player } = this.#target;
     player.visible = true;
+    const teamMeshes = this.#teamMeshes[teamId];
+    // Les pions de l'équipe réécrivent eux-mêmes le joueur à l'image suivante, chaque partie à sa
+    // place (une seule coupe de cheveux visible).
+    if (typeof teamMeshes?.invalidate === 'function') {
+      teamMeshes.invalidate();
+      teamMeshes.update?.();
+      return;
+    }
     player.updateMatrix();
-    for (const mesh of this.#teamMeshes[teamId]?.meshes ?? []) {
+    for (const mesh of teamMeshes?.meshes ?? []) {
       mesh.setMatrixAt(index, player.matrix);
       mesh.instanceMatrix.needsUpdate = true;
     }

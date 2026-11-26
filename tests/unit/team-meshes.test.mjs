@@ -61,10 +61,12 @@ function sameMatrix(a, b) {
   return a.elements.every((value, index) => Math.abs(value - b.elements[index]) < 1e-6);
 }
 
-test('six maillages instanciés par équipe (socle, flèche, tenue, peau, cheveux, chaussures), une instance par joueur, à sa pose', () => {
+test('neuf maillages instanciés par équipe (socle, flèche, tenue, peau, quatre coupes, chaussures), une instance par joueur, à sa pose', () => {
   const { group, meshes } = createSetup();
-  assert.equal(meshes.meshes.length, 6);
-  for (const mesh of meshes.meshes) {
+  assert.equal(meshes.meshes.length, 9);
+  // Les coupes de cheveux (indices 4 à 7) ne montrent chaque joueur que dans la sienne : la coupe
+  // classique par défaut (indice 4).
+  for (const mesh of meshes.meshes.filter((_, index) => index < 5 || index > 7)) {
     assert.equal(mesh.isInstancedMesh, true);
     assert.equal(mesh.count, 11);
     group.children.forEach((player, index) => {
@@ -79,7 +81,7 @@ test('le joueur garde son identité, son numéro et sa zone de sélection ; le p
   const { group } = createSetup();
   const player = group.children[3];
   assert.deepEqual(Object.keys(player.userData).sort(), ['number', 'post', 'role', 'teamId', 'type']);
-  assert.deepEqual(player.children.map((child) => (child.isSprite ? 'numéro' : child.name)), ['numéro', 'hitbox']);
+  assert.deepEqual(player.children.map((child) => (child.isSprite ? 'numéro' : child.name)), ['numéro', 'hitbox', 'shirt-number']);
   assert.equal(player.rotation.y, Math.PI, 'les Rouges regardent vers -X');
 });
 

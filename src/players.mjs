@@ -18,7 +18,15 @@
  */
 import * as THREE from 'three';
 import { PLAYER_SIZE } from './config.mjs';
-import { createFootballerGeometries, FOOTBALLER_COLORS } from './player-model.mjs';
+import {
+  createFootballerGeometries, createHairGeometries, createShirtNumberGeometry, FOOTBALLER_COLORS,
+} from './player-model.mjs';
+import {
+  DEFAULT_APPEARANCE, HAIR_STYLE_IDS, hairColorToHex, skinToneColor,
+} from './player-appearance.mjs';
+
+/** Matrice d'une instance cachée : échelle nulle (un joueur dans le maillage d'une autre coupe). */
+const HIDDEN_INSTANCE = new THREE.Matrix4().makeScale(0, 0, 0);
 
 /** Résolution de la texture d'un numéro, en pixels. */
 const LABEL_TEXTURE_SIZE = 128;
@@ -71,6 +79,71 @@ function drawLabel(canvas, cssColor, number) {
   ctx.fillText(String(number), center, center + 4);
 }
 
+/** Résolution de la texture d'un numéro de dos, en pixels. */
+const SHIRT_NUMBER_TEXTURE_SIZE = 128;
+
+/**
+ * Numéro valable pour un maillot : entier de 1 à 99. Sinon, le dos reste sans numéro.
+ * @param {unknown} number
+ * @returns {boolean}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Scène 3D — numéros de dos
+ */
+export function isShirtNumber(number) {
+  return Number.isInteger(number) && number >= 1 && number <= 99;
+}
+
+/**
+ * Couleurs d'un numéro de dos lisible sur un maillot : chiffre blanc et liseré sombre sur un
+ * maillot foncé, chiffre presque noir et liseré clair sur un maillot clair (blanc, jaune).
+ * @param {number} kitColor couleur sRGB du maillot (0xRRGGBB)
+ * @returns {{fill: string, outline: string}} couleurs CSS
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Scène 3D — numéros de dos
+ */
+export function shirtNumberInk(kitColor) {
+  // THREE.Color garde ses composantes en linéaire : la luminance relative se calcule directement.
+  const { r, g, b } = new THREE.Color(kitColor);
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luminance > 0.35
+    ? { fill: '#17181c', outline: 'rgba(255, 255, 255, 0.55)' }
+    : { fill: '#ffffff', outline: 'rgba(0, 0, 0, 0.45)' };
+}
+
+/**
+ * Dessine, ou redessine, un numéro de dos sur un fond transparent : chiffres pleins, larges et
+ * serrés, comme un flocage de maillot, avec un fin liseré pour rester lisible.
+ * @param {HTMLCanvasElement} canvas
+ * @param {{fill: string, outline: string}} ink couleurs (shirtNumberInk)
+ * @param {number} number numéro du maillot
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Scène 3D — numéros de dos
+ */
+function drawShirtNumber(canvas, ink, number) {
+  const ctx = canvas.getContext('2d');
+  const size = SHIRT_NUMBER_TEXTURE_SIZE;
+  ctx.clearRect?.(0, 0, size, size);
+  ctx.font = `800 ${number >= 10 ? 92 : 108}px "Arial Black", "Segoe UI", Roboto, Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 7;
+  ctx.strokeStyle = ink.outline;
+  ctx.fillStyle = ink.fill;
+  const text = String(number);
+  // Deux chiffres : légèrement resserrés pour tenir dans la largeur du dos.
+  const scaleX = number >= 10 ? 0.86 : 1;
+  ctx.save?.();
+  ctx.translate?.(size / 2, size / 2 + 6);
+  ctx.scale?.(scaleX, 1);
+  ctx.strokeText(text, 0, 0);
+  ctx.fillText(text, 0, 0);
+  ctx.restore?.();
+}
+
 /**
  * Crée la flèche blanche posée au pied du joueur, qui indique son orientation.
  * La géométrie pointe vers +X, l'axe « avant » du joueur.
@@ -112,10 +185,13 @@ export class PlayerFactory {
     const footballer = createFootballerGeometries(height);
     this.bodyGeometry = footballer.kit; // maillot et short, à la couleur de l'équipe
     this.skinGeometry = footballer.skin;
-    this.hairGeometry = footballer.hair;
+    footballer.hair.dispose(); // remplacée par les quatre coupes ci-dessous
+    // Quatre coupes partagées (personnalisation) ; la couleur des cheveux vient de chaque instance.
+    this.hairGeometries = createHairGeometries(height);
     this.bootsGeometry = footballer.boots;
-    this.skinMaterial = new THREE.MeshStandardMaterial({ color: FOOTBALLER_COLORS.skin, roughness: 0.7, metalness: 0 });
-    this.hairMaterial = new THREE.MeshStandardMaterial({ color: FOOTBALLER_COLORS.hair, roughness: 0.85, metalness: 0 });
+    // Teint de chaque joueur porté par sa couleur d'instance (personnalisation) : matériau blanc partagé.
+    this.skinMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, metalness: 0 });
+    this.hairMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, metalness: 0 });
     this.bootsMaterial = new THREE.MeshStandardMaterial({ color: FOOTBALLER_COLORS.boots, roughness: 0.5, metalness: 0.05 });
 
     this.baseGeometry = new THREE.CylinderGeometry(radius * 1.3, radius * 1.4, 0.0015, 20);
@@ -129,8 +205,65 @@ export class PlayerFactory {
     this.hitboxGeometry.translate(0, (height * 1.5) / 2, 0);
     this.hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false });
 
+    // Numéro dans le dos (phase 5) : un plan partagé, une texture par équipe et par numéro.
+    this.shirtNumberGeometry = createShirtNumberGeometry(height);
+
     this.bodyMaterials = new Map();
     this.labelMaterials = new Map();
+    this.shirtNumberMaterials = new Map();
+  }
+
+  /**
+   * Renvoie le matériau du numéro de dos d'un joueur, créé une seule fois par équipe et par
+   * numéro. Couleur de départ : lisible sur le maillot de l'équipe ; followTeamKits l'ajuste
+   * ensuite au maillot choisi et au gardien.
+   * @param {{id: string, color: number}} team
+   * @param {number} number numéro valable (isShirtNumber)
+   * @returns {THREE.MeshBasicMaterial}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Scène 3D — numéros de dos
+   */
+  getShirtNumberMaterial(team, number) {
+    const key = `${team.id}-${number}`;
+    if (!this.shirtNumberMaterials.has(key)) {
+      const canvas = document.createElement('canvas');
+      canvas.width = SHIRT_NUMBER_TEXTURE_SIZE;
+      canvas.height = SHIRT_NUMBER_TEXTURE_SIZE;
+      drawShirtNumber(canvas, shirtNumberInk(team.color ?? 0xffffff), number);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      this.shirtNumberMaterials.set(key, new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        alphaTest: 0.3,
+        depthWrite: false,
+        toneMapped: false,
+        // Imprimé sur le tissu : toujours devant le dos du maillot, jamais en conflit avec lui.
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2,
+      }));
+    }
+    return this.shirtNumberMaterials.get(key);
+  }
+
+  /**
+   * Redessine les numéros de dos d'une équipe pour qu'ils restent lisibles sur son maillot, et sur
+   * celui du gardien (n° 1).
+   * @param {string} teamId
+   * @param {{kit: number, goalkeeper: number}} colors couleurs sRGB des maillots
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Scène 3D — numéros de dos
+   */
+  setShirtNumberColors(teamId, { kit, goalkeeper }) {
+    for (const [key, material] of this.shirtNumberMaterials) {
+      const [id, number] = key.split('-');
+      if (id !== teamId || !material.map?.image) continue;
+      drawShirtNumber(material.map.image, shirtNumberInk(Number(number) === 1 ? goalkeeper : kit), Number(number));
+      material.map.needsUpdate = true;
+    }
   }
 
   /**
@@ -187,6 +320,7 @@ export class PlayerFactory {
   /**
    * Crée un joueur prêt à être placé sur le terrain, tourné vers le but adverse.
    * Son numéro est un sprite, toujours tourné vers la caméra, donc lisible sous tous les angles.
+   * Depuis la phase 5, le même numéro est aussi imprimé dans le dos de son maillot.
    * Depuis le sprint 6, son pion est dessiné par les maillages instanciés de son équipe
    * (createTeamMeshes) : le groupe porte l'identité, la place, le numéro et la zone de sélection.
    * @param {{team: object, number: number, role: string, post?: string}} options rôle et poste normalisé (« MDC »)
@@ -208,14 +342,24 @@ export class PlayerFactory {
     hitbox.name = 'hitbox';
 
     player.add(label, hitbox);
+
+    // Numéro imprimé dans le dos du maillot : enfant du joueur, il suit sa place et sa rotation.
+    // Un joueur sans numéro valable garde un dos uni.
+    if (isShirtNumber(number)) {
+      const shirtNumber = new THREE.Mesh(this.shirtNumberGeometry, this.getShirtNumberMaterial(team, number));
+      shirtNumber.name = 'shirt-number';
+      player.add(shirtNumber);
+    }
     player.rotation.y = team.attacksPositiveX ? 0 : Math.PI;
     return player;
   }
 
   /**
-   * Crée les pions visibles d'une équipe : six maillages instanciés (socle, flèche, tenue, peau,
-   * cheveux, chaussures), dont l'instance i suit le joueur i. Socle et tenue prennent la couleur
-   * du maillot de chaque joueur ; peau, cheveux et chaussures sont les mêmes pour tous.
+   * Crée les pions visibles d'une équipe : neuf maillages instanciés (socle, flèche, tenue, peau,
+   * quatre coupes de cheveux, chaussures), dont l'instance i suit le joueur i. Socle et tenue
+   * prennent la couleur du maillot de chaque joueur ; chaque joueur n'apparaît que dans le
+   * maillage de sa coupe, avec sa couleur de cheveux ; la peau prend le teint de chaque joueur ;
+   * les chaussures sont les mêmes pour tous.
    * @param {{id: string, color: number}} team
    * @param {THREE.Object3D[]} players joueurs de l'équipe (createPlayer), dans un groupe placé à
    *   l'origine du terrain, comme celui des maillages
@@ -232,8 +376,9 @@ export class PlayerFactory {
         [this.baseGeometry, this.getBodyMaterial(team), true],
         [this.markerGeometry, this.markerMaterial, false],
         [this.bodyGeometry, this.getBodyMaterial(team), true],
-        [this.skinGeometry, this.skinMaterial, false],
-        [this.hairGeometry, this.hairMaterial, false],
+        [this.skinGeometry, this.skinMaterial, false, { skin: true }],
+        // Une coupe par maillage : chaque joueur n'est visible que dans celui de sa coupe.
+        ...HAIR_STYLE_IDS.map((style) => [this.hairGeometries[style], this.hairMaterial, false, { hair: style }]),
         [this.bootsGeometry, this.bootsMaterial, false],
       ],
     });
@@ -255,14 +400,22 @@ export class TeamMeshes {
   #written;
   /** Maillages qui prennent la couleur du maillot (socle et tenue). */
   #kitMeshes;
+  /** Maillages des coupes de cheveux, avec la coupe de chacun. */
+  #hairMeshes;
+  /** Coupe de chaque joueur, par indice d'instance. */
+  #hairStyles;
+  /** Maillages de la peau (teint de chaque joueur). */
+  #skinMeshes;
 
   /**
    * @param {object} options
    * @param {{id: string}} options.team
    * @param {THREE.Object3D[]} options.players joueurs de l'équipe
-   * @param {Array<[THREE.BufferGeometry, THREE.Material, boolean?]>} options.parts géométrie et
-   *   matériau de chaque partie du pion, partagés avec la fabrique ; vrai si la partie prend la
-   *   couleur du maillot (socle et tenue), faux pour la flèche, la peau, les cheveux et les chaussures
+   * @param {Array<[THREE.BufferGeometry, THREE.Material, boolean?, {hair?: string, skin?: boolean}?]>} options.parts
+   *   géométrie et matériau de chaque partie du pion, partagés avec la fabrique ; vrai si la partie
+   *   prend la couleur du maillot (socle et tenue), faux sinon ; enfin, son rôle dans l'apparence :
+   *   `hair`, l'identifiant d'une coupe (seuls les joueurs de cette coupe y sont visibles) ; `skin`,
+   *   la peau (teint de chaque joueur)
    * @responsable Bilel Khlif
    * @date 2026-11-16
    * @role Scène 3D — joueurs (instanciation)
@@ -281,10 +434,18 @@ export class TeamMeshes {
       return mesh;
     });
     this.#kitMeshes = this.#meshes.filter((mesh, index) => parts[index][2]);
+    this.#hairMeshes = this.#meshes
+      .map((mesh, index) => ({ mesh, style: parts[index][3]?.hair ?? null }))
+      .filter(({ style }) => style !== null);
+    this.#skinMeshes = this.#meshes.filter((mesh, index) => parts[index][3]?.skin === true);
+    this.#hairStyles = players.map(() => DEFAULT_APPEARANCE.hair);
     this.#written = new Float64Array(players.length * 4).fill(Number.NaN);
     // Couleurs d'instance créées avant le premier rendu : le matériau les prend en compte dès sa
     // compilation. Ensuite, un changement de maillot ne fait que réécrire ces couleurs.
     this.setKitColors({ kit: team.color ?? 0xffffff, goalkeeper: team.color ?? 0xffffff });
+    for (const { number } of players.map((player) => player.userData)) {
+      this.setAppearance(number, DEFAULT_APPEARANCE);
+    }
     this.update();
   }
 
@@ -308,7 +469,52 @@ export class TeamMeshes {
   }
 
   /**
-   * Maillages instanciés de l'équipe (socle, flèche, tenue, peau, cheveux, chaussures).
+   * Apparence d'un joueur, reconnu par son numéro : sa coupe (seul le maillage de cette coupe le
+   * montre), la couleur de ses cheveux et son teint. Les autres joueurs ne changent pas.
+   * @param {number} number numéro du joueur
+   * @param {{hair: string, color: string, skin?: string}} appearance coupe, couleur « #rrggbb » et
+   *   identifiant du teint (teint par défaut s'il manque ou est inconnu)
+   * @returns {boolean} faux si aucun joueur de l'équipe ne porte ce numéro
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Scène 3D — joueurs (instanciation)
+   */
+  setAppearance(number, { hair, color, skin }) {
+    const index = this.#players.findIndex((player) => player.userData.number === number);
+    if (index < 0) {
+      return false;
+    }
+    const hairColor = new THREE.Color(hairColorToHex(color));
+    for (const { mesh } of this.#hairMeshes) {
+      mesh.setColorAt(index, hairColor);
+      mesh.instanceColor.needsUpdate = true;
+    }
+    // Teint : toute la peau du joueur (tête, cou, bras, mains, jambes), et rien d'autre.
+    const skinColor = new THREE.Color(hairColorToHex(skinToneColor(skin)));
+    for (const mesh of this.#skinMeshes) {
+      mesh.setColorAt(index, skinColor);
+      mesh.instanceColor.needsUpdate = true;
+    }
+    if (this.#hairStyles[index] !== hair) {
+      this.#hairStyles[index] = hair;
+      this.#written[index * 4] = Number.NaN; // pose à réécrire : la coupe visible a changé
+    }
+    return true;
+  }
+
+  /**
+   * Force la réécriture de toutes les instances à la prochaine image (après qu'un autre module les
+   * a modifiées, comme le point de vue qui masque un joueur).
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Scène 3D — joueurs (instanciation)
+   */
+  invalidate() {
+    this.#written.fill(Number.NaN);
+  }
+
+  /**
+   * Maillages instanciés de l'équipe (socle, flèche, tenue, peau, quatre coupes, chaussures).
    * @returns {THREE.InstancedMesh[]}
    * @responsable Bilel Khlif
    * @date 2026-11-16
@@ -345,6 +551,13 @@ export class TeamMeshes {
       player.updateMatrix();
       for (let part = 0; part < meshes.length; part += 1) {
         meshes[part].setMatrixAt(index, player.matrix);
+      }
+      // Coupes : le joueur n'est visible que dans le maillage de la sienne.
+      for (let hair = 0; hair < this.#hairMeshes.length; hair += 1) {
+        const { mesh, style } = this.#hairMeshes[hair];
+        if (style !== this.#hairStyles[index]) {
+          mesh.setMatrixAt(index, HIDDEN_INSTANCE);
+        }
       }
       changed = true;
     }
