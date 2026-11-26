@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "id": "relance-courte-trois-pivot",
+  "title": "Relance courte à trois avec pivot",
+  "theme": "Construction",
+  "description": "Face au pressing haut d'un 4-4-2, le gardien et les deux défenseurs centraux, écartés aux angles de la surface, forment une relance à trois. La sentinelle se place en pivot entre les deux attaquants rouges. Le gardien joue le central droit, qui trouve le pivot ; le pivot remet en une touche au relayeur gauche, le troisième homme, qui reçoit face au jeu et lance l'ailier pendant que le latéral gauche dédouble.",
+  "formations": { "blue": "4-3-3", "red": "4-4-2" },
+  "players": {
+    "blue:1": [-49, 0],
+    "blue:5": [-44, -16],
+    "blue:4": [-44, 16],
+    "blue:6": [-34, 0],
+    "blue:3": [-30, -30],
+    "blue:2": [-30, 30],
+    "blue:8": [-22, -12],
+    "blue:10": [-22, 12],
+    "blue:11": [-10, -30],
+    "blue:7": [-10, 30],
+    "blue:9": [0, 0],
+    "red:9": [-38, -6],
+    "red:10": [-38, 7],
+    "red:8": [-26, -6],
+    "red:6": [-26, 8],
+    "red:11": [-22, -24],
+    "red:7": [-22, 24],
+    "red:2": [-8, -26],
+    "red:3": [-8, 26],
+    "red:4": [-2, -8],
+    "red:5": [-2, 8]
+  },
+  "ball": [-48, 0.5],
+  "arrows": [
+    { "kind": "pass", "team": "blue", "from": [-48, 0.5], "to": [-44, 16] },
+    { "kind": "pass", "team": "blue", "from": [-44, 16], "to": [-34, 0] },
+    { "kind": "pass", "team": "blue", "from": [-34, 0], "to": [-22, -12] },
+    { "kind": "pass", "team": "blue", "from": [-22, -12], "to": [-6, -29] },
+    { "kind": "run", "from": [-30, -30], "to": [2, -31] }
+  ],
+  "keyframes": [
+    {
+      "players": { "red:10": [-41, 10], "red:9": [-40, -3] },
+      "ball": [-44, 16]
+    },
+    {
+      "players": { "red:10": [-42, 13], "red:9": [-37, -3], "red:6": [-29, 4] },
+      "ball": [-34, 0]
+    },
+    {
+      "players": { "blue:8": [-21, -12], "red:8": [-23, -8], "red:9": [-35, -1] },
+      "ball": [-22, -12]
+    },
+    {
+      "players": { "blue:11": [-6, -29], "blue:3": [-14, -31], "red:11": [-12, -26], "red:2": [-4, -27] },
+      "ball": [-6, -29]
+    },
+    {
+      "players": { "blue:3": [2, -31], "blue:11": [0, -26], "blue:8": [-12, -10] },
+      "ball": [0, -26]
+    }
+  ]
+}

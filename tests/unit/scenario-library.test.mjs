@@ -63,3 +63,27 @@ test('contre-attaque en trois passes : trois passes bleues, du ballon récupér�
   const last = state.keyframes.at(-1).ball;
   assert.deepEqual(last, fromRealMeters([52.5, -2]));
 });
+
+test('relance courte à trois avec pivot : gardien et centraux en base à trois, pivot entre les attaquants, troisième homme', () => {
+  const { data, state } = load('relance-courte-trois-pivot');
+  const [gk, left, right, pivot] = ['blue:1', 'blue:5', 'blue:4', 'blue:6'].map((key) => data.players[key]);
+  // Base à trois : gardien et centraux dans la largeur de la surface (moins de 20,16 m de l'axe),
+  // les centraux écartés d'au moins 30 m pour étirer les deux attaquants.
+  for (const [x, z] of [gk, left, right]) assert.ok(x < -36 && Math.abs(z) <= 20.16);
+  assert.ok(right[1] - left[1] >= 30);
+  // Pivot entre les deux attaquants rouges, devant les centraux.
+  const strikers = [data.players['red:9'], data.players['red:10']].sort((a, b) => a[1] - b[1]);
+  assert.ok(pivot[1] > strikers[0][1] && pivot[1] < strikers[1][1], 'pivot dans l\'intervalle des deux attaquants');
+  assert.ok(pivot[0] > left[0] && pivot[0] > right[0]);
+  // Gardien → central → pivot → relayeur : le relayeur reçoit du pivot (troisième homme).
+  const passes = data.arrows.filter((a) => a.kind === 'pass');
+  assert.deepEqual(passes.slice(0, 3).map((a) => a.to), [right, pivot, data.players['blue:8']]);
+  for (const keyframe of state.keyframes) {
+    const { key, meters } = carrier(keyframe);
+    assert.ok(key.startsWith('blue:') && meters < 2.5, `${key} à ${meters.toFixed(1)} m`);
+  }
+  // Pressing réel : chaque attaquant rouge à moins de 15 m d'un relanceur bleu au départ.
+  for (const [x, z] of strikers) {
+    assert.ok([gk, left, right].some(([bx, bz]) => Math.hypot(bx - x, bz - z) < 15));
+  }
+});
