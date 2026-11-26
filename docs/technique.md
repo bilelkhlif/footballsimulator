@@ -70,6 +70,20 @@ Pour un autre hébergeur, `npm run pages:prepare` produit un dossier qui ne cont
 publique (sans serveur Python, tests, poids ni médias non déclarés). Les fichiers `.js` et `.mjs`
 doivent être servis avec le type `text/javascript`.
 
+### Intégration continue (`.github/workflows/`)
+
+| Workflow | Quand | Ce qu'il fait |
+| --- | --- | --- |
+| `tests.yml` | Chaque push sur `main` et chaque pull request | Tests unitaires sur Node.js 20, 22 et 24 ; empreinte `SHELL_VERSION` et en-têtes de documentation (JavaScript et Python) contrôlés à part |
+| `pages.yml` | Après des tests verts sur `main`, ou à la main | Prépare le site public avec `pages:prepare`, puis le publie si la variable `PAGES_DEPLOY` vaut `actions` |
+
+Les tests de bout en bout ne tournent pas en intégration continue : ils exigent un GPU WebGPU.
+
+**Passer la publication à GitHub Actions** (administrateur du dépôt, une seule fois) :
+Settings → Pages → Source : « GitHub Actions », puis Settings → Secrets and variables → Actions →
+Variables : `PAGES_DEPLOY` = `actions`. Le site publié ne contient alors que la partie publique
+préparée par `pages:prepare`. Tant que ce n'est pas fait, Pages publie la branche `main` comme avant.
+
 ## 4. Architecture
 
 ### 4.1 Déploiement
