@@ -28,17 +28,18 @@ export function easeInOutCubic(t) {
 }
 
 /**
- * Places d'une équipe dans une formation, dans le repère du terrain.
+ * Places d'une équipe dans une formation, dans le repère du terrain, pour une phase de jeu.
  * @param {import('./formations.mjs').FormationStrategy} formation
  * @param {boolean} attacksPositiveX sens d'attaque de l'équipe
- * @returns {Map<number, {x: number, z: number, role: string}>} numéro → place et poste
+ * @param {string} [phase] base, possession ou defense (PHASES)
+ * @returns {Map<number, {x: number, z: number, role: string, post: string}>} numéro → place, rôle et poste
  * @responsable Bilel Khlif
  * @date 2026-11-14
  * @role Scène 3D — animation des changements de formation
  */
-export function computeTeamTargets(formation, attacksPositiveX) {
+export function computeTeamTargets(formation, attacksPositiveX, phase = undefined) {
   const targets = new Map();
-  for (const position of formation.computePositions()) {
+  for (const position of formation.computePositions(phase)) {
     const { x, z } = toPitchCoordinates(position, attacksPositiveX);
     targets.set(position.number, { x, z, role: position.role, post: position.post });
   }

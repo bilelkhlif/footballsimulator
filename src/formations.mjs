@@ -81,6 +81,16 @@ export function postOfRole(role) {
   return post;
 }
 
+/**
+ * Phases de jeu d'une formation : la disposition de base (coup d'envoi), en possession du ballon
+ * et hors possession. Un même système change de forme selon la phase : le 4-3-3 devient un 2-3-5
+ * en possession et un 4-5-1 sans le ballon.
+ */
+export const PHASES = Object.freeze({ BASE: 'base', POSSESSION: 'possession', DEFENSE: 'defense' });
+
+/** Libellé de chaque phase, pour l'interface. */
+export const PHASE_LABELS = Object.freeze({ base: 'Base', possession: 'En possession', defense: 'Hors possession' });
+
 /** Ligne du gardien, commune à toutes les formations. */
 const GOALKEEPER_LINE = Object.freeze({
   x: 0.04,
@@ -131,13 +141,65 @@ export class FormationStrategy {
   }
 
   /**
-   * Calcule les 11 positions normalisées de la formation, chacune avec son poste normalisé.
+   * Dispositions en possession et hors possession : pour chaque phase, son nom (« 2-3-5 »), son
+   * principe et la place de chaque numéro, [x, y] dans le repère normalisé de l'équipe. En
+   * possession, x dépasse 0,5 : l'équipe joue dans la moitié adverse. Sans disposition propre, une
+   * phase reprend la disposition de base.
+   * @returns {{possession?: {name: string, principle: string, places: object}, defense?: {name: string, principle: string, places: object}}}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : dispositions en possession et hors possession
+   */
+  get phaseShapes() {
+    return {};
+  }
+
+  /**
+   * Nom de la disposition d'une phase : « 2-3-5 » pour le 4-3-3 en possession.
+   * @param {string} [phase] une valeur de PHASES
+   * @returns {string}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : dispositions en possession et hors possession
+   */
+  shapeName(phase = PHASES.BASE) {
+    return phase === PHASES.BASE ? this.name : this.phaseShapes[phase]?.name ?? this.name;
+  }
+
+  /**
+   * Calcule les 11 positions normalisées de la formation, chacune avec son poste normalisé. Dans une
+   * autre phase que la base, chaque joueur garde son rôle et son poste, mais prend la place de la
+   * disposition de cette phase ; elle doit placer exactement les 11 numéros de la base.
+   * @param {string} [phase] une valeur de PHASES
    * @returns {Array<{x: number, y: number, number: number, role: string, post: string}>}
    * @responsable Bilel Khlif
    * @date 2026-11-05
    * @role Logique métier — patron Strategy : stratégie de base
    */
-  computePositions() {
+  computePositions(phase = PHASES.BASE) {
+    if (!Object.values(PHASES).includes(phase)) {
+      throw new Error(`Phase de jeu inconnue : ${phase}`);
+    }
+    const base = this.#computeBasePositions();
+    const places = phase === PHASES.BASE ? null : this.phaseShapes[phase]?.places;
+    if (!places) {
+      return base;
+    }
+    const numbers = Object.keys(places).map(Number).sort((a, b) => a - b);
+    if (numbers.join() !== base.map((p) => p.number).sort((a, b) => a - b).join()) {
+      throw new Error(`La disposition ${this.shapeName(phase)} du ${this.name} ne place pas les 11 joueurs de la formation`);
+    }
+    return base.map((position) => ({ ...position, x: places[position.number][0], y: places[position.number][1] }));
+  }
+
+  /**
+   * Positions de la disposition de base, ligne par ligne.
+   * @returns {Array<{x: number, y: number, number: number, role: string, post: string}>}
+   * @responsable Bilel Khlif
+   * @date 2026-11-05
+   * @role Logique métier — patron Strategy : stratégie de base
+   */
+  #computeBasePositions() {
     const positions = this.lines.flatMap((line) => line.slots.map((slot) => ({
       x: slot.x ?? line.x,
       y: slot.y,
@@ -167,6 +229,28 @@ export class Formation442 extends FormationStrategy {
    */
   get name() {
     return '4-4-2';
+  }
+
+  /**
+   * Dispositions : en possession, 2-4-4 ; hors possession, 4-4-2 compact.
+   * @returns {object}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : dispositions en possession et hors possession
+   */
+  get phaseShapes() {
+    return {
+      possession: {
+        name: '2-4-4',
+        principle: "Les latéraux montent à hauteur des milieux ; les milieux excentrés rejoignent les deux attaquants.",
+        places: { 1: [0.08, 0.5], 2: [0.5, 0.94], 3: [0.5, 0.06], 4: [0.3, 0.64], 5: [0.3, 0.36], 6: [0.46, 0.6], 7: [0.66, 0.84], 8: [0.46, 0.4], 9: [0.8, 0.58], 10: [0.78, 0.42], 11: [0.66, 0.16] },
+      },
+      defense: {
+        name: '4-4-2 compact',
+        principle: "Deux lignes de quatre resserrées en bloc médian ; les attaquants ferment l'axe.",
+        places: { 1: [0.04, 0.5], 2: [0.16, 0.8], 3: [0.16, 0.2], 4: [0.16, 0.6], 5: [0.16, 0.4], 6: [0.27, 0.61], 7: [0.27, 0.82], 8: [0.27, 0.39], 9: [0.38, 0.58], 10: [0.38, 0.42], 11: [0.27, 0.18] },
+      },
+    };
   }
 
   /**
@@ -217,6 +301,28 @@ export class Formation433 extends FormationStrategy {
   }
 
   /**
+   * Dispositions : en possession, 2-3-5 ; hors possession, 4-5-1.
+   * @returns {object}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : dispositions en possession et hors possession
+   */
+  get phaseShapes() {
+    return {
+      possession: {
+        name: '2-3-5',
+        principle: "Les latéraux rentrent à côté de la sentinelle ; les relayeurs montent dans les demi-espaces, les ailiers tiennent la largeur.",
+        places: { 1: [0.08, 0.5], 2: [0.46, 0.7], 3: [0.46, 0.3], 4: [0.32, 0.64], 5: [0.32, 0.36], 6: [0.44, 0.5], 7: [0.78, 0.95], 8: [0.74, 0.3], 9: [0.82, 0.5], 10: [0.74, 0.7], 11: [0.78, 0.05] },
+      },
+      defense: {
+        name: '4-5-1',
+        principle: "Les ailiers redescendent sur la ligne des milieux ; l'avant-centre seul presse la relance.",
+        places: { 1: [0.04, 0.5], 2: [0.16, 0.8], 3: [0.16, 0.2], 4: [0.16, 0.6], 5: [0.16, 0.4], 6: [0.25, 0.5], 7: [0.29, 0.88], 8: [0.29, 0.35], 9: [0.4, 0.5], 10: [0.29, 0.65], 11: [0.29, 0.12] },
+      },
+    };
+  }
+
+  /**
    * @returns {Array<object>}
    * @responsable Bilel Khlif
    * @date 2026-11-05
@@ -261,6 +367,28 @@ export class Formation352 extends FormationStrategy {
    */
   get name() {
     return '3-5-2';
+  }
+
+  /**
+   * Dispositions : en possession, 3-2-5 ; hors possession, 5-3-2.
+   * @returns {object}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : dispositions en possession et hors possession
+   */
+  get phaseShapes() {
+    return {
+      possession: {
+        name: '3-2-5',
+        principle: "Les pistons montent sur la ligne d'attaque ; le meneur rejoint les deux attaquants.",
+        places: { 1: [0.08, 0.5], 2: [0.72, 0.95], 3: [0.72, 0.05], 4: [0.3, 0.5], 5: [0.3, 0.75], 6: [0.3, 0.25], 7: [0.48, 0.62], 8: [0.48, 0.38], 9: [0.82, 0.62], 10: [0.7, 0.5], 11: [0.82, 0.38] },
+      },
+      defense: {
+        name: '5-3-2',
+        principle: "Les pistons redescendent dans la ligne des centraux : cinq défenseurs.",
+        places: { 1: [0.04, 0.5], 2: [0.16, 0.92], 3: [0.16, 0.08], 4: [0.14, 0.5], 5: [0.14, 0.7], 6: [0.14, 0.3], 7: [0.27, 0.7], 8: [0.27, 0.3], 9: [0.4, 0.58], 10: [0.28, 0.5], 11: [0.39, 0.42] },
+      },
+    };
   }
 
   /**
@@ -319,6 +447,28 @@ export class Formation4231 extends FormationStrategy {
   }
 
   /**
+   * Dispositions : en possession, 2-4-4 ; hors possession, 4-4-1-1.
+   * @returns {object}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : dispositions en possession et hors possession
+   */
+  get phaseShapes() {
+    return {
+      possession: {
+        name: '2-4-4',
+        principle: "Les latéraux montent à hauteur du double pivot ; les trois milieux offensifs rejoignent l'avant-centre.",
+        places: { 1: [0.08, 0.5], 2: [0.5, 0.92], 3: [0.5, 0.08], 4: [0.3, 0.64], 5: [0.3, 0.36], 6: [0.45, 0.4], 7: [0.74, 0.82], 8: [0.45, 0.6], 9: [0.82, 0.5], 10: [0.7, 0.5], 11: [0.74, 0.18] },
+      },
+      defense: {
+        name: '4-4-1-1',
+        principle: "Les milieux excentrés s'alignent sur le double pivot ; le meneur marque la sentinelle adverse.",
+        places: { 1: [0.04, 0.5], 2: [0.16, 0.8], 3: [0.16, 0.2], 4: [0.16, 0.6], 5: [0.16, 0.4], 6: [0.28, 0.4], 7: [0.28, 0.85], 8: [0.28, 0.6], 9: [0.42, 0.5], 10: [0.36, 0.5], 11: [0.28, 0.15] },
+      },
+    };
+  }
+
+  /**
    * @returns {Array<object>}
    * @responsable Bilel Khlif
    * @date 2026-11-14
@@ -372,6 +522,28 @@ export class Formation4141 extends FormationStrategy {
   }
 
   /**
+   * Dispositions : en possession, 2-3-5 ; hors possession, 4-5-1.
+   * @returns {object}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : dispositions en possession et hors possession
+   */
+  get phaseShapes() {
+    return {
+      possession: {
+        name: '2-3-5',
+        principle: "Les latéraux encadrent la sentinelle ; les relayeurs entrent dans les demi-espaces, les milieux excentrés tiennent la largeur.",
+        places: { 1: [0.08, 0.5], 2: [0.47, 0.78], 3: [0.47, 0.22], 4: [0.32, 0.64], 5: [0.32, 0.36], 6: [0.45, 0.5], 7: [0.76, 0.94], 8: [0.72, 0.32], 9: [0.82, 0.5], 10: [0.72, 0.68], 11: [0.76, 0.06] },
+      },
+      defense: {
+        name: '4-5-1',
+        principle: "La ligne de quatre recule devant la sentinelle : un bloc de cinq milieux, très compact.",
+        places: { 1: [0.04, 0.5], 2: [0.16, 0.8], 3: [0.16, 0.2], 4: [0.16, 0.6], 5: [0.16, 0.4], 6: [0.23, 0.5], 7: [0.29, 0.86], 8: [0.29, 0.38], 9: [0.4, 0.5], 10: [0.29, 0.62], 11: [0.29, 0.14] },
+      },
+    };
+  }
+
+  /**
    * @returns {Array<object>}
    * @responsable Iyed Rachdi
    * @date 2026-11-25
@@ -420,6 +592,28 @@ export class Formation343 extends FormationStrategy {
    */
   get name() {
     return '3-4-3';
+  }
+
+  /**
+   * Dispositions : en possession, 3-2-5 ; hors possession, 5-4-1.
+   * @returns {object}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : dispositions en possession et hors possession
+   */
+  get phaseShapes() {
+    return {
+      possession: {
+        name: '3-2-5',
+        principle: "Les pistons donnent la largeur ; les ailiers rentrent dans les demi-espaces autour de l'avant-centre.",
+        places: { 1: [0.08, 0.5], 2: [0.74, 0.95], 3: [0.74, 0.05], 4: [0.32, 0.5], 5: [0.32, 0.75], 6: [0.32, 0.25], 7: [0.76, 0.7], 8: [0.48, 0.4], 9: [0.82, 0.5], 10: [0.48, 0.6], 11: [0.76, 0.3] },
+      },
+      defense: {
+        name: '5-4-1',
+        principle: "Les pistons redescendent en défense, les ailiers sur la ligne des milieux.",
+        places: { 1: [0.04, 0.5], 2: [0.16, 0.92], 3: [0.16, 0.08], 4: [0.14, 0.5], 5: [0.14, 0.7], 6: [0.14, 0.3], 7: [0.28, 0.86], 8: [0.28, 0.38], 9: [0.4, 0.5], 10: [0.28, 0.62], 11: [0.28, 0.14] },
+      },
+    };
   }
 
   /**
@@ -481,6 +675,28 @@ export class Formation532 extends FormationStrategy {
   }
 
   /**
+   * Dispositions : en possession, 3-5-2 ; hors possession, 5-3-2 bas.
+   * @returns {object}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : dispositions en possession et hors possession
+   */
+  get phaseShapes() {
+    return {
+      possession: {
+        name: '3-5-2',
+        principle: "À la récupération, les pistons montent à hauteur des milieux ; les deux attaquants attaquent la profondeur.",
+        places: { 1: [0.08, 0.5], 2: [0.6, 0.94], 3: [0.6, 0.06], 4: [0.28, 0.5], 5: [0.28, 0.72], 6: [0.28, 0.28], 7: [0.5, 0.68], 8: [0.5, 0.32], 9: [0.78, 0.58], 10: [0.46, 0.5], 11: [0.72, 0.42] },
+      },
+      defense: {
+        name: '5-3-2 bas',
+        principle: "Bloc bas devant la surface : cinq défenseurs à 13 m du but, trois milieux 10 m devant.",
+        places: { 1: [0.04, 0.5], 2: [0.13, 0.9], 3: [0.13, 0.1], 4: [0.12, 0.5], 5: [0.12, 0.68], 6: [0.12, 0.32], 7: [0.23, 0.68], 8: [0.23, 0.32], 9: [0.36, 0.56], 10: [0.235, 0.5], 11: [0.34, 0.45] },
+      },
+    };
+  }
+
+  /**
    * @returns {Array<object>}
    * @responsable Iyed Rachdi
    * @date 2026-11-25
@@ -535,6 +751,28 @@ export class Formation442Diamond extends FormationStrategy {
    */
   get name() {
     return '4-4-2 losange';
+  }
+
+  /**
+   * Dispositions : en possession, 2-1-4-1-2 ; hors possession, 4-3-1-2.
+   * @returns {object}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : dispositions en possession et hors possession
+   */
+  get phaseShapes() {
+    return {
+      possession: {
+        name: '2-1-4-1-2',
+        principle: "Les latéraux montent à hauteur des relayeurs ; la sentinelle reste seule devant les deux centraux.",
+        places: { 1: [0.08, 0.5], 2: [0.58, 0.94], 3: [0.58, 0.06], 4: [0.3, 0.64], 5: [0.3, 0.36], 6: [0.44, 0.5], 7: [0.56, 0.67], 8: [0.56, 0.33], 9: [0.8, 0.6], 10: [0.68, 0.5], 11: [0.8, 0.4] },
+      },
+      defense: {
+        name: '4-3-1-2',
+        principle: "Le losange se resserre dans l'axe ; les relayeurs coulissent vers le ballon pour couvrir les côtés.",
+        places: { 1: [0.04, 0.5], 2: [0.16, 0.8], 3: [0.16, 0.2], 4: [0.16, 0.6], 5: [0.16, 0.4], 6: [0.24, 0.5], 7: [0.29, 0.67], 8: [0.29, 0.33], 9: [0.4, 0.6], 10: [0.35, 0.5], 11: [0.4, 0.4] },
+      },
+    };
   }
 
   /**

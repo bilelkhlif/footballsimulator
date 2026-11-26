@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  FORMATIONS, FormationStrategy, getFormation, POSTS, postOfNumber, postOfRole, toPitchCoordinates,
+  FORMATIONS, Formation433 as Formation433Base, FormationStrategy, getFormation, PHASES, POSTS, postOfNumber, postOfRole, toPitchCoordinates,
 } from '../../src/formations.mjs';
 import { PITCH_LENGTH, PITCH_WIDTH, PLAYER_SIZE, REAL_PITCH } from '../../src/config.mjs';
 
@@ -175,4 +175,79 @@ test('postes : ce qu\'un entraîneur écrirait au tableau', () => {
 test('un rôle sans poste normalisé est refusé', () => {
   assert.equal(postOfRole('Sentinelle'), 'MDC');
   assert.throws(() => postOfRole('Libéro'), /Rôle sans poste normalisé : Libéro/);
+});
+
+/**
+ * Profondeur moyenne des joueurs de champ, en mètres depuis leur propre ligne de but.
+ * @param {Array<{x: number, post: string}>} positions
+ * @returns {number}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Tests unitaires (src/formations.mjs) — mesure
+ */
+function meanDepth(positions) {
+  const outfield = positions.filter((p) => p.post !== 'GB');
+  return (outfield.reduce((sum, p) => sum + p.x, 0) / outfield.length) * REAL_PITCH.length;
+}
+
+for (const [name, formation] of Object.entries(FORMATIONS)) {
+  test(`${name} : dispositions en possession et hors possession, 11 joueurs dans le terrain, sans chevauchement`, () => {
+    const base = formation.computePositions();
+    for (const phase of [PHASES.POSSESSION, PHASES.DEFENSE]) {
+      const positions = formation.computePositions(phase);
+      assert.equal(positions.length, 11);
+      for (const p of positions) {
+        assert.ok(p.x > 0 && p.x < 1 && p.y > 0 && p.y < 1, `${phase} : ${p.role} hors du terrain`);
+        const same = base.find((b) => b.number === p.number);
+        assert.equal(p.post, same.post, 'le joueur garde son poste');
+        assert.equal(p.role, same.role, 'le joueur garde son rôle');
+      }
+      for (let i = 0; i < positions.length; i += 1) {
+        for (let j = i + 1; j < positions.length; j += 1) {
+          const gap = Math.hypot((positions[i].x - positions[j].x) * PITCH_LENGTH, (positions[i].y - positions[j].y) * PITCH_WIDTH);
+          assert.ok(gap > TOKEN_DIAMETER, `${phase} : ${positions[i].role} et ${positions[j].role} se chevauchent`);
+        }
+      }
+      assert.notEqual(formation.shapeName(phase), '', 'la disposition a un nom');
+    }
+    const possession = formation.computePositions(PHASES.POSSESSION);
+    const defense = formation.computePositions(PHASES.DEFENSE);
+    assert.ok(meanDepth(possession) > meanDepth(base) + 10, 'en possession, l\'équipe monte d\'au moins 10 m');
+    assert.ok(meanDepth(defense) <= meanDepth(base), 'hors possession, l\'équipe ne monte pas');
+    assert.ok(defense.every((p) => p.x < 0.5), 'hors possession, toute l\'équipe est dans sa moitié');
+  });
+}
+
+test('4-3-3 : 2-3-5 en possession et 4-5-1 hors possession, ligne par ligne', () => {
+  const formation = FORMATIONS['4-3-3'];
+  assert.equal(formation.shapeName(PHASES.POSSESSION), '2-3-5');
+  assert.equal(formation.shapeName(PHASES.DEFENSE), '4-5-1');
+  assert.equal(formation.shapeName(), '4-3-3');
+  // Lignes repérées par leur profondeur sur le terrain de 105 m.
+  const line = (positions, from, to) => positions.filter((p) => p.post !== 'GB' && p.x * 105 >= from && p.x * 105 < to);
+  const possession = formation.computePositions(PHASES.POSSESSION);
+  assert.equal(line(possession, 0, 40).length, 2, 'deux centraux à la relance');
+  assert.equal(line(possession, 40, 60).length, 3, 'trois joueurs au milieu : la sentinelle et les latéraux rentrés');
+  assert.equal(line(possession, 60, 105).length, 5, 'cinq joueurs sur la ligne d\'attaque');
+  const defense = formation.computePositions(PHASES.DEFENSE);
+  assert.equal(line(defense, 0, 20).length, 4, 'quatre défenseurs');
+  assert.equal(line(defense, 20, 35).length, 5, 'cinq milieux, ailiers compris');
+  assert.equal(line(defense, 35, 60).length, 1, 'un seul attaquant');
+});
+
+test('une phase inconnue ou une disposition incomplète est refusée', () => {
+  assert.throws(() => FORMATIONS['4-4-2'].computePositions('pressing'), /Phase de jeu inconnue : pressing/);
+  class Incomplete extends Formation433Base {
+    get phaseShapes() {
+      return { possession: { name: '3-7', principle: '', places: { 1: [0.1, 0.5] } } };
+    }
+  }
+  assert.throws(() => new Incomplete().computePositions(PHASES.POSSESSION), /ne place pas les 11 joueurs/);
+  // Sans disposition propre, une phase reprend la base.
+  class NoShapes extends Formation433Base {
+    get phaseShapes() {
+      return {};
+    }
+  }
+  assert.deepEqual(new NoShapes().computePositions(PHASES.DEFENSE), new NoShapes().computePositions());
 });
