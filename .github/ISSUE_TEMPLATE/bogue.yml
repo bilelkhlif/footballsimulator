@@ -1,0 +1,45 @@
+name: Bogue
+description: Quelque chose ne marche pas comme prévu dans le tableau tactique ou le visualiseur.
+title: "[Bogue] "
+labels: [bogue]
+body:
+  - type: textarea
+    id: probleme
+    attributes:
+      label: Ce qui se passe
+      description: Ce que vous avez vu, et ce que vous attendiez.
+    validations:
+      required: true
+  - type: textarea
+    id: etapes
+    attributes:
+      label: Étapes pour reproduire
+      placeholder: |
+        1. Ouvrir l'application, espace « Équipes et formations »
+        2. Choisir 3-5-2 pour les Bleus
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options:
+        - Vue 3D
+        - Réalité augmentée sur téléphone
+        - AR émulée (?iwer)
+        - Visualiseur de match
+    validations:
+      required: true
+  - type: input
+    id: appareil
+    attributes:
+      label: Appareil et navigateur
+      placeholder: TECNO POVA 6 Pro 5G, Chrome 142, Android 14
+    validations:
+      required: true
+  - type: textarea
+    id: console
+    attributes:
+      label: Messages de la console ou capture d'écran
+      description: Sur téléphone, chrome://inspect depuis le PC. Ajouter ?diagnostics à l'adresse pour les performances.

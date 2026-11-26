@@ -45,7 +45,7 @@ path = [
   "docs/inventaire-licences-python.md",
   "docs/licences-et-distribution.md",
   "docs/opensource-research.md",
-  "docs/revue-independante-pr19-pr20.md",
+  "docs/archives/revue-independante-pr19-pr20.md",
   "docs/stabilisation-homographie.md",
   "docs/sports-analytics-references.md",
   "docs/validation-*.json",

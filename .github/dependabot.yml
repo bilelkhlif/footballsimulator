@@ -1,0 +1,26 @@
+# Mises à jour des dépendances, proposées chaque semaine par Dependabot sous forme de pull request.
+# npm : seul playwright-core (tests). GitHub Actions : versions des actions des workflows.
+# three.js (src/vendor/three-r187/) est copié à la main : Dependabot ne le voit pas, et ce dossier
+# n'est jamais modifié automatiquement. Les dépendances Python du serveur d'analyse sont épinglées
+# après une revue de sécurité (analysis/README.md) : elles restent hors de Dependabot.
+# Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    labels: [dépendances]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci(deps)"
+    labels: [dépendances]

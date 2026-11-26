@@ -1,0 +1,66 @@
+# Déploiement GitHub Pages par Actions, seulement après des tests verts sur main.
+#
+# 1. Le workflow « Tests » réussit sur main (push ou fusion d'une pull request).
+# 2. « build » prépare le site public avec « npm run pages:prepare » : application, visualiseur,
+#    démonstrations dont les droits sont vérifiés, licences. Ni serveur d'analyse, ni tests, ni
+#    documents de travail. Le paquet est vérifié à chaque fois, même sans déploiement.
+# 3. « deploy » le publie, seulement quand la variable de dépôt PAGES_DEPLOY vaut « actions ».
+#
+# Mise en service, par un administrateur du dépôt (une seule fois) :
+#   Settings → Pages → Build and deployment → Source : « GitHub Actions » ;
+#   Settings → Secrets and variables → Actions → Variables : PAGES_DEPLOY = actions.
+# Tant que ce n'est pas fait, GitHub Pages continue de publier la branche main comme avant, et ce
+# workflow s'arrête après la préparation, sans erreur.
+#
+# Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
+name: Pages
+
+on:
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Préparation du site public
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Exactement le commit dont les tests viennent de réussir.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Empreinte de la coquille à jour
+        run: node tests/shell-version.mjs --check
+      - name: Site public (pages:prepare)
+        run: node tests/prepare-pages.mjs _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Publication sur GitHub Pages
+    needs: build
+    if: vars.PAGES_DEPLOY == 'actions'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

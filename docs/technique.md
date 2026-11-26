@@ -70,6 +70,20 @@ Pour un autre hébergeur, `npm run pages:prepare` produit un dossier qui ne cont
 publique (sans serveur Python, tests, poids ni médias non déclarés). Les fichiers `.js` et `.mjs`
 doivent être servis avec le type `text/javascript`.
 
+### Intégration continue (`.github/workflows/`)
+
+| Workflow | Quand | Ce qu'il fait |
+| --- | --- | --- |
+| `tests.yml` | Chaque push sur `main` et chaque pull request | Tests unitaires sur Node.js 20, 22 et 24 ; empreinte `SHELL_VERSION` et en-têtes de documentation (JavaScript et Python) contrôlés à part |
+| `pages.yml` | Après des tests verts sur `main`, ou à la main | Prépare le site public avec `pages:prepare`, puis le publie si la variable `PAGES_DEPLOY` vaut `actions` |
+
+Les tests de bout en bout ne tournent pas en intégration continue : ils exigent un GPU WebGPU.
+
+**Passer la publication à GitHub Actions** (administrateur du dépôt, une seule fois) :
+Settings → Pages → Source : « GitHub Actions », puis Settings → Secrets and variables → Actions →
+Variables : `PAGES_DEPLOY` = `actions`. Le site publié ne contient alors que la partie publique
+préparée par `pages:prepare`. Tant que ce n'est pas fait, Pages publie la branche `main` comme avant.
+
 ## 4. Architecture
 
 ### 4.1 Déploiement
@@ -313,7 +327,7 @@ Classées par priorité pour la soutenance.
 | 5 | Aucune intégration continue : les tests ne tournent que sur le PC de celui qui les lance | Fait dans ce lot : `.github/workflows/tests.yml` lance les tests unitaires à chaque push et pull request. Les tests de bout en bout restent manuels (GPU nécessaire) |
 | 6 | Chiffres périmés dans la documentation : plusieurs comptes de tests différents dans le README (369, 285, 277, 226), coquille annoncée à 51 entrées au lieu de 54 (55 depuis la sauvegarde automatique) | Coquille corrigée dans ce lot. Garder un seul tableau de résultats daté, dans le README, et renvoyer vers lui |
 | 7 | README de 617 lignes, qui répète les comptes rendus de sprint | Le ramener à environ 150 lignes : présentation, lancement, liens. Le reste est déjà dans `docs/` |
-| 8 | 60 documents dans `docs/`, dont des doublons apparents (`conformite.md` et `conformite-cahier-des-charges.md` ; `architecture.md` et `guide-du-code.md`) | Ajouter un index `docs/README.md`, ou archiver les documents de revue dans `docs/archives/` |
+| 8 | 60 documents dans `docs/`, dont des doublons apparents (`conformite.md` et `conformite-cahier-des-charges.md` ; `architecture.md` et `guide-du-code.md`) | Fait : index [docs/README.md](README.md), qui distingue les deux matrices de conformité ; revues archivées dans `docs/archives/` |
 | 9 | `src/visualizer/visualizer-main.mjs` fait 1 525 lignes | Le découper (chargement des sources, lecture vidéo, panneaux, sélection), comme l'a été `main.mjs` |
 | 10 | Le serveur local `tests/serve.mjs` sert les vidéos `.webm` des tests en `application/octet-stream` | Corrigé dans ce lot : types `.webm`, `.webp`, `.ico`, `.txt` ajoutés |
 

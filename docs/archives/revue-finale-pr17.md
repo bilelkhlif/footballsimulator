@@ -50,8 +50,8 @@ Des faiblesses subsistent :
 | Rail sous une encoche latérale simulée | Marge gauche 34 px, cible Accueil à x=7 px | Rail et contenu décalés selon la marge ; cible à x=41 px. Droite et bas respectés aussi, panneau Retour hors de la barre système |
 
 Comparaison du texte à 200 %, même profil Chrome 390 × 844 :
-[avant](images/revue/avant-texte-200.png), [après](images/revue/apres-texte-200.png).
-Les [comparaisons initiales bureau/portrait/paysage](espaces-coaching.md#captures-avant-et-après)
+[avant](../images/revue/avant-texte-200.png), [après](../images/revue/apres-texte-200.png).
+Les [comparaisons initiales bureau/portrait/paysage](../espaces-coaching.md#captures-avant-et-après)
 restent disponibles. Aucun changement de direction graphique ni du moteur tactique n'a été introduit.
 
 La simulation d'encoche remplace les expressions CSS `env(safe-area-inset-*)` dans la vraie
@@ -89,7 +89,7 @@ les vérifications réelles de raycasting, souris, doigt et AR.
 - À réaliser sur téléphone : caméra/permissions, DOM Overlay natif, cibles au doigt près des encoches, rotation portrait/paysage, annulation/Retour système, stabilité/ancre pendant une minute, sélection ≥9/10, FPS ≥30, installation et ouverture autonome, passage hors ligne/mise à jour. Les essais anciens ne valident pas automatiquement ce nouveau rail.
 
 Les frontières du futur visualiseur sont consignées dans la
-[note séparée](integration-future-visualiseur.md#frontières-après-la-revue-de-la-pr-nº-17).
+[note séparée](../integration-future-visualiseur.md#frontières-après-la-revue-de-la-pr-nº-17).
 Aucun backend, modèle ou fichier vidéo n'est ajouté au produit académique.
 
 ## Mesures de rendu et de mémoire
@@ -119,7 +119,7 @@ revendiquée. Les ressources des cinq cycles AR sont aussi stables dans la suite
 
 Durée automatisée clic → espace prêt après deux images : médiane **83 ms**, p95 **90 ms**,
 sur 210 ouvertures. Elle inclut l'aller-retour Playwright et les images attendues : ce n'est
-pas une mesure isolée de latence tactile. Les [mesures brutes](validation/revue-pr17-mesures.json)
+pas une mesure isolée de latence tactile. Les [mesures brutes](../validation/revue-pr17-mesures.json)
 conservent les valeurs exactes et les statistiques fournies par three.js.
 
 ## Bilan de validation et préparation à la fusion
@@ -127,7 +127,7 @@ conservent les valeurs exactes et les statistiques fournies par three.js.
 `npm test` après corrections : **229 / 229 tests unitaires** et **140 / 140 vérifications
 navigateur**, **0 échec, 0 cas ignoré**, code de sortie 0. Les onze vérifications ajoutées sont
 les sept cas UX, les deux dimensions avec marges simulées et les deux étapes du parcours complet
-3D puis AR. Le [journal complet](validation/revue-pr17-tests.txt) est conservé.
+3D puis AR. Le [journal complet](../validation/revue-pr17-tests.txt) est conservé.
 `npm run shell-version -- --check` passe avec `15d2a647fa7d74a5`, et `git diff --check` passe.
 Les nouveaux modules de tests sont en `.mjs` ; aucune dépendance n'a été ajoutée.
 
