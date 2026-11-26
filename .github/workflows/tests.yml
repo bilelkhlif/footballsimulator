@@ -1,4 +1,6 @@
-# Intégration continue : tests unitaires à chaque push et pull request.
+# Intégration continue : tests unitaires à chaque push et pull request, sur Node.js 20, 22 et 24.
+# Node 18 n'est pas testé : la carte d'import des tests (tests/unit/import-map.mjs) exige
+# module.register, apparu dans Node 20.6.
 # Les tests de bout en bout (npm run test:e2e) exigent un GPU compatible WebGPU et restent
 # lancés à la main sur un PC (docs/technique.md, §9).
 # Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
@@ -8,19 +10,24 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
 
 jobs:
   unit:
-    name: Tests unitaires (Node.js)
+    name: Tests unitaires (Node.js ${{ matrix.node }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
       - run: npm run test:unit
