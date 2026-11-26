@@ -376,10 +376,12 @@ async function init(renderMode) {
 
   // Tactiques enregistrées (phase 5) : l'entraîneur nomme la tactique en cours et la garde sur
   // l'appareil ; l'ouverture est vérifiée contre le tableau, puis passe par une commande annulable.
+  // Export et import en fichier JSON : un fichier importé est vérifié contre le tableau en cours.
   createSavedTacticsPanel({
     root: document.getElementById('saved-tactics-panel'),
     library: createTacticLibrary(tacticStore),
     capture: () => captureTactic(board, sequence),
+    getReference: () => board.snapshot(),
     open: (name, tactic) => {
       if (!isValidTactic(tactic, board.snapshot())) {
         return false;
