@@ -112,3 +112,23 @@ test('pressing haut en 4-4-2 : bloc compact et haut, marquages, course courbe, r
   assert.ok(near.length >= 3, `${near.length} Bleus près du ballon`);
   assert.ok(carrier(last).key.startsWith('blue:'));
 });
+
+test('dédoublement et centre en retrait : le latéral passe à l\'extérieur, centre en arrière vers le point de penalty', () => {
+  const { data, state } = load('dedoublement-centre-en-retrait');
+  const [dribble, overlap, , , cross, lateRun, shot] = data.arrows;
+  // Dédoublement : l'ailier rentre, le latéral finit plus près de la touche que lui.
+  assert.ok(Math.abs(dribble.to[1]) < Math.abs(dribble.from[1]), 'l\'ailier rentre vers l\'axe');
+  assert.ok(Math.abs(overlap.to[1]) > Math.abs(dribble.to[1]), 'le latéral dédouble par l\'extérieur');
+  // Le latéral rouge est attiré vers l'axe à la première image.
+  assert.ok(Math.abs(state.keyframes[1].players['red:3'].z) < Math.abs(state.keyframes[0].players['red:3'].z));
+  // Centre en retrait : du bord de la ligne de but vers l'arrière, entre la surface de but et la limite de la surface.
+  assert.equal(cross.kind, 'cross');
+  assert.ok(52.5 - cross.from[0] <= 5, 'centre au ras de la ligne de but');
+  assert.ok(cross.to[0] < cross.from[0], 'ballon joué en arrière');
+  const fromGoalLine = 52.5 - cross.to[0];
+  assert.ok(fromGoalLine > 5.5 && fromGoalLine <= 16.5 && Math.abs(cross.to[1]) <= 9.16, 'zone du point de penalty');
+  // Le relayeur arrive lancé (plus de 10 m de course) et tire.
+  assert.ok(Math.hypot(lateRun.to[0] - lateRun.from[0], lateRun.to[1] - lateRun.from[1]) > 10);
+  assert.deepEqual(lateRun.to, cross.to);
+  assert.equal(shot.kind, 'shot');
+});

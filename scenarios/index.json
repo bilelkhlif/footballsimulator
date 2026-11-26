@@ -3,6 +3,7 @@
   "scenarios": [
     "contre-attaque-trois-passes.json",
     "relance-courte-trois-pivot.json",
-    "pressing-haut-4-4-2.json"
+    "pressing-haut-4-4-2.json",
+    "dedoublement-centre-en-retrait.json"
   ]
 }
