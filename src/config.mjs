@@ -61,6 +61,9 @@ export const TEAMS = Object.freeze({
 /** Formations affichées au démarrage : celles du scénario de démonstration (cahier, §4.1). */
 export const DEFAULT_FORMATIONS = Object.freeze({ blue: '4-3-3', red: '4-4-2' });
 
+/** Maillot de départ de chaque équipe, clé de la palette (src/team-colors.mjs). */
+export const DEFAULT_KITS = Object.freeze({ blue: 'bleu', red: 'rouge' });
+
 /** Couleurs de la scène hors AR et du terrain. */
 export const SCENE_COLORS = Object.freeze({
   background: 0x101915,

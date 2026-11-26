@@ -138,7 +138,7 @@ test('départ d\'une course : seulement un joueur ; le ballon, le gazon ou un ra
   assert.equal(resolveArrowStart({ kind: RUN, target: null, point: { x: 0, z: 0.1 } }, state).reason, ARROW_REASONS.RUN_NEEDS_PLAYER);
   assert.equal(resolveArrowStart({ kind: RUN, target: null, point: null }, state).reason, ARROW_REASONS.MISSED);
   assert.equal(resolveArrowStart({ kind: RUN, target: null, point: { x: Number.NaN, z: 0 } }, state).reason, ARROW_REASONS.INVALID_POINT);
-  assert.equal(resolveArrowStart({ kind: 'dribble', target: on('blue', 7), point: null }, state).reason, ARROW_REASONS.UNKNOWN_KIND);
+  assert.equal(resolveArrowStart({ kind: 'tacle', target: on('blue', 7), point: null }, state).reason, ARROW_REASONS.UNKNOWN_KIND);
 });
 
 test('arrivée d\'une passe : un partenaire (receveur explicite) ou un espace libre ; jamais un adversaire du passeur', () => {

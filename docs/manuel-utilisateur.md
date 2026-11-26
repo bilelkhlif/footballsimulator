@@ -82,7 +82,15 @@ Tournez autour de la table : vous voyez la tactique sous tous les angles, et le 
 
 ## 5. Choisir les formations
 
-Ouvrez **Équipes et formations**, ou touchez la pastille d'une équipe en haut de l'écran. Quatre formations sont proposées par équipe : 4-4-2, 4-3-3, 3-5-2 et 4-2-3-1. Les joueurs rejoignent leurs nouvelles places en glissant. Le changement est confirmé dans l'aide du geste et reste annulable. La formation est rappelée sur la pastille de l'équipe. Dépliez « Positions des 22 joueurs » pour lire leurs coordonnées actuelles.
+Ouvrez **Équipes et formations**, ou touchez la pastille d'une équipe en haut de l'écran. La carte **Équipes**, en haut de l'espace, donne à chaque équipe un nom (24 caractères au plus, différent de l'adversaire) et un maillot. Les couleurs proposées sont vérifiées en vision normale et pour les trois daltonismes : un maillot trop proche de l'adversaire, ou qui se fondrait dans le gazon, est refusé, et l'aide dit pour quelle vision. Le gardien porte automatiquement une couleur distincte des deux équipes et de l'autre gardien. Le nom choisi remplace « Bleus » ou « Rouges » dans tous les messages ; le changement est annulable.
+
+Huit formations sont proposées par équipe : 4-4-2, 4-3-3, 3-5-2, 4-2-3-1, 4-1-4-1 (bloc compact avec une sentinelle devant la défense), 3-4-3 (largeur donnée par les pistons), 5-3-2 (bloc bas, deux attaquants pour contre-attaquer) et 4-4-2 en losange (supériorité dans l'axe). Les joueurs rejoignent leurs nouvelles places en glissant. Le changement est confirmé dans l'aide du geste et reste annulable. La formation est rappelée sur la pastille de l'équipe. Dépliez « Positions des 22 joueurs » pour lire leurs coordonnées actuelles. Chaque joueur y est nommé par son numéro et son poste dans la formation en place, avec les abréviations du tableau noir : GB (gardien), DD, DC, DG (défenseurs), PD, PG (pistons), MDC, MC, MOC (milieux axiaux), MD, MG (milieux excentrés), AD, AG (ailiers) et AT (attaquant). Le joueur sélectionné est présenté de la même façon, par exemple « Bleus · n° 6 · MDC ».
+
+Sous les formations, trois boutons par équipe montrent la même équipe dans les trois phases du jeu : **Base** (placement du coup d'envoi), **En possession** et **Hors possession**. Chaque bouton indique la disposition obtenue : un 4-3-3 devient un 2-3-5 avec le ballon (latéraux rentrés à côté de la sentinelle, relayeurs dans les demi-espaces) et un 4-5-1 sans le ballon (ailiers redescendus). La pastille de l'équipe l'affiche, par exemple « 4-3-3 · 2-3-5 ». La bascule est annulable ; changer de formation garde la phase choisie.
+
+La carte **Analyse tactique**, dans le même espace, donne pour chaque équipe sa largeur, sa profondeur, la distance entre la défense et le milieu, puis entre le milieu et l'attaque, et la surface qu'elle occupe. Tout est en mètres réels, sur un terrain de 105 × 68 m, sans le gardien. Les valeurs suivent chaque déplacement, chaque formation et chaque bascule : comparez un 4-3-3 en possession (plus de 2 000 m²) et le même 4-3-3 sans le ballon (moins de 1 000 m²).
+
+Sous les mesures, la rubrique **Hors-jeu** donne, pour chaque équipe qui attaque, la distance de sa ligne de hors-jeu au but adverse et ce qui la fixe : l'avant-dernier défenseur (le gardien compte), le ballon s'il est plus avancé, ou la ligne médiane, car on n'est jamais hors-jeu dans sa moitié. Elle nomme les joueurs en position de hors-jeu ; un joueur à hauteur ne l'est pas. **Afficher les lignes de hors-jeu** les trace sur le terrain, à la couleur de l'équipe qui attaque, aussi en AR.
 
 ![Le panneau des formations sur le terrain posé : Bleus en 4-4-2, Rouges en 4-3-3](images/sprint4-ar-formations.jpg)
 
@@ -101,6 +109,9 @@ Le ballon se déplace de la même façon. Pour annuler une sélection, touchez �
 | --- | --- | --- | --- | --- |
 | « Passe » | Pleine et dorée | Le trajet du ballon | Le ballon, son porteur, ou l’arrivée d’une passe déjà tracée | Un partenaire, un espace libre, ou la fin d'une course |
 | « Course » | En tirets et blanche | Le déplacement d'un joueur | Le joueur qui court | Un point du terrain |
+| « Dribble » | En pointillés orange | Le porteur avance balle au pied | Le porteur du ballon | Un point du terrain |
+| « Centre » | Pleine et cyan | Le ballon envoyé d'un couloir vers la surface | Le ballon, dans un couloir du dernier tiers | Un point de la surface de réparation, ou un partenaire |
+| « Tir » | Pleine, violette et épaisse | Le tir au but | Le ballon, à 40 m au plus du but | Le but adverse, entre les poteaux |
 
 **Une passe**, pas à pas :
 
@@ -110,6 +121,8 @@ Le ballon se déplace de la même façon. Pour annuler une sélection, touchez �
 4. Touchez, ou relâchez le doigt : la passe est tracée. Pour enchaîner, touchez le receveur, puis le joueur suivant.
 
 **Une course** : touchez **« Course »**, le joueur qui court, puis son point d'arrivée.
+
+**Un marquage individuel** : touchez **« Marquage »**, le défenseur, puis l'adversaire qu'il prend en charge. Un trait à la couleur du défenseur les relie et suit les deux joueurs. Un défenseur ne marque qu'un joueur : un nouveau marquage remplace l'ancien. Deux défenseurs peuvent prendre le même attaquant (prise à deux). Toucher de nouveau la même paire retire le marquage ; tout reste annulable.
 
 Ce qui est refusé, avec un message en rouge et sans rien enregistrer :
 
@@ -181,6 +194,7 @@ Au clavier :
 | Touche | Action |
 | --- | --- |
 | D, P, C | Outils Déplacer, Passe, Course |
+| B, X, T, M | Outils Dribble, Centre, Tir, Marquage |
 | Échap | Abandonner la sélection ou le tracé, fermer un panneau |
 | Ctrl+Z (Cmd+Z sur Mac) | Annuler |
 | Ctrl+Y, ou Ctrl+Maj+Z | Rétablir |

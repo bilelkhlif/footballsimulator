@@ -26,7 +26,7 @@ import * as THREE from 'three';
 import { assignFormationRoles } from './team.mjs';
 import { ARROW_STYLES, ArrowLayer, ArrowPreview, INVALID_COLOR } from './tactical-arrows.mjs';
 import { TRANSITION_DURATION_MS } from './formation-transition.mjs';
-import { passOrigins } from './arrow-rules.mjs';
+import { BALL_ARROW_KINDS, passOrigins } from './arrow-rules.mjs';
 
 /** Durée d'un déplacement à la main, en millisecondes. */
 export const MOVE_DURATION_MS = 350;
@@ -204,7 +204,8 @@ export class TacticalView {
       this.#selectedObject = this.objectFor(selection);
       this.#draftStart = arrowStart;
       this.#draftKind = mode;
-      this.#showOrigins = mode === 'pass' && state === 'arrow-start';
+      // Anneaux des départs possibles : pour toute flèche qui porte le ballon.
+      this.#showOrigins = BALL_ARROW_KINDS.includes(mode) && state === 'arrow-start';
       if (arrowStart) {
         this.#startMarker.material.color.setHex(ARROW_STYLES[mode]?.color ?? ARROW_STYLES.pass.color);
       }

@@ -4,6 +4,8 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { WORKSPACES } from './workspace-controller.mjs';
+import { postOfNumber } from './formations.mjs';
+import { teamName } from './team-identity.mjs';
 
 /** Une seule liaison par racine, même en cas de demande répétée. */
 const BINDINGS = new WeakMap();
@@ -177,13 +179,15 @@ export function createWorkspaceSummary({ root, board, interaction }) {
   const render = () => {
     const selection = interaction.selection;
     const snapshot = board.snapshot();
-    const identity = selection?.type === 'ball' ? 'Ballon' : selection ? `${selection.teamId === 'blue' ? 'Bleus' : 'Rouges'} · n° ${selection.number}` : null;
+    /** « Bleus · n° 6 · MDC » : équipe, numéro et poste normalisé dans la formation en place. */
+    const label = (teamId, number) => `${teamName(teamId)} · n° ${number} · ${postOfNumber(board.getFormation(teamId), number)}`;
+    const identity = selection?.type === 'ball' ? 'Ballon' : selection ? label(selection.teamId, selection.number) : null;
     const position = selection?.type === 'ball' ? snapshot.ball : selection ? snapshot.players[`${selection.teamId}:${selection.number}`] : null;
     for (const element of root.querySelectorAll('[data-selection-summary]')) {
       element.textContent = identity ? `${identity} · x ${position.x.toFixed(2)} · z ${position.z.toFixed(2)} m` : 'Aucune sélection';
     }
     for (const element of root.querySelectorAll('[data-formation-summary]')) element.textContent = board.getFormation(element.dataset.formationSummary).name;
-    const mode = { move: 'Déplacer', pass: 'Passe', run: 'Course' }[interaction.mode];
+    const mode = { move: 'Déplacer', pass: 'Passe', run: 'Course', dribble: 'Dribble', cross: 'Centre', shot: 'Tir', mark: 'Marquage' }[interaction.mode];
     for (const element of root.querySelectorAll('[data-mode-summary]')) element.textContent = mode;
     root.querySelector('#active-tool').setAttribute('aria-label', `Outil actif : ${mode}. Ouvrir les outils tactiques.`);
     root.querySelector('[data-arrow-count]').textContent = String(snapshot.arrows.length);
@@ -193,8 +197,7 @@ export function createWorkspaceSummary({ root, board, interaction }) {
       for (const key of Object.keys(snapshot.players)) {
         const row = document.createElement('tr');
         row.dataset.player = key;
-        const [team, number] = key.split(':');
-        for (const text of [`${team === 'blue' ? 'Bleus' : 'Rouges'} · ${number}`, '', '']) {
+        for (const text of ['', '', '']) {
           const cell = document.createElement('td');
           cell.textContent = text;
           row.append(cell);
@@ -204,6 +207,9 @@ export function createWorkspaceSummary({ root, board, interaction }) {
     }
     for (const row of body.children) {
       const point = snapshot.players[row.dataset.player];
+      const [team, number] = row.dataset.player.split(':');
+      // Le poste suit la formation en place : il est réécrit à chaque changement.
+      row.children[0].textContent = label(team, Number(number));
       row.children[1].textContent = point.x.toFixed(2);
       row.children[2].textContent = point.z.toFixed(2);
     }

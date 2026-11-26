@@ -123,7 +123,7 @@ test('sprint 5 : flèches, avec des identifiants qui ne reculent jamais ; flèch
   const run = board.addArrow({ kind: ARROW_KINDS.RUN, from: { x: 0, z: 0 }, to: { x: 0, z: 0.1 } });
   assert.deepEqual([pass.id, run.id], [1, 2]);
   assert.deepEqual(board.getArrows().map(({ kind }) => kind), ['pass', 'run']);
-  assert.throws(() => board.addArrow({ kind: 'dribble', from: { x: 0, z: 0 }, to: { x: 0.1, z: 0 } }), /Type de flèche/);
+  assert.throws(() => board.addArrow({ kind: 'tacle', from: { x: 0, z: 0 }, to: { x: 0.1, z: 0 } }), /Type de flèche/);
   assert.throws(() => board.addArrow({ kind: 'pass', from: { x: 0, z: 0 }, to: { x: 0.01, z: 0 } }), /trop courte/);
   assert.throws(() => board.addArrow({ kind: 'pass', from: { x: 0, z: 0 }, to: { x: 0.5, z: 0 } }), /hors du terrain/);
   assert.throws(() => board.addArrow({ kind: 'pass', from: { x: 0, z: 0 }, to: { x: 0.1, z: 0 }, id: 1 }), /déjà présente/);

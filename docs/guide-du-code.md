@@ -434,6 +434,19 @@ Il modifie aussi :
 
 Deux outils de développement s'ajoutent dans `tests/` : `benchmark.mjs` (`npm run bench`), qui mesure les performances, et `shell-version.mjs` (`npm run shell-version`), qui calcule `SHELL_VERSION`.
 
+### Modèle football (version 0.4)
+
+- **`src/formations.mjs`** : huit formations, dont le 4-1-4-1, le 3-4-3, le 5-3-2 et le 4-4-2 en losange. Chaque place porte un poste normalisé (`POSTS`, `postOfRole`, `postOfNumber`) : GB, DD, DC, DG, PD, PG, MDC, MC, MD, MG, MOC, AD, AG, AT. Chaque formation décrit aussi ses dispositions en possession et hors possession (`phaseShapes`) : `computePositions(phase)` rend la place de chaque numéro dans la phase demandée.
+- **`src/tactics-board.mjs`** : la phase de jeu de chaque équipe (`getPhase`, `setPhase`), dans les instantanés ; un changement de formation garde la phase.
+- **`src/commands.mjs`** : `ChangePhaseCommand`, la bascule annulable entre base, possession et hors possession.
+- **`src/tactical-metrics.mjs`** : fonctions pures. Largeur, profondeur, distance entre les lignes et surface occupée (enveloppe convexe), en mètres réels. Les lignes se lisent sur le terrain, d'après le nom de la disposition en place (« 4-5-1 » : les 4 joueurs de champ les plus bas, les 5 suivants, le dernier).
+- **`src/arrow-rules.mjs`** : trois nouvelles flèches du ballon, dribble, centre et tir (`BALL_ARROW_KINDS`), avec leurs zones en mètres réels : surface de réparation (`isInPenaltyArea`), dernier tiers, but entre les poteaux, sens d'attaque du porteur (`attackSign`). Styles dans `src/tactical-arrows.mjs` ; outils, touches B, X et T dans `index.html`, `src/keyboard-shortcuts.mjs` et `src/tactical-toolbar.mjs`.
+- **Marquage individuel** : `TacticsBoard.setMarking` / `removeMarking` (dans les instantanés et la sauvegarde), `MarkPlayerCommand` (crée, remplace ou retire, annulable), mode `mark` de `src/tactical-interaction.mjs` (défenseur, puis adversaire ; touche M), et `src/marking-layer.mjs` : les traits en 3D, replacés à chaque image d'après la position affichée des pions (tâche de la boucle de rendu).
+- **Noms et maillots** : `TacticsBoard.getIdentity` / `setIdentity` (nom de 1 à 24 caractères, distinct ; maillot de la palette), `ChangeTeamIdentityCommand`. `src/team-colors.mjs` : palette, simulation des trois daltonismes (matrices de Machado et al., 2009), écart ΔE*76 en CIELAB, choix du maillot du gardien. `src/team-identity.mjs` : noms dans les textes (« des Bleus », « de Sfax », « d’Espérance »). `src/team-kits-view.mjs` : couleur de chaque pion par instance (gardien distinct, même appel de dessin), numéros et variables CSS. `src/team-panel.mjs` : la carte Équipes.
+- **`src/offside.mjs`** : la ligne de hors-jeu (loi 11), fonction pure : la plus avancée de l'avant-dernier défenseur (gardien compris), du ballon et de la ligne médiane ; un joueur à hauteur n'est pas hors-jeu.
+- **`src/offside-layer.mjs`** : les deux lignes de hors-jeu en 3D, dans le repère du terrain, masquées par défaut ; elles suivent le tableau (observateur).
+- **`src/analysis-panel.mjs`** : le tableau « Analyse tactique » de l'espace Équipes et formations, recalculé à chaque changement du tableau (observateur), avec une phrase de hors-jeu par équipe et le bouton qui affiche les lignes.
+
 ### Fichiers du dépôt
 
 - **`.editorconfig`** : règles communes à tous les éditeurs : UTF-8, fins de ligne LF, indentation de 2 espaces, ligne vide finale.

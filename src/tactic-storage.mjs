@@ -17,10 +17,11 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { FORMATIONS } from './formations.mjs';
+import { FORMATIONS, PHASES } from './formations.mjs';
+import { checkKitContrast, KIT_PALETTE } from './team-colors.mjs';
 import { MAX_KEYFRAMES } from './tactical-sequence.mjs';
 import {
-  ARROW_KINDS, BALL_MARGIN, isOnBoard, isOnPitch, MIN_ARROW_LENGTH, PLAYER_MARGIN,
+  ARROW_KINDS, BALL_MARGIN, isOnBoard, isOnPitch, MIN_ARROW_LENGTH, normalizeTeamName, PLAYER_MARGIN,
 } from './tactics-board.mjs';
 
 /** Version du format enregistré : à incrémenter si sa forme change, l'ancienne est alors ignorée. */
@@ -82,6 +83,25 @@ function arePlayersValid(players, playerKeys) {
 }
 
 /**
+ * Vrai si les identités enregistrées sont celles que le tableau accepterait.
+ * @param {unknown} identities
+ * @param {string[]} teamIds
+ * @returns {boolean}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Persistance — sauvegarde automatique de la tactique
+ */
+function areIdentitiesValid(identities, teamIds) {
+  if (!isRecord(identities) || !hasExactKeys(identities, teamIds)) return false;
+  const entries = teamIds.map((teamId) => identities[teamId]);
+  if (!entries.every((entry) => isRecord(entry) && normalizeTeamName(entry.name) === entry.name && Object.hasOwn(KIT_PALETTE, entry.kit))) {
+    return false;
+  }
+  const [a, b] = entries;
+  return !b || (a.name.toLocaleLowerCase('fr') !== b.name.toLocaleLowerCase('fr') && checkKitContrast(a.kit, b.kit).ok);
+}
+
+/**
  * Vrai si la flèche a une forme que le tableau tactique accepterait.
  * @param {unknown} arrow
  * @returns {boolean}
@@ -111,14 +131,33 @@ export function isValidTactic(data, reference) {
   if (!isRecord(data) || data.version !== TACTIC_FORMAT_VERSION || !isRecord(data.board)) {
     return false;
   }
-  const { formations, players, ball, arrows } = data.board;
+  const { formations, phases, players, ball, arrows, markings, identities } = data.board;
   const teamIds = Object.keys(reference.formations);
   const playerKeys = Object.keys(reference.players);
   if (!isRecord(formations) || !hasExactKeys(formations, teamIds)
     || !teamIds.every((teamId) => Object.hasOwn(FORMATIONS, formations[teamId]))) {
     return false;
   }
+  // Phases de jeu : absentes d'une tactique enregistrée avant leur ajout (chaque équipe reprend
+  // alors la base) ; présentes, une par équipe, et connues.
+  if (phases !== undefined && (!isRecord(phases) || !hasExactKeys(phases, teamIds)
+    || !teamIds.every((teamId) => Object.values(PHASES).includes(phases[teamId])))) {
+    return false;
+  }
   if (!arePlayersValid(players, playerKeys) || !isOnBoard(ball, BALL_MARGIN)) {
+    return false;
+  }
+  // Identités : absentes d'une tactique plus ancienne ; sinon un nom valide et distinct par équipe,
+  // et des maillots de la palette qui se distinguent pour les daltoniens.
+  if (identities !== undefined && !areIdentitiesValid(identities, teamIds)) {
+    return false;
+  }
+  // Marquages : absents d'une tactique plus ancienne ; sinon des paires d'adversaires connus, un
+  // seul marquage par défenseur.
+  if (markings !== undefined && (!Array.isArray(markings)
+    || !markings.every((pair) => Array.isArray(pair) && pair.length === 2 && pair.every((key) => playerKeys.includes(key))
+      && pair[0].split(':')[0] !== pair[1].split(':')[0])
+    || new Set(markings.map(([defender]) => defender)).size !== markings.length)) {
     return false;
   }
   if (!Array.isArray(arrows) || !arrows.every(isArrowValid)

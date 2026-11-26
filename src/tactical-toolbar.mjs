@@ -36,6 +36,10 @@ const FLASH_DURATION_MS = 450;
 const ARROW_START_HINTS = Object.freeze({
   pass: 'Passe : touchez le ballon ou son porteur (anneaux dorés).',
   run: 'Course : touchez le joueur qui court.',
+  dribble: 'Dribble : touchez le porteur du ballon.',
+  cross: 'Centre : touchez le ballon ou son porteur, dans un couloir près de la surface.',
+  shot: 'Tir : touchez le ballon ou le tireur.',
+  mark: 'Marquage : touchez le défenseur, puis l’adversaire qu’il prend en charge.',
 });
 
 /**

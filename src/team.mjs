@@ -23,8 +23,8 @@ export function createTeam(team, formation, playerFactory) {
   teamGroup.name = `team-${team.id}`;
   teamGroup.userData = { type: 'team', teamId: team.id, formation: formation.name };
 
-  for (const [number, { x, z, role }] of computeTeamTargets(formation, team.attacksPositiveX)) {
-    const player = playerFactory.createPlayer({ team, number, role });
+  for (const [number, { x, z, role, post }] of computeTeamTargets(formation, team.attacksPositiveX)) {
+    const player = playerFactory.createPlayer({ team, number, role, post });
     player.position.set(x, 0, z);
     teamGroup.add(player);
   }
@@ -71,6 +71,7 @@ export function assignFormationRoles(teamGroup, team, formation) {
     const target = targets.get(player.userData.number);
     if (target) {
       player.userData.role = target.role;
+      player.userData.post = target.post;
     }
   }
   teamGroup.userData.formation = formation.name;

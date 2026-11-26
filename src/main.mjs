@@ -28,7 +28,12 @@ import { DEFAULT_FORMATIONS, TEAMS } from './config.mjs';
 import { TacticsBoard } from './tactics-board.mjs';
 import { FormationAnimator, TRANSITION_DURATION_MS } from './formation-transition.mjs';
 import { createFormationPanel } from './formation-panel.mjs';
-import { ChangeFormationCommand, CommandHistory } from './commands.mjs';
+import { createAnalysisPanel } from './analysis-panel.mjs';
+import { OffsideLayer } from './offside-layer.mjs';
+import { MarkingLayer } from './marking-layer.mjs';
+import { followTeamKits } from './team-kits-view.mjs';
+import { createTeamPanel } from './team-panel.mjs';
+import { ChangeFormationCommand, ChangePhaseCommand, ChangeTeamIdentityCommand, CommandHistory } from './commands.mjs';
 import { MOVE_DURATION_MS, TacticalView } from './tactical-view.mjs';
 import { TacticalInteraction } from './tactical-interaction.mjs';
 import { attachKeyboardShortcuts } from './keyboard-shortcuts.mjs';
@@ -53,6 +58,7 @@ import { describeAdapter, WebGpuUnavailableError, WEBGPU_ERROR_REASONS } from '.
 import { getRequestedRenderMode, RENDER_MODES, WebGlTestModeUnavailableError } from './webgl-test-mode.mjs';
 import { WorkspaceController } from './workspace-controller.mjs';
 import { createThemeControl, THEME_COLORS } from './theme.mjs';
+import { followTeamNames, teamName } from './team-identity.mjs';
 import { createWorkspaceNavigation, createWorkspaceSummary, createWorkspaceStatus } from './workspace-navigation.mjs';
 
 /** Réglage de Chrome qui active la liaison WebXR/WebGPU (Chrome 157, Android et Windows). */
@@ -168,6 +174,8 @@ async function init(renderMode) {
   // Tableau tactique : formations (sprint 4), places des joueurs, ballon et flèches (sprint 5).
   // Les actions de l'utilisateur passent par l'historique des commandes (patron Command).
   const board = new TacticsBoard(DEFAULT_FORMATIONS);
+  // Noms des équipes dans les textes : suivis avant tout autre observateur du tableau.
+  followTeamNames(board);
   const history = new CommandHistory();
   // Déplacements animés ; directs si l'utilisateur demande moins d'animations.
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -178,13 +186,17 @@ async function init(renderMode) {
   // Pions instanciés (sprint 6) : 3 appels de dessin par équipe, mis à jour seulement quand un
   // joueur bouge.
   const teamMeshes = [];
+  const teamMeshesById = {};
   for (const team of Object.values(TEAMS)) {
     teamGroups[team.id] = createTeam(team, board.getFormation(team.id), playerFactory);
     pitchGroup.add(teamGroups[team.id]);
     const meshes = playerFactory.createTeamMeshes(team, teamGroups[team.id].children);
     pitchGroup.add(meshes.group);
     teamMeshes.push(meshes);
+    teamMeshesById[team.id] = meshes;
   }
+  // Maillots : couleur de chaque pion (gardien distinct), numéros et pastilles de l'interface.
+  followTeamKits({ board, teamMeshes: teamMeshesById, playerFactory, root: document.documentElement });
   const ball = createBall();
   pitchGroup.add(ball);
 
@@ -207,7 +219,34 @@ async function init(renderMode) {
     chips: Object.fromEntries(Object.keys(TEAMS).map((id) => [id, document.getElementById(`formation-${id}`)])),
     choose: (teamId, name) => {
       if (history.execute(new ChangeFormationCommand({ board, teamId, formation: name }))) {
-        hint.flash(`${TEAMS[teamId].label} : formation ${name} appliquée.`, 'success');
+        hint.flash(`${teamName(teamId)} : formation ${name} appliquée.`, 'success');
+      }
+    },
+    choosePhase: (teamId, phase) => {
+      const command = new ChangePhaseCommand({ board, teamId, phase });
+      if (history.execute(command)) {
+        hint.flash(`${teamName(teamId)} : ${command.label.split(' pour ')[0].toLowerCase()}.`, 'success');
+      }
+    },
+  });
+
+  // Analyse tactique : largeur, profondeur, lignes et surface de chaque équipe, en mètres réels.
+  // Lignes de hors-jeu en 3D, dans le repère du terrain ; affichées depuis la carte d'analyse.
+  const offsideLayer = new OffsideLayer({ pitchGroup, board });
+  // Marquages individuels : traits replacés à chaque image (tâche de la boucle de rendu).
+  const markingLayer = new MarkingLayer({ pitchGroup, board, teamGroups });
+  createAnalysisPanel({ root: document.getElementById('analysis-panel'), board, teams: Object.values(TEAMS), offsideLayer });
+  // Noms et maillots des équipes : une commande annulable ; un refus est expliqué dans le bandeau.
+  createTeamPanel({
+    root: document.getElementById('team-panel'),
+    board,
+    choose: (teamId, identity) => {
+      try {
+        if (history.execute(new ChangeTeamIdentityCommand({ board, teamId, ...identity }))) {
+          hint.flash(`${teamName(teamId)} : nom et maillot appliqués.`, 'success');
+        }
+      } catch (error) {
+        hint.flash(error.message, 'invalid');
       }
     },
   });
@@ -375,6 +414,7 @@ async function init(renderMode) {
     { update: (time, frame) => arState.tacticalInput?.update(frame) },
     sequencePlayer,
     tacticalView,
+    markingLayer,
     ...teamMeshes,
   ];
   if (diagnostics) {
@@ -408,7 +448,7 @@ async function init(renderMode) {
   document.body.classList.add('is-ready');
   return {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer,
     get diagnostics() { return diagnostics; },
   };
 }
@@ -771,7 +811,7 @@ async function start() {
   }
   const {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer,
   } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
   const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding, workspaces, navigation });
@@ -792,6 +832,8 @@ async function start() {
     sequencePlayer,
     teamMeshes,
     autosave,
+    offsideLayer,
+    markingLayer,
     xrDevice: emulator?.xrDevice ?? null,
     get placement() {
       return arState.placement;

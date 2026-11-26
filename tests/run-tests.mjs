@@ -18,6 +18,8 @@ import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { REPO_ROOT, startServer } from './serve.mjs';
 import { readShellVersion } from './shell-version.mjs';
+import { FORMATIONS } from '../src/formations.mjs';
+import { computeTeamTargets } from '../src/formation-transition.mjs';
 import { clickUi, tapUi, installAimTools, openWorkspace } from './workspace-test-helpers.mjs';
 import { runWorkspaceTests, verifyArWorkspaces } from './workspace-tests.mjs';
 import { runFinalUxReviewTests } from './final-ux-review-tests.mjs';
@@ -540,7 +542,8 @@ async function testFormationButtons(browser, url) {
     const opened = await page.evaluate(() => !document.getElementById('formation-panel').hidden
       && document.getElementById('formations-toggle').getAttribute('aria-expanded') === 'true');
     const buttonCount = await page.locator('.formation-button').count();
-    record('Formations : panneau ouvert par « Formations », 4 boutons par équipe', closedAtStart && opened && buttonCount === 8 ? 'ok' : 'échec',
+    record('Formations : panneau ouvert par « Formations », un bouton par formation et par équipe', closedAtStart && opened
+      && buttonCount === 2 * Object.keys(FORMATIONS).length ? 'ok' : 'échec',
       `fermé au départ : ${closedAtStart}, ouvert : ${opened}, ${buttonCount} boutons`);
 
     // Transition animée : à mi-parcours, les joueurs sont en route.
@@ -599,6 +602,206 @@ async function testReducedMotion(browser, url) {
     await clickUi(page, '.formation-button[data-team="red"][data-formation="3-5-2"]');
     const state = await readTeamPlacement(page, 'red');
     record(name, !state.animating && isInFormation(state, '3-5-2') ? 'ok' : 'échec', `écart juste après le clic : ${state.worstCm} cm`);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Bascule attaque / défense dans la page : le bouton « En possession · 2-3-5 » des Bleus place
+ * l'équipe dans sa disposition en possession, la pastille l'affiche, puis Ctrl+Z la ramène à la base.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Tests de bout en bout — bascule attaque / défense
+ */
+async function testPhaseToggle(browser, url) {
+  const name = 'Formations : bascule en possession (4-3-3 → 2-3-5) par son bouton, puis annulation';
+  const context = await browser.newContext({ ...DESKTOP, reducedMotion: 'reduce' });
+  try {
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    await clickUi(page, '#formations-toggle');
+    const label = await page.textContent('.phase-button[data-team="blue"][data-phase="possession"]');
+    await clickUi(page, '.phase-button[data-team="blue"][data-phase="possession"]');
+    // Places attendues, calculées ici avec le même module que l'application.
+    const expected = [...computeTeamTargets(FORMATIONS['4-3-3'], true, 'possession')];
+    const after = await page.evaluate((targets) => {
+      const app = window.__footballSimulator;
+      const worst = Math.max(...targets.map(([number, { x, z }]) => {
+        const p = app.board.getPlayerPosition('blue', number);
+        return Math.hypot(p.x - x, p.z - z);
+      }));
+      return {
+        phase: app.board.getPhase('blue'),
+        worst,
+        chip: document.getElementById('formation-blue')?.textContent ?? '',
+        pressed: document.querySelector('.phase-button[data-team="blue"][data-phase="possession"]').getAttribute('aria-pressed'),
+      };
+    }, expected);
+    await page.keyboard.press('Control+z');
+    const undone = await page.evaluate(() => window.__footballSimulator.board.getPhase('blue'));
+    const problems = [];
+    if (!label.includes('2-3-5')) problems.push(`libellé « ${label} »`);
+    if (after.phase !== 'possession' || after.worst > 1e-9) problems.push(`phase ${after.phase}, écart ${after.worst}`);
+    if (!after.chip.includes('2-3-5')) problems.push(`pastille « ${after.chip} »`);
+    if (after.pressed !== 'true') problems.push('bouton non marqué');
+    if (undone !== 'base') problems.push(`après Ctrl+Z : ${undone}`);
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || `bouton « ${label} », pastille « ${after.chip} »`);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Analyse et hors-jeu dans la page : la carte « Analyse tactique » affiche des mesures et la ligne
+ * de hors-jeu des deux équipes ; un Bleu passé derrière la défense rouge y apparaît hors-jeu, et le
+ * bouton affiche les lignes sur le terrain.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Tests de bout en bout — analyse tactique et hors-jeu
+ */
+async function testAnalysisAndOffside(browser, url) {
+  const name = 'Analyse tactique : mesures en mètres réels, hors-jeu calculé et lignes affichées sur le terrain';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    await clickUi(page, '#formations-toggle');
+    await page.evaluate(() => window.__footballSimulator.board.setPlayerPosition('blue', 9, { x: 0.25, z: 0 }));
+    await clickUi(page, '#offside-toggle');
+    const state = await page.evaluate(() => ({
+      width: document.querySelector('#analysis-panel tr[data-metric="width"] td[data-team="blue"]')?.textContent ?? '',
+      blue: document.querySelector('[data-offside="blue"]')?.textContent ?? '',
+      red: document.querySelector('[data-offside="red"]')?.textContent ?? '',
+      visible: window.__footballSimulator.offsideLayer.visible,
+      pressed: document.getElementById('offside-toggle').getAttribute('aria-pressed'),
+    }));
+    const problems = [];
+    if (!/^\d+ m$/.test(state.width)) problems.push(`largeur « ${state.width} »`);
+    if (!/hors-jeu : n° 9 \(AT\)/.test(state.blue)) problems.push(`Bleus : « ${state.blue} »`);
+    if (!/^Rouges en attaque : ligne à \d+ m du but des Bleus/.test(state.red)) problems.push(`Rouges : « ${state.red} »`);
+    if (!state.visible || state.pressed !== 'true') problems.push('lignes non affichées');
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || `largeur des Bleus ${state.width} ; ${state.blue}`);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Tir à la souris : touche T, toucher le ballon d'un attaquant à l'entrée de la surface, puis
+ * viser à côté du poteau (refusé, en rouge, avec sa raison) et entre les poteaux (tracé, annulable).
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Tests de bout en bout — dribble, centre et tir
+ */
+async function testShotArrow(browser, url) {
+  const name = 'Flèches : tir tracé à la souris (touche T) ; à côté du poteau, refus expliqué';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    await context.addInitScript(installAimTools);
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    // Ballon à 17 m du but rouge, dans l'axe (terrain de 105 m : 0,6 m) ; l'avant-centre bleu juste
+    // derrière, côté but, pour ne pas cacher le ballon à la caméra : il en reste le porteur.
+    await page.evaluate(() => {
+      const { board } = window.__footballSimulator;
+      board.setPlayerPosition('blue', 9, { x: 0.218, z: 0.004 });
+      board.setBallPosition({ x: 0.2, z: 0.004 });
+    });
+    await page.waitForTimeout(500);
+    await page.keyboard.press('t');
+    const pressed = await page.evaluate(() => document.querySelector('[data-mode="shot"]').getAttribute('aria-pressed'));
+    const ball = await page.evaluate(() => window.__aim.ball());
+    await page.mouse.click(ball.x, ball.y);
+    // Points à 1,5 m devant la ligne de but : sur la ligne, le cadre du but les cache.
+    const wide = await page.evaluate(() => window.__aim.spot([[0.291, 0.05], [0.291, -0.05]]));
+    await page.mouse.click(wide.sx, wide.sy);
+    const refused = await readTactics(page);
+    // Dans les coins (2,8 m de l'axe, entre les poteaux) : le gardien rouge cache le centre du but.
+    const goal = await page.evaluate(() => window.__aim.spot([[0.292, 0.016], [0.292, -0.016], [0.292, 0.012], [0.292, -0.012]]));
+    if (!ball || !wide || !goal) throw new Error(`visée impossible : ballon ${Boolean(ball)}, à côté ${Boolean(wide)}, but ${Boolean(goal)}`);
+    await page.mouse.click(goal.sx, goal.sy);
+    const drawn = await readTactics(page);
+    const problems = [];
+    if (pressed !== 'true') problems.push('outil Tir non actif après T');
+    if (!refused.hint.includes('entre les poteaux') || refused.snapshot.arrows.length) problems.push(`à côté : « ${refused.hint} »`);
+    if (drawn.snapshot.arrows.length !== 1 || drawn.snapshot.arrows[0].kind !== 'shot' || !drawn.canUndo) {
+      problems.push(`tir : ${JSON.stringify(drawn.snapshot.arrows)} « ${drawn.hint} »`);
+    }
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || `refus : « ${refused.hint} » ; puis « ${drawn.hint} »`);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
+ * Équipes dans la page : renommer les Rouges et leur donner un maillot jaune par le panneau ; les
+ * pions changent de couleur (gardien distinct), le nom suit dans les formations ; un maillot trop
+ * proche de l'adversaire pour un daltonien est refusé avec sa raison ; Ctrl+Z rend l'identité.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Tests de bout en bout — noms et maillots des équipes
+ */
+async function testTeamIdentity(browser, url) {
+  const name = 'Équipes : nom et maillot par le panneau, gardien distinct, maillot trop proche refusé, annulation';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    await clickUi(page, '#formations-toggle');
+    await page.fill('[data-team-name="red"]', 'Espérance');
+    await page.selectOption('[data-team-kit="red"]', 'jaune');
+    await page.waitForTimeout(300);
+    const applied = await page.evaluate(() => {
+      const app = window.__footballSimulator;
+      const mesh = app.teamMeshes[1].meshes[2];
+      const players = app.pitchGroup.getObjectByName('team-red').children;
+      const colorOf = (number) => {
+        const color = mesh.instanceColor ? new mesh.instanceColor.constructor(0) : null;
+        const index = players.findIndex((p) => p.userData.number === number);
+        return [mesh.instanceColor.getX(index), mesh.instanceColor.getY(index), mesh.instanceColor.getZ(index), color === null];
+      };
+      return {
+        identity: app.board.getIdentity('red'),
+        nine: colorOf(9),
+        keeper: colorOf(1),
+        row: document.querySelector('[data-team-label="red"]')?.textContent ?? '',
+      };
+    });
+    await page.selectOption('[data-team-kit="red"]', 'violet');
+    await page.waitForTimeout(300);
+    const refused = await page.evaluate(() => ({
+      kit: window.__footballSimulator.board.getIdentity('red').kit,
+      select: document.querySelector('[data-team-kit="red"]').value,
+      hint: document.getElementById('hint').textContent,
+    }));
+    // Les raccourcis se taisent dans un champ de saisie : l'entraîneur quitte d'abord le champ.
+    await page.evaluate(() => document.activeElement?.blur());
+    await page.keyboard.press('Control+z');
+    const undone = await page.evaluate(() => window.__footballSimulator.board.getIdentity('red').kit);
+    const problems = [];
+    if (applied.identity.name !== 'Espérance' || applied.identity.kit !== 'jaune') problems.push(`identité ${JSON.stringify(applied.identity)}`);
+    if (JSON.stringify(applied.nine) === JSON.stringify(applied.keeper)) problems.push('gardien de la même couleur');
+    if (applied.row !== 'Espérance') problems.push(`ligne des formations « ${applied.row} »`);
+    if (refused.kit !== 'jaune' || refused.select !== 'jaune' || !/trop proches/.test(refused.hint)) problems.push(`refus : ${JSON.stringify(refused)}`);
+    if (undone !== 'rouge') problems.push(`après Ctrl+Z : ${undone}`);
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || `gardien ${applied.identity.goalkeeperKit} ; refus : « ${refused.hint} »`);
   } catch (error) {
     record(name, 'échec', error.message.split('\n')[0]);
   } finally {
@@ -912,6 +1115,9 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
     const initialView = await readView();
     /** Vrai si la vue 3D est revenue exactement à son état d'avant l'entrée en AR. */
     const sameAsInitial = (view) => JSON.stringify(view) === JSON.stringify(initialView);
+    /** Ce qui diffère de la vue de départ, pour le bilan d'un échec. */
+    const viewDiff = (view) => Object.keys(view).filter((key) => JSON.stringify(view[key]) !== JSON.stringify(initialView[key]))
+      .map((key) => `${key} : ${JSON.stringify(initialView[key])} → ${JSON.stringify(view[key])}`).join(' ; ');
 
     const steps = [
       [webglTest ? 'entrée par « Entrer en AR », session rendue par une couche WebGL' : 'entrée par « Entrer en AR », session rendue en WebGPU', async () => {
@@ -1054,8 +1260,11 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
           };
         });
         const before = await readTactics(page);
+        // Entre les deux groupes de la barre (outils, historique) : la barre, mais aucun bouton.
         const box = await page.locator('#tactical-toolbar').boundingBox();
-        await page.mouse.click(box.x + 3, box.y + box.height / 2); // bord de la barre, entre les boutons
+        const modes = await page.locator('#tactical-toolbar .toolbar__group--modes').boundingBox();
+        const history = await page.locator('#tactical-toolbar .toolbar__group--history').boundingBox();
+        await page.mouse.click(box.x + 3, (modes.y + modes.height + history.y) / 2);
         await page.waitForTimeout(400);
         const blocked = await page.evaluate(() => window.__selects);
         // Contrôle : un toucher sur le gazon, lui, atteint bien la scène.
@@ -1139,7 +1348,8 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         await page.waitForFunction(() => document.body.dataset.xr === 'inactive', null, { timeout: 15000 });
         const view = await readView();
         const counts = await countLoopCalls(800);
-        return [sameAsInitial(view) && counts.updates > 0, `vue identique au départ : ${sameAsInitial(view)}, contrôles relancés : ${counts.updates > 0}`];
+        return [sameAsInitial(view) && counts.updates > 0,
+          `vue identique au départ : ${sameAsInitial(view) || viewDiff(view)}, contrôles relancés : ${counts.updates > 0}`];
       }],
       ['fin de session : saisie AR arrêtée, tactique gardée pour la vue 3D', async () => {
         const state = await page.evaluate(() => ({
@@ -1426,8 +1636,9 @@ async function testTacticalMobile(browser, url) {
         overflow: document.documentElement.scrollWidth > window.innerWidth,
       };
     });
-    const layoutOk = layout.count === 6 && layout.inside && layout.minHeight >= 44 && layout.labelsFit && !layout.overflow;
-    record(`${name} : barre d'outils entière, six boutons de ${layout.minHeight} px de haut, libellés lisibles`, layoutOk ? 'ok' : 'échec',
+    // Sept outils (Déplacer, Passe, Course, Dribble, Centre, Tir, Marquage) et trois actions d'historique.
+    const layoutOk = layout.count === 10 && layout.inside && layout.minHeight >= 44 && layout.labelsFit && !layout.overflow;
+    record(`${name} : barre d'outils entière, ${layout.count} boutons de ${layout.minHeight} px de haut, libellés lisibles`, layoutOk ? 'ok' : 'échec',
       `dans l'écran : ${layout.inside}, libellés entiers : ${layout.labelsFit}, débordement : ${layout.overflow}`);
 
     const target = await page.evaluate(() => window.__aim.player('red'));
@@ -2150,6 +2361,10 @@ async function main() {
     await testFormationButtons(browser, root.url);
     await testReducedMotion(browser, root.url);
     await testTacticAutosave(browser, root.url);
+    await testPhaseToggle(browser, root.url);
+    await testAnalysisAndOffside(browser, root.url);
+    await testShotArrow(browser, root.url);
+    await testTeamIdentity(browser, root.url);
     await testTacticalBoard(browser, root.url);
     await testTacticalMobile(browser, root.url);
     await testArrowRules(browser, root.url);

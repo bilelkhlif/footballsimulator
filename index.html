@@ -49,6 +49,10 @@
     <symbol id="i-move" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></symbol>
     <symbol id="i-pass" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.6"/><path d="M8.2 15.8 19 5"/><path d="M12.5 5H19v6.5"/></symbol>
     <symbol id="i-run" viewBox="0 0 24 24"><path d="M4.5 19.5 19 5" stroke-dasharray="2.8 2.6"/><path d="M12.5 5H19v6.5"/></symbol>
+    <symbol id="i-dribble" viewBox="0 0 24 24"><circle cx="5.5" cy="18.5" r="2.4"/><path d="M7.6 16.4c1.9-.6 1.6-3 3.4-3.7s1.8-3.2 3.6-3.9c1.3-.5 2.6-1.5 4.2-3.6"/><path d="M13.6 5H19v5.4"/></symbol>
+    <symbol id="i-cross" viewBox="0 0 24 24"><path d="M4 20V4"/><path d="M4 6c6-1.5 11 1.5 13.5 9"/><path d="M13.4 13.6 17.6 15.6l1.6-4.4"/></symbol>
+    <symbol id="i-shot" viewBox="0 0 24 24"><path d="M15 4.5h5.5v9H15"/><circle cx="4.8" cy="19.2" r="2.2"/><path d="M6.8 17.2 15.5 9"/><path d="M10.8 8.8h4.9v4.9"/></symbol>
+    <symbol id="i-mark" viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="7" r="3"/><path d="M8.4 15.2 15.6 8.8" stroke-dasharray="2.4 2"/></symbol>
     <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
     <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
     <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/></symbol>
@@ -117,7 +121,9 @@
 
         <section data-workspace-panel="formations" aria-label="Équipes et formations" hidden>
           <p class="panel-intro">Chaque équipe, son organisation.</p><p class="muted">Choisissez une formation. Les joueurs rejoignent leurs places ; le changement reste annulable.</p>
+          <div class="summary-card team-card"><h3>Équipes</h3><div id="team-panel"></div><p class="muted">Maillots vérifiés en vision normale et pour les trois daltonismes ; le gardien porte une couleur distincte.</p></div>
           <div id="formation-panel" class="formation-panel" hidden></div>
+          <div class="summary-card analysis-card"><h3>Analyse tactique</h3><div id="analysis-panel"></div><p class="muted">Mesures en mètres réels, sur un terrain de 105 × 68 m, sans le gardien. Les lignes se lisent sur le terrain, d'après la disposition en place.</p></div>
           <details class="positions"><summary>Positions des 22 joueurs</summary><p class="muted">Coordonnées de la maquette, en mètres. Déplacez les joueurs directement sur le terrain.</p><table><caption class="sr-only">Positions actuelles des joueurs</caption><thead><tr><th scope="col">Joueur</th><th scope="col">x (m)</th><th scope="col">z (m)</th></tr></thead><tbody id="player-positions"></tbody></table></details>
         </section>
 
@@ -134,6 +140,18 @@
             <button class="tool tool--run" type="button" data-mode="run" aria-pressed="false" aria-keyshortcuts="C" title="Tracer la course d’un joueur (C)">
               <svg class="icon" aria-hidden="true"><use href="#i-run"/></svg><span class="tool__label">Course</span>
             </button>
+            <button class="tool tool--dribble" type="button" data-mode="dribble" aria-pressed="false" aria-keyshortcuts="B" title="Tracer un dribble, depuis le porteur du ballon (B)">
+              <svg class="icon" aria-hidden="true"><use href="#i-dribble"/></svg><span class="tool__label">Dribble</span>
+            </button>
+            <button class="tool tool--cross" type="button" data-mode="cross" aria-pressed="false" aria-keyshortcuts="X" title="Tracer un centre, d'un couloir vers la surface (X)">
+              <svg class="icon" aria-hidden="true"><use href="#i-cross"/></svg><span class="tool__label">Centre</span>
+            </button>
+            <button class="tool tool--shot" type="button" data-mode="shot" aria-pressed="false" aria-keyshortcuts="T" title="Tracer un tir, vers le but (T)">
+              <svg class="icon" aria-hidden="true"><use href="#i-shot"/></svg><span class="tool__label">Tir</span>
+            </button>
+            <button class="tool tool--mark" type="button" data-mode="mark" aria-pressed="false" aria-keyshortcuts="M" title="Marquage individuel : un défenseur, puis l'adversaire qu'il marque (M)">
+              <svg class="icon" aria-hidden="true"><use href="#i-mark"/></svg><span class="tool__label">Marquage</span>
+            </button>
           </div>
           <div class="toolbar__group toolbar__group--history" role="group" aria-label="Historique">
             <button class="tool" type="button" data-action="undo" aria-keyshortcuts="Control+Z" disabled>
@@ -148,7 +166,7 @@
           </div>
         </div>
 
-          <div class="tool-guide"><h3>Un geste à la fois</h3><p><strong>Déplacer</strong> · un joueur ou le ballon, puis sa destination.</p><p><strong>Passe</strong> · le ballon ou son porteur, puis un partenaire ou un espace libre.</p><p><strong>Course</strong> · un joueur, puis son arrivée.</p><p class="muted">Un aperçu rouge explique une action refusée. Échap ou Abandonner annule le geste en cours.</p></div>
+          <div class="tool-guide"><h3>Un geste à la fois</h3><p><strong>Déplacer</strong> · un joueur ou le ballon, puis sa destination.</p><p><strong>Passe</strong> · le ballon ou son porteur, puis un partenaire ou un espace libre.</p><p><strong>Course</strong> · un joueur, puis son arrivée.</p><p><strong>Dribble</strong> · le porteur, puis l’endroit où il emmène le ballon.</p><p><strong>Centre</strong> · le ballon dans un couloir du dernier tiers, puis un point de la surface.</p><p><strong>Tir</strong> · le ballon, puis le but, entre les poteaux.</p><p><strong>Marquage</strong> · un défenseur, puis l’adversaire qu’il prend en charge ; la même paire retire le marquage.</p><p class="muted">Un aperçu rouge explique une action refusée. Échap ou Abandonner annule le geste en cours.</p></div>
         </section>
 
         <section data-workspace-panel="animation" aria-label="Animation et séquences" hidden>

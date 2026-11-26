@@ -91,7 +91,7 @@ test('raccourcis ignorés : saisie de texte, touche déjà traitée, appui long,
   assert.equal(resolveShortcut({ key: 'z', ctrlKey: true, repeat: true }), null, 'pas d\'annulations en rafale');
   assert.equal(resolveShortcut({ key: 'p', ctrlKey: true }), null, 'Ctrl+P reste au navigateur (impression)');
   assert.equal(resolveShortcut({ key: 'c', altKey: true }), null);
-  assert.equal(resolveShortcut({ key: 'x' }), null);
+  assert.equal(resolveShortcut({ key: 'q' }), null);
 });
 
 test('raccourcis branchés : chaque touche déclenche son action ; Échap sans rien à abandonner reste au navigateur', () => {

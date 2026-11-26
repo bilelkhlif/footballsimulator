@@ -78,7 +78,7 @@ test('trois maillages instanciés par équipe (socle, flèche, corps), une insta
 test('le joueur garde son identité, son numéro et sa zone de sélection ; le pion visible n\'est plus dans son groupe', () => {
   const { group } = createSetup();
   const player = group.children[3];
-  assert.deepEqual(Object.keys(player.userData).sort(), ['number', 'role', 'teamId', 'type']);
+  assert.deepEqual(Object.keys(player.userData).sort(), ['number', 'post', 'role', 'teamId', 'type']);
   assert.deepEqual(player.children.map((child) => (child.isSprite ? 'numéro' : child.name)), ['numéro', 'hitbox']);
   assert.equal(player.rotation.y, Math.PI, 'les Rouges regardent vers -X');
 });

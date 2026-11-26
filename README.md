@@ -244,6 +244,10 @@ La barre d'outils, sous le terrain, réunit trois outils et l'historique :
 | Déplacer (D) | Toucher un joueur ou le ballon, puis une place du plateau | L'objet sélectionné (anneau doré) y glisse ; toucher à nouveau l'objet annule la sélection |
 | Passe (P) | Toucher le ballon ou son porteur, puis un partenaire ou un espace libre | Flèche pleine, dorée : le trajet du ballon |
 | Course (C) | Toucher un joueur, puis son point d'arrivée | Flèche en tirets, blanche : le déplacement d'un joueur |
+| Dribble (B) | Toucher le porteur du ballon, puis un point du terrain | Pointillés orange : le porteur avance balle au pied |
+| Centre (X) | Toucher le ballon dans un couloir du dernier tiers, puis un point de la surface | Flèche cyan : le ballon envoyé dans la surface |
+| Tir (T) | Toucher le ballon, puis le but, entre les poteaux | Flèche violette, épaisse : le tir |
+| Marquage (M) | Toucher un défenseur, puis l'adversaire qu'il marque | Trait à la couleur du défenseur, qui suit les deux joueurs ; la même paire retire le marquage |
 | Annuler (Ctrl+Z), Rétablir (Ctrl+Y) | — | Défait ou refait la dernière action, formations comprises |
 | Réinitialiser | Deux touchers : « Confirmer ? » | Formations de départ, joueurs à leurs places, ballon au centre, sans flèche ; « Annuler » le rétablit |
 | Abandonner (Échap) | — | Abandonne la sélection ou le tracé en cours |
@@ -492,7 +496,7 @@ Résultat le 23 novembre 2026, après les retours de l'évaluation : 226 tests u
 │   ├── config.mjs               Dimensions, échelle, équipes et couleurs
 │   ├── scene.mjs                Moteur de rendu, caméra, lumières, contrôles, pitchGroup
 │   ├── pitch.mjs                Terrain : plateau, gazon, lignes et buts
-│   ├── formations.mjs           Formations 4-4-2, 4-3-3, 3-5-2 et 4-2-3-1 (Strategy)
+│   ├── formations.mjs           Huit formations, une classe chacune (Strategy)
 │   ├── tactics-board.mjs        État tactique : formations, places, ballon, flèches (Observer)
 │   ├── arrow-rules.mjs          Règles des flèches, fonctions pures sans three.js
 │   ├── formation-panel.mjs      Boutons de formation, créés depuis les stratégies (sprint 4)
