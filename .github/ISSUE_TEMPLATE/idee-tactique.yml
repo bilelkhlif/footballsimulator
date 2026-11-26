@@ -1,0 +1,33 @@
+name: Idée tactique
+description: Une formation, une situation de jeu ou un outil qu'un entraîneur voudrait montrer sur le tableau.
+title: "[Tactique] "
+labels: [idée tactique]
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options:
+        - Formation ou disposition (en possession / hors possession)
+        - Situation de jeu (relance, pressing, contre-attaque, coup de pied arrêté)
+        - Outil du tableau (flèche, marquage, mesure)
+        - Autre
+    validations:
+      required: true
+  - type: textarea
+    id: besoin
+    attributes:
+      label: Ce que l'entraîneur veut montrer
+      description: Le principe de jeu, avec le vocabulaire du terrain (bloc bas, demi-espaces, troisième homme, pistons…).
+    validations:
+      required: true
+  - type: textarea
+    id: placement
+    attributes:
+      label: Placement et mouvements
+      description: Postes concernés, zones du terrain, ordre des passes ou des courses. Un schéma est le bienvenu.
+  - type: textarea
+    id: reference
+    attributes:
+      label: Référence
+      description: Équipe, match ou ouvrage où l'on voit ce principe.
