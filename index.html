@@ -74,6 +74,7 @@
     <symbol id="i-settings" viewBox="0 0 24 24"><path d="m9 3-1 3-3 1-2 3 2 2-1 3 2 3 3-1 2 4h3l1-3 3-1 2-3-2-2 1-3-2-3-3 1-2-3z"/><circle cx="12" cy="12" r="3"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
     <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></symbol>
   </svg>
 
@@ -227,6 +228,10 @@
     </aside>
 
 
+    <section id="point-of-view-bar" class="pov-bar ui-surface" aria-labelledby="point-of-view-title" hidden>
+      <div class="pov-bar__text"><p class="eyebrow">POINT DE VUE</p><h2 id="point-of-view-title" class="pov-bar__title" data-pov-title></h2><p class="pov-bar__help" data-pov-help role="status"></p></div>
+      <button id="point-of-view-exit" class="button button--primary" type="button" aria-keyshortcuts="Escape"><svg class="icon" aria-hidden="true"><use href="#i-exit"/></svg>Retour au terrain</button>
+    </section>
     <aside id="diagnostics" class="diagnostics" aria-label="Diagnostic des performances" hidden>
       <dl>
         <div><dt>Images/s</dt><dd data-field="fps">–</dd></div>
@@ -243,7 +248,7 @@
 
     <footer class="bottombar">
       <div class="pitch-meta"><button id="active-tool" class="active-tool ui-surface" type="button" data-workspace="tactics" aria-label="Ouvrir les outils tactiques"><svg class="icon" aria-hidden="true"><use href="#i-move"/></svg><span data-mode-summary>Déplacer</span></button><span class="selection-meta" data-selection-summary>Aucune sélection</span></div>
-      <div class="status-line"><p id="hint" class="hint" role="status" aria-live="polite">Glissez pour tourner, pincez pour zoomer.</p><button id="cancel-draft" class="chip-button ui-surface" type="button" aria-keyshortcuts="Escape" hidden><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg><span data-cancel-label>Abandonner</span></button></div>
+      <div class="status-line"><p id="hint" class="hint" role="status" aria-live="polite">Glissez pour tourner, pincez pour zoomer.</p><button id="cancel-draft" class="chip-button ui-surface" type="button" aria-keyshortcuts="Escape" hidden><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg><span data-cancel-label>Abandonner</span></button><button id="point-of-view" class="chip-button ui-surface" type="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-eye"/></svg><span>Point de vue</span></button></div>
       <div class="view-controls ui-surface" role="group" aria-label="Commandes de vue"><button id="zoom-out" class="icon-button" type="button" aria-label="Dézoomer" title="Dézoomer"><svg class="icon" aria-hidden="true"><use href="#i-minus"/></svg></button><button id="zoom-in" class="icon-button" type="button" aria-label="Zoomer" title="Zoomer"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button><span class="view-controls__divider" aria-hidden="true"></span><button id="reset-view" class="icon-button" type="button" aria-label="Recentrer" title="Recentrer la vue sur le terrain"><svg class="icon" aria-hidden="true"><use href="#i-recenter"/></svg></button></div>
       <div class="ar-session-actions" role="group" aria-label="Commandes de la session AR"><button id="move-pitch" class="button button--secondary" type="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-lift"/></svg><span class="button__label">Déplacer le terrain</span></button><button id="exit-ar" class="button button--secondary" type="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-exit"/></svg><span class="button__label">Quitter l’AR</span></button></div>
     </footer>

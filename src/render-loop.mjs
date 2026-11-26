@@ -57,6 +57,8 @@ export function matchXrTargetToViews(renderer) {
  * @param {import('three').Camera} context.camera
  * @param {{update: () => void}} context.controls contrôles d'orbite
  * @param {{update: () => void}} [context.animator] déplacements de joueurs (src/formation-transition.mjs)
+ * @param {() => (import('three').Camera|null)} [context.getViewCamera] caméra qui remplace celle de
+ *   la vue normale hors AR, ou null (point de vue d'un joueur, src/point-of-view.mjs)
  * @param {() => ({update: (frame: XRFrame) => void}|null)} context.getArPlacement renvoie la pose
  *   du terrain de la session en cours (src/ar-surface.mjs), ou null hors session
  * @param {Array<{update: (time: number, frame?: XRFrame) => void, beforeFrame?: (time: number) => void, afterRender?: (time: number) => void}>} [context.tasks]
@@ -70,7 +72,9 @@ export function matchXrTargetToViews(renderer) {
  * @date 2026-11-09
  * @role Boucle de rendu — travail de chaque image
  */
-export function createRenderLoop({ renderer, scene, camera, controls, animator = null, getArPlacement, tasks = [] }) {
+export function createRenderLoop({
+  renderer, scene, camera, controls, animator = null, getArPlacement, tasks = [], getViewCamera = () => null,
+}) {
   return (time, frame) => {
     for (let index = 0; index < tasks.length; index += 1) {
       tasks[index].beforeFrame?.(time);
@@ -90,7 +94,8 @@ export function createRenderLoop({ renderer, scene, camera, controls, animator =
     for (let index = 0; index < tasks.length; index += 1) {
       tasks[index].update(time, frame);
     }
-    renderer.render(scene, camera);
+    // En AR, la caméra du casque ou du téléphone ; sinon celle du point de vue s'il est actif.
+    renderer.render(scene, renderer.xr.isPresenting ? camera : (getViewCamera() ?? camera));
     for (let index = 0; index < tasks.length; index += 1) {
       tasks[index].afterRender?.(time);
     }
