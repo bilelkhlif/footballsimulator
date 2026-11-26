@@ -13,7 +13,7 @@
  */
 
 /** Touche de chaque outil. */
-export const MODE_KEYS = Object.freeze({ d: 'move', p: 'pass', c: 'run', b: 'dribble', x: 'cross', t: 'shot' });
+export const MODE_KEYS = Object.freeze({ d: 'move', p: 'pass', c: 'run', b: 'dribble', x: 'cross', t: 'shot', m: 'mark' });
 
 /**
  * Traduit un appui de touche en action, ou null s'il n'en déclenche aucune.

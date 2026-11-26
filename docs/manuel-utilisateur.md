@@ -120,6 +120,8 @@ Le ballon se déplace de la même façon. Pour annuler une sélection, touchez �
 
 **Une course** : touchez **« Course »**, le joueur qui court, puis son point d'arrivée.
 
+**Un marquage individuel** : touchez **« Marquage »**, le défenseur, puis l'adversaire qu'il prend en charge. Un trait à la couleur du défenseur les relie et suit les deux joueurs. Un défenseur ne marque qu'un joueur : un nouveau marquage remplace l'ancien. Deux défenseurs peuvent prendre le même attaquant (prise à deux). Toucher de nouveau la même paire retire le marquage ; tout reste annulable.
+
 Ce qui est refusé, avec un message en rouge et sans rien enregistrer :
 
 - une passe qui ne part ni du ballon, ni de son porteur, ni d’une arrivée de passe déjà tracée ; une course qui ne part pas d'un joueur ;
@@ -190,7 +192,7 @@ Au clavier :
 | Touche | Action |
 | --- | --- |
 | D, P, C | Outils Déplacer, Passe, Course |
-| B, X, T | Outils Dribble, Centre, Tir |
+| B, X, T, M | Outils Dribble, Centre, Tir, Marquage |
 | Échap | Abandonner la sélection ou le tracé, fermer un panneau |
 | Ctrl+Z (Cmd+Z sur Mac) | Annuler |
 | Ctrl+Y, ou Ctrl+Maj+Z | Rétablir |

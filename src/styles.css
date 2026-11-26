@@ -283,6 +283,8 @@ a.button { text-decoration: none; }
 .toolbar { display: grid; gap: 14px; }
 .toolbar__group { display: grid; gap: 7px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .toolbar__group--history { padding-top: 14px; border-top: 1px solid var(--border); }
+/* Sept outils sur deux lignes de quatre : la barre tient entière sur un téléphone de 360 px. */
+.toolbar__group--modes { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .tool { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-width: 0; min-height: 68px; padding: 10px 3px; color: var(--ink); background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-md); font-size: .8125rem; line-height: 1.4; font-weight: 500; transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), transform var(--dur-base) var(--ease-spring), box-shadow var(--dur-base) var(--ease-out); }
 .tool:hover:not(:disabled) { background: var(--surface-control-hover); }
 .tool[aria-pressed="true"] { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); box-shadow: 0 6px 16px var(--accent-soft), inset 0 1px rgba(255, 255, 255, .3); }

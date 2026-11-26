@@ -247,6 +247,7 @@ La barre d'outils, sous le terrain, réunit trois outils et l'historique :
 | Dribble (B) | Toucher le porteur du ballon, puis un point du terrain | Pointillés orange : le porteur avance balle au pied |
 | Centre (X) | Toucher le ballon dans un couloir du dernier tiers, puis un point de la surface | Flèche cyan : le ballon envoyé dans la surface |
 | Tir (T) | Toucher le ballon, puis le but, entre les poteaux | Flèche violette, épaisse : le tir |
+| Marquage (M) | Toucher un défenseur, puis l'adversaire qu'il marque | Trait à la couleur du défenseur, qui suit les deux joueurs ; la même paire retire le marquage |
 | Annuler (Ctrl+Z), Rétablir (Ctrl+Y) | — | Défait ou refait la dernière action, formations comprises |
 | Réinitialiser | Deux touchers : « Confirmer ? » | Formations de départ, joueurs à leurs places, ballon au centre, sans flèche ; « Annuler » le rétablit |
 | Abandonner (Échap) | — | Abandonne la sélection ou le tracé en cours |

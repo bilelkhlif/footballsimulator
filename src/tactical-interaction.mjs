@@ -37,13 +37,14 @@ import { ARROW_KINDS, BALL_MARGIN, clampToBoard, isOnBoard, PLAYER_MARGIN } from
 import {
   BALL_ARROW_KINDS, readTacticalState, resolveArrowEnd, resolveArrowStart, sameTarget, targetLabel,
 } from './arrow-rules.mjs';
-import { AddArrowCommand, MoveBallCommand, MovePlayerCommand } from './commands.mjs';
+import { AddArrowCommand, MarkPlayerCommand, MoveBallCommand, MovePlayerCommand } from './commands.mjs';
 
 export { sameTarget, targetLabel as selectionLabel } from './arrow-rules.mjs';
 
 /** Modes de l'interaction : déplacer, tracer une passe, tracer une course. */
 export const INTERACTION_MODES = Object.freeze({
   MOVE: 'move', PASS: ARROW_KINDS.PASS, RUN: ARROW_KINDS.RUN, DRIBBLE: ARROW_KINDS.DRIBBLE, CROSS: ARROW_KINDS.CROSS, SHOT: ARROW_KINDS.SHOT,
+  MARK: 'mark',
 });
 
 /** États de la machine à états. */
@@ -100,6 +101,18 @@ export function ofLabel(target) {
 }
 
 /**
+ * Met la première lettre d'un texte en majuscule.
+ * @param {string} text
+ * @returns {string}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Interaction tactique — retours à l'utilisateur
+ */
+function capitalize(text) {
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+}
+
+/**
  * Consigne affichée quand le départ d'une flèche est posé.
  * @param {{kind: string, actor: object, passer: object|null}} draft
  * @returns {string}
@@ -108,6 +121,9 @@ export function ofLabel(target) {
  * @role Interaction tactique — retours à l'utilisateur
  */
 export function describeDraft({ kind, actor, passer }) {
+  if (kind === INTERACTION_MODES.MARK) {
+    return `Marquage ${ofLabel(actor)} : touchez l’adversaire qu’il prend en charge.`;
+  }
   if (kind === ARROW_KINDS.RUN) {
     return `Course ${ofLabel(actor)} : touchez son point d’arrivée.`;
   }
@@ -271,6 +287,10 @@ export class TacticalInteraction extends EventEmitter {
    */
   get wantsHover() {
     const { state } = this;
+    // Un marquage relie deux joueurs : pas d'aperçu de flèche entre les deux touchers.
+    if (this.#mode === INTERACTION_MODES.MARK) {
+      return false;
+    }
     return state === INTERACTION_STATES.ARROW_END || state === INTERACTION_STATES.SELECTED;
   }
 
@@ -393,6 +413,9 @@ export class TacticalInteraction extends EventEmitter {
     }
     // Les objets ont pu bouger depuis la dernière image (ancre, animation) : matrices à jour.
     this.#pitchGroup.updateMatrixWorld(true);
+    if (this.#mode === INTERACTION_MODES.MARK) {
+      return this.#tapInMarkMode(raycaster);
+    }
     return this.#mode === INTERACTION_MODES.MOVE ? this.#tapInMoveMode(raycaster) : this.#tapInArrowMode(raycaster);
   }
 
@@ -530,6 +553,45 @@ export class TacticalInteraction extends EventEmitter {
     this.#history.execute(new AddArrowCommand({ board: this.#board, arrow: { kind: draft.kind, from: draft.start, to: decision.end } }));
     this.#notify();
     return this.#feedback('arrow', 'success', describeArrowDone(draft.kind, decision.receiver, draft.actor));
+  }
+
+  /**
+   * Toucher en mode « marquage » : le défenseur, puis l'adversaire qu'il prend en charge, par une
+   * commande annulable. Toucher de nouveau le défenseur abandonne ; un partenaire est refusé.
+   * @param {THREE.Raycaster} raycaster
+   * @returns {{action: string, message?: string}}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Interaction tactique — marquage individuel
+   */
+  #tapInMarkMode(raycaster) {
+    const { target } = this.#aim(raycaster);
+    if (!this.#draft) {
+      if (target?.type !== 'player') {
+        return this.#feedback('invalid', 'invalid', 'Un marquage part d’un joueur : touchez le défenseur.');
+      }
+      const start = this.#board.getPlayerPosition(target.teamId, target.number);
+      this.#draft = { kind: INTERACTION_MODES.MARK, start, actor: { ...target }, passer: null };
+      this.#notify();
+      return this.#feedback('arrow-start', 'info', describeDraft(this.#draft));
+    }
+    const draft = this.#draft;
+    if (sameTarget(target, draft.actor)) {
+      this.#clearDraft();
+      this.#notify();
+      return this.#feedback('cancel', 'info', MESSAGES.draftCancelled);
+    }
+    if (target?.type !== 'player' || target.teamId === draft.actor.teamId) {
+      return this.#feedback('invalid', 'invalid', 'Un marquage relie deux adversaires : touchez un joueur de l’autre équipe.');
+    }
+    this.#clearDraft();
+    const command = new MarkPlayerCommand({ board: this.#board, defender: draft.actor, attacker: target });
+    this.#history.execute(command);
+    this.#notify();
+    const message = command.removed
+      ? `Marquage retiré : ${targetLabel(draft.actor)} ne marque plus ${targetLabel(target)}.`
+      : `${capitalize(targetLabel(draft.actor))} marque ${targetLabel(target)}.`;
+    return this.#feedback('mark', 'success', message);
   }
 
   /**

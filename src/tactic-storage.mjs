@@ -111,7 +111,7 @@ export function isValidTactic(data, reference) {
   if (!isRecord(data) || data.version !== TACTIC_FORMAT_VERSION || !isRecord(data.board)) {
     return false;
   }
-  const { formations, phases, players, ball, arrows } = data.board;
+  const { formations, phases, players, ball, arrows, markings } = data.board;
   const teamIds = Object.keys(reference.formations);
   const playerKeys = Object.keys(reference.players);
   if (!isRecord(formations) || !hasExactKeys(formations, teamIds)
@@ -125,6 +125,14 @@ export function isValidTactic(data, reference) {
     return false;
   }
   if (!arePlayersValid(players, playerKeys) || !isOnBoard(ball, BALL_MARGIN)) {
+    return false;
+  }
+  // Marquages : absents d'une tactique plus ancienne ; sinon des paires d'adversaires connus, un
+  // seul marquage par défenseur.
+  if (markings !== undefined && (!Array.isArray(markings)
+    || !markings.every((pair) => Array.isArray(pair) && pair.length === 2 && pair.every((key) => playerKeys.includes(key))
+      && pair[0].split(':')[0] !== pair[1].split(':')[0])
+    || new Set(markings.map(([defender]) => defender)).size !== markings.length)) {
     return false;
   }
   if (!Array.isArray(arrows) || !arrows.every(isArrowValid)

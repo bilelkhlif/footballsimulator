@@ -30,6 +30,7 @@ import { FormationAnimator, TRANSITION_DURATION_MS } from './formation-transitio
 import { createFormationPanel } from './formation-panel.mjs';
 import { createAnalysisPanel } from './analysis-panel.mjs';
 import { OffsideLayer } from './offside-layer.mjs';
+import { MarkingLayer } from './marking-layer.mjs';
 import { ChangeFormationCommand, ChangePhaseCommand, CommandHistory } from './commands.mjs';
 import { MOVE_DURATION_MS, TacticalView } from './tactical-view.mjs';
 import { TacticalInteraction } from './tactical-interaction.mjs';
@@ -223,6 +224,8 @@ async function init(renderMode) {
   // Analyse tactique : largeur, profondeur, lignes et surface de chaque équipe, en mètres réels.
   // Lignes de hors-jeu en 3D, dans le repère du terrain ; affichées depuis la carte d'analyse.
   const offsideLayer = new OffsideLayer({ pitchGroup, board });
+  // Marquages individuels : traits replacés à chaque image (tâche de la boucle de rendu).
+  const markingLayer = new MarkingLayer({ pitchGroup, board, teamGroups });
   createAnalysisPanel({ root: document.getElementById('analysis-panel'), board, teams: Object.values(TEAMS), offsideLayer });
 
   // Interaction tactique (sprint 5) : un seul rayon, orienté par la souris, le doigt ou l'AR.
@@ -388,6 +391,7 @@ async function init(renderMode) {
     { update: (time, frame) => arState.tacticalInput?.update(frame) },
     sequencePlayer,
     tacticalView,
+    markingLayer,
     ...teamMeshes,
   ];
   if (diagnostics) {
@@ -421,7 +425,7 @@ async function init(renderMode) {
   document.body.classList.add('is-ready');
   return {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer,
     get diagnostics() { return diagnostics; },
   };
 }
@@ -784,7 +788,7 @@ async function start() {
   }
   const {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer,
   } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
   const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding, workspaces, navigation });
@@ -806,6 +810,7 @@ async function start() {
     teamMeshes,
     autosave,
     offsideLayer,
+    markingLayer,
     xrDevice: emulator?.xrDevice ?? null,
     get placement() {
       return arState.placement;

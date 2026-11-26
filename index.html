@@ -52,6 +52,7 @@
     <symbol id="i-dribble" viewBox="0 0 24 24"><circle cx="5.5" cy="18.5" r="2.4"/><path d="M7.6 16.4c1.9-.6 1.6-3 3.4-3.7s1.8-3.2 3.6-3.9c1.3-.5 2.6-1.5 4.2-3.6"/><path d="M13.6 5H19v5.4"/></symbol>
     <symbol id="i-cross" viewBox="0 0 24 24"><path d="M4 20V4"/><path d="M4 6c6-1.5 11 1.5 13.5 9"/><path d="M13.4 13.6 17.6 15.6l1.6-4.4"/></symbol>
     <symbol id="i-shot" viewBox="0 0 24 24"><path d="M15 4.5h5.5v9H15"/><circle cx="4.8" cy="19.2" r="2.2"/><path d="M6.8 17.2 15.5 9"/><path d="M10.8 8.8h4.9v4.9"/></symbol>
+    <symbol id="i-mark" viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="7" r="3"/><path d="M8.4 15.2 15.6 8.8" stroke-dasharray="2.4 2"/></symbol>
     <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
     <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
     <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/></symbol>
@@ -147,6 +148,9 @@
             <button class="tool tool--shot" type="button" data-mode="shot" aria-pressed="false" aria-keyshortcuts="T" title="Tracer un tir, vers le but (T)">
               <svg class="icon" aria-hidden="true"><use href="#i-shot"/></svg><span class="tool__label">Tir</span>
             </button>
+            <button class="tool tool--mark" type="button" data-mode="mark" aria-pressed="false" aria-keyshortcuts="M" title="Marquage individuel : un défenseur, puis l'adversaire qu'il marque (M)">
+              <svg class="icon" aria-hidden="true"><use href="#i-mark"/></svg><span class="tool__label">Marquage</span>
+            </button>
           </div>
           <div class="toolbar__group toolbar__group--history" role="group" aria-label="Historique">
             <button class="tool" type="button" data-action="undo" aria-keyshortcuts="Control+Z" disabled>
@@ -161,7 +165,7 @@
           </div>
         </div>
 
-          <div class="tool-guide"><h3>Un geste à la fois</h3><p><strong>Déplacer</strong> · un joueur ou le ballon, puis sa destination.</p><p><strong>Passe</strong> · le ballon ou son porteur, puis un partenaire ou un espace libre.</p><p><strong>Course</strong> · un joueur, puis son arrivée.</p><p><strong>Dribble</strong> · le porteur, puis l’endroit où il emmène le ballon.</p><p><strong>Centre</strong> · le ballon dans un couloir du dernier tiers, puis un point de la surface.</p><p><strong>Tir</strong> · le ballon, puis le but, entre les poteaux.</p><p class="muted">Un aperçu rouge explique une action refusée. Échap ou Abandonner annule le geste en cours.</p></div>
+          <div class="tool-guide"><h3>Un geste à la fois</h3><p><strong>Déplacer</strong> · un joueur ou le ballon, puis sa destination.</p><p><strong>Passe</strong> · le ballon ou son porteur, puis un partenaire ou un espace libre.</p><p><strong>Course</strong> · un joueur, puis son arrivée.</p><p><strong>Dribble</strong> · le porteur, puis l’endroit où il emmène le ballon.</p><p><strong>Centre</strong> · le ballon dans un couloir du dernier tiers, puis un point de la surface.</p><p><strong>Tir</strong> · le ballon, puis le but, entre les poteaux.</p><p><strong>Marquage</strong> · un défenseur, puis l’adversaire qu’il prend en charge ; la même paire retire le marquage.</p><p class="muted">Un aperçu rouge explique une action refusée. Échap ou Abandonner annule le geste en cours.</p></div>
         </section>
 
         <section data-workspace-panel="animation" aria-label="Animation et séquences" hidden>

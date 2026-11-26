@@ -186,7 +186,7 @@ export function createWorkspaceSummary({ root, board, interaction }) {
       element.textContent = identity ? `${identity} · x ${position.x.toFixed(2)} · z ${position.z.toFixed(2)} m` : 'Aucune sélection';
     }
     for (const element of root.querySelectorAll('[data-formation-summary]')) element.textContent = board.getFormation(element.dataset.formationSummary).name;
-    const mode = { move: 'Déplacer', pass: 'Passe', run: 'Course', dribble: 'Dribble', cross: 'Centre', shot: 'Tir' }[interaction.mode];
+    const mode = { move: 'Déplacer', pass: 'Passe', run: 'Course', dribble: 'Dribble', cross: 'Centre', shot: 'Tir', mark: 'Marquage' }[interaction.mode];
     for (const element of root.querySelectorAll('[data-mode-summary]')) element.textContent = mode;
     root.querySelector('#active-tool').setAttribute('aria-label', `Outil actif : ${mode}. Ouvrir les outils tactiques.`);
     root.querySelector('[data-arrow-count]').textContent = String(snapshot.arrows.length);

@@ -122,7 +122,20 @@ export function clampToBoard(position, margin = 0) {
 }
 
 /**
- * Clé d'un joueur : son équipe et son numéro, qui ne changent jamais.
+ * Équipe et numéro d'un joueur, lus dans sa clé « blue:9 ».
+ * @param {string} key
+ * @returns {{teamId: string, number: number}}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Logique métier — marquage individuel
+ */
+function parsePlayerKey(key) {
+  const [teamId, number] = key.split(':');
+  return { teamId, number: Number(number) };
+}
+
+/**
+ * Clé d'un joueur : son équipe et son numéro, qui ne changent jamais (« blue:9 »).
  * @param {string} teamId
  * @param {number} number
  * @returns {string}
@@ -186,6 +199,10 @@ export class TacticsBoard extends EventEmitter {
   #arrows = [];
 
   #nextArrowId = 1;
+
+  /** @type {Map<string, string>} marquages individuels : clé du défenseur → clé de l'attaquant marqué */
+  #markings = new Map();
+
   #teams;
   #initialState;
 
@@ -437,6 +454,72 @@ export class TacticsBoard extends EventEmitter {
   }
 
   /**
+   * Marquages individuels en place : chaque défenseur et l'adversaire qu'il marque.
+   * @returns {Array<{defender: {teamId: string, number: number}, attacker: {teamId: string, number: number}}>}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — marquage individuel
+   */
+  getMarkings() {
+    return [...this.#markings].map(([defender, attacker]) => ({ defender: parsePlayerKey(defender), attacker: parsePlayerKey(attacker) }));
+  }
+
+  /**
+   * Adversaire marqué par un défenseur, ou null.
+   * @param {{teamId: string, number: number}} defender
+   * @returns {{teamId: string, number: number}|null}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — marquage individuel
+   */
+  getMarkingOf(defender) {
+    const attacker = this.#markings.get(playerKey(defender.teamId, defender.number));
+    return attacker ? parsePlayerKey(attacker) : null;
+  }
+
+  /**
+   * Fait marquer un adversaire par un défenseur. Un défenseur ne marque qu'un joueur à la fois :
+   * son marquage précédent est remplacé. Un attaquant peut être pris à deux.
+   * @param {{teamId: string, number: number}} defender
+   * @param {{teamId: string, number: number}} attacker joueur de l'autre équipe
+   * @returns {boolean} faux si ce marquage existait déjà
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — marquage individuel
+   */
+  setMarking(defender, attacker) {
+    this.#requirePlayer(defender.teamId, defender.number);
+    this.#requirePlayer(attacker.teamId, attacker.number);
+    if (defender.teamId === attacker.teamId) {
+      throw new RangeError('Un marquage relie deux adversaires');
+    }
+    const defenderKey = playerKey(defender.teamId, defender.number);
+    const attackerKey = playerKey(attacker.teamId, attacker.number);
+    if (this.#markings.get(defenderKey) === attackerKey) {
+      return false;
+    }
+    this.#markings.set(defenderKey, attackerKey);
+    this.emit('change', { type: 'markings' });
+    return true;
+  }
+
+  /**
+   * Retire le marquage d'un défenseur.
+   * @param {{teamId: string, number: number}} defender
+   * @returns {boolean} faux s'il ne marquait personne
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — marquage individuel
+   */
+  removeMarking(defender) {
+    if (!this.#markings.delete(playerKey(defender.teamId, defender.number))) {
+      return false;
+    }
+    this.emit('change', { type: 'markings' });
+    return true;
+  }
+
+  /**
    * Instantané d'une équipe : sa formation, sa phase de jeu et la place de chacun de ses joueurs.
    * Il sert à annuler un changement de formation ou une bascule, y compris pendant la transition
    * animée d'un changement précédent : il contient les places voulues, pas les positions
@@ -473,7 +556,8 @@ export class TacticsBoard extends EventEmitter {
   /**
    * Instantané complet du tableau, sous forme de données simples.
    * @returns {{formations: Record<string, string>, phases: Record<string, string>,
-   *   players: Record<string, {x: number, z: number}>, ball: {x: number, z: number}, arrows: Array<object>}}
+   *   players: Record<string, {x: number, z: number}>, ball: {x: number, z: number}, arrows: Array<object>,
+   *   markings: Array<[string, string]>}} markings : paires clé du défenseur, clé de l'attaquant
    * @responsable Bilel Khlif
    * @date 2026-11-15
    * @role Logique métier — instantanés pour l'annulation (patron Command)
@@ -485,12 +569,14 @@ export class TacticsBoard extends EventEmitter {
       players: Object.fromEntries([...this.#players].map(([key, position]) => [key, copyPosition(position)])),
       ball: this.getBallPosition(),
       arrows: this.getArrows(),
+      markings: [...this.#markings],
     };
   }
 
   /**
-   * Rétablit un instantané complet : formations, phases de jeu, joueurs, ballon et flèches. Un
-   * instantané sans phases (enregistré avant leur ajout) remet chaque équipe à la base.
+   * Rétablit un instantané complet : formations, phases de jeu, joueurs, ballon, flèches et
+   * marquages. Un instantané sans phases ni marquages (enregistré avant leur ajout) remet chaque
+   * équipe à la base, sans marquage.
    * @param {ReturnType<TacticsBoard['snapshot']>} snapshot
    * @responsable Bilel Khlif
    * @date 2026-11-15
@@ -511,6 +597,7 @@ export class TacticsBoard extends EventEmitter {
     this.#arrows = snapshot.arrows.map(({ id, kind, from, to }) => ({ id, kind, from: copyPosition(from), to: copyPosition(to) }));
     // Les identifiants ne reculent jamais : une flèche rétablie ne peut pas en remplacer une autre.
     this.#nextArrowId = Math.max(this.#nextArrowId, ...this.#arrows.map(({ id }) => id + 1));
+    this.#markings = new Map((snapshot.markings ?? []).map(([defender, attacker]) => [defender, attacker]));
     this.emit('change', { type: 'restore' });
   }
 

@@ -1575,8 +1575,8 @@ async function testTacticalMobile(browser, url) {
         overflow: document.documentElement.scrollWidth > window.innerWidth,
       };
     });
-    // Six outils (Déplacer, Passe, Course, Dribble, Centre, Tir) et trois actions d'historique.
-    const layoutOk = layout.count === 9 && layout.inside && layout.minHeight >= 44 && layout.labelsFit && !layout.overflow;
+    // Sept outils (Déplacer, Passe, Course, Dribble, Centre, Tir, Marquage) et trois actions d'historique.
+    const layoutOk = layout.count === 10 && layout.inside && layout.minHeight >= 44 && layout.labelsFit && !layout.overflow;
     record(`${name} : barre d'outils entière, ${layout.count} boutons de ${layout.minHeight} px de haut, libellés lisibles`, layoutOk ? 'ok' : 'échec',
       `dans l'écran : ${layout.inside}, libellés entiers : ${layout.labelsFit}, débordement : ${layout.overflow}`);
 

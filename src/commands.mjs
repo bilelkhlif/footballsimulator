@@ -409,6 +409,86 @@ export class ChangePhaseCommand extends Command {
 }
 
 /**
+ * Marquage individuel : un défenseur prend en charge un adversaire. Toucher de nouveau la même
+ * paire retire le marquage. Un défenseur ne marque qu'un joueur : un nouveau marquage remplace le
+ * précédent, et l'annulation le rétablit.
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Logique métier — patron Command : marquage individuel
+ */
+export class MarkPlayerCommand extends Command {
+  #board;
+  #defender;
+  #attacker;
+  #previous = null;
+  #removed = false;
+
+  /**
+   * @param {object} options
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board
+   * @param {{teamId: string, number: number}} options.defender
+   * @param {{teamId: string, number: number}} options.attacker joueur de l'autre équipe
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : marquage individuel
+   */
+  constructor({ board, defender, attacker }) {
+    super();
+    this.#board = board;
+    this.#defender = { teamId: defender.teamId, number: defender.number };
+    this.#attacker = { teamId: attacker.teamId, number: attacker.number };
+  }
+
+  /**
+   * Vrai si l'exécution a retiré un marquage existant au lieu d'en créer un.
+   * @returns {boolean}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : marquage individuel
+   */
+  get removed() {
+    return this.#removed;
+  }
+
+  /**
+   * @returns {string}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : marquage individuel
+   */
+  get label() {
+    const who = `n° ${this.#defender.number} des ${teamLabel(this.#defender.teamId)}`;
+    return this.#removed ? `Retirer le marquage du ${who}` : `Marquage du n° ${this.#attacker.number} par le ${who}`;
+  }
+
+  /**
+   * @returns {boolean}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : marquage individuel
+   */
+  execute() {
+    this.#previous = this.#board.getMarkingOf(this.#defender);
+    const same = this.#previous && this.#previous.teamId === this.#attacker.teamId && this.#previous.number === this.#attacker.number;
+    this.#removed = Boolean(same);
+    return same ? this.#board.removeMarking(this.#defender) : this.#board.setMarking(this.#defender, this.#attacker);
+  }
+
+  /**
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Command : marquage individuel
+   */
+  undo() {
+    if (this.#previous) {
+      this.#board.setMarking(this.#defender, this.#previous);
+    } else {
+      this.#board.removeMarking(this.#defender);
+    }
+  }
+}
+
+/**
  * Réinitialiser le terrain (BF8) : formations de départ, joueurs à leurs places, ballon au centre,
  * flèches effacées. Annulable comme les autres actions.
  * @responsable Bilel Khlif
