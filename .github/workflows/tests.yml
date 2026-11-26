@@ -31,3 +31,25 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:unit
+
+  # Deux règles du dépôt, contrôlées à part pour qu'un échec dise tout de suite sa cause.
+  # L'empreinte est recalculée sur des fichiers aux fins de ligne LF (.gitattributes) : une
+  # empreinte calculée sur une copie Windows en CRLF est refusée ici.
+  checks:
+    name: Empreinte de la coquille et en-têtes de documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: SHELL_VERSION à jour (sinon lancer « npm run shell-version »)
+        run: node tests/shell-version.mjs --check
+      - name: En-têtes @responsable, @date et @role des fonctions JavaScript
+        run: node --import ./tests/unit/import-map.mjs --test tests/unit/documentation.test.mjs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: En-têtes des modules Python du serveur d'analyse
+        working-directory: analysis
+        run: python -m unittest tests.test_documentation
