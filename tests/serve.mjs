@@ -27,6 +27,10 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
   '.pdf': 'application/pdf',
   '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+  '.txt': 'text/plain; charset=utf-8',
 };
 
 /**

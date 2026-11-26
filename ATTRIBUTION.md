@@ -480,6 +480,14 @@ Assistants utilisés : **Claude Code** (Anthropic), du 5 au 25 novembre 2026 (mo
 
     * **Axe de vérification appliqué par l’étudiant :** consignes, interdits et condition de fusion fixés par Bilel Khlif. Vérifications faites par l’assistant, aucune sur téléphone : droits relus sur Wikimedia Commons et par son API ; analyses réelles sur la RTX 2050 ; contrôle visuel de la calibration par superposition des lignes, qui a montré que la calibration automatique de France–Allemagne et du Brésil est fausse (positions masquées, verdict publié) ; résultats et nombres de tests dans `docs/dossier-evaluation.md`.
 
+*   **Composant ou Shader concerné :** sauvegarde automatique de la tactique, 25 novembre 2026 : `src/tactic-storage.mjs`, modifications de `src/main.mjs` et `sw.mjs` ; tests (`tests/unit/tactic-storage.test.mjs`, `testTacticAutosave` dans `tests/run-tests.mjs`) ; `docs/technique.md`, README
+
+    * **Prompt ou usage principal :** demande d'Iyed Rachdi à Claude Code (Claude Opus 5.5) d'enregistrer `TacticsBoard` et `TacticalSequence` dans IndexedDB quand la page est masquée (`visibilitychange`), puis de les rétablir au lancement, sans autre changement. Après un essai d'Iyed Rachdi (changements perdus au rechargement du navigateur), ajout d'un enregistrement 0,4 s après chaque changement : un rechargement ne laisse pas toujours à l'écriture lancée au masquage le temps de se terminer.
+
+        **Périmètre technique :** Format versionné, vérification complète d'une donnée enregistrée avant tout rétablissement (formations, joueurs, places, flèches, images clés), rétablissement hors de l'historique des commandes, lancement jamais bloqué par IndexedDB, fonctionnement inchangé sans stockage.
+
+    * **Axe de vérification appliqué par l'étudiant :** relecture du changement et des tests avant le commit ; essai sur téléphone à faire (tactique modifiée, application mise en arrière-plan puis fermée, relancée).
+
 *   **Composant ou Shader concerné :** icônes (`assets/icons/`), bannière et captures (`docs/images/`, dont celles des sprints 2 à 6, et `assets/screenshots/`), figures du rapport (`docs/etat-de-l-art/figures/`)
 
     * **Prompt ou usage principal :** dessin des icônes en SVG d'après la couverture du cahier des charges, captures automatisées de l'application, mise en page de la bannière dans le style de la présentation d'état de l'art
