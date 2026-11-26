@@ -129,6 +129,7 @@ test('applyFormation : chaque joueur three.js, reconnu par son numéro, prend so
     assert.equal(player.position.x, target.x);
     assert.equal(player.position.z, target.z);
     assert.equal(player.userData.role, target.role);
+    assert.equal(player.userData.post, target.post, "le poste normalisé suit la formation");
   }
   assert.equal(teamGroup.userData.formation, '3-5-2');
 });

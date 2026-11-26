@@ -40,7 +40,7 @@ export function computeTeamTargets(formation, attacksPositiveX) {
   const targets = new Map();
   for (const position of formation.computePositions()) {
     const { x, z } = toPitchCoordinates(position, attacksPositiveX);
-    targets.set(position.number, { x, z, role: position.role });
+    targets.set(position.number, { x, z, role: position.role, post: position.post });
   }
   return targets;
 }

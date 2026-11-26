@@ -146,16 +146,16 @@ export class PlayerFactory {
    * Son numéro est un sprite, toujours tourné vers la caméra, donc lisible sous tous les angles.
    * Depuis le sprint 6, son pion est dessiné par les maillages instanciés de son équipe
    * (createTeamMeshes) : le groupe porte l'identité, la place, le numéro et la zone de sélection.
-   * @param {{team: object, number: number, role: string}} options
+   * @param {{team: object, number: number, role: string, post?: string}} options rôle et poste normalisé (« MDC »)
    * @returns {THREE.Group} groupe du joueur ; `userData` décrit l'équipe, le numéro et le poste
    * @responsable Bilel Khlif
    * @date 2026-11-05
    * @role Scène 3D — joueurs (patron Factory)
    */
-  createPlayer({ team, number, role }) {
+  createPlayer({ team, number, role, post = null }) {
     const player = new THREE.Group();
     player.name = `player-${team.id}-${number}`;
-    player.userData = { type: 'player', teamId: team.id, number, role };
+    player.userData = { type: 'player', teamId: team.id, number, role, post };
 
     const label = new THREE.Sprite(this.getLabelMaterial(team, number));
     label.scale.setScalar(PLAYER_SIZE.labelSize);

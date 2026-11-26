@@ -15,6 +15,72 @@
  */
 import { PITCH_LENGTH, PITCH_WIDTH } from './config.mjs';
 
+/**
+ * Postes normalisés, avec leur libellé : l'abréviation courte qu'un entraîneur écrit au tableau.
+ * Aux dix postes de base s'ajoutent les milieux excentrés d'une ligne de quatre (MG, MD) et les
+ * pistons (PG, PD), qui ne sont ni des latéraux ni des ailiers : ils tiennent tout le couloir.
+ */
+export const POSTS = Object.freeze({
+  GB: 'Gardien de but',
+  DD: 'Défenseur droit',
+  DC: 'Défenseur central',
+  DG: 'Défenseur gauche',
+  PD: 'Piston droit',
+  PG: 'Piston gauche',
+  MDC: 'Milieu défensif central',
+  MC: 'Milieu central',
+  MD: 'Milieu droit',
+  MG: 'Milieu gauche',
+  MOC: 'Milieu offensif central',
+  AD: 'Ailier droit',
+  AG: 'Ailier gauche',
+  AT: 'Attaquant',
+});
+
+/** Poste normalisé de chaque rôle employé par les formations. */
+const ROLE_POSTS = Object.freeze({
+  Gardien: 'GB',
+  'Arrière droit': 'DD',
+  'Arrière gauche': 'DG',
+  'Défenseur central': 'DC',
+  'Piston droit': 'PD',
+  'Piston gauche': 'PG',
+  'Milieu défensif': 'MDC',
+  Sentinelle: 'MDC',
+  'Milieu central': 'MC',
+  'Milieu relayeur': 'MC',
+  'Milieu droit': 'MD',
+  'Milieu gauche': 'MG',
+  'Meneur de jeu': 'MOC',
+  'Milieu offensif droit': 'AD',
+  'Milieu offensif gauche': 'AG',
+  'Ailier droit': 'AD',
+  'Ailier gauche': 'AG',
+  'Avant-centre': 'AT',
+  Attaquant: 'AT',
+  'Second attaquant': 'AT',
+  // Rôles génériques, pour une formation décrite sans détail.
+  Défenseur: 'DC',
+  Milieu: 'MC',
+});
+
+/**
+ * Poste normalisé d'un rôle de formation. Un rôle inconnu est refusé : chaque place d'une
+ * formation a ainsi toujours un poste.
+ * @param {string} role par exemple « Sentinelle »
+ * @returns {string} code de POSTS, par exemple « MDC »
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Logique métier — postes normalisés
+ */
+export function postOfRole(role) {
+  const post = ROLE_POSTS[role];
+  if (!post) {
+    throw new Error(`Rôle sans poste normalisé : ${role}`);
+  }
+  return post;
+}
+
 /** Ligne du gardien, commune à toutes les formations. */
 const GOALKEEPER_LINE = Object.freeze({
   x: 0.04,
@@ -53,8 +119,9 @@ export class FormationStrategy {
 
   /**
    * Lignes de joueurs. Chaque ligne a une profondeur x commune, qu'un joueur
-   * peut remplacer par sa propre valeur (milieu défensif plus bas, par exemple).
-   * @returns {Array<{x: number, slots: Array<{y: number, number: number, role: string, x?: number}>}>}
+   * peut remplacer par sa propre valeur (milieu défensif plus bas, par exemple). Le poste
+   * normalisé se déduit du rôle ; une place peut aussi le donner (`post`, code de POSTS).
+   * @returns {Array<{x: number, slots: Array<{y: number, number: number, role: string, x?: number, post?: string}>}>}
    * @responsable Bilel Khlif
    * @date 2026-11-05
    * @role Logique métier — patron Strategy : stratégie de base
@@ -64,8 +131,8 @@ export class FormationStrategy {
   }
 
   /**
-   * Calcule les 11 positions normalisées de la formation.
-   * @returns {Array<{x: number, y: number, number: number, role: string}>}
+   * Calcule les 11 positions normalisées de la formation, chacune avec son poste normalisé.
+   * @returns {Array<{x: number, y: number, number: number, role: string, post: string}>}
    * @responsable Bilel Khlif
    * @date 2026-11-05
    * @role Logique métier — patron Strategy : stratégie de base
@@ -76,6 +143,7 @@ export class FormationStrategy {
       y: slot.y,
       number: slot.number,
       role: slot.role,
+      post: slot.post ?? postOfRole(slot.role),
     })));
     if (positions.length !== 11) {
       throw new Error(`La formation ${this.name} place ${positions.length} joueurs au lieu de 11`);
@@ -505,6 +573,19 @@ export const FORMATIONS = Object.freeze(Object.fromEntries(
     new Formation532(), new Formation442Diamond()]
     .map((formation) => [formation.name, formation]),
 ));
+
+/**
+ * Poste normalisé d'un numéro dans une formation, par exemple « MDC » pour le n° 6 du 4-3-3.
+ * @param {FormationStrategy} formation
+ * @param {number} number numéro de maillot, de 1 à 11
+ * @returns {string|null}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Logique métier — postes normalisés
+ */
+export function postOfNumber(formation, number) {
+  return formation.computePositions().find((position) => position.number === number)?.post ?? null;
+}
 
 /**
  * Renvoie la stratégie correspondant à un nom de formation.

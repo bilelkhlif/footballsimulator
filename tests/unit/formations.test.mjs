@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  FORMATIONS, FormationStrategy, getFormation, toPitchCoordinates,
+  FORMATIONS, FormationStrategy, getFormation, POSTS, postOfNumber, postOfRole, toPitchCoordinates,
 } from '../../src/formations.mjs';
 import { PITCH_LENGTH, PITCH_WIDTH, PLAYER_SIZE, REAL_PITCH } from '../../src/config.mjs';
 
@@ -144,4 +144,35 @@ test('les Rouges jouent la même formation, tournée de 180° autour du point ce
   assert.ok(Math.abs(blue.x + red.x) < 1e-12);
   assert.ok(Math.abs(blue.z + red.z) < 1e-12);
   assert.ok(blue.x < 0, 'les Bleus défendent du côté -X');
+});
+
+test('chaque place de chaque formation a un poste normalisé connu', () => {
+  for (const [name, formation] of Object.entries(FORMATIONS)) {
+    for (const { post, role } of formation.computePositions()) {
+      assert.ok(Object.hasOwn(POSTS, post), `${name} : ${role} sans poste normalisé (${post})`);
+    }
+    const posts = formation.computePositions().map((p) => p.post);
+    assert.equal(posts.filter((p) => p === 'GB').length, 1, `${name} : un seul gardien`);
+  }
+});
+
+test('postes : ce qu\'un entraîneur écrirait au tableau', () => {
+  const post = (formation, number) => postOfNumber(FORMATIONS[formation], number);
+  assert.equal(post('4-3-3', 6), 'MDC', 'milieu défensif du 4-3-3');
+  assert.equal(post('4-1-4-1', 6), 'MDC', 'la sentinelle');
+  assert.equal(post('4-3-3', 7), 'AD');
+  assert.equal(post('4-3-3', 11), 'AG');
+  assert.equal(post('4-4-2', 2), 'DD');
+  assert.equal(post('4-4-2', 3), 'DG');
+  assert.equal(post('4-4-2', 11), 'MG', 'milieu gauche d\'une ligne de quatre, pas un ailier');
+  assert.equal(post('3-4-3', 3), 'PG', 'piston gauche');
+  assert.equal(post('5-3-2', 2), 'PD');
+  assert.equal(post('4-4-2 losange', 10), 'MOC');
+  assert.equal(post('4-2-3-1', 9), 'AT');
+  assert.equal(postOfNumber(FORMATIONS['4-4-2'], 12), null);
+});
+
+test('un rôle sans poste normalisé est refusé', () => {
+  assert.equal(postOfRole('Sentinelle'), 'MDC');
+  assert.throws(() => postOfRole('Libéro'), /Rôle sans poste normalisé : Libéro/);
 });
