@@ -10,10 +10,21 @@
  * toucher qui valide : ce que montre l'aperçu est ce que fera le toucher.
  *
  * Sens des flèches, d'après le tableau du sprint 5 :
- * - une passe est le trajet du ballon : elle part du ballon, ou de l'arrivée d'une passe déjà tracée
- *   (enchaînement), et va vers un partenaire ou un espace libre du terrain ;
+ * - une passe est le trajet du ballon : elle part du ballon, ou de l'arrivée d'une passe, d'un
+ *   dribble ou d'un centre déjà tracés (enchaînement), et va vers un partenaire ou un espace libre ;
  * - une course est le déplacement d'un joueur : elle part d'un joueur et va vers un point du
  *   terrain.
+ *
+ * Trois gestes du porteur s'y ajoutent (version 0.4), avec leurs règles sur le terrain réel de
+ * 105 × 68 m (mesures IFAB) :
+ * - un dribble part du ballon, mais exige un porteur : un ballon que personne ne tient ne se
+ *   conduit pas ;
+ * - un centre part d'un couloir (hors de la largeur de la surface, à plus de 20,16 m de l'axe),
+ *   dans le dernier tiers (à moins de 35 m de la ligne de but adverse), et arrive dans la surface
+ *   de réparation ;
+ * - un tir arrive entre les poteaux (but de 7,32 m), à moins de 2,5 m de la ligne de but, part
+ *   d'au plus 40 m du but, et jamais vers le but de sa propre équipe.
+ * Le but visé est celui de l'adversaire du porteur ; sans porteur, celui du côté de l'arrivée.
  *
  * Aucune règle du football n'est inventée : passes longues, transversales, centres, passes en
  * retrait, courses en diagonale ou croisées restent possibles. Le hors-jeu, les contacts et les
@@ -22,7 +33,7 @@
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { TEAMS } from './config.mjs';
+import { PITCH_LENGTH, PITCH_SCALE, TEAMS } from './config.mjs';
 import { ARROW_KINDS, isOnBoard, isOnPitch, MIN_ARROW_LENGTH, sameArrowPath } from './tactics-board.mjs';
 
 /**
@@ -38,6 +49,27 @@ export const ORIGIN_SNAP_RADIUS = 0.015;
 /** Distance sous laquelle l'arrivée d'une passe s'accroche à l'arrivée d'une course (1,2 cm). */
 export const RUN_END_SNAP_RADIUS = 0.012;
 
+/** Demi-largeur de la surface de réparation : 40,32 m de large (IFAB), en mètres de maquette. */
+export const PENALTY_AREA_HALF_WIDTH = 20.16 * PITCH_SCALE;
+
+/** Profondeur de la surface de réparation : 16,5 m (IFAB). */
+export const PENALTY_AREA_DEPTH = 16.5 * PITCH_SCALE;
+
+/** Demi-largeur du but : 7,32 m entre les poteaux (IFAB). */
+export const GOAL_HALF_WIDTH = 3.66 * PITCH_SCALE;
+
+/** Arrivée d'un tir : à moins de 2,5 m de la ligne de but, pour viser au doigt. */
+export const SHOT_END_DEPTH = 2.5 * PITCH_SCALE;
+
+/** Distance maximale d'un tir au centre du but : 40 m. */
+export const SHOT_MAX_DISTANCE = 40 * PITCH_SCALE;
+
+/** Dernier tiers : un centre part à moins de 35 m de la ligne de but adverse. */
+export const FINAL_THIRD_DEPTH = 35 * PITCH_SCALE;
+
+/** Flèches qui portent le ballon : elles partent du ballon ou d'une arrivée de ballon. */
+export const BALL_ARROW_KINDS = Object.freeze([ARROW_KINDS.PASS, ARROW_KINDS.DRIBBLE, ARROW_KINDS.CROSS, ARROW_KINDS.SHOT]);
+
 /** Raisons d'un refus. */
 export const ARROW_REASONS = Object.freeze({
   INVALID_POINT: 'invalid-point',
@@ -50,6 +82,13 @@ export const ARROW_REASONS = Object.freeze({
   RUN_NEEDS_PLAYER: 'run-needs-player',
   PASS_NEEDS_BALL: 'pass-needs-ball',
   PASS_TO_OPPONENT: 'pass-to-opponent',
+  DRIBBLE_NEEDS_CARRIER: 'dribble-needs-carrier',
+  CROSS_NOT_WIDE: 'cross-not-wide',
+  CROSS_TOO_FAR: 'cross-too-far',
+  CROSS_NOT_IN_BOX: 'cross-not-in-box',
+  SHOT_NOT_ON_GOAL: 'shot-not-on-goal',
+  SHOT_TOO_FAR: 'shot-too-far',
+  SHOT_OWN_GOAL: 'shot-own-goal',
 });
 
 /** Message court affiché pour chaque raison de refus. */
@@ -64,6 +103,13 @@ const REASON_MESSAGES = Object.freeze({
   [ARROW_REASONS.RUN_NEEDS_PLAYER]: 'Une course part d’un joueur : touchez un joueur.',
   [ARROW_REASONS.PASS_NEEDS_BALL]: 'Une passe part du ballon : touchez le ballon ou son porteur.',
   [ARROW_REASONS.PASS_TO_OPPONENT]: 'Passe vers un adversaire : visez un partenaire ou un espace libre.',
+  [ARROW_REASONS.DRIBBLE_NEEDS_CARRIER]: 'Un dribble part d’un porteur : touchez le joueur qui a le ballon.',
+  [ARROW_REASONS.CROSS_NOT_WIDE]: 'Un centre part d’un couloir, hors de la largeur de la surface.',
+  [ARROW_REASONS.CROSS_TOO_FAR]: 'Un centre part du dernier tiers, à moins de 35 m du but.',
+  [ARROW_REASONS.CROSS_NOT_IN_BOX]: 'Un centre arrive dans la surface de réparation.',
+  [ARROW_REASONS.SHOT_NOT_ON_GOAL]: 'Un tir vise le but : touchez entre les poteaux.',
+  [ARROW_REASONS.SHOT_TOO_FAR]: 'Tir de plus de 40 m : rapprochez le ballon du but.',
+  [ARROW_REASONS.SHOT_OWN_GOAL]: 'Tir vers son propre but : visez le but adverse.',
 });
 
 /**
@@ -189,9 +235,10 @@ export function findCarrier(state, point, radius = POSSESSION_RADIUS) {
 }
 
 /**
- * Départs possibles d'une passe : le ballon, puis l'arrivée de chaque passe déjà tracée.
+ * Départs possibles d'une passe : le ballon, puis l'arrivée de chaque flèche qui porte le ballon
+ * (passe, dribble ou centre) déjà tracée. Un tir termine l'action : son arrivée n'en est pas un.
  * @param {ReturnType<typeof readTacticalState>} state
- * @returns {Array<{x: number, z: number, source: 'ball'|'pass', arrowId?: number}>}
+ * @returns {Array<{x: number, z: number, source: string, arrowId?: number}>} source : 'ball', ou le type de la flèche
  * @responsable Bilel Khlif
  * @date 2026-11-23
  * @role Règles des flèches — départs d'une passe
@@ -199,7 +246,8 @@ export function findCarrier(state, point, radius = POSSESSION_RADIUS) {
 export function passOrigins(state) {
   return [
     { x: state.ball.x, z: state.ball.z, source: 'ball' },
-    ...state.arrows.filter(({ kind }) => kind === ARROW_KINDS.PASS).map(({ id, to }) => ({ x: to.x, z: to.z, source: 'pass', arrowId: id })),
+    ...state.arrows.filter(({ kind }) => kind === ARROW_KINDS.PASS || kind === ARROW_KINDS.DRIBBLE || kind === ARROW_KINDS.CROSS)
+      .map(({ id, kind, to }) => ({ x: to.x, z: to.z, source: kind, arrowId: id })),
   ];
 }
 
@@ -279,7 +327,7 @@ export function resolveArrowStart({ kind, target, point }, state) {
   }
   if (target?.type === 'ball') {
     const start = targetPosition(target, state);
-    return { ok: true, start, actor: { type: 'ball' }, passer: findCarrier(state, start) };
+    return requireCarrier(kind, { ok: true, start, actor: { type: 'ball' }, passer: findCarrier(state, start) });
   }
   if (target?.type === 'player') {
     const position = targetPosition(target, state);
@@ -297,13 +345,84 @@ export function resolveArrowStart({ kind, target, point }, state) {
     return refuse(ARROW_REASONS.PASS_NEEDS_BALL);
   }
   const start = { x: origin.x, z: origin.z };
-  return { ok: true, start, actor: { type: 'point', ...start }, passer: findCarrier(state, start) };
+  return requireCarrier(kind, { ok: true, start, actor: { type: 'point', ...start }, passer: findCarrier(state, start) });
+}
+
+/**
+ * Un dribble exige un porteur : sans joueur au ballon, le départ est refusé. Les autres flèches
+ * passent telles quelles.
+ * @param {string} kind
+ * @param {{ok: true, passer: object|null}} decision départ accepté
+ * @returns {object} la décision, ou un refus
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Règles des flèches — dribble, centre et tir
+ */
+function requireCarrier(kind, decision) {
+  return kind === ARROW_KINDS.DRIBBLE && !decision.passer ? refuse(ARROW_REASONS.DRIBBLE_NEEDS_CARRIER) : decision;
+}
+
+/**
+ * Sens d'attaque visé par une flèche : celui de l'équipe du porteur ; sans porteur, vers le but
+ * du côté de l'arrivée.
+ * @param {{teamId?: string}|null} passer
+ * @param {{x: number}} to
+ * @returns {1|-1} +1 vers le but situé en +X
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Règles des flèches — dribble, centre et tir
+ */
+export function attackSign(passer, to) {
+  if (passer?.teamId && TEAMS[passer.teamId]) {
+    return TEAMS[passer.teamId].attacksPositiveX ? 1 : -1;
+  }
+  return to.x < 0 ? -1 : 1;
+}
+
+/**
+ * Vrai si un point est dans la surface de réparation du but situé du côté `sign`.
+ * @param {{x: number, z: number}} point
+ * @param {1|-1} sign
+ * @returns {boolean}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Règles des flèches — dribble, centre et tir
+ */
+export function isInPenaltyArea(point, sign) {
+  return Math.abs(point.z) <= PENALTY_AREA_HALF_WIDTH && Math.abs(sign * PITCH_LENGTH / 2 - point.x) <= PENALTY_AREA_DEPTH;
+}
+
+/**
+ * Règles propres au centre et au tir, sur le terrain réel ; null si la flèche les respecte.
+ * @param {{kind: string, from: {x: number, z: number}, to: {x: number, z: number}}} arrow
+ * @param {{teamId?: string}|null} passer
+ * @returns {string|null} une raison de ARROW_REASONS, ou null
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Règles des flèches — dribble, centre et tir
+ */
+function finishingRule({ kind, from, to }, passer) {
+  if (kind === ARROW_KINDS.CROSS) {
+    const sign = attackSign(passer, to);
+    if (Math.abs(from.z) <= PENALTY_AREA_HALF_WIDTH) return ARROW_REASONS.CROSS_NOT_WIDE;
+    if (sign * (sign * PITCH_LENGTH / 2 - from.x) > FINAL_THIRD_DEPTH) return ARROW_REASONS.CROSS_TOO_FAR;
+    if (!isInPenaltyArea(to, sign)) return ARROW_REASONS.CROSS_NOT_IN_BOX;
+  }
+  if (kind === ARROW_KINDS.SHOT) {
+    const goalSide = to.x < 0 ? -1 : 1;
+    const goalLine = goalSide * PITCH_LENGTH / 2;
+    if (Math.abs(to.z) > GOAL_HALF_WIDTH || Math.abs(goalLine - to.x) > SHOT_END_DEPTH) return ARROW_REASONS.SHOT_NOT_ON_GOAL;
+    if (passer?.teamId && attackSign(passer, to) !== goalSide) return ARROW_REASONS.SHOT_OWN_GOAL;
+    if (Math.hypot(goalLine - from.x, from.z) > SHOT_MAX_DISTANCE) return ARROW_REASONS.SHOT_TOO_FAR;
+  }
+  return null;
 }
 
 /**
  * Vérifie une flèche complète : type connu, coordonnées finies, départ sur le plateau, arrivée sur
- * le terrain (lignes comprises), longueur d'au moins 2 cm, pas de doublon, et, pour une passe dont
- * le passeur est connu, pas de receveur adverse.
+ * le terrain (lignes comprises), longueur d'au moins 2 cm, pas de doublon, et, pour une passe ou un
+ * centre dont le passeur est connu, pas de receveur adverse. Un dribble exige un porteur ; un centre
+ * et un tir respectent leurs zones (finishingRule).
  * @param {{kind: string, from: {x: number, z: number}, to: {x: number, z: number}}} arrow
  * @param {ReturnType<typeof readTacticalState>} state
  * @param {{passer?: {teamId: string}|null, receiver?: {type: string, teamId?: string}|null}} [roles]
@@ -331,10 +450,15 @@ export function validateArrow({ kind, from, to }, state, { passer = null, receiv
   if (state.arrows.some((arrow) => sameArrowPath(arrow, { kind, from, to }))) {
     return refuse(ARROW_REASONS.DUPLICATE);
   }
-  if (kind === ARROW_KINDS.PASS && passer?.teamId && receiver?.type === 'player' && receiver.teamId !== passer.teamId) {
+  if ((kind === ARROW_KINDS.PASS || kind === ARROW_KINDS.CROSS) && passer?.teamId && receiver?.type === 'player'
+    && receiver.teamId !== passer.teamId) {
     return refuse(ARROW_REASONS.PASS_TO_OPPONENT);
   }
-  return { ok: true };
+  if (kind === ARROW_KINDS.DRIBBLE && !passer) {
+    return refuse(ARROW_REASONS.DRIBBLE_NEEDS_CARRIER);
+  }
+  const reason = finishingRule({ kind, from, to }, passer);
+  return reason ? refuse(reason) : { ok: true };
 }
 
 /**
@@ -374,7 +498,13 @@ export function resolveArrowEnd({ draft, target, point }, state) {
       return refuse(ARROW_REASONS.INVALID_POINT);
     }
     end = { x: point.x, z: point.z };
-    if (draft.kind === ARROW_KINDS.PASS) {
+    // Tir : un toucher sur le but lui-même, juste derrière la ligne, vise la ligne de but.
+    const goalLine = (end.x < 0 ? -1 : 1) * PITCH_LENGTH / 2;
+    if (draft.kind === ARROW_KINDS.SHOT && Math.abs(end.z) <= GOAL_HALF_WIDTH && Math.abs(end.x) > PITCH_LENGTH / 2
+      && Math.abs(end.x - goalLine) <= SHOT_END_DEPTH) {
+      end = { x: goalLine, z: end.z };
+    }
+    if (draft.kind === ARROW_KINDS.PASS || draft.kind === ARROW_KINDS.CROSS) {
       const runEnd = state.arrows
         .filter(({ kind }) => kind === ARROW_KINDS.RUN)
         .map(({ to }) => to)

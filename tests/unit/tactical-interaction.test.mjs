@@ -267,7 +267,7 @@ test('changer de mode abandonne la sélection ou la flèche en cours ; mode inco
   interaction.setMode(INTERACTION_MODES.MOVE);
   assert.equal(interaction.arrowStart, null);
   assert.equal(interaction.setMode(INTERACTION_MODES.MOVE), false);
-  assert.throws(() => interaction.setMode('dribble'), /Mode inconnu/);
+  assert.throws(() => interaction.setMode('tacle'), /Mode inconnu/);
 });
 
 test('interaction coupée (AR avant la pose du terrain) : les touchers sont ignorés', () => {

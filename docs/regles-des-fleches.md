@@ -54,6 +54,18 @@ Deux règles de geste complètent ce tableau :
 
 Quand le passeur est inconnu, par exemple pour un ballon arrêté sur coup franc sans joueur à côté, R8 ne s'applique pas : l'application ne sait pas quelle équipe joue le ballon.
 
+### Dribble, centre et tir (version 0.4)
+
+Trois gestes du porteur s'ajoutent à la passe. Ils partent comme elle du ballon, de son porteur ou de l'arrivée d'une flèche de ballon déjà tracée. Leurs zones suivent les mesures IFAB du terrain réel de 105 × 68 m.
+
+| Flèche | Départ | Arrivée | Refus |
+| --- | --- | --- | --- |
+| Dribble, pointillés orange | Le ballon, avec un porteur | Un point du terrain | Ballon sans porteur : « Un dribble part d’un porteur » |
+| Centre, cyan | Un couloir (à plus de 20,16 m de l'axe, hors de la largeur de la surface), dans le dernier tiers (à moins de 35 m de la ligne de but adverse) | Un point de la surface de réparation adverse (40,32 × 16,5 m), ou un partenaire | Départ dans l'axe, départ trop loin, arrivée hors de la surface, receveur adverse |
+| Tir, violet épais | Le ballon, à 40 m au plus du centre du but | Entre les poteaux (7,32 m), à moins de 2,5 m de la ligne de but ; un toucher sur le but lui-même est ramené sur la ligne | À côté du poteau, tir de plus de 40 m, tir vers son propre but |
+
+Le but visé est celui de l'adversaire du porteur ; sans porteur, celui du côté de l'arrivée. Une passe peut partir de l'arrivée d'un dribble ou d'un centre (une remise après un centre, par exemple). Un tir termine l'action : son arrivée n'est pas un départ.
+
 ## 3. Ce qui reste possible, volontairement
 
 Aucune règle du football n'est inventée. Restent possibles :

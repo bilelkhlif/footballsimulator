@@ -35,14 +35,16 @@ import { EventEmitter } from './events.mjs';
 import { findTargetOnRay, intersectPitchPlane, pickTarget } from './raycasting.mjs';
 import { ARROW_KINDS, BALL_MARGIN, clampToBoard, isOnBoard, PLAYER_MARGIN } from './tactics-board.mjs';
 import {
-  readTacticalState, resolveArrowEnd, resolveArrowStart, sameTarget, targetLabel,
+  BALL_ARROW_KINDS, readTacticalState, resolveArrowEnd, resolveArrowStart, sameTarget, targetLabel,
 } from './arrow-rules.mjs';
 import { AddArrowCommand, MoveBallCommand, MovePlayerCommand } from './commands.mjs';
 
 export { sameTarget, targetLabel as selectionLabel } from './arrow-rules.mjs';
 
 /** Modes de l'interaction : déplacer, tracer une passe, tracer une course. */
-export const INTERACTION_MODES = Object.freeze({ MOVE: 'move', PASS: ARROW_KINDS.PASS, RUN: ARROW_KINDS.RUN });
+export const INTERACTION_MODES = Object.freeze({
+  MOVE: 'move', PASS: ARROW_KINDS.PASS, RUN: ARROW_KINDS.RUN, DRIBBLE: ARROW_KINDS.DRIBBLE, CROSS: ARROW_KINDS.CROSS, SHOT: ARROW_KINDS.SHOT,
+});
 
 /** États de la machine à états. */
 export const INTERACTION_STATES = Object.freeze({
@@ -110,7 +112,16 @@ export function describeDraft({ kind, actor, passer }) {
     return `Course ${ofLabel(actor)} : touchez son point d’arrivée.`;
   }
   const from = passer ? ofLabel(passer) : 'depuis le ballon';
-  return `Passe ${from} : touchez un partenaire ou un espace libre.`;
+  switch (kind) {
+    case ARROW_KINDS.DRIBBLE:
+      return `Dribble ${from} : touchez l’endroit où il emmène le ballon.`;
+    case ARROW_KINDS.CROSS:
+      return `Centre ${from} : touchez un point de la surface de réparation.`;
+    case ARROW_KINDS.SHOT:
+      return `Tir ${from} : touchez le but, entre les poteaux.`;
+    default:
+      return `Passe ${from} : touchez un partenaire ou un espace libre.`;
+  }
 }
 
 /**
@@ -126,6 +137,15 @@ export function describeDraft({ kind, actor, passer }) {
 export function describeArrowDone(kind, receiver, actor) {
   if (kind === ARROW_KINDS.RUN) {
     return `Course ${ofLabel(actor)} tracée.`;
+  }
+  if (kind === ARROW_KINDS.DRIBBLE) {
+    return 'Dribble tracé.';
+  }
+  if (kind === ARROW_KINDS.CROSS) {
+    return receiver ? `Centre pour ${targetLabel(receiver)} tracé.` : 'Centre dans la surface tracé.';
+  }
+  if (kind === ARROW_KINDS.SHOT) {
+    return 'Tir tracé.';
   }
   return receiver ? `Passe vers ${targetLabel(receiver)} tracée.` : 'Passe dans l’espace tracée.';
 }
@@ -482,7 +502,7 @@ export class TacticalInteraction extends EventEmitter {
       // Vu de côté (AR, téléphone près de la table), un joueur peut cacher le ballon : si l'objet
       // le plus proche ne peut pas commencer la passe et que le rayon traverse aussi le ballon,
       // c'est le ballon qui était visé.
-      if (!decision.ok && this.#mode === INTERACTION_MODES.PASS && target?.type !== 'ball'
+      if (!decision.ok && BALL_ARROW_KINDS.includes(this.#mode) && target?.type !== 'ball'
         && findTargetOnRay(raycaster, this.#getHitboxes(), (object) => object.userData?.type === 'ball')) {
         decision = resolveArrowStart({ kind: this.#mode, target: { type: 'ball' }, point }, this.rulesState);
       }

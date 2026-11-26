@@ -153,7 +153,7 @@ test('une donnée invalide, ancienne ou étrangère est refusée et laisse le ta
     'joueur hors du plateau': variant((data) => { data.board.players['blue:9'] = { x: 5, z: 0 }; }),
     'coordonnée non numérique': variant((data) => { data.board.players['blue:9'] = { x: 'NaN', z: 0 }; }),
     'ballon hors du plateau': variant((data) => { data.board.ball = { x: 0, z: 9 }; }),
-    'flèche de type inconnu': variant((data) => { data.board.arrows[0].kind = 'shot'; }),
+    'flèche de type inconnu': variant((data) => { data.board.arrows[0].kind = 'tacle'; }),
     'flèche hors du terrain': variant((data) => { data.board.arrows[0].to = { x: 2, z: 0 }; }),
     'flèche trop courte': variant((data) => { data.board.arrows[0].to = { ...data.board.arrows[0].from }; }),
     'identifiants de flèche en double': variant((data) => { data.board.arrows.push({ ...data.board.arrows[0], to: { x: 0, z: 0 } }); }),

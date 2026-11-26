@@ -244,6 +244,9 @@ La barre d'outils, sous le terrain, réunit trois outils et l'historique :
 | Déplacer (D) | Toucher un joueur ou le ballon, puis une place du plateau | L'objet sélectionné (anneau doré) y glisse ; toucher à nouveau l'objet annule la sélection |
 | Passe (P) | Toucher le ballon ou son porteur, puis un partenaire ou un espace libre | Flèche pleine, dorée : le trajet du ballon |
 | Course (C) | Toucher un joueur, puis son point d'arrivée | Flèche en tirets, blanche : le déplacement d'un joueur |
+| Dribble (B) | Toucher le porteur du ballon, puis un point du terrain | Pointillés orange : le porteur avance balle au pied |
+| Centre (X) | Toucher le ballon dans un couloir du dernier tiers, puis un point de la surface | Flèche cyan : le ballon envoyé dans la surface |
+| Tir (T) | Toucher le ballon, puis le but, entre les poteaux | Flèche violette, épaisse : le tir |
 | Annuler (Ctrl+Z), Rétablir (Ctrl+Y) | — | Défait ou refait la dernière action, formations comprises |
 | Réinitialiser | Deux touchers : « Confirmer ? » | Formations de départ, joueurs à leurs places, ballon au centre, sans flèche ; « Annuler » le rétablit |
 | Abandonner (Échap) | — | Abandonne la sélection ou le tracé en cours |

@@ -17,6 +17,11 @@ import { EventEmitter } from './events.mjs';
 import { TEAMS } from './config.mjs';
 import { PHASE_LABELS } from './formations.mjs';
 
+/** Libellé, dans l'historique, du tracé de chaque type de flèche. */
+const ARROW_LABELS = Object.freeze({
+  pass: 'Tracer une passe', run: 'Tracer une course', dribble: 'Tracer un dribble', cross: 'Tracer un centre', shot: 'Tracer un tir',
+});
+
 /** Nombre maximal d'actions gardées pour l'annulation. */
 export const HISTORY_LIMIT = 100;
 
@@ -232,7 +237,7 @@ export class AddArrowCommand extends Command {
    * @role Logique métier — patron Command : flèche tactique
    */
   get label() {
-    return this.#arrow.kind === 'pass' ? 'Tracer une passe' : 'Tracer une course';
+    return ARROW_LABELS[this.#arrow.kind] ?? 'Tracer une flèche';
   }
 
   /**

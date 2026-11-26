@@ -698,6 +698,57 @@ async function testAnalysisAndOffside(browser, url) {
 }
 
 /**
+ * Tir à la souris : touche T, toucher le ballon d'un attaquant à l'entrée de la surface, puis
+ * viser à côté du poteau (refusé, en rouge, avec sa raison) et entre les poteaux (tracé, annulable).
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Tests de bout en bout — dribble, centre et tir
+ */
+async function testShotArrow(browser, url) {
+  const name = 'Flèches : tir tracé à la souris (touche T) ; à côté du poteau, refus expliqué';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    await context.addInitScript(installAimTools);
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    // Ballon à 17 m du but rouge, dans l'axe (terrain de 105 m : 0,6 m) ; l'avant-centre bleu juste
+    // derrière, côté but, pour ne pas cacher le ballon à la caméra : il en reste le porteur.
+    await page.evaluate(() => {
+      const { board } = window.__footballSimulator;
+      board.setPlayerPosition('blue', 9, { x: 0.218, z: 0.004 });
+      board.setBallPosition({ x: 0.2, z: 0.004 });
+    });
+    await page.waitForTimeout(500);
+    await page.keyboard.press('t');
+    const pressed = await page.evaluate(() => document.querySelector('[data-mode="shot"]').getAttribute('aria-pressed'));
+    const ball = await page.evaluate(() => window.__aim.ball());
+    await page.mouse.click(ball.x, ball.y);
+    // Points à 1,5 m devant la ligne de but : sur la ligne, le cadre du but les cache.
+    const wide = await page.evaluate(() => window.__aim.spot([[0.291, 0.05], [0.291, -0.05]]));
+    await page.mouse.click(wide.sx, wide.sy);
+    const refused = await readTactics(page);
+    // Dans les coins (2,8 m de l'axe, entre les poteaux) : le gardien rouge cache le centre du but.
+    const goal = await page.evaluate(() => window.__aim.spot([[0.292, 0.016], [0.292, -0.016], [0.292, 0.012], [0.292, -0.012]]));
+    if (!ball || !wide || !goal) throw new Error(`visée impossible : ballon ${Boolean(ball)}, à côté ${Boolean(wide)}, but ${Boolean(goal)}`);
+    await page.mouse.click(goal.sx, goal.sy);
+    const drawn = await readTactics(page);
+    const problems = [];
+    if (pressed !== 'true') problems.push('outil Tir non actif après T');
+    if (!refused.hint.includes('entre les poteaux') || refused.snapshot.arrows.length) problems.push(`à côté : « ${refused.hint} »`);
+    if (drawn.snapshot.arrows.length !== 1 || drawn.snapshot.arrows[0].kind !== 'shot' || !drawn.canUndo) {
+      problems.push(`tir : ${JSON.stringify(drawn.snapshot.arrows)} « ${drawn.hint} »`);
+    }
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || `refus : « ${refused.hint} » ; puis « ${drawn.hint} »`);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Sauvegarde automatique : une tactique modifiée (formation par son bouton, joueur déplacé, image
  * clé) est enregistrée dans le vrai IndexedDB de Chrome peu après le changement, puis rétablie
  * après un vrai rechargement du navigateur, avec un message ; « Réinitialiser » repart toujours des formations de départ.
@@ -1003,6 +1054,9 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
     const initialView = await readView();
     /** Vrai si la vue 3D est revenue exactement à son état d'avant l'entrée en AR. */
     const sameAsInitial = (view) => JSON.stringify(view) === JSON.stringify(initialView);
+    /** Ce qui diffère de la vue de départ, pour le bilan d'un échec. */
+    const viewDiff = (view) => Object.keys(view).filter((key) => JSON.stringify(view[key]) !== JSON.stringify(initialView[key]))
+      .map((key) => `${key} : ${JSON.stringify(initialView[key])} → ${JSON.stringify(view[key])}`).join(' ; ');
 
     const steps = [
       [webglTest ? 'entrée par « Entrer en AR », session rendue par une couche WebGL' : 'entrée par « Entrer en AR », session rendue en WebGPU', async () => {
@@ -1145,8 +1199,11 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
           };
         });
         const before = await readTactics(page);
+        // Entre les deux groupes de la barre (outils, historique) : la barre, mais aucun bouton.
         const box = await page.locator('#tactical-toolbar').boundingBox();
-        await page.mouse.click(box.x + 3, box.y + box.height / 2); // bord de la barre, entre les boutons
+        const modes = await page.locator('#tactical-toolbar .toolbar__group--modes').boundingBox();
+        const history = await page.locator('#tactical-toolbar .toolbar__group--history').boundingBox();
+        await page.mouse.click(box.x + 3, (modes.y + modes.height + history.y) / 2);
         await page.waitForTimeout(400);
         const blocked = await page.evaluate(() => window.__selects);
         // Contrôle : un toucher sur le gazon, lui, atteint bien la scène.
@@ -1230,7 +1287,8 @@ async function testArSession(browser, url, { webglTest = false } = {}) {
         await page.waitForFunction(() => document.body.dataset.xr === 'inactive', null, { timeout: 15000 });
         const view = await readView();
         const counts = await countLoopCalls(800);
-        return [sameAsInitial(view) && counts.updates > 0, `vue identique au départ : ${sameAsInitial(view)}, contrôles relancés : ${counts.updates > 0}`];
+        return [sameAsInitial(view) && counts.updates > 0,
+          `vue identique au départ : ${sameAsInitial(view) || viewDiff(view)}, contrôles relancés : ${counts.updates > 0}`];
       }],
       ['fin de session : saisie AR arrêtée, tactique gardée pour la vue 3D', async () => {
         const state = await page.evaluate(() => ({
@@ -1517,8 +1575,9 @@ async function testTacticalMobile(browser, url) {
         overflow: document.documentElement.scrollWidth > window.innerWidth,
       };
     });
-    const layoutOk = layout.count === 6 && layout.inside && layout.minHeight >= 44 && layout.labelsFit && !layout.overflow;
-    record(`${name} : barre d'outils entière, six boutons de ${layout.minHeight} px de haut, libellés lisibles`, layoutOk ? 'ok' : 'échec',
+    // Six outils (Déplacer, Passe, Course, Dribble, Centre, Tir) et trois actions d'historique.
+    const layoutOk = layout.count === 9 && layout.inside && layout.minHeight >= 44 && layout.labelsFit && !layout.overflow;
+    record(`${name} : barre d'outils entière, ${layout.count} boutons de ${layout.minHeight} px de haut, libellés lisibles`, layoutOk ? 'ok' : 'échec',
       `dans l'écran : ${layout.inside}, libellés entiers : ${layout.labelsFit}, débordement : ${layout.overflow}`);
 
     const target = await page.evaluate(() => window.__aim.player('red'));
@@ -2243,6 +2302,7 @@ async function main() {
     await testTacticAutosave(browser, root.url);
     await testPhaseToggle(browser, root.url);
     await testAnalysisAndOffside(browser, root.url);
+    await testShotArrow(browser, root.url);
     await testTacticalBoard(browser, root.url);
     await testTacticalMobile(browser, root.url);
     await testArrowRules(browser, root.url);

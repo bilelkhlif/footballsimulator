@@ -17,10 +17,17 @@
  */
 import * as THREE from 'three';
 
-/** Style de chaque type de flèche. */
+/**
+ * Style de chaque type de flèche. Les couleurs restent distinctes de celles des équipes (bleu,
+ * rouge) et de l'aperçu refusé (rouge) ; le dribble se lit aussi à ses pointillés serrés, comme un
+ * ballon conduit, et le tir à son trait plus épais.
+ */
 export const ARROW_STYLES = Object.freeze({
   pass: Object.freeze({ color: 0xf4c542, dashed: false, label: 'Passe' }),
   run: Object.freeze({ color: 0xffffff, dashed: true, label: 'Course' }),
+  dribble: Object.freeze({ color: 0xff8a3d, dashed: true, dash: 0.004, gap: 0.004, label: 'Dribble' }),
+  cross: Object.freeze({ color: 0x3fd0e0, dashed: false, label: 'Centre' }),
+  shot: Object.freeze({ color: 0xc77dff, dashed: false, shaftWidth: 0.0065, label: 'Tir' }),
 });
 
 /** Couleur d'un aperçu refusé par les règles des flèches (src/arrow-rules.mjs). */
@@ -40,14 +47,17 @@ export const ARROW_DIMENSIONS = Object.freeze({
  * Construit la géométrie d'une flèche couchée sur le gazon, le long de +X, de 0 à sa longueur :
  * un corps (plein ou en tirets) puis une pointe triangulaire.
  * @param {number} length longueur totale, en mètres
- * @param {{dashed?: boolean}} [options]
+ * @param {{dashed?: boolean, dash?: number, gap?: number, shaftWidth?: number}} [options] tirets et
+ *   largeur propres au style ; par défaut, ceux de ARROW_DIMENSIONS
  * @returns {THREE.BufferGeometry}
  * @responsable Bilel Khlif
  * @date 2026-11-15
  * @role Scène 3D — flèches tactiques (géométrie)
  */
-export function buildArrowGeometry(length, { dashed = false } = {}) {
-  const { shaftWidth, headLength, headWidth, dash, gap } = ARROW_DIMENSIONS;
+export function buildArrowGeometry(length, {
+  dashed = false, dash = ARROW_DIMENSIONS.dash, gap = ARROW_DIMENSIONS.gap, shaftWidth = ARROW_DIMENSIONS.shaftWidth,
+} = {}) {
+  const { headLength, headWidth } = ARROW_DIMENSIONS;
   const head = Math.min(headLength, length * 0.45);
   const shaftEnd = length - head;
   const halfWidth = shaftWidth / 2;

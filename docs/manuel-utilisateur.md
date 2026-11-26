@@ -107,6 +107,9 @@ Le ballon se déplace de la même façon. Pour annuler une sélection, touchez �
 | --- | --- | --- | --- | --- |
 | « Passe » | Pleine et dorée | Le trajet du ballon | Le ballon, son porteur, ou l’arrivée d’une passe déjà tracée | Un partenaire, un espace libre, ou la fin d'une course |
 | « Course » | En tirets et blanche | Le déplacement d'un joueur | Le joueur qui court | Un point du terrain |
+| « Dribble » | En pointillés orange | Le porteur avance balle au pied | Le porteur du ballon | Un point du terrain |
+| « Centre » | Pleine et cyan | Le ballon envoyé d'un couloir vers la surface | Le ballon, dans un couloir du dernier tiers | Un point de la surface de réparation, ou un partenaire |
+| « Tir » | Pleine, violette et épaisse | Le tir au but | Le ballon, à 40 m au plus du but | Le but adverse, entre les poteaux |
 
 **Une passe**, pas à pas :
 
@@ -187,6 +190,7 @@ Au clavier :
 | Touche | Action |
 | --- | --- |
 | D, P, C | Outils Déplacer, Passe, Course |
+| B, X, T | Outils Dribble, Centre, Tir |
 | Échap | Abandonner la sélection ou le tracé, fermer un panneau |
 | Ctrl+Z (Cmd+Z sur Mac) | Annuler |
 | Ctrl+Y, ou Ctrl+Maj+Z | Rétablir |

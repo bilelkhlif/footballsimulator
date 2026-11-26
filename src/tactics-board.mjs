@@ -43,8 +43,12 @@ export const PLAYER_MARGIN = PLAYER_SIZE.radius * 1.4;
 /** Marge du ballon au bord du plateau : son rayon. */
 export const BALL_MARGIN = BALL_RADIUS;
 
-/** Types de flèches tactiques : passe (trajet du ballon) et course (déplacement d'un joueur). */
-export const ARROW_KINDS = Object.freeze({ PASS: 'pass', RUN: 'run' });
+/**
+ * Types de flèches tactiques : passe (trajet du ballon), course (déplacement d'un joueur sans
+ * ballon), dribble (le porteur avance balle au pied), centre (ballon envoyé d'un couloir vers la
+ * surface) et tir (vers le but).
+ */
+export const ARROW_KINDS = Object.freeze({ PASS: 'pass', RUN: 'run', DRIBBLE: 'dribble', CROSS: 'cross', SHOT: 'shot' });
 
 /** Longueur minimale d'une flèche, en mètres (2 cm, environ 3,5 m sur un vrai terrain). */
 export const MIN_ARROW_LENGTH = 0.02;
