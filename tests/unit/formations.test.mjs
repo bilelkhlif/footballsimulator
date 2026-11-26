@@ -19,7 +19,22 @@ const CENTER_CIRCLE_RADIUS = 9.15;
 const TOKEN_DIAMETER = PLAYER_SIZE.radius * 2.8;
 
 test('les formations sont enregistrées, dans l\'ordre des boutons', () => {
-  assert.deepEqual(Object.keys(FORMATIONS), ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '4-1-4-1', '3-4-3']);
+  assert.deepEqual(Object.keys(FORMATIONS), ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '4-1-4-1', '3-4-3', '5-3-2']);
+});
+
+test('5-3-2 : bloc bas de cinq défenseurs à hauteur de la surface, milieu à trois resserré, deux attaquants', () => {
+  const positions = FORMATIONS['5-3-2'].computePositions();
+  const defenders = positions.filter((p) => /Défenseur|Piston/.test(p.role));
+  const midfield = positions.filter((p) => p.role.startsWith('Milieu'));
+  const forwards = positions.filter((p) => /attaquant|Avant-centre/i.test(p.role));
+  assert.equal(defenders.length, 5);
+  assert.equal(midfield.length, 3);
+  assert.equal(forwards.length, 2);
+  // Bloc bas : toute la défense à moins de 18 m de son but (surface de réparation : 16,5 m).
+  for (const { x, role } of defenders) assert.ok(x * 105 < 18, `${role} trop haut (${(x * 105).toFixed(1)} m)`);
+  // Lignes resserrées : au plus 13 m entre la défense centrale et le milieu.
+  const meanX = (players) => players.reduce((sum, p) => sum + p.x, 0) / players.length;
+  assert.ok((meanX(midfield) - meanX(defenders)) * 105 <= 13);
 });
 
 test('3-4-3 : trois centraux, et la largeur donnée par les pistons, plus larges que les attaquants', () => {

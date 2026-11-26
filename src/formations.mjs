@@ -392,9 +392,68 @@ export class Formation343 extends FormationStrategy {
   }
 }
 
+/**
+ * 5-3-2 : bloc bas et contre-attaque. Cinq défenseurs à hauteur de la surface (15 à 17 m du but),
+ * les pistons alignés avec les trois centraux ; un milieu à trois resserré 12 m devant eux pour
+ * fermer l'axe. Les deux attaquants restent hauts, prêts à partir en contre dès la récupération :
+ * le second attaquant décroché sert d'appui, l'avant-centre attaque la profondeur.
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Logique métier — patron Strategy : formation concrète
+ */
+export class Formation532 extends FormationStrategy {
+  /**
+   * @returns {string}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : formation concrète
+   */
+  get name() {
+    return '5-3-2';
+  }
+
+  /**
+   * @returns {Array<object>}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : formation concrète
+   */
+  get lines() {
+    return [
+      GOALKEEPER_LINE,
+      {
+        x: 0.14,
+        slots: [
+          { y: 0.08, number: 3, role: 'Piston gauche', x: 0.16 },
+          { y: 0.3, number: 6, role: 'Défenseur central' },
+          { y: 0.5, number: 4, role: 'Défenseur central' },
+          { y: 0.7, number: 5, role: 'Défenseur central' },
+          { y: 0.92, number: 2, role: 'Piston droit', x: 0.16 },
+        ],
+      },
+      {
+        x: 0.255,
+        slots: [
+          { y: 0.28, number: 8, role: 'Milieu relayeur' },
+          { y: 0.5, number: 10, role: 'Milieu central', x: 0.27 },
+          { y: 0.72, number: 7, role: 'Milieu relayeur' },
+        ],
+      },
+      {
+        x: 0.39,
+        slots: [
+          { y: 0.42, number: 11, role: 'Second attaquant', x: 0.38 },
+          { y: 0.58, number: 9, role: 'Avant-centre', x: 0.4 },
+        ],
+      },
+    ];
+  }
+}
+
 /** Formations disponibles, indexées par leur nom, dans l'ordre des boutons de l'interface. */
 export const FORMATIONS = Object.freeze(Object.fromEntries(
-  [new Formation442(), new Formation433(), new Formation352(), new Formation4231(), new Formation4141(), new Formation343()]
+  [new Formation442(), new Formation433(), new Formation352(), new Formation4231(), new Formation4141(), new Formation343(),
+    new Formation532()]
     .map((formation) => [formation.name, formation]),
 ));
 
