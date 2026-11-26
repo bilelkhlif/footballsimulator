@@ -180,6 +180,8 @@ export function createSavedTacticsPanel({
     item.dataset.savedTactic = entry.id;
     const name = document.createElement('strong');
     name.textContent = entry.name;
+    // Nom complet au survol, quand il est coupé par des points de suspension.
+    name.title = entry.name;
     const savedAt = document.createElement('span');
     savedAt.className = 'muted';
     savedAt.textContent = `Enregistrée le ${SAVED_AT_FORMAT.format(entry.savedAt)}`;
