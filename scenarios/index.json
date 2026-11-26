@@ -2,6 +2,7 @@
   "version": 1,
   "scenarios": [
     "contre-attaque-trois-passes.json",
-    "relance-courte-trois-pivot.json"
+    "relance-courte-trois-pivot.json",
+    "pressing-haut-4-4-2.json"
   ]
 }

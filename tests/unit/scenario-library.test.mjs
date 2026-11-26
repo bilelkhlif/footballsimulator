@@ -87,3 +87,28 @@ test('relance courte à trois avec pivot : gardien et centraux en base à trois,
     assert.ok([gk, left, right].some(([bx, bz]) => Math.hypot(bx - x, bz - z) < 15));
   }
 });
+
+test('pressing haut en 4-4-2 : bloc compact et haut, marquages, course courbe, récupération côté ballon', () => {
+  const { data, state } = load('pressing-haut-4-4-2');
+  const blueOutfield = Object.entries(data.players).filter(([key]) => key.startsWith('blue:') && key !== 'blue:1').map(([, p]) => p);
+  const depths = blueOutfield.map(([x]) => x);
+  assert.ok(Math.max(...depths) - Math.min(...depths) <= 35, 'bloc de 35 m au plus');
+  for (const key of ['blue:2', 'blue:3', 'blue:4', 'blue:5']) assert.ok(data.players[key][0] > 0, `${key} dans la moitié rouge`);
+  // Ailiers sur les latéraux, milieux sur leurs vis-à-vis : quatre marquages, tous bleus sur rouges.
+  assert.equal(data.markings.length, 4);
+  assert.ok(data.markings.every(([d, a]) => d.startsWith('blue:') && a.startsWith('red:')));
+  // Course courbe du n° 9 : elle finit sur la ligne de passe entre le central qui reçoit et son
+  // gardien, à moins de 3 m : la remise au gardien est fermée.
+  const run = data.arrows.find((a) => a.kind === 'run' && a.from[0] === data.players['blue:9'][0]);
+  const [receiver, keeper] = [data.arrows[0].to, data.players['red:1']];
+  const [lx, lz] = [keeper[0] - receiver[0], keeper[1] - receiver[1]];
+  const t = ((run.to[0] - receiver[0]) * lx + (run.to[1] - receiver[1]) * lz) / (lx * lx + lz * lz);
+  const gap = Math.hypot(receiver[0] + t * lx - run.to[0], receiver[1] + t * lz - run.to[1]);
+  assert.ok(t > 0 && t < 1 && gap < 3, `à ${gap.toFixed(1)} m de la ligne de remise`);
+  // À la récupération : trois Bleus au moins à moins de 15 m du ballon, et un Bleu au ballon.
+  const last = state.keyframes.at(-1);
+  const near = Object.entries(last.players).filter(([key, p]) => key.startsWith('blue:')
+    && Math.hypot(p.x - last.ball.x, p.z - last.ball.z) / PITCH_SCALE < 15);
+  assert.ok(near.length >= 3, `${near.length} Bleus près du ballon`);
+  assert.ok(carrier(last).key.startsWith('blue:'));
+});

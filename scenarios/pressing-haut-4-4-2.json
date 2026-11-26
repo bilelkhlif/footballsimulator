@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "id": "pressing-haut-4-4-2",
+  "title": "Pressing haut en 4-4-2 sur la relance adverse",
+  "theme": "Pressing",
+  "description": "Les Bleus pressent la relance rouge en bloc haut : défense au-delà de la ligne médiane, bloc de 32 m. Déclencheur : la passe du gardien au central. L'attaquant le plus proche presse le receveur par une course courbe qui ferme la remise ; l'autre attaquant masque le pivot. Les ailiers tiennent les latéraux, les milieux marquent leurs vis-à-vis. Le ballon part vers la touche : piège de la ligne, l'ailier récupère, tout le bloc a coulissé côté ballon.",
+  "formations": { "blue": "4-4-2", "red": "4-4-2" },
+  "players": {
+    "red:1": [49, 0],
+    "red:4": [44, -15],
+    "red:5": [44, 15],
+    "red:6": [34, 0],
+    "red:2": [30, -30],
+    "red:3": [30, 30],
+    "red:8": [24, -10],
+    "red:7": [22, -26],
+    "red:11": [22, 26],
+    "red:9": [8, -5],
+    "red:10": [8, 6],
+    "blue:10": [36, -6],
+    "blue:9": [36, 6],
+    "blue:11": [26, -24],
+    "blue:7": [26, 24],
+    "blue:8": [20, -8],
+    "blue:6": [22, 6],
+    "blue:3": [4, -24],
+    "blue:5": [4, -8],
+    "blue:4": [4, 8],
+    "blue:2": [4, 24],
+    "blue:1": [-22, 0]
+  },
+  "ball": [48, 0.5],
+  "arrows": [
+    { "kind": "pass", "team": "red", "from": [48, 0.5], "to": [44, 15] },
+    { "kind": "run", "from": [36, 6], "to": [46, 11] },
+    { "kind": "pass", "team": "red", "from": [44, 15], "to": [30, 29] },
+    { "kind": "run", "from": [26, 24], "to": [31, 27] }
+  ],
+  "markings": [["blue:11", "red:2"], ["blue:7", "red:3"], ["blue:8", "red:8"], ["blue:6", "red:6"]],
+  "keyframes": [
+    {
+      "players": { "blue:9": [46, 11], "blue:10": [36, 1], "blue:7": [29, 26], "blue:6": [26, 5], "blue:4": [8, 10], "blue:2": [8, 24] },
+      "ball": [44, 15]
+    },
+    {
+      "players": { "red:3": [30, 29.5], "blue:7": [31, 27], "blue:9": [40, 18], "blue:6": [26, 15], "blue:8": [23, 3], "blue:11": [22, -12], "blue:4": [10, 14], "blue:2": [12, 26], "blue:5": [8, 2], "blue:3": [6, -14] },
+      "ball": [30, 29]
+    },
+    {
+      "players": { "blue:7": [30.5, 28], "red:3": [31, 31] },
+      "ball": [30.5, 27.5]
+    }
+  ]
+}
