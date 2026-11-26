@@ -19,7 +19,20 @@ const CENTER_CIRCLE_RADIUS = 9.15;
 const TOKEN_DIAMETER = PLAYER_SIZE.radius * 2.8;
 
 test('les formations sont enregistrées, dans l\'ordre des boutons', () => {
-  assert.deepEqual(Object.keys(FORMATIONS), ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '4-1-4-1']);
+  assert.deepEqual(Object.keys(FORMATIONS), ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '4-1-4-1', '3-4-3']);
+});
+
+test('3-4-3 : trois centraux, et la largeur donnée par les pistons, plus larges que les attaquants', () => {
+  const positions = FORMATIONS['3-4-3'].computePositions();
+  const centreBacks = positions.filter((p) => p.role === 'Défenseur central');
+  const wingBacks = positions.filter((p) => p.role.startsWith('Piston'));
+  const forwards = positions.filter((p) => /Ailier|Avant-centre/.test(p.role));
+  assert.equal(centreBacks.length, 3);
+  assert.equal(forwards.length, 3);
+  // Pistons à moins de 6 m de la ligne de touche (terrain de 68 m de large).
+  for (const { y } of wingBacks) assert.ok(Math.min(y, 1 - y) * 68 < 6);
+  const width = (players) => (Math.max(...players.map((p) => p.y)) - Math.min(...players.map((p) => p.y))) * 68;
+  assert.ok(width(wingBacks) > width(forwards), 'les pistons sont les joueurs les plus larges');
 });
 
 test('4-1-4-1 : une seule sentinelle entre la défense et la ligne de quatre, dans l\'axe', () => {

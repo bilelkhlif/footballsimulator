@@ -334,9 +334,67 @@ export class Formation4141 extends FormationStrategy {
   }
 }
 
+/**
+ * 3-4-3 : la largeur vient des pistons. Trois défenseurs centraux couvrent l'axe ; les deux
+ * pistons, collés à la ligne de touche (5 m), donnent la largeur, ce qui laisse les deux attaquants
+ * excentrés rentrer dans les demi-espaces autour de l'avant-centre. Le double pivot n° 8 et n° 10
+ * tient l'axe devant les trois centraux.
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Logique métier — patron Strategy : formation concrète
+ */
+export class Formation343 extends FormationStrategy {
+  /**
+   * @returns {string}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : formation concrète
+   */
+  get name() {
+    return '3-4-3';
+  }
+
+  /**
+   * @returns {Array<object>}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : formation concrète
+   */
+  get lines() {
+    return [
+      GOALKEEPER_LINE,
+      {
+        x: 0.16,
+        slots: [
+          { y: 0.28, number: 6, role: 'Défenseur central' },
+          { y: 0.5, number: 4, role: 'Défenseur central' },
+          { y: 0.72, number: 5, role: 'Défenseur central' },
+        ],
+      },
+      {
+        x: 0.3,
+        slots: [
+          { y: 0.07, number: 3, role: 'Piston gauche', x: 0.34 },
+          { y: 0.38, number: 8, role: 'Milieu central' },
+          { y: 0.62, number: 10, role: 'Milieu central' },
+          { y: 0.93, number: 2, role: 'Piston droit', x: 0.34 },
+        ],
+      },
+      {
+        x: 0.42,
+        slots: [
+          { y: 0.22, number: 11, role: 'Ailier gauche' },
+          { y: 0.5, number: 9, role: 'Avant-centre', x: 0.41 },
+          { y: 0.78, number: 7, role: 'Ailier droit' },
+        ],
+      },
+    ];
+  }
+}
+
 /** Formations disponibles, indexées par leur nom, dans l'ordre des boutons de l'interface. */
 export const FORMATIONS = Object.freeze(Object.fromEntries(
-  [new Formation442(), new Formation433(), new Formation352(), new Formation4231(), new Formation4141()]
+  [new Formation442(), new Formation433(), new Formation352(), new Formation4231(), new Formation4141(), new Formation343()]
     .map((formation) => [formation.name, formation]),
 ));
 
