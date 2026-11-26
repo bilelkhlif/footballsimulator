@@ -61,13 +61,14 @@ function percent(share) {
  * Indicateurs d'une carte : calibration, déplacements invraisemblables, coupures, continuité du suivi.
  * Le ton signale la fiabilité : good, warn ou bad (seuils documentés dans docs/visualiseur-demos-reelles.md).
  * @param {object|null} quality indicateurs du catalogue (gallery_quality côté Python)
- * @param {{verdict: string}|null} check verdict du contrôle visuel
+ * @param {{verdict: string}|null} check verdict du contrôle visuel de la calibration
+ * @param {{verdict: string}|null} teamCheck verdict du contrôle visuel des équipes
  * @returns {{key: string, label: string, value: string, tone: string, title: string}[]}
  * @responsable Bilel Khlif
  * @date 2026-11-25
  * @role Visualiseur de match — galerie des démonstrations
  */
-export function describeQuality(quality, check = null) {
+export function describeQuality(quality, check = null, teamCheck = null) {
   if (!quality) {
     return [];
   }
@@ -91,13 +92,18 @@ export function describeQuality(quality, check = null) {
   }
   if (typeof quality.knownTeamShare === 'number') {
     // Deux équipes attendues : un classement où presque tous les joueurs d'une image sont dans la même
-    // équipe trahit un regroupement faux, même avec beaucoup de joueurs « classés ».
+    // équipe trahit un regroupement faux, même avec beaucoup de joueurs « classés ». Ce n'est qu'un
+    // indice : le contrôle visuel l'emporte (« wrong » est rouge ; une scène déséquilibrée dont les
+    // équipes ont été contrôlées, comme la vidéo synthétique, ne l'est pas).
+    const verdict = teamCheck?.verdict ?? null;
     const balanced = typeof quality.teamMajorityShare !== 'number' || quality.teamMajorityShare <= 0.7;
+    const bad = verdict === 'wrong' || (verdict === null && !balanced);
     chips.push({
       key: 'teams', label: 'Équipes', value: percent(quality.knownTeamShare),
-      tone: !balanced ? 'bad' : quality.knownTeamShare >= 0.85 ? 'good' : 'warn',
-      title: balanced ? 'Part des observations de joueurs dont l\'équipe est connue'
-        : `Équipes déséquilibrées : ${percent(quality.teamMajorityShare)} des joueurs d'une image dans la même équipe`,
+      tone: bad ? 'bad' : quality.knownTeamShare >= 0.85 ? 'good' : 'warn',
+      title: verdict === 'wrong' ? 'Équipes fausses au contrôle visuel, malgré la part des joueurs classés'
+        : bad ? `Équipes déséquilibrées : ${percent(quality.teamMajorityShare)} des joueurs d'une image dans la même équipe`
+          : 'Part des observations de joueurs dont l\'équipe est connue',
     });
   }
   if (quality.medianTrackSeconds !== undefined && quality.medianTrackSeconds !== null) {
@@ -199,7 +205,7 @@ export function renderGallery(list, demos, { selectedId = null, onSelect }) {
     if (verdicts.childElementCount) {
       body.append(verdicts);
     }
-    const chips = describeQuality(demo.quality, demo.calibrationCheck);
+    const chips = describeQuality(demo.quality, demo.calibrationCheck, demo.teamCheck);
     if (chips.length) {
       const row = document.createElement('span');
       row.className = 'vz-match__quality';

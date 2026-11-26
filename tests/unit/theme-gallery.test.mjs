@@ -164,6 +164,12 @@ test('les indicateurs de qualité ont un ton qui dit la fiabilité, et une calib
   assert.equal(teams({ knownTeamShare: 0.88, teamMajorityShare: 0.89 }).tone, 'bad', 'presque tous dans la même équipe : faux');
   assert.equal(teams({ knownTeamShare: 0.6, teamMajorityShare: 0.5 }).tone, 'warn');
   assert.equal(teams({ calibratedShare: 1 }), undefined, "sans mesure des équipes, pas d'indicateur");
+  // Le contrôle visuel l'emporte sur l'indice d'équilibre.
+  const checked = (quality, verdict) => describeQuality(quality, null, { verdict, note: '' }).find((chip) => chip.key === 'teams');
+  assert.equal(checked({ knownTeamShare: 0.99, teamMajorityShare: 0.78 }, 'exact').tone, 'good', 'scène déséquilibrée, équipes exactes');
+  assert.equal(checked({ knownTeamShare: 0.93, teamMajorityShare: 0.75 }, 'partial').tone, 'good');
+  assert.equal(checked({ knownTeamShare: 0.99, teamMajorityShare: 0.55 }, 'wrong').tone, 'bad', 'équipes fausses au contrôle');
+  assert.match(checked({ knownTeamShare: 0.99, teamMajorityShare: 0.55 }, 'wrong').title, /fausses/);
   assert.equal(formatDuration(26.04), '26 s');
   assert.equal(formatDuration(65), '1 min 05 s');
   assert.equal(formatDuration(null), '—');

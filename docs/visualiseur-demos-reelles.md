@@ -11,8 +11,10 @@ mesures de calibration, de positions, de suivi et d'identités sont restées ide
 
 Chaque carte affiche désormais deux verdicts de contrôle visuel, calibration et équipes, et l'indicateur
 « Équipes ». Celui-ci donne la part des observations de joueurs dont l'équipe est connue. Il passe au
-rouge si plus de 70 % des joueurs d'une image typique sont dans la même équipe, car deux équipes sont
-attendues. Le verdict et son constat chiffré se lisent aussi dans « Qualité de l'analyse ». La
+rouge quand le contrôle visuel juge les équipes fausses. Sans contrôle, il passe aussi au rouge si plus de
+70 % des joueurs d'une image typique sont dans la même équipe, car deux équipes sont attendues. Ce n'est
+qu'un indice : la vidéo synthétique, aux équipes exactes, compte 78 % de joueurs de la même équipe dans
+une image typique, parce que la caméra suit l'attaque. Le verdict et son constat chiffré se lisent aussi dans « Qualité de l'analyse ». La
 démonstration ouverte par défaut reste Samsunspor–Altınordu, la seule dont la calibration passe le
 contrôle visuel : ses positions 3D sont affichées, mais ses équipes sont fausses et c'est indiqué.
 
