@@ -44,7 +44,7 @@ Où trouver quoi. Les résultats des tests sont dans un seul tableau daté, dans
 | --- | --- |
 | [visualiseur-match.md](visualiseur-match.md) | Architecture, format des données, validation |
 | [visualiseur-modes.md](visualiseur-modes.md) | Démonstration publique et analyse locale |
-| [visualiseur-demos-reelles.md](visualiseur-demos-reelles.md) | Démonstrations sur de vraies vidéos |
+| [visualiseur-demos-reelles.md](visualiseur-demos-reelles.md) | Démonstrations sur de vraies vidéos : droits, contrôle de la calibration et des équipes |
 | [visualiseur-livraison-2026-11-25.md](visualiseur-livraison-2026-11-25.md) | Livraison vérifiée du 25 novembre 2026 |
 | [integration-visualiseur.md](integration-visualiseur.md) | Intégration dans l'application : compte rendu |
 | [integration-future-visualiseur.md](integration-future-visualiseur.md) | Note différée sur l'intégration future |

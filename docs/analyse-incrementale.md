@@ -12,7 +12,8 @@ en mémoire ; elle n'est plus appelée par le serveur ni par la commande habitue
 1. Vérifier l'empreinte de la source, des poids, du code d'analyse, des options et des dépendances.
 2. Décoder séquentiellement, détecter, suivre et calibrer. Valider un segment SQLite à la fois.
 3. Publier aussitôt ses images avec équipes inconnues : elles sont consultables avant la fin.
-4. Relire une réserve initiale de maillots et apprendre les deux groupes une seule fois.
+4. Relire une réserve initiale de maillots et apprendre les deux équipes une seule fois, avec un groupe
+   « autres » sans équipe quand il est démontré (arbitres, stadiers).
 5. Classer les segments, conserver les votes récents et calculer les distances cumulées.
 6. Calculer les indicateurs par lecture séquentielle ; valider ensuite le marqueur de fin.
 

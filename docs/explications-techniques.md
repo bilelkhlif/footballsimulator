@@ -87,7 +87,7 @@ n'en contient pas. Le visualiseur analyse une **vidéo** de match.
 |---|---|---|
 | Détection | YOLOv8 entraîné par Roboflow Sports : joueurs, gardiens, arbitres ; modèle dédié au ballon | `detection.py` |
 | Suivi | ByteTrack (bibliothèque trackers) ; coupures de plan détectées par PySceneDetect | `tracking.py` |
-| Équipes | Plongements SigLIP du torse, réduits par UMAP, regroupés par KMeans ; vote par trajectoire | `teams.py`, `streaming_teams.py` |
+| Équipes | Plongements SigLIP du torse, réduits par UMAP, regroupés par KMeans en deux équipes, plus un groupe « autres » sans équipe quand il est démontré ; vote par trajectoire | `teams.py`, `streaming_teams.py` |
 | Identités | Échanges d'identifiants corrigés aux contacts masqués quand les maillots le prouvent | `identity.py` |
 | Calibration | 32 points clés du terrain (YOLOv8 pose), homographie RANSAC, erreur hors échantillon | `calibration.py` |
 | Stabilisation | Filtre complémentaire : prédiction par le flux optique de la caméra, fusion avec la mesure, mesures aberrantes écartées | `calibration.py` (`HomographyStabilizer`) |
