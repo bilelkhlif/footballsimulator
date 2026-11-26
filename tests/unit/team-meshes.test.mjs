@@ -61,9 +61,9 @@ function sameMatrix(a, b) {
   return a.elements.every((value, index) => Math.abs(value - b.elements[index]) < 1e-6);
 }
 
-test('trois maillages instanciés par équipe (socle, flèche, corps), une instance par joueur, à sa pose', () => {
+test('six maillages instanciés par équipe (socle, flèche, tenue, peau, cheveux, chaussures), une instance par joueur, à sa pose', () => {
   const { group, meshes } = createSetup();
-  assert.equal(meshes.meshes.length, 3);
+  assert.equal(meshes.meshes.length, 6);
   for (const mesh of meshes.meshes) {
     assert.equal(mesh.isInstancedMesh, true);
     assert.equal(mesh.count, 11);

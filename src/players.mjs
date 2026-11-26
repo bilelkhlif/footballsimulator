@@ -5,9 +5,12 @@
  * Géométries et matériaux sont partagés entre les 22 joueurs pour limiter la
  * mémoire et le coût de rendu sur mobile (cahier, §6.1).
  *
- * Sprint 6 : le pion visible (socle, flèche d'orientation, corps) est dessiné par instanciation.
- * Chaque équipe a trois maillages instanciés (TeamMeshes) au lieu de 33 maillages : 6 appels de
- * dessin au lieu de 66 pour les 22 joueurs, mesuré par le banc de « npm run bench » (cahier §6.3).
+ * Sprint 6 : le pion visible est dessiné par instanciation (TeamMeshes) : une instance par joueur
+ * dans quelques maillages par équipe, au lieu d'un maillage par joueur (cahier §6.3).
+ * Depuis la phase 5, le pion en forme de gélule est remplacé par un footballeur complet
+ * (src/player-model.mjs) : maillot et short à la couleur de l'équipe, peau, cheveux et chaussures
+ * identiques pour tous. Le socle coloré et la flèche d'orientation restent à ses pieds. Six
+ * maillages instanciés par équipe : 12 appels de dessin pour les 22 joueurs.
  * Le groupe de chaque joueur garde son identité (équipe, numéro, poste), son numéro et sa zone de
  * sélection : le raycasting, l'animation et la sélection ne changent pas.
  *
@@ -15,6 +18,7 @@
  */
 import * as THREE from 'three';
 import { PLAYER_SIZE } from './config.mjs';
+import { createFootballerGeometries, FOOTBALLER_COLORS } from './player-model.mjs';
 
 /** Résolution de la texture d'un numéro, en pixels. */
 const LABEL_TEXTURE_SIZE = 128;
@@ -104,8 +108,15 @@ export class PlayerFactory {
   constructor() {
     const { radius, height, hitboxRadius } = PLAYER_SIZE;
 
-    this.bodyGeometry = new THREE.CapsuleGeometry(radius, height - 2 * radius, 4, 12);
-    this.bodyGeometry.translate(0, height / 2, 0); // la base du pion repose sur y = 0
+    // Footballeur (phase 5) : quatre géométries partagées par les 22 joueurs, debout sur y = 0.
+    const footballer = createFootballerGeometries(height);
+    this.bodyGeometry = footballer.kit; // maillot et short, à la couleur de l'équipe
+    this.skinGeometry = footballer.skin;
+    this.hairGeometry = footballer.hair;
+    this.bootsGeometry = footballer.boots;
+    this.skinMaterial = new THREE.MeshStandardMaterial({ color: FOOTBALLER_COLORS.skin, roughness: 0.7, metalness: 0 });
+    this.hairMaterial = new THREE.MeshStandardMaterial({ color: FOOTBALLER_COLORS.hair, roughness: 0.85, metalness: 0 });
+    this.bootsMaterial = new THREE.MeshStandardMaterial({ color: FOOTBALLER_COLORS.boots, roughness: 0.5, metalness: 0.05 });
 
     this.baseGeometry = new THREE.CylinderGeometry(radius * 1.3, radius * 1.4, 0.0015, 20);
     this.baseGeometry.translate(0, 0.00075, 0);
@@ -123,7 +134,7 @@ export class PlayerFactory {
   }
 
   /**
-   * Renvoie le matériau du corps d'un joueur, partagé par toute l'équipe.
+   * Renvoie le matériau de la tenue d'un joueur (maillot, short et socle), partagé par toute l'équipe.
    * @param {{id: string, color: number}} team
    * @returns {THREE.MeshStandardMaterial}
    * @responsable Bilel Khlif
@@ -202,8 +213,9 @@ export class PlayerFactory {
   }
 
   /**
-   * Crée les pions visibles d'une équipe : trois maillages instanciés (socle, flèche, corps), dont
-   * l'instance i suit le joueur i.
+   * Crée les pions visibles d'une équipe : six maillages instanciés (socle, flèche, tenue, peau,
+   * cheveux, chaussures), dont l'instance i suit le joueur i. Socle et tenue prennent la couleur
+   * du maillot de chaque joueur ; peau, cheveux et chaussures sont les mêmes pour tous.
    * @param {{id: string, color: number}} team
    * @param {THREE.Object3D[]} players joueurs de l'équipe (createPlayer), dans un groupe placé à
    *   l'origine du terrain, comme celui des maillages
@@ -220,6 +232,9 @@ export class PlayerFactory {
         [this.baseGeometry, this.getBodyMaterial(team), true],
         [this.markerGeometry, this.markerMaterial, false],
         [this.bodyGeometry, this.getBodyMaterial(team), true],
+        [this.skinGeometry, this.skinMaterial, false],
+        [this.hairGeometry, this.hairMaterial, false],
+        [this.bootsGeometry, this.bootsMaterial, false],
       ],
     });
   }
@@ -238,7 +253,7 @@ export class TeamMeshes {
   #meshes;
   /** Dernière pose écrite de chaque joueur : x, y, z et angle autour de Y. */
   #written;
-  /** Maillages qui prennent la couleur du maillot (socle et corps). */
+  /** Maillages qui prennent la couleur du maillot (socle et tenue). */
   #kitMeshes;
 
   /**
@@ -247,7 +262,7 @@ export class TeamMeshes {
    * @param {THREE.Object3D[]} options.players joueurs de l'équipe
    * @param {Array<[THREE.BufferGeometry, THREE.Material, boolean?]>} options.parts géométrie et
    *   matériau de chaque partie du pion, partagés avec la fabrique ; vrai si la partie prend la
-   *   couleur du maillot (socle et corps), faux pour la flèche d'orientation
+   *   couleur du maillot (socle et tenue), faux pour la flèche, la peau, les cheveux et les chaussures
    * @responsable Bilel Khlif
    * @date 2026-11-16
    * @role Scène 3D — joueurs (instanciation)
@@ -293,7 +308,7 @@ export class TeamMeshes {
   }
 
   /**
-   * Maillages instanciés de l'équipe (socle, flèche, corps).
+   * Maillages instanciés de l'équipe (socle, flèche, tenue, peau, cheveux, chaussures).
    * @returns {THREE.InstancedMesh[]}
    * @responsable Bilel Khlif
    * @date 2026-11-16

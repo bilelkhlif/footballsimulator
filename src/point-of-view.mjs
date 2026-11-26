@@ -3,7 +3,8 @@
  * sélectionné, et la souris (ou le doigt) pour regarder autour de lui.
  *
  * Aucun second moteur ni seconde scène : c'est la scène three.js du tableau tactique, dessinée par
- * une caméra en perspective placée sur le joueur, à 1,75 m réels du sol. La boucle de rendu dessine
+ * une caméra en perspective placée aux yeux du joueur, à la hauteur des yeux de son modèle
+ * (src/player-model.mjs) : le regard est à l'échelle des autres footballeurs du terrain. La boucle de rendu dessine
  * avec cette caméra tant que le point de vue est actif (createRenderLoop, getViewCamera). La caméra
  * suit la place affichée du joueur à chaque image : elle reste juste pendant une transition de
  * formation ou la lecture d'une séquence. Le pion du joueur est masqué pendant le point de vue
@@ -20,10 +21,11 @@
  */
 import * as THREE from 'three';
 import { EventEmitter } from './events.mjs';
-import { PITCH_SCALE } from './config.mjs';
+import { PLAYER_SIZE } from './config.mjs';
+import { EYE_LEVEL } from './player-model.mjs';
 
-/** Hauteur des yeux, en mètres de la maquette : 1,75 m réels. */
-export const EYE_HEIGHT = 1.75 * PITCH_SCALE;
+/** Hauteur des yeux, en mètres de la maquette : celle des yeux du modèle de footballeur. */
+export const EYE_HEIGHT = PLAYER_SIZE.height * EYE_LEVEL;
 
 /** Champ de vision vertical, en degrés : large, comme un regard humain. */
 export const POV_FIELD_OF_VIEW = 72;
