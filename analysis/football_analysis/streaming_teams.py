@@ -21,8 +21,8 @@ from typing import Any, Callable
 
 import numpy as np
 
-from .teams import (BACKBONES, MIN_CROPS_TO_FIT, MIN_VOTE_SHARE, TeamAssignment,
-                    build_classifier, extract_team_features, team_colour, vote)
+from .teams import (BACKBONES, MIN_CROPS_TO_FIT, MIN_VOTE_SHARE, OTHER, TeamAssignment,
+                    build_classifier, extract_team_features, split_teams, team_colour, vote)
 
 #: Bornes du format de reprise ; elles s'appliquent avant la décompression des tableaux.
 MAX_SAVED_CROPS = 4096
@@ -180,11 +180,10 @@ class FrozenTeamModel:
         self._features = np.ascontiguousarray(features, dtype=np.float32)
         self._owners = np.asarray(owners, dtype=np.int64)
         projections = self._classifier.reducer.fit_transform(self._features)
-        labels = np.asarray(self._classifier.cluster_model.fit_predict(projections), dtype=np.int64)
-        centers = np.asarray(self._classifier.cluster_model.cluster_centers_, dtype=np.float64)
-        if labels.shape != (len(features),) or set(labels.tolist()) != {0, 1}:
+        labels, centers = split_teams(self._features, projections, self.seed)
+        if labels.shape != (len(features),) or not {0, 1} <= set(labels.tolist()) <= {0, 1, OTHER}:
             raise InsufficientTeamEvidence("le regroupement ne fournit pas deux équipes")
-        if centers.ndim != 2 or centers.shape[0] != 2 or not np.isfinite(centers).all():
+        if centers.ndim != 2 or centers.shape[0] not in (2, 3) or not np.isfinite(centers).all():
             raise ValueError("centres des équipes invalides")
         self._labels, self._centers = labels, centers
         self._assignments = {int(track): vote(labels[self._owners == track]) for track in dict.fromkeys(owners)}
@@ -260,7 +259,9 @@ class FrozenTeamModel:
                 best = int(np.argmax(shares))
                 if float(shares[best]) >= MIN_VOTE_SHARE:
                     track, crop_index, _ = batch[int(index)]
-                    result[track][crop_index] = int(self._neighbors.classes_[best])
+                    label = int(self._neighbors.classes_[best])
+                    # Le groupe « autres » (arbitre, stadier) ne vote pour aucune équipe.
+                    result[track][crop_index] = None if label == OTHER else label
         return result
 
     def dump(self) -> bytes:
@@ -335,7 +336,8 @@ class FrozenTeamModel:
                     raise ValueError("correspondance des images initiales invalide")
                 if (features.ndim != 2 or not MIN_CROPS_TO_FIT <= len(features) <= model.max_fit_crops
                         or not 0 < features.shape[1] <= MAX_FEATURE_DIMENSION or not np.isfinite(features).all()
-                        or set(labels.tolist()) != {0, 1} or centers.ndim != 2 or centers.shape[0] != 2
+                        or not {0, 1} <= set(labels.tolist()) <= {0, 1, OTHER} or centers.ndim != 2
+                        or centers.shape[0] not in (2, 3)
                         or not 0 < centers.shape[1] <= MAX_FEATURE_DIMENSION or not np.isfinite(centers).all()):
                     raise ValueError("tableaux du repère d'équipe invalides")
                 from sklearn.neighbors import KNeighborsClassifier

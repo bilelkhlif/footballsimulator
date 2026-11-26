@@ -96,10 +96,23 @@ class BoundedPeopleTracker(PeopleTracker):
 class BoundedCrops(CropCollector):
     """Réserve bornée réutilisant le choix des maillots validé dans teams.py.
 
+    « wanted » restreint la réserve à certaines trajectoires ; les boîtes des autres restent
+    comptées dans le contrôle des masquages.
+
     @responsable Bilel Khlif
     @date 2026-11-23
     @role Analyse incrémentale — mémoire des images de maillots
     """
+
+    def __init__(self, wanted: set[int] | None = None):
+        """Réserve vide ; sans « wanted », toutes les trajectoires proposées sont candidates.
+
+        @responsable Bilel Khlif
+        @date 2026-11-26
+        @role Analyse incrémentale — mémoire des images de maillots
+        """
+        super().__init__()
+        self.wanted = wanted
 
     def offer(self, frame: np.ndarray, track_ids: list[int], boxes: np.ndarray) -> None:
         """Limite l'effectif et les dimensions, en gardant le contrôle des masquages.
@@ -109,6 +122,8 @@ class BoundedCrops(CropCollector):
         @role Analyse incrémentale — mémoire des images de maillots
         """
         for index, track in enumerate(track_ids):
+            if self.wanted is not None and track not in self.wanted:
+                continue
             if track not in self.seen and len(self.seen) >= MAX_CROP_TRACKS:
                 continue
             box = boxes[index].copy()
@@ -502,25 +517,34 @@ def classify_chunks(path: Path, store: ChunkStore, options: AnalysisOptions, dev
     reader = CropReader(path)
     started = time.perf_counter()
     old_seconds = store.state("classification_seconds", 0.0)
+    fitted = model.assignments
     try:
         for chunk in store.iter_raw(after_seq=cursor):
             frames = chunk["frames"]
             for frame, event in zip(frames, chunk["replay"]):
                 mapper.apply(frame, event)
             spans = _roles(store, frames)
-            if frames[-1]["time"] > options.team_fit_seconds:
-                collector = BoundedCrops()
-                reader.collect(frames, chunk["replay"], collector, from_time=options.team_fit_seconds + 0.00001)
+            warmup = frames[-1]["time"] <= options.team_fit_seconds
+            # Pendant l'amorçage, un joueur apparu après le remplissage de la réserve d'apprentissage
+            # (MAX_CROP_TRACKS trajectoires) n'a aucun vote du regroupement : il est prédit comme après
+            # l'amorçage. Sans cela, sur un clip plus court que l'amorçage, toutes les trajectoires
+            # tardives restaient sans équipe (46 joueurs sur Samsunspor–Trabzonspor, 26 novembre 2026).
+            outside = {track for track, span in spans.items() if span["role"] == "player" and track not in corrected
+                       and (track not in fitted or fitted[track].votes == 0)} if warmup else set()
+            if not warmup or outside:
+                collector = BoundedCrops(wanted=outside if warmup else None)
+                reader.collect(frames, chunk["replay"], collector,
+                               from_time=0.0 if warmup else options.team_fit_seconds + 0.00001)
                 player_crops = {track: crops for track, crops in collector.crops.items()
                                 if spans[track]["role"] == "player"}
                 votes.update(player_crops, frames[-1]["time"])
                 del collector, player_crops
-            assignments = {track: (corrected[track] if track in corrected and frames[-1]["time"] <= options.team_fit_seconds
-                                    else model.assignments.get(track) if frames[-1]["time"] <= options.team_fit_seconds
-                                    else votes.assignment(track)) for track in spans}
+            assignments = {track: (corrected[track] if warmup and track in corrected
+                                   else fitted.get(track) if warmup and track not in outside
+                                   else votes.assignment(track)) for track in spans}
             teams = {track: assignment.team if assignment else None for track, assignment in assignments.items()}
             goalkeeper_ids = {track for track, span in spans.items() if span["role"] == "goalkeeper"}
-            if frames[-1]["time"] <= options.team_fit_seconds:
+            if warmup:
                 assignments.update({track: TeamAssignment(**keepers[str(track)]) for track in goalkeeper_ids
                                     if str(track) in keepers})
             else:
