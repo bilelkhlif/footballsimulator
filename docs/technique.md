@@ -327,7 +327,7 @@ Classées par priorité pour la soutenance.
 | 5 | Aucune intégration continue : les tests ne tournent que sur le PC de celui qui les lance | Fait dans ce lot : `.github/workflows/tests.yml` lance les tests unitaires à chaque push et pull request. Les tests de bout en bout restent manuels (GPU nécessaire) |
 | 6 | Chiffres périmés dans la documentation : plusieurs comptes de tests différents dans le README (369, 285, 277, 226), coquille annoncée à 51 entrées au lieu de 54 (55 depuis la sauvegarde automatique) | Coquille corrigée dans ce lot. Garder un seul tableau de résultats daté, dans le README, et renvoyer vers lui |
 | 7 | README de 617 lignes, qui répète les comptes rendus de sprint | Le ramener à environ 150 lignes : présentation, lancement, liens. Le reste est déjà dans `docs/` |
-| 8 | 60 documents dans `docs/`, dont des doublons apparents (`conformite.md` et `conformite-cahier-des-charges.md` ; `architecture.md` et `guide-du-code.md`) | Ajouter un index `docs/README.md`, ou archiver les documents de revue dans `docs/archives/` |
+| 8 | 60 documents dans `docs/`, dont des doublons apparents (`conformite.md` et `conformite-cahier-des-charges.md` ; `architecture.md` et `guide-du-code.md`) | Fait : index [docs/README.md](README.md), qui distingue les deux matrices de conformité ; revues archivées dans `docs/archives/` |
 | 9 | `src/visualizer/visualizer-main.mjs` fait 1 525 lignes | Le découper (chargement des sources, lecture vidéo, panneaux, sélection), comme l'a été `main.mjs` |
 | 10 | Le serveur local `tests/serve.mjs` sert les vidéos `.webm` des tests en `application/octet-stream` | Corrigé dans ce lot : types `.webm`, `.webp`, `.ico`, `.txt` ajoutés |
 
