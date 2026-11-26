@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "id": "dedoublement-centre-en-retrait",
+  "title": "Dédoublement du latéral et centre en retrait",
+  "theme": "Animation offensive",
+  "description": "Côté droit, l'ailier rentre balle au pied et attire le latéral gauche rouge vers l'axe. Le latéral droit bleu dédouble par l'extérieur et reçoit dans le couloir libéré. Il déborde jusqu'à la ligne de but, puis centre en retrait vers le point de penalty, que l'avant-centre a vidé en attirant les centraux au premier poteau. Le relayeur, arrivé lancé, tire du point de penalty.",
+  "formations": { "blue": "4-3-3", "red": "4-4-2" },
+  "phases": { "blue": "possession", "red": "defense" },
+  "players": {
+    "blue:7": [30, 22],
+    "blue:2": [22, 28],
+    "blue:8": [24, 6],
+    "blue:9": [38, 2],
+    "blue:11": [36, -18],
+    "blue:10": [28, -6],
+    "red:3": [33, 24],
+    "red:11": [26, 20]
+  },
+  "ball": [30.5, 21.5],
+  "arrows": [
+    { "kind": "dribble", "team": "blue", "from": [30.5, 21.5], "to": [33, 17] },
+    { "kind": "run", "from": [22, 28], "to": [44, 30] },
+    { "kind": "pass", "team": "blue", "from": [33, 17], "to": [44, 30] },
+    { "kind": "dribble", "team": "blue", "from": [44, 30], "to": [50, 24] },
+    { "kind": "cross", "team": "blue", "from": [50, 24], "to": [41, 3] },
+    { "kind": "run", "from": [24, 6], "to": [41, 3] },
+    { "kind": "shot", "team": "blue", "from": [41, 3], "to": [52.5, -2] }
+  ],
+  "keyframes": [
+    {
+      "players": { "blue:7": [33, 17.5], "red:3": [35, 19], "blue:2": [32, 30], "red:11": [28, 24] },
+      "ball": [33, 17]
+    },
+    {
+      "players": { "blue:2": [44, 30], "red:3": [38, 21], "blue:9": [44, 4], "blue:8": [30, 5] },
+      "ball": [44, 30]
+    },
+    {
+      "players": { "blue:2": [50, 24.5], "red:3": [46, 24], "blue:9": [49, 5], "red:4": [48, 5], "red:5": [47, -1], "blue:8": [36, 4] },
+      "ball": [50, 24]
+    },
+    {
+      "players": { "blue:8": [41, 3] },
+      "ball": [41, 3]
+    },
+    {
+      "players": { "blue:8": [42, 2.5] },
+      "ball": [52.5, -2]
+    }
+  ]
+}

@@ -128,6 +128,7 @@ Le diagramme UML de déploiement complet est dans [uml.md](uml.md).
 | Analyse | `tactical-metrics.mjs`, `offside.mjs`, `offside-layer.mjs`, `analysis-panel.mjs` | Largeur, profondeur, distance entre les lignes et surface occupée de chaque équipe, en mètres réels ; ligne de hors-jeu (loi 11) et ses lignes en 3D ; panneau observateur du tableau |
 | Équipes | `team-colors.mjs`, `team-identity.mjs`, `team-kits-view.mjs`, `team-panel.mjs` | Noms et maillots, contraste vérifié pour les daltoniens, gardien distinct ; l'identité est dans `TacticsBoard`, modifiée par `ChangeTeamIdentityCommand` |
 | Marquage | `marking-layer.mjs` | Traits défenseur → attaquant, tâche de la boucle de rendu ; l'état est dans `TacticsBoard`, modifié par `MarkPlayerCommand` |
+| Situations | `scenarios.mjs`, `scenario-panel.mjs`, `scenarios/*.json` | Bibliothèque de situations de jeu, vérifiées, chargées par `LoadScenarioCommand` |
 | Persistance | `tactic-storage.mjs` | Tactique enregistrée dans IndexedDB 0,4 s après chaque changement et à la page masquée, vérifiée puis rétablie au lancement |
 | Partagé | `config.mjs`, `events.mjs` | Constantes ; émetteur d'événements |
 

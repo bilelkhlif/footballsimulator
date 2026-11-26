@@ -58,7 +58,8 @@ export function preparePages({ output, root = REPO_ROOT } = {}) {
     cpSync(path.join(root, file), path.join(destination, file));
   }
   // Une œuvre sous AGPL est livrée avec le texte de sa licence (LICENSES/) et la correspondance des fichiers.
-  for (const directory of ['src', 'assets', 'LICENSES']) {
+  // scenarios/ : bibliothèque de situations de jeu, dans la coquille hors ligne de l'application.
+  for (const directory of ['src', 'assets', 'LICENSES', 'scenarios']) {
     cpSync(path.join(root, directory), path.join(destination, directory), { recursive: true });
   }
   mkdirSync(path.join(destination, 'demo'));

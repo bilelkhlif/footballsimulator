@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "id": "corner-offensif-defense-en-zone",
+  "title": "Corner offensif contre une défense en zone",
+  "theme": "Coup de pied arrêté",
+  "description": "Corner côté droit. Trois cibles, trois courses lancées de l'extérieur de la surface : l'avant-centre au premier poteau, un défenseur central au second poteau, l'autre central au point de penalty. Un milieu reste à l'entrée de la surface pour le second ballon ; trois joueurs couvrent la contre-attaque. Les Rouges défendent en zone, sans marquage individuel : une ligne de trois dans la surface de but, une zone au premier poteau, deux joueurs au point de penalty, un à l'entrée de la surface et un pour couper le corner à deux. Le ballon part au premier poteau, prolongé de la tête.",
+  "formations": { "blue": "4-3-3", "red": "4-4-2" },
+  "players": {
+    "blue:7": [53.2, 34.6],
+    "blue:9": [44, 8],
+    "blue:4": [42, -4],
+    "blue:5": [38, 2],
+    "blue:8": [35, -6],
+    "blue:10": [46, 26],
+    "blue:11": [44, -14],
+    "blue:6": [5, 0],
+    "blue:3": [0, -15],
+    "blue:2": [0, 15],
+    "red:1": [52, 0.5],
+    "red:4": [48, -5],
+    "red:5": [48, 0],
+    "red:9": [48, 5],
+    "red:10": [51, 6],
+    "red:6": [42, -4],
+    "red:8": [42, 4],
+    "red:7": [36, 0],
+    "red:11": [47, 22],
+    "red:2": [38, -14],
+    "red:3": [38, 14]
+  },
+  "ball": [52.3, 33.8],
+  "arrows": [
+    { "kind": "cross", "team": "blue", "from": [52.3, 33.8], "to": [50.5, 4.5] },
+    { "kind": "cross", "team": "blue", "from": [52.3, 33.8], "to": [49.5, -4] },
+    { "kind": "cross", "team": "blue", "from": [52.3, 33.8], "to": [41.5, 0.5] },
+    { "kind": "run", "from": [44, 8], "to": [50.5, 4.5] },
+    { "kind": "run", "from": [42, -4], "to": [49.5, -4] },
+    { "kind": "run", "from": [38, 2], "to": [41.5, 0.5] },
+    { "kind": "shot", "team": "blue", "from": [50.5, 4.5], "to": [52.5, 1] }
+  ],
+  "keyframes": [
+    {
+      "players": { "blue:9": [47.5, 6.5], "blue:4": [46, -4], "blue:5": [40, 1.5], "red:10": [50.5, 5.5] }
+    },
+    {
+      "players": { "blue:9": [50.5, 4.5], "blue:4": [49.5, -4], "blue:5": [41.5, 0.5], "red:9": [49.5, 4] },
+      "ball": [50.5, 4.5]
+    },
+    {
+      "players": { "red:1": [52, 2.5] },
+      "ball": [52.5, 1]
+    }
+  ]
+}

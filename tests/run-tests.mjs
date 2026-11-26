@@ -810,6 +810,51 @@ async function testTeamIdentity(browser, url) {
 }
 
 /**
+ * Situations dans la page : le bouton « Charger » de la contre-attaque place les flèches et les
+ * images clés, « Lecture » la joue sans erreur, puis Ctrl+Z rend le tableau de départ.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Tests de bout en bout — bibliothèque de situations
+ */
+async function testScenarioLibrary(browser, url) {
+  const name = 'Situations : charger la contre-attaque en trois passes, la jouer, puis l\'annuler';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    const before = await page.evaluate(() => JSON.stringify(window.__footballSimulator.board.snapshot()));
+    await page.waitForSelector('[data-load-scenario="contre-attaque-trois-passes"]', { state: 'attached', timeout: 10000 });
+    await clickUi(page, '[data-load-scenario="contre-attaque-trois-passes"]');
+    const loaded = await page.evaluate(() => ({
+      arrows: window.__footballSimulator.board.getArrows().length,
+      keyframes: window.__footballSimulator.sequence.length,
+      phase: window.__footballSimulator.board.getPhase('blue'),
+      hint: document.getElementById('hint').textContent,
+    }));
+    await clickUi(page, '[data-sequence="play"]');
+    await page.waitForTimeout(1500);
+    const playing = await page.evaluate(() => window.__footballSimulator.sequencePlayer.state);
+    await page.evaluate(() => document.activeElement?.blur());
+    await page.keyboard.press('Control+z');
+    await page.waitForTimeout(300);
+    const after = await page.evaluate(() => JSON.stringify(window.__footballSimulator.board.snapshot()));
+    const problems = [];
+    if (loaded.arrows !== 7 || loaded.keyframes !== 6 || loaded.phase !== 'defense') problems.push(`chargé : ${JSON.stringify(loaded)}`);
+    if (!loaded.hint.includes('Contre-attaque en trois passes')) problems.push(`message « ${loaded.hint} »`);
+    // Cinq étapes de 1,5 s : après 1,5 s, la lecture est toujours en cours.
+    if (playing !== 'playing') problems.push(`lecture : ${playing}`);
+    if (after !== before) problems.push('Ctrl+Z ne rend pas le tableau de départ');
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || `7 flèches, 6 images clés ; lecture : ${playing}`);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Sauvegarde automatique : une tactique modifiée (formation par son bouton, joueur déplacé, image
  * clé) est enregistrée dans le vrai IndexedDB de Chrome peu après le changement, puis rétablie
  * après un vrai rechargement du navigateur, avec un message ; « Réinitialiser » repart toujours des formations de départ.
@@ -2365,6 +2410,7 @@ async function main() {
     await testAnalysisAndOffside(browser, root.url);
     await testShotArrow(browser, root.url);
     await testTeamIdentity(browser, root.url);
+    await testScenarioLibrary(browser, root.url);
     await testTacticalBoard(browser, root.url);
     await testTacticalMobile(browser, root.url);
     await testArrowRules(browser, root.url);

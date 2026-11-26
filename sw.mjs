@@ -31,7 +31,7 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 /** Empreinte du contenu de la coquille, écrite par « npm run shell-version » (tests/shell-version.mjs). */
-const SHELL_VERSION = '0141860a14e80a86';
+const SHELL_VERSION = 'f811a6a65e3fae11';
 const CACHE_PREFIX = 'football-simulator-';
 const CACHE_NAME = `${CACHE_PREFIX}${SHELL_VERSION}`;
 
@@ -74,6 +74,14 @@ const APP_SHELL = [
   './src/marking-layer.mjs',
   './src/team-kits-view.mjs',
   './src/team-panel.mjs',
+  './src/scenarios.mjs',
+  './src/scenario-panel.mjs',
+  './scenarios/index.json',
+  './scenarios/contre-attaque-trois-passes.json',
+  './scenarios/relance-courte-trois-pivot.json',
+  './scenarios/pressing-haut-4-4-2.json',
+  './scenarios/dedoublement-centre-en-retrait.json',
+  './scenarios/corner-offensif-defense-en-zone.json',
   './src/commands.mjs',
   './src/raycasting.mjs',
   './src/tactical-interaction.mjs',
