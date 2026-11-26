@@ -36,7 +36,7 @@ jamais d'un seul appareil ni du réseau.
 | 15 | 0:45 | Mode avion, recharger | Service Worker à version de contenu (§2.3, §4.3) | Application démarrée hors-ligne | Montrer le test « coquille rechargée hors ligne » |
 | 16 | 0:30 | `?diagnostics` | Images par seconde, temps CPU, appels de dessin | Panneau de mesures | Citer le banc : 62,5 images/s en AR émulée (indicatif) |
 | 17 | 1:30 | Rail : « Analyse de match (Bêta) » → galerie, Samsunspor–Altınordu | Vraie vidéo CC BY-SA, analysée sur GPU ; terrain 3D synchronisé ; vitesses exploratoires | Joueurs placés sur le terrain 3D, sélection d'un joueur | Démo synthétique de la galerie |
-| 18 | 1:00 | Ouvrir France–Allemagne | Calibration fausse découverte au contrôle visuel : positions masquées plutôt que fausses | Détections sur la vidéo, terrain 3D vide avec l'avertissement | [stabilisation-homographie.md](stabilisation-homographie.md), §3 |
+| 18 | 1:00 | Ouvrir Samsunspor–Trabzonspor | Équipes rouge et blanc contre bleu ciel séparées sur la vidéo (93 % des observations classées, 3 erreurs au contrôle visuel) ; calibration fausse : positions masquées plutôt que fausses | Joueurs colorés par équipe sur la vidéo, terrain 3D vide avec l'avertissement | France–Allemagne ; [visualiseur-demos-reelles.md](visualiseur-demos-reelles.md) |
 | 19 | 1:00 | Panneau « Qualité de l'analyse » | Stabilisation : 70,6 % → 11,2 % de déplacements invraisemblables, mêmes détections | Indicateurs et limites affichés | Tableau du document de stabilisation |
 | 20 | 2:00 | Dossier d'évaluation, matrice de conformité, tests | 54 exigences tracées ; ce qui reste demande un téléphone ; ATTRIBUTION.md et contributions | [dossier-evaluation.md](dossier-evaluation.md) ouvert | Captures de `docs/images/glass/` |
 
@@ -45,6 +45,8 @@ jamais d'un seul appareil ni du réseau.
 - Que l'AR de la version actuelle a été validée sur téléphone : seules des versions antérieures l'ont été
   (12 et 14 novembre). Les essais P0 à P10 de [recette.md](recette.md) restent à faire.
 - Que les vitesses et distances du visualiseur sont des mesures sportives : aucune vérité terrain.
+- Que le classement des équipes est validé : il a été contrôlé visuellement par l'assistant IA, et les
+  équipes de Samsunspor–Altınordu, la démonstration ouverte par défaut, sont fausses (verdict affiché).
 - Qu'Iyed Rachdi ou Ghassen Dalleji ont réalisé une partie précise sans leur confirmation
   ([matrice des contributions](matrice-contributions-academiques.md)).
 

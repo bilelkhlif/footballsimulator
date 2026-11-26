@@ -1,6 +1,77 @@
 # Démonstrations sur de vraies vidéos
 
-## État au 25 novembre 2026 (soir) : galerie de quatre matchs
+## État au 26 novembre 2026 : galerie de sept matchs, équipes contrôlées
+
+La galerie propose six vidéos réelles de Wikimedia Commons et le match synthétique. Trois vidéos ont été
+ajoutées pour montrer le classement des joueurs en deux équipes : Samsunspor contre Trabzonspor (corner),
+Rizespor (penalty) et Fenerbahçe (coup franc), filmées en tribune par 𐰇𐱅𐰚𐰤. Les six vidéos réelles ont
+été analysées à nouveau avec le code final, sur RTX 2050. Sur les trois vidéos déjà publiées, les
+mesures de calibration, de positions, de suivi et d'identités sont restées identiques : seules les
+équipes changent.
+
+Chaque carte affiche désormais deux verdicts de contrôle visuel, calibration et équipes, et l'indicateur
+« Équipes ». Celui-ci donne la part des observations de joueurs dont l'équipe est connue. Il passe au
+rouge si plus de 70 % des joueurs d'une image typique sont dans la même équipe, car deux équipes sont
+attendues. Le verdict et son constat chiffré se lisent aussi dans « Qualité de l'analyse ». La
+démonstration ouverte par défaut reste Samsunspor–Altınordu, la seule dont la calibration passe le
+contrôle visuel : ses positions 3D sont affichées, mais ses équipes sont fausses et c'est indiqué.
+
+| Match | Catégorie | Durée ; vidéo | Analyse RTX 2050 ; mémoire GPU | Équipe connue | Même équipe (image typique) | Contrôle des équipes | Calibration |
+|---|---|---|---|---|---|---|---|
+| Samsunspor–Altınordu 2023 — penalty, vue large | Vue large | 29,8 s ; 6,1 Mo | 208 s ; +910 Mio | 99 % | 89 % | fausses : arbitres en cyan contre tous les joueurs | approximative (1 à 3 m) |
+| Samsunspor–Trabzonspor 2025 — corner | Corner | 15,3 s ; 6,7 Mo | 146 s ; +886 Mio | 93 % | 62 % | 73 justes, 3 erreurs, 3 mêlées, 6 sans équipe | rejetée : 3D masquée |
+| Samsunspor–Rizespor 2024 — penalty | Penalty | 19,5 s ; 8,2 Mo | 129 s ; +876 Mio | 94 % | 57 % | 28 justes, 1 erreur, 1 mêlée, 5 sans équipe | rejetée : 3D masquée |
+| Samsunspor–Fenerbahçe 2025 — coup franc | Coup franc | 22,7 s ; 9,3 Mo | 178 s ; +883 Mio | 96 % | 56 % | 53 justes, 3 erreurs, 4 mêlées, 6 sans équipe | rejetée : 3D masquée |
+| Brésil–Afrique du Sud 2016 — coup franc | Coup franc | 26,1 s ; 4,4 Mo | 174 s ; +903 Mio | 90 % | 67 % | 52 justes, 3 erreurs, 2 douteuses, 10 sans équipe | rejetée : 3D masquée |
+| France–Allemagne 2018 — penalty, vidéo réelle | Suivi difficile | 26,0 s ; 10,6 Mo | 149 s ; +877 Mio | 85 % | 70 % | 28 justes, 2 erreurs, 1 mêlée, 3 sans équipe | rejetée : 3D masquée |
+| Match synthétique de démonstration | Synthétique | 36 s ; 1,3 Mo | aucune (annotations exactes) | sans objet | sans objet | exactes par construction | exacte par construction |
+
+« Analyse » : durée totale d'une analyse, une à la fois, chargement des modèles compris. « Mémoire GPU » :
+hausse mesurée sur toute la carte par nvidia-smi ; le pic propre à PyTorch est de 627 Mio. « Même
+équipe » : part médiane des joueurs classés d'une image qui sont dans la même équipe, vers 50 % attendu.
+Les décomptes du contrôle portent sur les trajectoires de joueurs suivies au moins 8 images (protocole
+ci-dessous). Preuves : [validation-equipes-2026-11-26.json](validation-equipes-2026-11-26.json).
+
+**Ce qui a changé dans l'analyse** ([analyse-incrementale.md](analyse-incrementale.md)) :
+
+- *Défaut corrigé.* Sur un clip plus court que l'amorçage des équipes (30 s), un joueur apparu après le
+  remplissage de la réserve d'apprentissage (64 trajectoires) restait sans équipe jusqu'à la fin. Avec
+  les mêmes détections, la part des observations classées passe de 44,8 à 93,0 % sur Trabzonspor, de
+  86,7 à 96,2 % sur Fenerbahçe, de 52,5 à 89,7 % sur le Brésil et de 87,8 à 99,1 % sur Altınordu.
+- *Groupe « autres ».* Un petit groupe à part du regroupement en trois ne vote pour aucune équipe. Sur
+  Rizespor, il écarte deux gardiens en noir et trois stadiers, auparavant rangés avec l'équipe rouge et
+  blanche. La part classée descend donc de 99,6 à 94,2 % : ce sont ces non-joueurs qui sortent.
+- *Limite.* Sur Altınordu, les deux équipes sont plus proches l'une de l'autre que des arbitres en
+  cyan : le regroupement oppose « arbitres » et « joueurs ». La correction du défaut y range désormais
+  presque tous les joueurs dans le même groupe (99 % classés, 89 % dans la même équipe) : l'indicateur
+  est rouge et le verdict « équipes fausses ».
+
+**Protocole du contrôle des équipes.** Une planche par vidéo montre une vignette par trajectoire de
+joueur suivie au moins 8 images, prise au milieu de la trajectoire et rangée selon l'équipe attribuée.
+Chaque vignette douteuse (deux joueurs superposés, flou) est tranchée sur cinq images réparties le long
+de la trajectoire. Est compté comme **erreur** un joueur rangé avec l'équipe adverse, ou un non-joueur
+rangé dans une équipe : arbitre, gardien adverse, drapeau de corner. Une trajectoire **mêlée** passe
+d'un joueur à l'autre, souvent dans un duel ou dans le mur : c'est un défaut d'identité plus que de
+maillot. Les trajectoires que le détecteur appelle « gardien » sont classées autrement, par position :
+elles ne sont pas comptées. Sur le Brésil, ce sont surtout des stadiers du bord du terrain. Verdicts :
+`verified` sans erreur, `partial` avec des erreurs chiffrées dans la note, `wrong` si les équipes ne
+sont pas séparées, `exact` pour la vidéo synthétique. **Limites** : ce contrôle a été fait par
+l'assistant IA (Claude Code) sur les planches, sans revue humaine ni annotation de référence ; une
+vignette par trajectoire peut cacher un échange d'identité. L'audit annoté sur huit vidéos de la DFL
+reste la mesure de référence : 444 justes, 0 erreur, 2 inconnus sur 446 observations, inchangé.
+
+**Droits** : les trois nouvelles vidéos sont, comme Altınordu, des enregistrements de spectateur déclarés
+« création personnelle » et placés par leur auteur sous CC BY-SA 4.0. Les six pages ont été relues sur
+Commons et par son API le 26 novembre 2026 : aucune demande de suppression ni revue de licence.
+Crédits, transformations et empreintes : `SOURCE.md` de chaque dossier et
+[media-licenses.json](../demo/media-licenses.json). Écartés le 26 novembre : Samsunspor–Manisa et
+Samsunspor–Tuzlaspor (suivi trop morcelé : trajectoire médiane de 0,7 et 0,9 s, 61 et 77 % des
+observations classées). Également écartés : Samsunspor–Kayserispor (trois coupures de plan, trajectoire
+médiane de 0,6 s),
+Samsunspor–Panathinaikos (supporters au premier plan), Fleury–Lyon (photographes au premier plan, à
+contre-jour), Lettonie–Gibraltar et Pays basque–Venezuela (fumigènes et tribunes, presque pas de jeu).
+
+## Historique : galerie du 25 novembre 2026 (soir)
 
 La galerie du visualiseur propose trois vidéos réelles de Wikimedia Commons et le match synthétique.
 Chaque carte affiche sa vignette, sa catégorie, sa durée, le crédit de la vidéo, le verdict du contrôle
@@ -25,7 +96,8 @@ demande de suppression ni revue de licence. Crédits, liens, transformations et 
 `SOURCE.md` de chaque dossier et [media-licenses.json](../demo/media-licenses.json). Écartés : les clips
 de matchs de jeunes (mineurs), Orange County–Oakland (revue de licence en cours sur Commons), les vidéos de
 la DFL et de la FIFA, et un second penalty de Samsunspor (Rizespor, 2024), licite mais redondant avec
-Altınordu et filmé sous un angle où la calibration automatique échoue aussi. **Aucune contre-attaque sous
+Altınordu et filmé sous un angle où la calibration automatique échoue aussi. Il a été ajouté le
+26 novembre pour son classement des équipes. **Aucune contre-attaque sous
 licence vérifiée n'a été trouvée** : la catégorie n'est pas inventée.
 
 **Calibration** : le contrôle visuel (lignes du terrain projetées sur l'image) a montré que la calibration

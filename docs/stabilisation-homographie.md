@@ -80,6 +80,12 @@ lignes vertes et rouges sur la vidéo) a révélé un défaut plus grave que le 
   réparation le long des panneaux publicitaires.
 - **Samsunspor–Altınordu**, vue large du haut de la tribune, proche des vues de télévision : les lignes
   projetées suivent les lignes réelles, avec un écart estimé de 1 à 3 m.
+- **Samsunspor–Trabzonspor, –Rizespor et –Fenerbahçe**, ajoutées le 26 novembre pour leurs équipes :
+  calibration fausse sur les trois. Sur le corner filmé en biais, la surface et le rond central sont
+  projetés loin des lignes réelles. Sur le penalty vu d'en haut, la surface est prise pour le rond
+  central. Sur la vue rasante du coup franc, aucune ligne ne suit le terrain. Rizespor illustre le piège
+  décrit ci-dessous : 99,1 % d'images calibrées et 6,3 % de déplacements invraisemblables, pour un
+  terrain pourtant décalé.
 
 Ces confusions sont **cohérentes entre elles** : l'erreur hors échantillon reste faible (1,25 m sur
 France–Allemagne, 0,70 m sur le Brésil), alors que tout le terrain est décalé de plusieurs dizaines de
@@ -88,8 +94,9 @@ mètres. Aucune mesure interne ne pouvait le révéler ; le contrôle visuel l'a
 ## 4. Réponse : verdict affiché, positions masquées, référence possible
 
 - **Verdict du contrôle visuel dans le catalogue** (`calibrationCheck` de `demo/index.json`) :
-  `approximate` pour Altınordu, `rejected` pour France–Allemagne et le Brésil, `exact` pour la vidéo
-  synthétique. Le verdict et sa raison s'affichent sur la carte de la galerie et dans « Qualité de
+  `approximate` pour Altınordu, `rejected` pour France–Allemagne, le Brésil et les trois vidéos du
+  26 novembre, `exact` pour la vidéo synthétique. Le contrôle des équipes a son propre verdict
+  (`teamCheck`, [visualiseur-demos-reelles.md](visualiseur-demos-reelles.md)). Le verdict et sa raison s'affichent sur la carte de la galerie et dans « Qualité de
   l'analyse ».
 - **Positions masquées** quand le verdict est `rejected` : le terrain 3D ne reçoit qu'une copie non
   calibrée des images, la fiche du joueur indique « masquée (calibration rejetée) » pour la position, la
