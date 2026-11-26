@@ -283,9 +283,61 @@ export class Formation4231 extends FormationStrategy {
   }
 }
 
+/**
+ * 4-1-4-1 : bloc compact avec une sentinelle. Le n° 6 protège seul l'axe devant la défense ; les
+ * deux relayeurs occupent les demi-espaces et les deux milieux excentrés ferment les couloirs.
+ * Sur le terrain réel : 13 m entre la défense et la sentinelle, 8 m entre la sentinelle et la
+ * ligne de quatre ; l'avant-centre reste à 9,5 m du point central, hors du rond.
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Logique métier — patron Strategy : formation concrète
+ */
+export class Formation4141 extends FormationStrategy {
+  /**
+   * @returns {string}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : formation concrète
+   */
+  get name() {
+    return '4-1-4-1';
+  }
+
+  /**
+   * @returns {Array<object>}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-25
+   * @role Logique métier — patron Strategy : formation concrète
+   */
+  get lines() {
+    return [
+      GOALKEEPER_LINE,
+      BACK_FOUR,
+      {
+        x: 0.245,
+        slots: [{ y: 0.5, number: 6, role: 'Sentinelle' }],
+      },
+      {
+        x: 0.32,
+        slots: [
+          { y: 0.12, number: 11, role: 'Milieu gauche' },
+          { y: 0.37, number: 8, role: 'Milieu relayeur' },
+          { y: 0.63, number: 10, role: 'Milieu relayeur' },
+          { y: 0.88, number: 7, role: 'Milieu droit' },
+        ],
+      },
+      {
+        x: 0.41,
+        slots: [{ y: 0.5, number: 9, role: 'Avant-centre' }],
+      },
+    ];
+  }
+}
+
 /** Formations disponibles, indexées par leur nom, dans l'ordre des boutons de l'interface. */
 export const FORMATIONS = Object.freeze(Object.fromEntries(
-  [new Formation442(), new Formation433(), new Formation352(), new Formation4231()].map((formation) => [formation.name, formation]),
+  [new Formation442(), new Formation433(), new Formation352(), new Formation4231(), new Formation4141()]
+    .map((formation) => [formation.name, formation]),
 ));
 
 /**

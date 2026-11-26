@@ -492,7 +492,7 @@ Résultat le 23 novembre 2026, après les retours de l'évaluation : 226 tests u
 │   ├── config.mjs               Dimensions, échelle, équipes et couleurs
 │   ├── scene.mjs                Moteur de rendu, caméra, lumières, contrôles, pitchGroup
 │   ├── pitch.mjs                Terrain : plateau, gazon, lignes et buts
-│   ├── formations.mjs           Formations 4-4-2, 4-3-3, 3-5-2 et 4-2-3-1 (Strategy)
+│   ├── formations.mjs           Formations 4-4-2, 4-3-3, 3-5-2, 4-2-3-1 et 4-1-4-1 (Strategy)
 │   ├── tactics-board.mjs        État tactique : formations, places, ballon, flèches (Observer)
 │   ├── arrow-rules.mjs          Règles des flèches, fonctions pures sans three.js
 │   ├── formation-panel.mjs      Boutons de formation, créés depuis les stratégies (sprint 4)

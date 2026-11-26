@@ -18,8 +18,21 @@ const CENTER_CIRCLE_RADIUS = 9.15;
 /** Diamètre du socle d'un pion, en mètres (rayon 1,4 × celui du corps). */
 const TOKEN_DIAMETER = PLAYER_SIZE.radius * 2.8;
 
-test('les quatre formations sont enregistrées, dans l\'ordre des boutons', () => {
-  assert.deepEqual(Object.keys(FORMATIONS), ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1']);
+test('les formations sont enregistrées, dans l\'ordre des boutons', () => {
+  assert.deepEqual(Object.keys(FORMATIONS), ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '4-1-4-1']);
+});
+
+test('4-1-4-1 : une seule sentinelle entre la défense et la ligne de quatre, dans l\'axe', () => {
+  const positions = FORMATIONS['4-1-4-1'].computePositions();
+  const sentinel = positions.find((p) => p.role === 'Sentinelle');
+  const defenders = positions.filter((p) => /Arrière|Défenseur/.test(p.role));
+  const midfield = positions.filter((p) => /Milieu/.test(p.role));
+  assert.equal(sentinel.number, 6);
+  assert.equal(sentinel.y, 0.5);
+  assert.equal(midfield.length, 4, 'ligne de quatre milieux');
+  assert.ok(defenders.every((p) => p.x < sentinel.x) && midfield.every((p) => p.x > sentinel.x));
+  // Bloc compact : moins de 25 m entre la défense et la ligne de quatre, sur un terrain de 105 m.
+  assert.ok((midfield[0].x - defenders[0].x) * 105 < 25);
 });
 
 for (const [name, formation] of Object.entries(FORMATIONS)) {

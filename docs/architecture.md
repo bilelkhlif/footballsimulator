@@ -17,7 +17,7 @@ Le rendu passe par **WebGPU**, avec three.js r187, **sans repli WebGL** : sans W
 | `src/webgl-test-mode.mjs` | Mode test WebGL, seulement avec `?webgl` dans l'adresse : réservé aux tests, ce n'est pas un repli | |
 | `src/scene.mjs` | Moteur de rendu, caméra, lumières, contrôles d'orbite, groupe racine `pitchGroup` | |
 | `src/pitch.mjs` | Plateau, gazon texturé (lignes tracées sur un canvas), buts | |
-| `src/formations.mjs` | Une classe par formation (4-4-2, 4-3-3, 3-5-2, 4-2-3-1), qui calcule les 11 positions | Strategy |
+| `src/formations.mjs` | Une classe par formation (4-4-2, 4-3-3, 3-5-2, 4-2-3-1, 4-1-4-1), qui calcule les 11 positions | Strategy |
 | `src/tactics-board.mjs` | État tactique : formation de chaque équipe (sprint 4), place de chaque joueur et du ballon, flèches (sprint 5) ; refuse un état incohérent ; émet `formationchange` et `change` | Observer (sujet) |
 | `src/commands.mjs` | Déplacer un joueur ou le ballon, tracer une flèche, changer de formation, réinitialiser : des commandes annulables ; historique Annuler / Rétablir (sprint 5) ; ajouter une image clé, effacer la séquence (sprint 6) | Command |
 | `src/tactical-sequence.mjs` | Images clés de la séquence animée : places des joueurs et du ballon dans le repère du terrain, 12 au plus ; émet `change` (sprint 6, BF9) | Observer (sujet) |
