@@ -1,7 +1,7 @@
 /**
  * Tests unitaires de src/pointer-input.mjs (sprint 5) : un tap devient un rayon depuis la caméra, un
- * glissé ou un pincement restent aux contrôles d'orbite, la souris guide l'aperçu, et la saisie se
- * tait pendant une session AR.
+ * glissé ou un pincement restent aux contrôles d'orbite, la souris guide l'aperçu, la saisie se
+ * tait pendant une session AR, et le clic synthétisé après un tap au doigt est supprimé.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -173,4 +173,58 @@ test('visée au doigt seulement quand une destination est attendue : sinon un gl
   canvas.dispatchEvent(pointerEvent('pointerup', { clientX: 300, timeStamp: 200 }));
   assert.deepEqual(interaction.taps, []);
   assert.deepEqual(interaction.hovers, []);
+});
+
+/**
+ * Fin de toucher annulable, comme celle que le navigateur envoie avant de synthétiser un clic.
+ * @returns {Event}
+ * @responsable Bilel Khlif
+ * @date 2026-11-26
+ * @role Tests unitaires (src/pointer-input.mjs) — doublure
+ */
+function touchEnd() {
+  return new Event('touchend', { cancelable: true });
+}
+
+test('clic fantôme : la fin d\'un tap au doigt traité est annulée, pas celle d\'un glissé, d\'une souris ou d\'une saisie détachée', () => {
+  const { canvas, interaction, input } = createSetup();
+  canvas.dispatchEvent(pointerEvent('pointerdown', { timeStamp: 0 }));
+  canvas.dispatchEvent(pointerEvent('pointerup', { timeStamp: 120 }));
+  const afterTap = touchEnd();
+  canvas.dispatchEvent(afterTap);
+  assert.equal(interaction.taps.length, 1);
+  assert.equal(afterTap.defaultPrevented, true, 'le clic synthétisé après le tap est supprimé');
+  const again = touchEnd();
+  canvas.dispatchEvent(again);
+  assert.equal(again.defaultPrevented, false, 'une seule fin de toucher annulée par tap');
+
+  canvas.dispatchEvent(pointerEvent('pointerdown', { clientX: 100, timeStamp: 200 }));
+  canvas.dispatchEvent(pointerEvent('pointerup', { clientX: 160, timeStamp: 300 }));
+  const afterDrag = touchEnd();
+  canvas.dispatchEvent(afterDrag);
+  assert.equal(afterDrag.defaultPrevented, false, 'un glissé n\'est pas un tap : rien n\'est annulé');
+
+  canvas.dispatchEvent(pointerEvent('pointerdown', { pointerType: 'mouse', timeStamp: 400 }));
+  canvas.dispatchEvent(pointerEvent('pointerup', { pointerType: 'mouse', timeStamp: 450 }));
+  const afterMouse = touchEnd();
+  canvas.dispatchEvent(afterMouse);
+  assert.equal(interaction.taps.length, 2);
+  assert.equal(afterMouse.defaultPrevented, false, 'un clic de souris garde son comportement');
+
+  canvas.dispatchEvent(pointerEvent('pointerdown', { timeStamp: 500 }));
+  canvas.dispatchEvent(pointerEvent('pointerup', { timeStamp: 550 }));
+  input.detach();
+  const detached = touchEnd();
+  canvas.dispatchEvent(detached);
+  assert.equal(detached.defaultPrevented, false, 'détachée, la saisie n\'annule plus rien');
+});
+
+test('clic fantôme : une visée au doigt validée au relâchement annule aussi la fin du toucher', () => {
+  const { canvas, interaction } = createSetup({ wantsHover: true });
+  canvas.dispatchEvent(pointerEvent('pointerdown', { clientX: 200, timeStamp: 0 }));
+  canvas.dispatchEvent(pointerEvent('pointerup', { clientX: 650, timeStamp: 1500 }));
+  const end = touchEnd();
+  canvas.dispatchEvent(end);
+  assert.equal(interaction.taps.length, 1);
+  assert.equal(end.defaultPrevented, true);
 });

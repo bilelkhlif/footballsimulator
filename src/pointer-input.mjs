@@ -12,6 +12,11 @@
  * au relâchement. Pendant ce choix, un doigt ne fait plus tourner la vue : src/main.mjs confie la
  * rotation aux gestes à deux doigts. Un second doigt interrompt la visée sans rien valider.
  *
+ * Clic fantôme : après un tap au doigt, le navigateur synthétise un clic au même endroit. Le tap
+ * vient de sélectionner un joueur et d'afficher sous le doigt « Désélectionner », « Point de vue » ou
+ * « Personnaliser le joueur » : ce clic les déclencherait sans que personne les ait touchés. La fin
+ * du toucher (touchend) est donc annulée quand le tap a été traité, ce qui supprime ce clic.
+ *
  * Pendant une session AR, cette saisie se tait : c'est la session WebXR qui transmet les touchers
  * (src/xr-input.mjs). Le rayon et les coordonnées normalisées sont réutilisés d'un geste à l'autre.
  *
@@ -57,6 +62,8 @@ export class PointerInput {
   #aimingId = null;
   #activePointers = new Set();
   #attached = false;
+  /** Vrai entre un tap au doigt traité et la fin de ce toucher : son clic synthétisé sera annulé. */
+  #swallowClick = false;
 
   /**
    * @param {object} options
@@ -91,6 +98,7 @@ export class PointerInput {
       this.#element.addEventListener('pointercancel', this.#onPointerCancel);
       this.#element.addEventListener('pointermove', this.#onPointerMove);
       this.#element.addEventListener('pointerleave', this.#onPointerLeave);
+      this.#element.addEventListener('touchend', this.#onTouchEnd, { passive: false });
       this.#attached = true;
     }
     return this;
@@ -108,9 +116,11 @@ export class PointerInput {
     this.#element.removeEventListener('pointercancel', this.#onPointerCancel);
     this.#element.removeEventListener('pointermove', this.#onPointerMove);
     this.#element.removeEventListener('pointerleave', this.#onPointerLeave);
+    this.#element.removeEventListener('touchend', this.#onTouchEnd);
     this.#attached = false;
     this.#down = null;
     this.#aimingId = null;
+    this.#swallowClick = false;
     this.#activePointers.clear();
   }
 
@@ -135,6 +145,7 @@ export class PointerInput {
    */
   #onPointerDown = (event) => {
     this.#activePointers.add(event.pointerId);
+    this.#swallowClick = false;
     if (this.#isPresenting() || this.#activePointers.size > 1 || event.button > 0) {
       this.#down = null;
       this.#stopAiming();
@@ -168,12 +179,29 @@ export class PointerInput {
       this.#castFrom(event);
       this.#interaction.handleTap(this.#raycaster);
       this.#interaction.hover(null);
+      this.#swallowClick = event.pointerType === 'touch';
       return;
     }
     if (isTap(down, { x: event.clientX, y: event.clientY, time: event.timeStamp })) {
       this.#castFrom(event);
       this.#interaction.handleTap(this.#raycaster);
+      this.#swallowClick = event.pointerType === 'touch';
     }
+  };
+
+  /**
+   * Fin d'un toucher : si ce toucher était un tap traité, annule le clic que le navigateur
+   * synthétiserait ensuite à cet endroit, sur ce que le tap vient d'afficher sous le doigt.
+   * @param {TouchEvent} event
+   * @responsable Bilel Khlif
+   * @date 2026-11-26
+   * @role Saisie hors AR — suppression du clic fantôme après un tap
+   */
+  #onTouchEnd = (event) => {
+    if (this.#swallowClick && event.cancelable) {
+      event.preventDefault();
+    }
+    this.#swallowClick = false;
   };
 
   /**
