@@ -37,7 +37,8 @@ import { createTeamPanel } from './team-panel.mjs';
 import { buildScenarioState, loadScenarioLibrary } from './scenarios.mjs';
 import { createScenarioPanel } from './scenario-panel.mjs';
 import {
-  ChangeFormationCommand, ChangePhaseCommand, ChangeTeamIdentityCommand, CommandHistory, LoadSavedTacticCommand,
+  ChangeFormationCommand, ChangePhaseCommand, ChangePlayerAppearanceCommand, ChangeTeamIdentityCommand, CommandHistory,
+  LoadSavedTacticCommand,
   LoadScenarioCommand,
 } from './commands.mjs';
 import { MOVE_DURATION_MS, TacticalView } from './tactical-view.mjs';
@@ -65,6 +66,8 @@ import { SurfacePlacement } from './ar-surface.mjs';
 import { createReticle } from './reticle.mjs';
 import { createRenderLoop } from './render-loop.mjs';
 import { PointOfView } from './point-of-view.mjs';
+import { followPlayerAppearances } from './player-appearance-view.mjs';
+import { createPlayerCustomizationPanel } from './player-customization-panel.mjs';
 import { describeAdapter, WebGpuUnavailableError, WEBGPU_ERROR_REASONS } from './webgpu.mjs';
 import { getRequestedRenderMode, RENDER_MODES, WebGlTestModeUnavailableError } from './webgl-test-mode.mjs';
 import { WorkspaceController } from './workspace-controller.mjs';
@@ -212,6 +215,8 @@ async function init(renderMode) {
   const pointOfView = new PointOfView({ renderer, pitchGroup, teamGroups, teamMeshes: teamMeshesById, controls });
   // Maillots : couleur de chaque pion (gardien distinct), numéros et pastilles de l'interface.
   followTeamKits({ board, teamMeshes: teamMeshesById, playerFactory, root: document.documentElement });
+  // Apparence des joueurs (coupe et couleur des cheveux), joueur par joueur, d'après le tableau.
+  const appearanceView = followPlayerAppearances({ board, teamMeshes: teamMeshesById, teamGroups });
   const ball = createBall();
   pitchGroup.add(ball);
 
@@ -342,7 +347,40 @@ async function init(renderMode) {
     ? 'Bougez la souris pour regarder autour · Échap rend le curseur.'
     : 'Cliquez sur le terrain puis bougez la souris, ou glissez au doigt, pour regarder autour.');
   interaction.on('statechange', refreshPointOfViewButton);
+
+  // « Personnaliser le joueur » : coupe et couleur des cheveux du joueur sélectionné. Aperçu
+  // immédiat en 3D ; « Appliquer » crée une commande annulable, enregistrée avec la tactique.
+  const customizeButton = document.getElementById('customize-player');
+  const customization = createPlayerCustomizationPanel({
+    root: document.getElementById('player-customization'),
+    getAppearance: (teamId, number) => board.getAppearance(teamId, number),
+    describe: (teamId, number) => `${teamName(teamId)} · n° ${number} · ${postOfNumber(board.getFormation(teamId), number)}`,
+    preview: (teamId, number, appearance) => appearanceView.preview(teamId, number, appearance),
+    clearPreview: () => appearanceView.clearPreview(),
+    apply: (teamId, number, appearance) => {
+      history.execute(new ChangePlayerAppearanceCommand({ board, teamId, number, appearance }));
+      hint.flash(`n° ${number} des ${teamName(teamId)} personnalisé : « Annuler » rend son apparence d'avant.`, 'success');
+    },
+    onToggle: () => refreshCustomizeButton(),
+  });
+  /** Le bouton suit la sélection : un joueur sélectionné, hors AR, hors point de vue, panneau fermé. */
+  const refreshCustomizeButton = () => {
+    const selection = interaction.selection;
+    customizeButton.hidden = selection?.type !== 'player' || renderer.xr.isPresenting || pointOfView.active || customization.isOpen;
+    if (!customizeButton.hidden) {
+      customizeButton.setAttribute('aria-label', `Personnaliser le n° ${selection.number} des ${teamName(selection.teamId)}`);
+    }
+  };
+  interaction.on('statechange', refreshCustomizeButton);
+  customizeButton.addEventListener('click', () => {
+    const selection = interaction.selection;
+    if (selection?.type === 'player') {
+      customization.open(selection);
+    }
+  });
+
   pointOfViewButton.addEventListener('click', () => {
+    customization.cancel();
     const selection = interaction.selection;
     if (!pointOfView.enter(selection)) {
       hint.flash('Point de vue indisponible pour cette sélection.', 'invalid');
@@ -361,6 +399,7 @@ async function init(renderMode) {
       hint.flash('Retour au terrain : la tactique est inchangée.', 'info');
     }
     refreshPointOfViewButton();
+    refreshCustomizeButton();
   });
   pointOfView.on('lockchange', ({ locked }) => {
     document.body.dataset.pointerLocked = String(locked);
@@ -369,9 +408,14 @@ async function init(renderMode) {
   // Une session AR ferme le point de vue : la vue appartient alors au téléphone.
   renderer.xr.addEventListener?.('sessionstart', () => {
     pointOfView.exit();
+    customization.cancel();
     refreshPointOfViewButton();
+    refreshCustomizeButton();
   });
-  renderer.xr.addEventListener?.('sessionend', refreshPointOfViewButton);
+  renderer.xr.addEventListener?.('sessionend', () => {
+    refreshPointOfViewButton();
+    refreshCustomizeButton();
+  });
 
   // Aide au premier lancement, rouverte par « ? ».
   const onboarding = createOnboarding({
@@ -393,8 +437,8 @@ async function init(renderMode) {
       undo: toolbar.undo,
       redo: toolbar.redo,
       // Échap : point de vue (le curseur verrouillé est rendu par le navigateur au premier Échap),
-      // confirmation, geste, guide de prise en main, puis panneau de l'espace.
-      cancel: () => pointOfView.exit() || toolbar.disarmReset() || cancelDraft() || closeOnboarding(onboarding) || navigation.close(),
+      // personnalisation (annulée), confirmation, geste, guide de prise en main, puis panneau de l'espace.
+      cancel: () => pointOfView.exit() || customization.cancel() || toolbar.disarmReset() || cancelDraft() || closeOnboarding(onboarding) || navigation.close(),
     },
   });
 

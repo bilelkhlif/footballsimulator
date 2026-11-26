@@ -25,6 +25,9 @@ import { getFormation, PHASES } from './formations.mjs';
 import { computeTeamTargets } from './formation-transition.mjs';
 import { BALL_RADIUS, BOARD_LENGTH, BOARD_WIDTH, DEFAULT_KITS, PITCH_LENGTH, PITCH_WIDTH, PLAYER_SIZE, TEAMS } from './config.mjs';
 import { checkKitContrast, goalkeeperKit, KIT_PALETTE } from './team-colors.mjs';
+import {
+  copyAppearance, DEFAULT_APPEARANCE, isValidAppearance, sameAppearance,
+} from './player-appearance.mjs';
 
 /** Demi-longueur et demi-largeur du plateau (terrain et bande de gazon), en mètres. */
 export const BOARD_HALF_EXTENTS = Object.freeze({ x: BOARD_LENGTH / 2, z: BOARD_WIDTH / 2 });
@@ -196,8 +199,11 @@ function samePosition(a, b) {
  *
  * Événements :
  * - formationchange : { teamId, formation, previous } quand la formation d'une équipe change ;
+ * - appearancechange : { teamId?, number? } quand l'apparence d'un joueur change (sans clé : tous,
+ *   après un rétablissement) ;
  * - change : { type, teamId?, number? } après chaque modification, type valant « formation »,
- *   « player », « ball », « arrows » ou « restore » (annulation, rétablissement, réinitialisation).
+ *   « player », « ball », « arrows », « appearance » ou « restore » (annulation, rétablissement,
+ *   réinitialisation).
  * @responsable Bilel Khlif
  * @date 2026-11-14
  * @role Logique métier — tableau tactique (sujet du patron Observer)
@@ -224,6 +230,13 @@ export class TacticsBoard extends EventEmitter {
 
   /** @type {Map<string, {name: string, kit: string}>} nom et maillot de chaque équipe */
   #identities = new Map();
+
+  /**
+   * Apparence des joueurs personnalisés (coupe et couleur des cheveux), par clé équipe:numéro.
+   * Un joueur absent a l'apparence par défaut (DEFAULT_APPEARANCE).
+   * @type {Map<string, {hair: string, color: string}>}
+   */
+  #appearances = new Map();
 
   #teams;
   #initialState;
@@ -501,6 +514,51 @@ export class TacticsBoard extends EventEmitter {
   }
 
   /**
+   * Apparence d'un joueur : sa coupe et la couleur de ses cheveux, ou l'apparence par défaut s'il
+   * n'a jamais été personnalisé.
+   * @param {string} teamId
+   * @param {number} number
+   * @returns {{hair: string, color: string}} copie
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Logique métier — apparence des joueurs
+   */
+  getAppearance(teamId, number) {
+    this.#requirePlayer(teamId, number);
+    return copyAppearance(this.#appearances.get(playerKey(teamId, number)) ?? DEFAULT_APPEARANCE);
+  }
+
+  /**
+   * Change l'apparence d'un seul joueur. L'apparence par défaut n'est pas gardée : le joueur
+   * redevient « jamais personnalisé ».
+   * @param {string} teamId
+   * @param {number} number
+   * @param {{hair: string, color: string}} appearance une des quatre coupes, couleur « #rrggbb »
+   * @returns {boolean} faux si rien ne change
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Logique métier — apparence des joueurs
+   */
+  setAppearance(teamId, number, appearance) {
+    this.#requirePlayer(teamId, number);
+    if (!isValidAppearance(appearance)) {
+      throw new RangeError('Apparence inconnue : choisissez une des quatre coupes et une couleur.');
+    }
+    if (sameAppearance(appearance, this.getAppearance(teamId, number))) {
+      return false;
+    }
+    const key = playerKey(teamId, number);
+    if (sameAppearance(appearance, DEFAULT_APPEARANCE)) {
+      this.#appearances.delete(key);
+    } else {
+      this.#appearances.set(key, copyAppearance(appearance));
+    }
+    this.emit('appearancechange', { teamId, number });
+    this.emit('change', { type: 'appearance', teamId, number });
+    return true;
+  }
+
+  /**
    * Change le nom et le maillot d'une équipe. Le nom compte 1 à 24 caractères et diffère de celui
    * de l'adversaire ; le maillot vient de la palette et se distingue du maillot adverse et du gazon
    * pour les trois daltonismes (src/team-colors.mjs). Refus : RangeError, avec un message à afficher.
@@ -658,6 +716,11 @@ export class TacticsBoard extends EventEmitter {
       arrows: this.getArrows(),
       markings: [...this.#markings],
       identities: Object.fromEntries([...this.#identities].map(([teamId, { name, kit }]) => [teamId, { name, kit }])),
+      // Apparences : seulement les joueurs personnalisés ; aucune clé si personne ne l'est, pour que
+      // l'instantané d'un tableau sans personnalisation reste celui d'avant la phase 5.
+      ...(this.#appearances.size
+        ? { appearances: Object.fromEntries([...this.#appearances].map(([key, appearance]) => [key, copyAppearance(appearance)])) }
+        : {}),
     };
   }
 
@@ -693,6 +756,14 @@ export class TacticsBoard extends EventEmitter {
         this.#identities.set(teamId, { name: identity.name, kit: identity.kit });
         this.emit('identitychange', { teamId });
       }
+    }
+    // Apparences : celles de l'instantané ; aucune dans une tactique plus ancienne (tous par défaut).
+    const appearances = new Map(Object.entries(snapshot.appearances ?? {})
+      .filter(([key, appearance]) => this.#players.has(key) && isValidAppearance(appearance))
+      .map(([key, appearance]) => [key, copyAppearance(appearance)]));
+    if (JSON.stringify([...appearances].sort()) !== JSON.stringify([...this.#appearances].sort())) {
+      this.#appearances = appearances;
+      this.emit('appearancechange', {});
     }
     this.emit('change', { type: 'restore' });
   }

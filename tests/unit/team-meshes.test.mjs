@@ -61,10 +61,12 @@ function sameMatrix(a, b) {
   return a.elements.every((value, index) => Math.abs(value - b.elements[index]) < 1e-6);
 }
 
-test('six maillages instanciés par équipe (socle, flèche, tenue, peau, cheveux, chaussures), une instance par joueur, à sa pose', () => {
+test('neuf maillages instanciés par équipe (socle, flèche, tenue, peau, quatre coupes, chaussures), une instance par joueur, à sa pose', () => {
   const { group, meshes } = createSetup();
-  assert.equal(meshes.meshes.length, 6);
-  for (const mesh of meshes.meshes) {
+  assert.equal(meshes.meshes.length, 9);
+  // Les coupes de cheveux (indices 4 à 7) ne montrent chaque joueur que dans la sienne : la coupe
+  // classique par défaut (indice 4).
+  for (const mesh of meshes.meshes.filter((_, index) => index < 5 || index > 7)) {
     assert.equal(mesh.isInstancedMesh, true);
     assert.equal(mesh.count, 11);
     group.children.forEach((player, index) => {

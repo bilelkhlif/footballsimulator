@@ -18,7 +18,13 @@
  */
 import * as THREE from 'three';
 import { PLAYER_SIZE } from './config.mjs';
-import { createFootballerGeometries, createShirtNumberGeometry, FOOTBALLER_COLORS } from './player-model.mjs';
+import {
+  createFootballerGeometries, createHairGeometries, createShirtNumberGeometry, FOOTBALLER_COLORS,
+} from './player-model.mjs';
+import { DEFAULT_APPEARANCE, HAIR_STYLE_IDS, hairColorToHex } from './player-appearance.mjs';
+
+/** Matrice d'une instance cachée : échelle nulle (un joueur dans le maillage d'une autre coupe). */
+const HIDDEN_INSTANCE = new THREE.Matrix4().makeScale(0, 0, 0);
 
 /** Résolution de la texture d'un numéro, en pixels. */
 const LABEL_TEXTURE_SIZE = 128;
@@ -177,10 +183,12 @@ export class PlayerFactory {
     const footballer = createFootballerGeometries(height);
     this.bodyGeometry = footballer.kit; // maillot et short, à la couleur de l'équipe
     this.skinGeometry = footballer.skin;
-    this.hairGeometry = footballer.hair;
+    footballer.hair.dispose(); // remplacée par les quatre coupes ci-dessous
+    // Quatre coupes partagées (personnalisation) ; la couleur des cheveux vient de chaque instance.
+    this.hairGeometries = createHairGeometries(height);
     this.bootsGeometry = footballer.boots;
     this.skinMaterial = new THREE.MeshStandardMaterial({ color: FOOTBALLER_COLORS.skin, roughness: 0.7, metalness: 0 });
-    this.hairMaterial = new THREE.MeshStandardMaterial({ color: FOOTBALLER_COLORS.hair, roughness: 0.85, metalness: 0 });
+    this.hairMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, metalness: 0 });
     this.bootsMaterial = new THREE.MeshStandardMaterial({ color: FOOTBALLER_COLORS.boots, roughness: 0.5, metalness: 0.05 });
 
     this.baseGeometry = new THREE.CylinderGeometry(radius * 1.3, radius * 1.4, 0.0015, 20);
@@ -344,9 +352,10 @@ export class PlayerFactory {
   }
 
   /**
-   * Crée les pions visibles d'une équipe : six maillages instanciés (socle, flèche, tenue, peau,
-   * cheveux, chaussures), dont l'instance i suit le joueur i. Socle et tenue prennent la couleur
-   * du maillot de chaque joueur ; peau, cheveux et chaussures sont les mêmes pour tous.
+   * Crée les pions visibles d'une équipe : neuf maillages instanciés (socle, flèche, tenue, peau,
+   * quatre coupes de cheveux, chaussures), dont l'instance i suit le joueur i. Socle et tenue
+   * prennent la couleur du maillot de chaque joueur ; chaque joueur n'apparaît que dans le
+   * maillage de sa coupe, avec sa couleur de cheveux ; peau et chaussures sont les mêmes pour tous.
    * @param {{id: string, color: number}} team
    * @param {THREE.Object3D[]} players joueurs de l'équipe (createPlayer), dans un groupe placé à
    *   l'origine du terrain, comme celui des maillages
@@ -364,7 +373,8 @@ export class PlayerFactory {
         [this.markerGeometry, this.markerMaterial, false],
         [this.bodyGeometry, this.getBodyMaterial(team), true],
         [this.skinGeometry, this.skinMaterial, false],
-        [this.hairGeometry, this.hairMaterial, false],
+        // Une coupe par maillage : chaque joueur n'est visible que dans celui de sa coupe.
+        ...HAIR_STYLE_IDS.map((style) => [this.hairGeometries[style], this.hairMaterial, false, style]),
         [this.bootsGeometry, this.bootsMaterial, false],
       ],
     });
@@ -386,14 +396,19 @@ export class TeamMeshes {
   #written;
   /** Maillages qui prennent la couleur du maillot (socle et tenue). */
   #kitMeshes;
+  /** Maillages des coupes de cheveux, avec la coupe de chacun. */
+  #hairMeshes;
+  /** Coupe de chaque joueur, par indice d'instance. */
+  #hairStyles;
 
   /**
    * @param {object} options
    * @param {{id: string}} options.team
    * @param {THREE.Object3D[]} options.players joueurs de l'équipe
-   * @param {Array<[THREE.BufferGeometry, THREE.Material, boolean?]>} options.parts géométrie et
-   *   matériau de chaque partie du pion, partagés avec la fabrique ; vrai si la partie prend la
-   *   couleur du maillot (socle et tenue), faux pour la flèche, la peau, les cheveux et les chaussures
+   * @param {Array<[THREE.BufferGeometry, THREE.Material, boolean?, string?]>} options.parts géométrie
+   *   et matériau de chaque partie du pion, partagés avec la fabrique ; vrai si la partie prend la
+   *   couleur du maillot (socle et tenue), faux sinon ; enfin, pour une coupe de cheveux, son
+   *   identifiant (HAIR_STYLE_IDS) : seuls les joueurs de cette coupe y sont visibles
    * @responsable Bilel Khlif
    * @date 2026-11-16
    * @role Scène 3D — joueurs (instanciation)
@@ -412,10 +427,17 @@ export class TeamMeshes {
       return mesh;
     });
     this.#kitMeshes = this.#meshes.filter((mesh, index) => parts[index][2]);
+    this.#hairMeshes = this.#meshes
+      .map((mesh, index) => ({ mesh, style: parts[index][3] ?? null }))
+      .filter(({ style }) => style !== null);
+    this.#hairStyles = players.map(() => DEFAULT_APPEARANCE.hair);
     this.#written = new Float64Array(players.length * 4).fill(Number.NaN);
     // Couleurs d'instance créées avant le premier rendu : le matériau les prend en compte dès sa
     // compilation. Ensuite, un changement de maillot ne fait que réécrire ces couleurs.
     this.setKitColors({ kit: team.color ?? 0xffffff, goalkeeper: team.color ?? 0xffffff });
+    for (const { number } of players.map((player) => player.userData)) {
+      this.setAppearance(number, DEFAULT_APPEARANCE);
+    }
     this.update();
   }
 
@@ -439,7 +461,45 @@ export class TeamMeshes {
   }
 
   /**
-   * Maillages instanciés de l'équipe (socle, flèche, tenue, peau, cheveux, chaussures).
+   * Apparence d'un joueur, reconnu par son numéro : sa coupe (seul le maillage de cette coupe le
+   * montre) et la couleur de ses cheveux. Les autres joueurs ne changent pas.
+   * @param {number} number numéro du joueur
+   * @param {{hair: string, color: string}} appearance coupe et couleur « #rrggbb »
+   * @returns {boolean} faux si aucun joueur de l'équipe ne porte ce numéro
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Scène 3D — joueurs (instanciation)
+   */
+  setAppearance(number, { hair, color }) {
+    const index = this.#players.findIndex((player) => player.userData.number === number);
+    if (index < 0) {
+      return false;
+    }
+    const hairColor = new THREE.Color(hairColorToHex(color));
+    for (const { mesh } of this.#hairMeshes) {
+      mesh.setColorAt(index, hairColor);
+      mesh.instanceColor.needsUpdate = true;
+    }
+    if (this.#hairStyles[index] !== hair) {
+      this.#hairStyles[index] = hair;
+      this.#written[index * 4] = Number.NaN; // pose à réécrire : la coupe visible a changé
+    }
+    return true;
+  }
+
+  /**
+   * Force la réécriture de toutes les instances à la prochaine image (après qu'un autre module les
+   * a modifiées, comme le point de vue qui masque un joueur).
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Scène 3D — joueurs (instanciation)
+   */
+  invalidate() {
+    this.#written.fill(Number.NaN);
+  }
+
+  /**
+   * Maillages instanciés de l'équipe (socle, flèche, tenue, peau, quatre coupes, chaussures).
    * @returns {THREE.InstancedMesh[]}
    * @responsable Bilel Khlif
    * @date 2026-11-16
@@ -476,6 +536,13 @@ export class TeamMeshes {
       player.updateMatrix();
       for (let part = 0; part < meshes.length; part += 1) {
         meshes[part].setMatrixAt(index, player.matrix);
+      }
+      // Coupes : le joueur n'est visible que dans le maillage de la sienne.
+      for (let hair = 0; hair < this.#hairMeshes.length; hair += 1) {
+        const { mesh, style } = this.#hairMeshes[hair];
+        if (style !== this.#hairStyles[index]) {
+          mesh.setMatrixAt(index, HIDDEN_INSTANCE);
+        }
       }
       changed = true;
     }

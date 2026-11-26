@@ -591,7 +591,8 @@ export class LoadScenarioCommand extends Command {
   execute() {
     const current = this.#board.snapshot();
     this.#previous = { board: current, keyframes: this.#sequence.keyframes };
-    this.#board.restore({ ...this.#state.board, identities: current.identities });
+    // Les équipes gardent leurs noms et maillots, et les joueurs leur apparence personnalisée.
+    this.#board.restore({ ...this.#state.board, identities: current.identities, appearances: current.appearances });
     this.#sequence.restore(this.#state.keyframes);
     return true;
   }
@@ -604,6 +605,69 @@ export class LoadScenarioCommand extends Command {
   undo() {
     this.#board.restore(this.#previous.board);
     this.#sequence.restore(this.#previous.keyframes);
+  }
+}
+
+/**
+ * Personnalise un joueur (phase 5) : sa coupe et la couleur de ses cheveux. Annulable : l'annulation
+ * rend son apparence d'avant. Les autres joueurs ne changent pas.
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Logique métier — patron Command : apparence des joueurs
+ */
+export class ChangePlayerAppearanceCommand extends Command {
+  #board;
+  #teamId;
+  #number;
+  #appearance;
+  #previous = null;
+
+  /**
+   * @param {object} options
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board
+   * @param {string} options.teamId
+   * @param {number} options.number
+   * @param {{hair: string, color: string}} options.appearance nouvelle apparence
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Logique métier — patron Command : apparence des joueurs
+   */
+  constructor({ board, teamId, number, appearance }) {
+    super();
+    this.#board = board;
+    this.#teamId = teamId;
+    this.#number = number;
+    this.#appearance = { ...appearance };
+  }
+
+  /**
+   * @returns {string}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Logique métier — patron Command : apparence des joueurs
+   */
+  get label() {
+    return `Personnaliser le n° ${this.#number} ${teamOf(this.#teamId)}`;
+  }
+
+  /**
+   * @returns {boolean}
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Logique métier — patron Command : apparence des joueurs
+   */
+  execute() {
+    this.#previous = this.#board.getAppearance(this.#teamId, this.#number);
+    return this.#board.setAppearance(this.#teamId, this.#number, this.#appearance);
+  }
+
+  /**
+   * @responsable Iyed Rachdi
+   * @date 2026-11-26
+   * @role Logique métier — patron Command : apparence des joueurs
+   */
+  undo() {
+    this.#board.setAppearance(this.#teamId, this.#number, this.#previous);
   }
 }
 

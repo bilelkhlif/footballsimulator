@@ -20,6 +20,7 @@
 import { FORMATIONS, PHASES } from './formations.mjs';
 import { checkKitContrast, KIT_PALETTE } from './team-colors.mjs';
 import { MAX_KEYFRAMES } from './tactical-sequence.mjs';
+import { isValidAppearance } from './player-appearance.mjs';
 import {
   ARROW_KINDS, BALL_MARGIN, isOnBoard, isOnPitch, MIN_ARROW_LENGTH, normalizeTeamName, PLAYER_MARGIN,
 } from './tactics-board.mjs';
@@ -131,7 +132,9 @@ export function isValidTactic(data, reference) {
   if (!isRecord(data) || data.version !== TACTIC_FORMAT_VERSION || !isRecord(data.board)) {
     return false;
   }
-  const { formations, phases, players, ball, arrows, markings, identities } = data.board;
+  const {
+    formations, phases, players, ball, arrows, markings, identities, appearances,
+  } = data.board;
   const teamIds = Object.keys(reference.formations);
   const playerKeys = Object.keys(reference.players);
   if (!isRecord(formations) || !hasExactKeys(formations, teamIds)
@@ -150,6 +153,12 @@ export function isValidTactic(data, reference) {
   // Identités : absentes d'une tactique plus ancienne ; sinon un nom valide et distinct par équipe,
   // et des maillots de la palette qui se distinguent pour les daltoniens.
   if (identities !== undefined && !areIdentitiesValid(identities, teamIds)) {
+    return false;
+  }
+  // Apparences des joueurs : absentes d'une tactique plus ancienne ou sans personnalisation ;
+  // sinon des joueurs connus, chacun avec une des quatre coupes et une couleur « #rrggbb ».
+  if (appearances !== undefined && (!isRecord(appearances)
+    || !Object.entries(appearances).every(([key, appearance]) => playerKeys.includes(key) && isValidAppearance(appearance)))) {
     return false;
   }
   // Marquages : absents d'une tactique plus ancienne ; sinon des paires d'adversaires connus, un
