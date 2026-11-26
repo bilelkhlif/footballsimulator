@@ -19,6 +19,7 @@ import { chromium } from 'playwright-core';
 import { REPO_ROOT, startServer } from './serve.mjs';
 import { readShellVersion } from './shell-version.mjs';
 import { FORMATIONS } from '../src/formations.mjs';
+import { computeTeamTargets } from '../src/formation-transition.mjs';
 import { clickUi, tapUi, installAimTools, openWorkspace } from './workspace-test-helpers.mjs';
 import { runWorkspaceTests, verifyArWorkspaces } from './workspace-tests.mjs';
 import { runFinalUxReviewTests } from './final-ux-review-tests.mjs';
@@ -625,11 +626,11 @@ async function testPhaseToggle(browser, url) {
     await clickUi(page, '#formations-toggle');
     const label = await page.textContent('.phase-button[data-team="blue"][data-phase="possession"]');
     await clickUi(page, '.phase-button[data-team="blue"][data-phase="possession"]');
-    const after = await page.evaluate(async () => {
-      const { computeTeamTargets } = await import('./src/formation-transition.mjs');
+    // Places attendues, calculées ici avec le même module que l'application.
+    const expected = [...computeTeamTargets(FORMATIONS['4-3-3'], true, 'possession')];
+    const after = await page.evaluate((targets) => {
       const app = window.__footballSimulator;
-      const targets = computeTeamTargets(app.board.getFormation('blue'), true, 'possession');
-      const worst = Math.max(...[...targets].map(([number, { x, z }]) => {
+      const worst = Math.max(...targets.map(([number, { x, z }]) => {
         const p = app.board.getPlayerPosition('blue', number);
         return Math.hypot(p.x - x, p.z - z);
       }));
@@ -639,7 +640,7 @@ async function testPhaseToggle(browser, url) {
         chip: document.getElementById('formation-blue')?.textContent ?? '',
         pressed: document.querySelector('.phase-button[data-team="blue"][data-phase="possession"]').getAttribute('aria-pressed'),
       };
-    });
+    }, expected);
     await page.keyboard.press('Control+z');
     const undone = await page.evaluate(() => window.__footballSimulator.board.getPhase('blue'));
     const problems = [];

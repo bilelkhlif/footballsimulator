@@ -266,6 +266,10 @@ a.button { text-decoration: none; }
 .phase-row--red { --team-color: #ff968a; }
 .phase-button { min-width: 0; min-height: 44px; font-size: .8125rem; font-weight: 600; line-height: 1.2; padding: 6px 4px; border: 1px dashed var(--border); border-radius: var(--radius-sm); color: var(--ink); background: transparent; transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out); }
 .phase-button:hover { border-color: var(--team-color); }
+/* Analyse tactique : une ligne par mesure, une colonne par équipe. */
+.analysis-table { width: 100%; border-collapse: collapse; font-size: .875rem; font-variant-numeric: tabular-nums; }
+.analysis-table th, .analysis-table td { padding: 5px 6px; text-align: right; border-bottom: 1px solid var(--border); }
+.analysis-table th[scope="row"], .analysis-table thead th:first-child { text-align: left; font-weight: 500; }
 .phase-button[aria-pressed="true"] { font-weight: 700; border-style: solid; border-color: var(--team-color); background: var(--surface-pressed); }
 .positions { border-top: 1px solid var(--border); padding-top: 15px; }
 .positions summary { cursor: pointer; min-height: 44px; font-size: .875rem; font-weight: 600; padding: 10px 0; }

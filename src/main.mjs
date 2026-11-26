@@ -28,6 +28,7 @@ import { DEFAULT_FORMATIONS, TEAMS } from './config.mjs';
 import { TacticsBoard } from './tactics-board.mjs';
 import { FormationAnimator, TRANSITION_DURATION_MS } from './formation-transition.mjs';
 import { createFormationPanel } from './formation-panel.mjs';
+import { createAnalysisPanel } from './analysis-panel.mjs';
 import { ChangeFormationCommand, ChangePhaseCommand, CommandHistory } from './commands.mjs';
 import { MOVE_DURATION_MS, TacticalView } from './tactical-view.mjs';
 import { TacticalInteraction } from './tactical-interaction.mjs';
@@ -217,6 +218,9 @@ async function init(renderMode) {
       }
     },
   });
+
+  // Analyse tactique : largeur, profondeur, lignes et surface de chaque équipe, en mètres réels.
+  createAnalysisPanel({ root: document.getElementById('analysis-panel'), board, teams: Object.values(TEAMS) });
 
   // Interaction tactique (sprint 5) : un seul rayon, orienté par la souris, le doigt ou l'AR.
   const interaction = new TacticalInteraction({ board, history, pitchGroup, getHitboxes: () => tacticalView.hitboxes });

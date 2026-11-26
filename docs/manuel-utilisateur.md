@@ -86,6 +86,8 @@ Ouvrez **Équipes et formations**, ou touchez la pastille d'une équipe en haut 
 
 Sous les formations, trois boutons par équipe montrent la même équipe dans les trois phases du jeu : **Base** (placement du coup d'envoi), **En possession** et **Hors possession**. Chaque bouton indique la disposition obtenue : un 4-3-3 devient un 2-3-5 avec le ballon (latéraux rentrés à côté de la sentinelle, relayeurs dans les demi-espaces) et un 4-5-1 sans le ballon (ailiers redescendus). La pastille de l'équipe l'affiche, par exemple « 4-3-3 · 2-3-5 ». La bascule est annulable ; changer de formation garde la phase choisie.
 
+La carte **Analyse tactique**, dans le même espace, donne pour chaque équipe sa largeur, sa profondeur, la distance entre la défense et le milieu, puis entre le milieu et l'attaque, et la surface qu'elle occupe. Tout est en mètres réels, sur un terrain de 105 × 68 m, sans le gardien. Les valeurs suivent chaque déplacement, chaque formation et chaque bascule : comparez un 4-3-3 en possession (plus de 2 000 m²) et le même 4-3-3 sans le ballon (moins de 1 000 m²).
+
 ![Le panneau des formations sur le terrain posé : Bleus en 4-4-2, Rouges en 4-3-3](images/sprint4-ar-formations.jpg)
 
 ## 6. Déplacer un joueur ou le ballon

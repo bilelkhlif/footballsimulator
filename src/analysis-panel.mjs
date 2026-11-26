@@ -1,0 +1,90 @@
+/**
+ * Panneau « Analyse tactique » : les mesures de chaque équipe, en mètres réels (largeur,
+ * profondeur, distance entre les lignes, surface occupée), recalculées à chaque changement du
+ * tableau tactique. Observateur (patron Observer) : il lit le tableau et ne le modifie jamais.
+ *
+ * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
+ */
+import { measureTeam } from './tactical-metrics.mjs';
+
+/** Lignes du tableau : clé de la mesure, libellé, unité. */
+export const METRIC_ROWS = Object.freeze([
+  ['width', 'Largeur', 'm'],
+  ['depth', 'Profondeur', 'm'],
+  ['defenseToMidfield', 'Défense ↔ milieu', 'm'],
+  ['midfieldToAttack', 'Milieu ↔ attaque', 'm'],
+  ['area', 'Surface occupée', 'm²'],
+]);
+
+/**
+ * Texte d'une mesure : arrondie au mètre, avec son unité ; un tiret si elle n'existe pas.
+ * @param {number|null} value
+ * @param {string} unit
+ * @returns {string}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Interface HTML — panneau d'analyse tactique
+ */
+export function formatMetric(value, unit) {
+  return value === null || !Number.isFinite(value) ? '—' : `${Math.round(value).toLocaleString('fr-FR')} ${unit}`;
+}
+
+/**
+ * Construit le tableau des mesures et le relie au tableau tactique.
+ * @param {object} options
+ * @param {HTMLElement} options.root conteneur du panneau
+ * @param {import('./tactics-board.mjs').TacticsBoard} options.board
+ * @param {Array<{id: string, label: string}>} options.teams équipes (config.TEAMS)
+ * @returns {{render: () => void, dispose: () => void}}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-25
+ * @role Interface HTML — panneau d'analyse tactique
+ */
+export function createAnalysisPanel({ root, board, teams }) {
+  const table = document.createElement('table');
+  table.className = 'analysis-table';
+  const caption = document.createElement('caption');
+  caption.className = 'sr-only';
+  caption.textContent = 'Mesures tactiques de chaque équipe, en mètres réels';
+  const head = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  for (const text of ['Mesure', ...teams.map((team) => team.label)]) {
+    const cell = document.createElement('th');
+    cell.scope = 'col';
+    cell.textContent = text;
+    headRow.append(cell);
+  }
+  head.append(headRow);
+  const body = document.createElement('tbody');
+  for (const [key, label] of METRIC_ROWS) {
+    const row = document.createElement('tr');
+    row.dataset.metric = key;
+    const name = document.createElement('th');
+    name.scope = 'row';
+    name.textContent = label;
+    row.append(name);
+    for (const team of teams) {
+      const cell = document.createElement('td');
+      cell.dataset.team = team.id;
+      row.append(cell);
+    }
+    body.append(row);
+  }
+  table.append(caption, head, body);
+  root.append(table);
+
+  /** Recalcule et affiche les mesures des deux équipes. */
+  const render = () => {
+    const metrics = Object.fromEntries(teams.map((team) => [team.id, measureTeam(board, team.id)]));
+    for (const row of body.children) {
+      const [, , unit] = METRIC_ROWS.find(([key]) => key === row.dataset.metric);
+      for (const cell of row.querySelectorAll('td')) {
+        cell.textContent = formatMetric(metrics[cell.dataset.team][row.dataset.metric], unit);
+      }
+    }
+  };
+  const offChange = board.on('change', render);
+  const offPhase = board.on('phasechange', render);
+  render();
+  return { render, dispose: () => { offChange(); offPhase(); } };
+}

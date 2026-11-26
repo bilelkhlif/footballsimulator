@@ -434,6 +434,14 @@ Il modifie aussi :
 
 Deux outils de développement s'ajoutent dans `tests/` : `benchmark.mjs` (`npm run bench`), qui mesure les performances, et `shell-version.mjs` (`npm run shell-version`), qui calcule `SHELL_VERSION`.
 
+### Modèle football (version 0.4)
+
+- **`src/formations.mjs`** : huit formations, dont le 4-1-4-1, le 3-4-3, le 5-3-2 et le 4-4-2 en losange. Chaque place porte un poste normalisé (`POSTS`, `postOfRole`, `postOfNumber`) : GB, DD, DC, DG, PD, PG, MDC, MC, MD, MG, MOC, AD, AG, AT. Chaque formation décrit aussi ses dispositions en possession et hors possession (`phaseShapes`) : `computePositions(phase)` rend la place de chaque numéro dans la phase demandée.
+- **`src/tactics-board.mjs`** : la phase de jeu de chaque équipe (`getPhase`, `setPhase`), dans les instantanés ; un changement de formation garde la phase.
+- **`src/commands.mjs`** : `ChangePhaseCommand`, la bascule annulable entre base, possession et hors possession.
+- **`src/tactical-metrics.mjs`** : fonctions pures. Largeur, profondeur, distance entre les lignes et surface occupée (enveloppe convexe), en mètres réels. Les lignes se lisent sur le terrain, d'après le nom de la disposition en place (« 4-5-1 » : les 4 joueurs de champ les plus bas, les 5 suivants, le dernier).
+- **`src/analysis-panel.mjs`** : le tableau « Analyse tactique » de l'espace Équipes et formations, recalculé à chaque changement du tableau (observateur).
+
 ### Fichiers du dépôt
 
 - **`.editorconfig`** : règles communes à tous les éditeurs : UTF-8, fins de ligne LF, indentation de 2 espaces, ligne vide finale.
