@@ -36,6 +36,7 @@ export const SAVE_ERRORS = Object.freeze({
   DUPLICATE: 'duplicate',
   FULL: 'full',
   STORAGE: 'storage',
+  NOT_FOUND: 'not-found',
 });
 
 /**
@@ -141,7 +142,9 @@ function createTacticId() {
  *   list: () => Promise<{ok: boolean, tactics: Array<{id: string, name: string, savedAt: number}>}>,
  *   save: (name: string, tactic: object) => Promise<{ok: true, entry: {id: string, name: string, savedAt: number}}|{ok: false, reason: string, name?: string}>,
  *   get: (id: string) => Promise<{name: string, tactic: object}|null>,
+ *   rename: (id: string, name: string) => Promise<{ok: true, entry: {id: string, name: string, savedAt: number}}|{ok: false, reason: string, name?: string}>,
  * }}
+ * Depuis la phase 6, une tactique enregistrée peut être renommée (rename).
  * @responsable Iyed Rachdi
  * @date 2026-11-26
  * @role Persistance — tactiques enregistrées
@@ -159,6 +162,17 @@ export function createTacticLibrary(store, { now = () => Date.now(), createId = 
   const readEntries = async () => readLibraryEntries(await store.load(LIBRARY_KEY, { strict: true }));
   /** Résumé affichable d'une entrée, sans la tactique. */
   const summarize = ({ id, name, savedAt }) => ({ id, name, savedAt });
+  /** Écrit la bibliothèque complète ; rend faux si le stockage refuse l'écriture. */
+  const writeEntries = (entries) => store.save({ version: LIBRARY_FORMAT_VERSION, tactics: entries }, LIBRARY_KEY);
+  /** Lit les entrées pour les modifier ; rend null si le stockage est illisible (rien n'est écrit). */
+  const readForUpdate = async (action) => {
+    try {
+      return await readEntries();
+    } catch (error) {
+      console.warn(`Tactiques enregistrées illisibles : ${action} abandonné.`, error);
+      return null;
+    }
+  };
 
   return {
     list() {
@@ -193,8 +207,36 @@ export function createTacticLibrary(store, { now = () => Date.now(), createId = 
           return { ok: false, reason: SAVE_ERRORS.FULL };
         }
         const entry = { id: createId(), name: cleanName, savedAt: now(), tactic };
-        const saved = await store.save({ version: LIBRARY_FORMAT_VERSION, tactics: [...entries, entry] }, LIBRARY_KEY);
+        const saved = await writeEntries([...entries, entry]);
         return saved ? { ok: true, entry: summarize(entry) } : { ok: false, reason: SAVE_ERRORS.STORAGE };
+      });
+    },
+
+    // Renommer (phase 6) : même règle de nom qu'à l'enregistrement ; la tactique, son identifiant et
+    // sa date ne changent pas. Seule la casse d'un même nom peut changer sans conflit avec lui-même.
+    rename(id, name) {
+      return serial(async () => {
+        const cleanName = normalizeTacticName(name);
+        if (!cleanName) {
+          return { ok: false, reason: SAVE_ERRORS.EMPTY_NAME };
+        }
+        const entries = await readForUpdate('renommage');
+        if (!entries) {
+          return { ok: false, reason: SAVE_ERRORS.STORAGE };
+        }
+        const entry = entries.find((candidate) => candidate.id === id);
+        if (!entry) {
+          return { ok: false, reason: SAVE_ERRORS.NOT_FOUND };
+        }
+        if (entries.some((other) => other.id !== id && nameKey(other.name) === nameKey(cleanName))) {
+          return { ok: false, reason: SAVE_ERRORS.DUPLICATE, name: cleanName };
+        }
+        if (entry.name === cleanName) {
+          return { ok: true, entry: summarize(entry) };
+        }
+        const renamed = { ...entry, name: cleanName };
+        const saved = await writeEntries(entries.map((candidate) => (candidate.id === id ? renamed : candidate)));
+        return saved ? { ok: true, entry: summarize(renamed) } : { ok: false, reason: SAVE_ERRORS.STORAGE };
       });
     },
 

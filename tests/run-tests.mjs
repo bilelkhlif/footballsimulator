@@ -25,6 +25,7 @@ import { runWorkspaceTests, verifyArWorkspaces } from './workspace-tests.mjs';
 import { runFinalUxReviewTests } from './final-ux-review-tests.mjs';
 import { runSafeAreaReviewTests } from './safe-area-review-tests.mjs';
 import { runCoachingWorkflowTests } from './coaching-workflow-tests.mjs';
+import { runSavedTacticsTests } from './saved-tactics-tests.mjs';
 import { runServiceWorkerMediaTests } from './service-worker-media-tests.mjs';
 import { testMatchVisualizer } from './visualizer-tests.mjs';
 import { testVisualizerGpuReset, testVisualizerModes } from './visualizer-modes-tests.mjs';
@@ -2406,6 +2407,7 @@ async function main() {
     await testFormationButtons(browser, root.url);
     await testReducedMotion(browser, root.url);
     await testTacticAutosave(browser, root.url);
+    await runSavedTacticsTests(browser, root.url, record);
     await testPhaseToggle(browser, root.url);
     await testAnalysisAndOffside(browser, root.url);
     await testShotArrow(browser, root.url);

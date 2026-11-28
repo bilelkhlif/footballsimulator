@@ -7,6 +7,8 @@
  * fichier JSON : la tactique importée est vérifiée, enregistrée sous un nom libre (jamais à la
  * place d'une autre), puis ouverte.
  *
+ * Phase 6 : chaque tactique enregistrée peut être renommée, dans sa ligne de la liste.
+ *
  * Le panneau ne connaît ni IndexedDB ni le tableau tactique : il passe par la bibliothèque
  * (src/tactic-library.mjs) pour enregistrer et relire, par src/tactic-file.mjs pour écrire et
  * vérifier les fichiers, et par l'action `open` pour rétablir une tactique, qui crée une commande
@@ -43,6 +45,8 @@ export function describeSaveError({ reason, name }) {
       return `Une tactique s’appelle déjà « ${name} » : choisissez un autre nom.`;
     case SAVE_ERRORS.FULL:
       return `Limite de ${MAX_SAVED_TACTICS} tactiques enregistrées atteinte sur cet appareil.`;
+    case SAVE_ERRORS.NOT_FOUND:
+      return 'Cette tactique n’est plus enregistrée sur cet appareil.';
     default:
       return 'Enregistrement impossible : le stockage de cet appareil est indisponible.';
   }
@@ -201,9 +205,88 @@ export function createSavedTacticsPanel({
     exportButton.textContent = 'Exporter';
     exportButton.setAttribute('aria-label', `Exporter en JSON la tactique : ${entry.name}`);
     exportButton.addEventListener('click', () => exportEntry(entry));
-    actions.append(openButton, exportButton);
+    const renameButton = document.createElement('button');
+    renameButton.type = 'button';
+    renameButton.className = 'button button--secondary';
+    renameButton.dataset.renameTactic = entry.id;
+    renameButton.textContent = 'Renommer';
+    renameButton.setAttribute('aria-label', `Renommer la tactique : ${entry.name}`);
+    renameButton.addEventListener('click', () => startRename(item, entry));
+    actions.append(openButton, exportButton, renameButton);
     item.append(name, savedAt, actions);
     return item;
+  };
+
+  /** Met le focus sur un bouton d'une ligne après un rafraîchissement de la liste. */
+  const focusInList = (selector) => list.querySelector(selector)?.focus();
+
+  /**
+   * Renommer (phase 6) : la ligne devient un petit formulaire, prérempli avec le nom actuel.
+   * Entrée valide, Échap ou « Annuler » rend la ligne telle quelle. Un nom vide ou déjà pris est
+   * refusé sans fermer le formulaire.
+   */
+  const startRename = (item, entry) => {
+    const renameForm = document.createElement('form');
+    renameForm.className = 'saved-tactics__rename';
+    renameForm.noValidate = true;
+    const renameLabel = document.createElement('label');
+    renameLabel.textContent = 'Nouveau nom';
+    const renameInput = document.createElement('input');
+    renameInput.type = 'text';
+    renameInput.maxLength = MAX_TACTIC_NAME_LENGTH;
+    renameInput.autocomplete = 'off';
+    renameInput.value = entry.name;
+    renameInput.dataset.renameInput = entry.id;
+    renameLabel.append(renameInput);
+    const confirm = document.createElement('button');
+    confirm.type = 'submit';
+    confirm.className = 'button button--primary';
+    confirm.dataset.confirmRename = entry.id;
+    confirm.textContent = 'Valider';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'button button--secondary';
+    cancel.textContent = 'Annuler';
+    const buttons = document.createElement('div');
+    buttons.className = 'saved-tactics__actions';
+    buttons.append(confirm, cancel);
+    renameForm.append(renameLabel, buttons);
+    const previous = [...item.children];
+    item.replaceChildren(renameForm);
+    renameInput.focus();
+    renameInput.select();
+
+    /** Rend la ligne d'origine, focus sur son bouton « Renommer ». */
+    const close = () => {
+      item.replaceChildren(...previous);
+      item.querySelector('[data-rename-tactic]')?.focus();
+    };
+    cancel.addEventListener('click', close);
+    renameInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+      }
+    });
+    renameForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      confirm.disabled = true;
+      try {
+        const result = await library.rename(entry.id, renameInput.value);
+        if (!result.ok) {
+          tell('invalid', describeSaveError(result));
+          renameInput.focus();
+          return;
+        }
+        await refresh();
+        focusInList(`[data-rename-tactic="${CSS.escape(entry.id)}"]`);
+        tell('success', result.entry.name === entry.name
+          ? `La tactique garde son nom « ${entry.name} ».`
+          : `Tactique « ${entry.name} » renommée « ${result.entry.name} ».`);
+      } finally {
+        confirm.disabled = false;
+      }
+    });
   };
 
   /** Relit la bibliothèque et redessine la liste. */

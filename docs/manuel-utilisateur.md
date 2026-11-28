@@ -19,8 +19,9 @@ Football Simulator pose un mini-terrain de football en 3D sur votre table, à tr
 9. [Animer une action](#9-animer-une-action)
 10. [Quitter l'AR](#10-quitter-lar)
 11. [Sans AR : la vue 3D](#11-sans-ar--la-vue-3d)
-12. [Mesurer la fluidité](#12-mesurer-la-fluidité)
-13. [En cas de problème](#13-en-cas-de-problème)
+12. [Garder vos tactiques](#12-garder-vos-tactiques)
+13. [Mesurer la fluidité](#13-mesurer-la-fluidité)
+14. [En cas de problème](#14-en-cas-de-problème)
 
 ---
 
@@ -214,7 +215,16 @@ Au clavier :
   </tr>
 </table>
 
-## 12. Mesurer la fluidité
+## 12. Garder vos tactiques
+
+Ouvrez **Accueil** : la carte **Tactiques enregistrées** garde vos tactiques sur l'appareil, même après la fermeture de l'application. Chaque tactique garde les formations, les places, les flèches, les marquages, les noms et maillots des équipes, l'apparence des joueurs et la séquence.
+
+- **Enregistrer** : donnez un nom à la tactique en cours, puis touchez « Enregistrer ». Deux tactiques ne peuvent pas porter le même nom.
+- **Ouvrir** remplace la tactique en cours ; « Annuler » rend la précédente.
+- **Renommer** transforme la ligne en champ, prérempli avec le nom actuel. Entrée ou « Valider » garde le nouveau nom ; Échap ou « Annuler » rend la ligne telle quelle. Un nom vide ou déjà pris est refusé, avec un message.
+- **Exporter** télécharge la tactique en fichier JSON ; **Importer un JSON** l'ouvre sur un autre appareil, sous un nom libre.
+
+## 13. Mesurer la fluidité
 
 Ouvrez **Plus d'outils**, puis **Afficher les diagnostics**, sans recharger le terrain.
 Le paramètre `?diagnostics` reste accepté. Un panneau affiche les images par seconde, la durée
@@ -226,7 +236,7 @@ au moins 30 images par seconde ; une mesure sur PC ne valide pas cet objectif su
 
 *Capture prise sur un ordinateur : les valeurs d'un téléphone seront plus basses.*
 
-## 13. En cas de problème
+## 14. En cas de problème
 
 | Message ou symptôme | Que faire |
 | --- | --- |
