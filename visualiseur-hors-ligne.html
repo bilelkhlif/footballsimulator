@@ -1,0 +1,72 @@
+<!doctype html>
+<!--
+  Football Simulator : page hors-ligne de l'analyse de match (phase 6). Le Service Worker (sw.mjs) la
+  sert à la place de visualizer.html quand celui-ci n'a jamais été ouvert en ligne et que le réseau
+  manque : l'entraîneur comprend ce qui se passe, au lieu de retomber sur le tableau tactique.
+  Page autonome : styles et script en ligne, aucun autre fichier à charger.
+  Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
+-->
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Analyse de match hors-ligne · Football Simulator</title>
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0e1311">
+  <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
+  <!-- Mise en page : une carte centrée, lisible de 250 px au bureau, thème clair ou sombre du système -->
+  <style>
+    :root { --bg: #0e1311; --card: #1a221e; --ink: #f2f6f3; --muted: #afbcb4; --accent: #b7efbe; --accent-ink: #10221a; --line: rgba(255, 255, 255, .14); }
+    @media (prefers-color-scheme: light) { :root { --bg: #eef3f0; --card: #ffffff; --ink: #13201a; --muted: #4a5951; --accent: #1d7a45; --accent-ink: #ffffff; --line: rgba(16, 36, 26, .16); } }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: max(20px, env(safe-area-inset-top)) 16px; background: var(--bg); color: var(--ink); font: 1rem/1.55 system-ui, "Segoe UI", Roboto, Arial, sans-serif; }
+    main { width: min(520px, 100%); padding: 24px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); }
+    h1 { margin: 0 0 10px; font-size: 1.375rem; line-height: 1.3; }
+    p { margin: 0 0 12px; color: var(--muted); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 14px; color: var(--ink); background: transparent; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; }
+    .button--primary { border-color: transparent; background: var(--accent); color: var(--accent-ink); }
+    .button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    #status { font-size: .875rem; }
+  </style>
+</head>
+<body>
+  <!-- Contenu : ce qui manque, ce qui marche toujours, et les deux actions possibles -->
+  <main aria-labelledby="title">
+    <p class="eyebrow">FOOTBALL SIMULATOR · ANALYSE DE MATCH</p>
+    <h1 id="title">L’analyse de match a besoin du réseau</h1>
+    <p>Cet appareil est hors-ligne, et l’analyse de match n’a pas encore été ouverte avec le réseau : ses vidéos et ses données ne sont pas sur l’appareil.</p>
+    <p>Le tableau tactique, lui, fonctionne hors-ligne, avec vos tactiques enregistrées.</p>
+    <div class="actions">
+      <a class="button button--primary" href="./">Ouvrir le tableau tactique</a>
+      <button class="button" type="button" id="retry">Réessayer</button>
+    </div>
+    <p id="status" role="status" aria-live="polite"></p>
+  </main>
+  <!-- Réessayer : rouvre l'analyse de match, seule dès que le réseau revient. Un événement « online »
+       peut arriver alors que le réseau manque encore (connexion mobile instable) : le serveur est
+       d'abord interrogé (requête HEAD, que le Service Worker laisse au réseau). -->
+  <script>
+    (function () {
+      var target = 'visualizer.html' + window.location.search;
+      var status = document.getElementById('status');
+      var checking = false;
+      function reopen(manual) {
+        if (checking) return;
+        checking = true;
+        if (manual) status.textContent = 'Vérification du réseau…';
+        fetch('visualizer.html', { method: 'HEAD', cache: 'no-store' }).then(function (response) {
+          if (!response.ok) throw new Error('réponse ' + response.status);
+          status.textContent = 'Réseau retrouvé : ouverture de l’analyse de match…';
+          window.location.replace(target);
+        }).catch(function () {
+          checking = false;
+          if (manual) status.textContent = 'Toujours hors-ligne : l’analyse s’ouvrira dès le retour du réseau.';
+        });
+      }
+      document.getElementById('retry').addEventListener('click', function () { reopen(true); });
+      window.addEventListener('online', function () { reopen(false); });
+    }());
+  </script>
+</body>
+</html>

@@ -81,6 +81,10 @@ Sans ce réglage, l'application affiche le badge « AR : réglage WebGPU à acti
 
 Tournez autour de la table : vous voyez la tactique sous tous les angles, et le terrain ne bouge pas. Pour le poser ailleurs, touchez **« Déplacer le terrain »**, puis recommencez à l'étape 2.
 
+**Taille du terrain.** Dans **Réalité augmentée**, la carte **Taille du terrain** propose **Table · 60 cm**, **Grande table · 1 m** et **Sol · 2 m** (pour travailler debout autour, avec l'équipe). Choisissez-la avant d'entrer en AR, ou pendant la session, avant ou après la pose : le terrain posé grandit ou rapetisse sur place, sans quitter la surface. La tactique ne change pas, et le choix est gardé pour la fois suivante. Pour le sol, visez le sol à 1,5 m environ.
+
+**Faire pivoter le terrain.** Une fois le terrain posé, posez deux doigts sur l'écran et tournez-les l'un autour de l'autre : le terrain pivote sur place, du même angle, comme une feuille sur la table. Les boutons **⟲** et **⟳**, à côté de « Déplacer le terrain », le font pivoter de 15°. Ce geste ne sélectionne ni ne déplace aucun joueur. « Déplacer le terrain » puis une nouvelle pose le remettent face à vous.
+
 ## 5. Choisir les formations
 
 Ouvrez **Équipes et formations**, ou touchez la pastille d'une équipe en haut de l'écran. La carte **Équipes**, en haut de l'espace, donne à chaque équipe un nom (24 caractères au plus, différent de l'adversaire) et un maillot. Les couleurs proposées sont vérifiées en vision normale et pour les trois daltonismes : un maillot trop proche de l'adversaire, ou qui se fondrait dans le gazon, est refusé, et l'aide dit pour quelle vision. Le gardien porte automatiquement une couleur distincte des deux équipes et de l'autre gardien. Le nom choisi remplace « Bleus » ou « Rouges » dans tous les messages ; le changement est annulable.
@@ -181,6 +185,7 @@ Bon à savoir :
 - Tracez d'abord les passes et les courses : les flèches montrent le plan, et la séquence joue les déplacements.
 - Pendant la lecture, vous pouvez tourner autour de la table : l'action reste sur le terrain.
 - Déplacer un joueur pendant la lecture l'arrête, et chacun rejoint la place enregistrée.
+- Si vous changez d'onglet ou mettez l'application en arrière-plan, le terrain cesse d'être dessiné (économie de batterie) ; à votre retour, tout est à sa place et la lecture reprend où elle en était.
 - La séquence et ses notes sont gardées avec la tactique : sauvegarde automatique, tactiques enregistrées, fichier JSON et lien de partage.
 
 ## 10. Quitter l'AR
@@ -259,4 +264,5 @@ au moins 30 images par seconde ; une mesure sur PC ne valide pas cet objectif su
 | Badge « AR indisponible : vue 3D » | Ce navigateur ne propose pas l'AR (ordinateur, iPhone) : la vue 3D reste disponible |
 | Le cercle doré n'apparaît pas | Ajoutez de la lumière, visez une surface texturée, déplacez lentement le téléphone d'un côté à l'autre |
 | Le terrain s'est décalé | Touchez « Déplacer le terrain », puis posez-le à nouveau |
+| « L'analyse de match a besoin du réseau » | L'analyse de match n'a jamais été ouverte avec le réseau sur cet appareil : « Ouvrir le tableau tactique » reste disponible hors-ligne ; l'analyse s'ouvre seule au retour du réseau, ou par « Réessayer » |
 | L'application paraît ancienne | Ouvrez-la avec le réseau, puis touchez « Recharger » quand l'avis « Nouvelle version installée. » apparaît |

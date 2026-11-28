@@ -146,3 +146,55 @@ test('appels en double : une deuxième entrée ne perd pas le fond, une sortie s
   assert.equal(scene.background, background);
   assert.equal(exitCount(), 1);
 });
+
+test('taille en AR : échelle appliquée avant et après la pose, plateau relevé d\'autant, vue 3D rendue à l\'échelle 1', async () => {
+  const { SURFACE_OFFSET } = await import('../../src/ar-placement.mjs');
+  const { pitchGroup, arView } = createScene();
+  arView.setScale(2 / 0.6);
+  assert.equal(pitchGroup.scale.x, 1, 'hors AR, la vue 3D garde l\'échelle 1');
+  arView.enter();
+  assert.ok(Math.abs(pitchGroup.scale.x - 2 / 0.6) < 1e-12, 'choisie avant l\'entrée, appliquée à l\'entrée');
+  const placement = computeSurfacePlacement({ x: 0, y: 0, z: -1.5 }, VIEWER.position);
+  arView.placeAt(placement);
+  assert.ok(Math.abs(pitchGroup.position.y - (placement.position.y + (2 / 0.6 - 1) * SURFACE_OFFSET)) < 1e-12, 'le plateau agrandi repose sur le sol');
+  arView.setScale(1);
+  assert.equal(pitchGroup.scale.x, 1);
+  assert.ok(Math.abs(pitchGroup.position.y - placement.position.y) < 1e-12, 'après la pose, retour sur la table');
+  arView.followAnchor({ position: { x: 0.1, y: 0.7, z: -0.8 }, orientation: { x: 0, y: 0, z: 0, w: 1 } });
+  arView.setScale(1 / 0.6);
+  assert.ok(Math.abs(pitchGroup.position.y - (0.7 + (1 / 0.6 - 1) * SURFACE_OFFSET)) < 1e-12, 'l\'ancre suivie garde le relèvement');
+  arView.exit();
+  assert.equal(pitchGroup.scale.x, 1);
+  assert.equal(arView.scale, 1 / 0.6, 'le choix est gardé pour la session suivante');
+  assert.throws(() => arView.setScale(0), RangeError);
+});
+
+test('rotation du terrain posé : ajoutée à la pose et à l\'ancre, sans déplacer le terrain ; nouvelle pose face à l\'utilisateur', () => {
+  const { pitchGroup, arView } = createScene();
+  arView.enter();
+  assert.equal(arView.rotateBy(0.3), false, 'pas encore posé : rien ne tourne');
+  const placement = computeSurfacePlacement({ x: 0, y: 0.72, z: -0.9 }, VIEWER.position);
+  arView.placeAt(placement);
+  const before = pitchGroup.position.clone();
+  assert.equal(arView.rotateBy(Math.PI / 12), true);
+  const euler = new THREE.Euler().setFromQuaternion(pitchGroup.quaternion, 'YXZ');
+  assert.ok(Math.abs(euler.y - (placement.rotationY + Math.PI / 12)) < 1e-9);
+  assert.ok(Math.abs(euler.x) < 1e-12 && Math.abs(euler.z) < 1e-12, 'le terrain reste à plat');
+  assert.ok(pitchGroup.position.equals(before), 'il tourne sur place');
+  // L'ancre recale le terrain : la rotation ajoutée est gardée.
+  const anchorYaw = 0.4;
+  arView.followAnchor({ position: { x: 0.2, y: 0.72, z: -1 }, orientation: { x: 0, y: Math.sin(anchorYaw / 2), z: 0, w: Math.cos(anchorYaw / 2) } });
+  const anchored = new THREE.Euler().setFromQuaternion(pitchGroup.quaternion, 'YXZ');
+  assert.ok(Math.abs(anchored.y - (anchorYaw + Math.PI / 12)) < 1e-9);
+  // Ancre penchée : la rotation se fait autour de l'axe du terrain, sans le décoller de son plan.
+  const tilt = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.2, 0, 0));
+  arView.followAnchor({ position: { x: 0, y: 0.7, z: -1 }, orientation: { x: tilt.x, y: tilt.y, z: tilt.z, w: tilt.w } });
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(pitchGroup.quaternion);
+  const anchorUp = new THREE.Vector3(0, 1, 0).applyQuaternion(tilt);
+  assert.ok(up.distanceTo(anchorUp) < 1e-9, 'la normale du terrain reste celle de l\'ancre');
+  arView.liftPitch();
+  arView.placeAt(placement);
+  assert.equal(arView.yaw, 0, 'nouvelle pose : face à l\'utilisateur');
+  arView.exit();
+  assert.equal(pitchGroup.quaternion.w, 1);
+});

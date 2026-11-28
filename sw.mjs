@@ -31,7 +31,7 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 /** Empreinte du contenu de la coquille, écrite par « npm run shell-version » (tests/shell-version.mjs). */
-const SHELL_VERSION = '4f9acdb2260f86d6';
+const SHELL_VERSION = 'af317fb3b1567c60';
 const CACHE_PREFIX = 'football-simulator-';
 const CACHE_NAME = `${CACHE_PREFIX}${SHELL_VERSION}`;
 
@@ -39,6 +39,7 @@ const CACHE_NAME = `${CACHE_PREFIX}${SHELL_VERSION}`;
 const APP_SHELL = [
   './',
   './index.html',
+  './visualiseur-hors-ligne.html',
   './manifest.json',
   './src/styles.css',
   './src/main.mjs',
@@ -53,6 +54,7 @@ const APP_SHELL = [
   './src/player-appearance.mjs',
   './src/player-appearance-view.mjs',
   './src/player-customization-panel.mjs',
+  './src/selected-player-actions.mjs',
   './src/team.mjs',
   './src/ball.mjs',
   './src/xr-support.mjs',
@@ -62,7 +64,10 @@ const APP_SHELL = [
   './src/xr-session.mjs',
   './src/ar-placement.mjs',
   './src/ar-view.mjs',
+  './src/ar-size.mjs',
+  './src/ar-gestures.mjs',
   './src/render-loop.mjs',
+  './src/render-suspension.mjs',
   './src/point-of-view.mjs',
   './src/webgpu.mjs',
   './src/webgl-test-mode.mjs',
@@ -125,6 +130,25 @@ const APP_SHELL = [
   './assets/icons/icon-maskable-512.png',
   './assets/icons/apple-touch-icon.png',
 ];
+
+/**
+ * Page de l'analyse de match, et sa page hors-ligne (phase 6) : servie quand la première est
+ * demandée hors-ligne sans avoir jamais été ouverte en ligne, au lieu du tableau tactique.
+ */
+const VISUALIZER_PATH = new URL('./visualizer.html', self.location).pathname;
+const VISUALIZER_OFFLINE_PAGE = './visualiseur-hors-ligne.html';
+
+/**
+ * Vrai pour une navigation vers la page de l'analyse de match (paramètres ignorés).
+ * @param {Request} request
+ * @returns {boolean}
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role PWA — Service Worker : page hors-ligne de l'analyse de match
+ */
+function isVisualizerNavigation(request) {
+  return request.mode === 'navigate' && new URL(request.url).pathname === VISUALIZER_PATH;
+}
 
 /** Chemins de la coquille, résolus depuis l'emplacement de ce fichier (sous-chemin compris). */
 const SHELL_PATHS = new Set(APP_SHELL.map((file) => new URL(file, self.location).pathname));
@@ -233,7 +257,9 @@ async function fetchAndCache(request) {
 
 /**
  * Cherche la copie d'un fichier dans le cache. Pour une navigation, les paramètres de l'adresse
- * (« ?iwer », « ?debug ») sont ignorés, et la page d'accueil sert de repli.
+ * (« ?iwer », « ?debug ») sont ignorés, et la page d'accueil sert de repli. Depuis la phase 6,
+ * l'analyse de match jamais visitée n'a pas de copie : elle n'a pas ce repli (networkFirst lui
+ * donne sa propre page hors-ligne, et seulement si le réseau échoue).
  * @param {Request} request
  * @returns {Promise<Response|undefined>}
  * @responsable Bilel Khlif
@@ -245,6 +271,9 @@ async function findInCache(request) {
   const cached = await caches.match(request, { ignoreSearch: isNavigation });
   if (cached || !isNavigation) {
     return cached;
+  }
+  if (isVisualizerNavigation(request)) {
+    return undefined;
   }
   return caches.match('./index.html');
 }
@@ -282,7 +311,12 @@ function withTimeout(promise, ms) {
 async function networkFirst(request, network) {
   const cached = await findInCache(request).catch(() => undefined);
   if (!cached) {
-    return network;
+    // Analyse de match jamais ouverte (phase 6) : le réseau, attendu sans limite comme à une
+    // première visite ; sa page hors-ligne seulement s'il échoue, jamais par la fenêtre « réseau
+    // lent », pour qu'au retour du réseau l'analyse s'ouvre aussitôt.
+    return isVisualizerNavigation(request)
+      ? network.catch(async () => (await caches.match(VISUALIZER_OFFLINE_PAGE)) ?? Response.error())
+      : network;
   }
   if (Date.now() < slowNetworkUntil) {
     return cached;
