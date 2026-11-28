@@ -16,7 +16,8 @@
  * barre d'outils à icônes, aide au premier lancement, bouton « Abandonner », raccourcis clavier,
  * visée au doigt, confirmation de la réinitialisation ; modules en .mjs.
  * Phase 6 : une tactique reçue par un lien de partage (« #tactique=… ») s'ouvre au lancement ;
- * calques de lecture du terrain (tiers, couloirs, demi-espaces, zone 14) ; zones surlignées.
+ * calques de lecture du terrain (tiers, couloirs, demi-espaces, zone 14) ; zones surlignées ; mode
+ * présentation « vestiaire ».
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -37,6 +38,7 @@ import { MarkingLayer } from './marking-layer.mjs';
 import { PitchZonesLayer } from './pitch-zones-layer.mjs';
 import { ZoneLayer } from './zone-layer.mjs';
 import { createZonePanel } from './zone-panel.mjs';
+import { PresentationMode } from './presentation-mode.mjs';
 import { followTeamKits } from './team-kits-view.mjs';
 import { createTeamPanel } from './team-panel.mjs';
 import { buildScenarioState, loadScenarioLibrary } from './scenarios.mjs';
@@ -420,6 +422,7 @@ async function init(renderMode) {
   });
   // Une session AR ferme le point de vue : la vue appartient alors au téléphone.
   renderer.xr.addEventListener?.('sessionstart', () => {
+    presentation.exit();
     pointOfView.exit();
     customization.cancel();
     refreshPointOfViewButton();
@@ -428,6 +431,44 @@ async function init(renderMode) {
   renderer.xr.addEventListener?.('sessionend', () => {
     refreshPointOfViewButton();
     refreshCustomizeButton();
+  });
+
+  // Mode présentation « vestiaire » (phase 6) : interface masquée, numéros agrandis, plein écran ;
+  // la tactique ne peut pas être modifiée par mégarde. Échap ou le bouton de sortie le quittent.
+  const presentation = new PresentationMode({
+    root: document.body,
+    teamGroups,
+    interaction,
+    fullscreen: {
+      request: () => document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }),
+      exit: () => document.exitFullscreen?.(),
+      isActive: () => Boolean(document.fullscreenElement),
+    },
+  });
+  // Ouverte depuis l'espace Plus d'outils : les commandes de vue gardent leur largeur.
+  const presentationOpen = document.getElementById('presentation-open');
+  const presentationExit = document.getElementById('presentation-exit');
+  /** Ouvre la présentation, en refermant le panneau, le point de vue et le geste en cours. */
+  const openPresentation = () => {
+    pointOfView.exit();
+    customization.cancel();
+    cancelDraft();
+    navigation.close();
+    presentation.enter();
+  };
+  presentationOpen.addEventListener('click', openPresentation);
+  presentationExit.addEventListener('click', () => presentation.exit());
+  document.addEventListener('fullscreenchange', () => presentation.onFullscreenChange());
+  presentation.on('change', ({ active }) => {
+    presentationOpen.setAttribute('aria-pressed', String(active));
+    presentationExit.hidden = !active;
+    if (active) {
+      presentationExit.focus();
+    } else {
+      // Le panneau a été refermé à l'entrée : le focus revient à l'espace Plus d'outils, d'où elle s'ouvre.
+      document.getElementById('more-toggle')?.focus();
+      hint.flash('Fin de la présentation : la tactique est inchangée.', 'info');
+    }
   });
 
   // Aide au premier lancement, rouverte par « ? ».
@@ -443,15 +484,17 @@ async function init(renderMode) {
   attachKeyboardShortcuts({
     target: window,
     actions: {
+      // Pendant la présentation, la tactique ne change pas : outils, annuler et rétablir attendent.
       mode: (mode) => {
+        if (presentation.active) return;
         toolbar.disarmReset();
         interaction.setMode(mode);
       },
-      undo: toolbar.undo,
-      redo: toolbar.redo,
+      undo: () => !presentation.active && toolbar.undo(),
+      redo: () => !presentation.active && toolbar.redo(),
       // Échap : point de vue (le curseur verrouillé est rendu par le navigateur au premier Échap),
       // personnalisation (annulée), confirmation, geste, guide de prise en main, puis panneau de l'espace.
-      cancel: () => pointOfView.exit() || customization.cancel() || toolbar.disarmReset() || cancelDraft() || closeOnboarding(onboarding) || navigation.close(),
+      cancel: () => presentation.exit() || pointOfView.exit() || customization.cancel() || toolbar.disarmReset() || cancelDraft() || closeOnboarding(onboarding) || navigation.close(),
     },
   });
 
@@ -477,6 +520,13 @@ async function init(renderMode) {
     onFeedback: ({ kind, message }) => hint.flash(message, kind),
     // Légende de la lecture (phase 6) : note de l'entraîneur de l'image clé la plus proche.
     caption: document.getElementById('sequence-note'),
+  });
+  // En présentation, Espace lance ou met en pause la séquence, devant l'équipe.
+  window.addEventListener('keydown', (event) => {
+    if (!presentation.active || event.key !== ' ' || event.repeat || event.target?.closest?.('input, textarea, select, button')) return;
+    event.preventDefault();
+    if (sequencePlayer.state === 'playing') sequencePlayer.pause();
+    else if (!sequencePlayer.play()) hint.flash('Enregistrez au moins deux images clés pour jouer une action.', 'info');
   });
 
   // Sauvegarde automatique : la tactique du dernier lancement est rétablie, une fois la scène et
@@ -616,7 +666,7 @@ async function init(renderMode) {
   return {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
     sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer,
-    pointOfView, sharedLink, pitchZones, zoneLayer,
+    pointOfView, sharedLink, pitchZones, zoneLayer, presentation,
     get diagnostics() { return diagnostics; },
   };
 }
@@ -999,7 +1049,7 @@ async function start() {
   }
   const {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer, sharedLink, pitchZones, zoneLayer,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer, sharedLink, pitchZones, zoneLayer, presentation,
   } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
   const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding, workspaces, navigation });
@@ -1025,6 +1075,7 @@ async function start() {
     sharedLink,
     pitchZones,
     zoneLayer,
+    presentation,
     xrDevice: emulator?.xrDevice ?? null,
     get placement() {
       return arState.placement;

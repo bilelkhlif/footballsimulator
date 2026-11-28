@@ -51,8 +51,12 @@ export function applyFramingOffset(camera, width, height) {
   const container = document.getElementById('scene-container');
   if (topbar && footer && container && width > 0 && height > 0) {
     const bounds = container.getBoundingClientRect();
-    const topPx = Math.max(0, topbar.getBoundingClientRect().bottom - bounds.top + 16);
-    const bottomPx = Math.max(topPx + 40, Math.min(height, footer.getBoundingClientRect().top - bounds.top - 16));
+    // Une barre masquée (mode présentation, phase 6) ne réserve aucune place : le terrain prend
+    // toute la hauteur, à 16 px des bords.
+    const shown = (element) => element.getClientRects().length > 0;
+    const topPx = shown(topbar) ? Math.max(0, topbar.getBoundingClientRect().bottom - bounds.top + 16) : 16;
+    const footerTop = shown(footer) ? footer.getBoundingClientRect().top - bounds.top : height;
+    const bottomPx = Math.max(topPx + 40, Math.min(height, footerTop - 16));
     camera.userData.framingWindow = {
       x: 0.92, top: 1 - (topPx * 2) / height, bottom: 1 - (bottomPx * 2) / height,
     };

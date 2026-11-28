@@ -1,7 +1,7 @@
 /**
  * Tests de bout en bout de la phase 6 B, « le regard de l'entraîneur », dans Chrome avec WebGPU :
  * calques de lecture du terrain (tiers, cinq couloirs, demi-espaces, zone 14), notes des images clés,
- * zones surlignées, situation du coup franc contre un mur et une défense en zone.
+ * zones surlignées, situation du coup franc contre un mur et une défense en zone, mode présentation.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -245,6 +245,76 @@ async function testFreeKickScenario(browser, url, record) {
 }
 
 /**
+ * Mode présentation : le bouton de l'espace Plus d'outils masque l'interface et agrandit les numéros ;
+ * un clic sur le terrain ne déplace rien ; Espace joue la séquence ; Échap rend l'interface,
+ * et la tactique inchangée.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @param {(name: string, status: string, detail?: string) => void} record
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Tests de bout en bout — mode présentation
+ */
+async function testPresentationMode(browser, url, record) {
+  const name = 'Mode présentation : interface masquée, numéros agrandis, tactique protégée, Espace joue, Échap sort';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    await context.addInitScript(installAimTools);
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    await page.evaluate(() => {
+      const { board, sequence } = window.__footballSimulator;
+      sequence.add({ players: board.snapshot().players, ball: board.getBallPosition() });
+      board.setPlayerPosition('blue', 9, { x: 0.15, z: 0 });
+      sequence.add({ players: board.snapshot().players, ball: board.getBallPosition() });
+    });
+    const before = await page.evaluate(() => JSON.stringify(window.__footballSimulator.board.snapshot()));
+    const problems = [];
+    await clickUi(page, '#presentation-open');
+    const shown = await page.evaluate(() => {
+      const visible = (selector) => {
+        const element = document.querySelector(selector);
+        return Boolean(element) && element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden';
+      };
+      const label = window.__footballSimulator.pitchGroup.getObjectByName('team-blue').children[0].children.find((child) => child.isSprite);
+      return {
+        state: document.body.dataset.presentation,
+        nav: visible('#workspace-nav'), topbar: visible('.topbar'), bottombar: visible('.bottombar'),
+        exit: visible('#presentation-exit'), focus: document.activeElement?.id, labelScale: label.scale.x,
+      };
+    });
+    if (shown.state !== 'on' || shown.nav || shown.topbar || shown.bottombar) problems.push(`interface encore visible : ${JSON.stringify(shown)}`);
+    if (!shown.exit || shown.focus !== 'presentation-exit') problems.push('bouton de sortie absent ou sans focus');
+    if (!(shown.labelScale > 0.02)) problems.push(`numéros non agrandis (${shown.labelScale})`);
+    const target = await page.evaluate(() => window.__aim.player('red'));
+    const spot = await page.evaluate(() => window.__aim.spot([[0.05, 0.1], [0.02, 0.12]]));
+    if (target && spot) {
+      await page.mouse.click(target.x, target.y);
+      await page.mouse.click(spot.sx, spot.sy);
+    }
+    await page.evaluate(() => document.activeElement?.blur());
+    await page.keyboard.press('Space');
+    const playing = await page.evaluate(() => window.__footballSimulator.sequencePlayer.state);
+    if (playing !== 'playing') problems.push(`Espace ne lance pas la séquence (${playing})`);
+    await page.keyboard.press('Escape');
+    const after = await page.evaluate(() => ({
+      state: document.body.dataset.presentation ?? null,
+      nav: document.querySelector('#workspace-nav').getClientRects().length > 0,
+      focus: document.activeElement?.id,
+      snapshot: JSON.stringify(window.__footballSimulator.board.snapshot()),
+    }));
+    if (after.state !== null || !after.nav) problems.push('Échap ne rend pas l\'interface');
+    if (after.focus === 'presentation-exit') problems.push('le focus reste sur un bouton masqué');
+    if (after.snapshot !== before) problems.push('la tactique a changé pendant la présentation');
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || `numéros ×${(shown.labelScale / 0.014).toFixed(1)}, clics sans effet, sortie par Échap`);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Parcours du regard de l'entraîneur.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
@@ -259,4 +329,5 @@ export async function runCoachViewTests(browser, url, record) {
   await testKeyframeNotes(browser, url, record);
   await testHighlightedZone(browser, url, record);
   await testFreeKickScenario(browser, url, record);
+  await testPresentationMode(browser, url, record);
 }

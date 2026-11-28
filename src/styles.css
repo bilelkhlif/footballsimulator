@@ -333,6 +333,13 @@ a.button { text-decoration: none; }
 .zone-list__item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--raised); font-size: .8125rem; overflow-wrap: anywhere; }
 .summary-card .zone-list .button { margin-top: 0; }
 .tool--zone[aria-pressed="true"] .icon { color: var(--gold); }
+/* Mode présentation (phase 6) : seul le terrain reste, avec la légende de la lecture et une sortie discrète. */
+.presentation-exit[hidden] { display: none !important; }
+body[data-presentation="on"] #overlay > :not(.presentation-exit):not(#sequence-note) { display: none !important; }
+body[data-presentation="on"] .presentation-exit { display: flex; position: absolute; z-index: 30; top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); opacity: .55; transition: opacity var(--dur-fast) var(--ease-out); }
+body[data-presentation="on"] .presentation-exit:hover, body[data-presentation="on"] .presentation-exit:focus-visible { opacity: 1; }
+body[data-presentation="on"] .sequence-note { left: 28px; right: 28px; bottom: max(28px, env(safe-area-inset-bottom)); max-width: min(900px, calc(100% - 56px)); font-size: 1.25rem; padding: 14px 22px; }
+body[data-presentation="on"] #scene-container { inset: 0; }
 .pitch-layers h4 { margin: 0 0 6px; font-size: .875rem; }
 .pitch-layers__buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .summary-card .pitch-layers__buttons .button { margin-top: 0; min-width: 0; padding-inline: 8px; }

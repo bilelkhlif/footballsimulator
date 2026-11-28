@@ -121,7 +121,7 @@ Le diagramme UML de déploiement complet est dans [uml.md](uml.md).
 | Actions | `commands.mjs` | Toute modification de l'état, annulable |
 | Interaction | `pointer-input.mjs`, `xr-input.mjs`, `raycasting.mjs`, `tactical-interaction.mjs`, `keyboard-shortcuts.mjs` | Un geste devient un rayon, puis une commande |
 | Vue | `tactical-view.mjs`, `formation-transition.mjs`, `sequence-player.mjs` | La scène suit l'état |
-| Interface | `workspace-controller.mjs`, `workspace-navigation.mjs`, `formation-panel.mjs`, `tactical-toolbar.mjs`, `sequence-panel.mjs`, `onboarding.mjs`, `diagnostics.mjs` | Rail, sept espaces, panneaux, aide |
+| Interface | `workspace-controller.mjs`, `workspace-navigation.mjs`, `formation-panel.mjs`, `tactical-toolbar.mjs`, `sequence-panel.mjs`, `onboarding.mjs`, `diagnostics.mjs`, `presentation-mode.mjs` | Rail, sept espaces, panneaux, aide ; mode présentation (interface masquée par `body[data-presentation]`, numéros ×2,2, interaction coupée, plein écran facultatif, cadrage sans les barres masquées) |
 | AR | `xr-support.mjs`, `xr-session.mjs`, `ar-surface.mjs`, `ar-placement.mjs`, `ar-view.mjs` | Détection, session, hit test, ancre, passage 3D / AR |
 | Développement | `dev-emulator.mjs`, `dev-xr-emulation.mjs` | Émulation IWER, avec `?iwer` seulement |
 | PWA | `pwa.mjs`, `sw.mjs`, `sw.js` | Enregistrement, installation, mise à jour, migration |

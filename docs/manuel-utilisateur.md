@@ -197,6 +197,8 @@ il ne recouvre pas les commandes de vue. La croix ou **Retour au terrain** repli
 Le bouton Retour du navigateur le replie aussi ; Avancer peut le rouvrir. Sur ordinateur,
 **Afficher les libellés du rail** développe la navigation pendant la session.
 
+**Mode présentation (vestiaire).** Dans **Plus d'outils**, le bouton **Mode présentation** passe en présentation : l'interface disparaît, le terrain occupe tout l'écran (en plein écran si le navigateur l'accepte) et les numéros au-dessus des joueurs sont agrandis, lisibles du fond de la pièce. Vous pouvez toujours tourner et zoomer la vue, mais aucun clic ne déplace un joueur. **Espace** lance ou met en pause la séquence, avec ses notes en grand. **Échap** ou « Quitter la présentation » rend l'interface, avec la tactique inchangée.
+
 Au clavier :
 
 | Touche | Action |
@@ -206,6 +208,7 @@ Au clavier :
 | Échap | Abandonner la sélection ou le tracé, fermer un panneau |
 | Ctrl+Z (Cmd+Z sur Mac) | Annuler |
 | Ctrl+Y, ou Ctrl+Maj+Z | Rétablir |
+| Espace (en présentation) | Lancer ou mettre en pause la séquence |
 | Tab, puis Entrée ou Espace | Atteindre et activer chaque bouton |
 | Flèches, Début, Fin dans le rail | Déplacer le focus entre les espaces |
 
