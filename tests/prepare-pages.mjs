@@ -53,7 +53,7 @@ export function preparePages({ output, root = REPO_ROOT } = {}) {
     if (existsSync(destination)) throw new Error('Le dossier de destination existe déjà ; aucun fichier écrasé.');
     mkdirSync(destination, { recursive: true });
   }
-  for (const file of ['index.html', 'visualizer.html', 'manifest.json', 'sw.js', 'sw.mjs', 'THIRD_PARTY_NOTICES.md', 'ATTRIBUTION.md',
+  for (const file of ['index.html', 'visualizer.html', 'visualiseur-hors-ligne.html', 'manifest.json', 'sw.js', 'sw.mjs', 'THIRD_PARTY_NOTICES.md', 'ATTRIBUTION.md',
     'LICENSING.md', 'REUSE.toml']) {
     cpSync(path.join(root, file), path.join(destination, file));
   }

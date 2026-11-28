@@ -21,7 +21,7 @@ const ROOT = new URL('../../', import.meta.url);
 const SCOPE = [['', /^sw\.m?js$/], ['src/', /\.mjs$/], ['src/visualizer/', /\.mjs$/], ['tests/', /\.mjs$/], ['tests/unit/', /\.mjs$/]];
 
 /** Fichiers sans fonction, dont l'en-tête renvoie aussi à ATTRIBUTION.md. */
-const OTHER_SOURCES = ['index.html', 'src/styles.css', 'visualizer.html', 'src/visualizer/visualizer.css'];
+const OTHER_SOURCES = ['index.html', 'src/styles.css', 'visualizer.html', 'src/visualizer/visualizer.css', 'visualiseur-hors-ligne.html'];
 
 /** Déclaration de premier niveau : fonction, classe, fonction fléchée nommée ou gestionnaire. */
 const TOP_LEVEL = new RegExp('^(?:export\\s+)?(?:default\\s+)?(?:'

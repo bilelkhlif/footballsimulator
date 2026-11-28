@@ -28,6 +28,7 @@ import { runCoachingWorkflowTests } from './coaching-workflow-tests.mjs';
 import { runSavedTacticsTests } from './saved-tactics-tests.mjs';
 import { runCoachViewTests } from './coach-view-tests.mjs';
 import { runArPlacementTests } from './ar-placement-tests.mjs';
+import { runPwaPhase6Tests } from './pwa-phase6-tests.mjs';
 import { runServiceWorkerMediaTests } from './service-worker-media-tests.mjs';
 import { testMatchVisualizer } from './visualizer-tests.mjs';
 import { testVisualizerGpuReset, testVisualizerModes } from './visualizer-modes-tests.mjs';
@@ -2443,6 +2444,7 @@ async function main() {
     await testLoading(browser, subPath.url, 'sous-chemin, comme GitHub Pages', DESKTOP);
     await testPwa(browser, subPath.url, 'sous-chemin');
     await runServiceWorkerMediaTests(browser, { root: root.url, subPath: subPath.url }, record);
+    await runPwaPhase6Tests(browser, { root: root.url, subPath: subPath.url }, record);
     await testSlowNetwork(browser, slow);
     await testEmulator(browser, root.url);
     await testArSession(browser, root.url);

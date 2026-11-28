@@ -124,3 +124,52 @@ test('une réponse no-store ou de type vidéo reste lisible sans être stockée'
     assert.equal(result.calls.open, 0);
   }
 });
+
+/**
+ * Navigation hors-ligne vers une page du dépôt : le vrai sw.mjs, un réseau coupé et un cache qui
+ * ne contient que la coquille (le tableau tactique et la page hors-ligne de l'analyse de match).
+ * @param {string} pathname page demandée, relative au dossier de l'application
+ * @param {string[]} [extraCached] autres pages en cache (déjà visitées)
+ * @param {{online?: boolean}} [options] online : le réseau répond, avec la page du serveur
+ * @returns {Promise<string|null>} texte de la page servie, ou null
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Tests unitaires — repli hors-ligne des navigations
+ */
+async function navigateOffline(pathname, extraCached = [], { online = false } = {}) {
+  const base = 'https://example.test/footballsimulator/';
+  const pages = new Map([[`${base}index.html`, 'tableau tactique'], [`${base}visualiseur-hors-ligne.html`, 'analyse hors-ligne'],
+    ...extraCached.map((page) => [`${base}${page}`, `copie de ${page}`])]);
+  const handlers = new Map();
+  const lookup = async (key, options) => {
+    const url = new URL(typeof key === 'string' ? key : key.url, base);
+    if (options?.ignoreSearch) url.search = '';
+    return pages.has(url.href) ? new Response(pages.get(url.href)) : undefined;
+  };
+  runInNewContext(WORKER, {
+    URL, Request, Response, setTimeout, clearTimeout,
+    self: { location: new URL(`${base}sw.mjs`), addEventListener: (type, handler) => handlers.set(type, handler) },
+    fetch: async (request) => {
+      if (!online) throw new TypeError('réseau coupé');
+      return new Response(`serveur : ${new URL(request.url).pathname}`);
+    },
+    caches: { open: async () => ({ match: lookup, put: async () => {} }), match: lookup },
+  });
+  let response;
+  handlers.get('fetch')({
+    request: { url: `${base}${pathname}`, method: 'GET', mode: 'navigate', destination: 'document', headers: new Headers() },
+    respondWith: (value) => { response = value; },
+    waitUntil: () => {},
+  });
+  const served = await response;
+  return served ? served.text() : null;
+}
+
+test('hors-ligne : l\'analyse de match jamais ouverte sert sa page hors-ligne, pas le tableau tactique', async () => {
+  assert.equal(await navigateOffline('visualizer.html'), 'analyse hors-ligne');
+  assert.equal(await navigateOffline('visualizer.html?demo=france'), 'analyse hors-ligne', 'avec des paramètres aussi');
+  assert.equal(await navigateOffline('visualizer.html', ['visualizer.html']), 'copie de visualizer.html', 'déjà visitée : sa copie');
+  assert.equal(await navigateOffline('autre-page.html'), 'tableau tactique', 'les autres pages gardent le repli d\'avant');
+  assert.equal(await navigateOffline('visualizer.html', [], { online: true }), 'serveur : /footballsimulator/visualizer.html',
+    'en ligne : la vraie page, jamais la page hors-ligne');
+});

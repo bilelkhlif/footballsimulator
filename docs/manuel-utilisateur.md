@@ -263,4 +263,5 @@ au moins 30 images par seconde ; une mesure sur PC ne valide pas cet objectif su
 | Badge « AR indisponible : vue 3D » | Ce navigateur ne propose pas l'AR (ordinateur, iPhone) : la vue 3D reste disponible |
 | Le cercle doré n'apparaît pas | Ajoutez de la lumière, visez une surface texturée, déplacez lentement le téléphone d'un côté à l'autre |
 | Le terrain s'est décalé | Touchez « Déplacer le terrain », puis posez-le à nouveau |
+| « L'analyse de match a besoin du réseau » | L'analyse de match n'a jamais été ouverte avec le réseau sur cet appareil : « Ouvrir le tableau tactique » reste disponible hors-ligne ; l'analyse s'ouvre seule au retour du réseau, ou par « Réessayer » |
 | L'application paraît ancienne | Ouvrez-la avec le réseau, puis touchez « Recharger » quand l'avis « Nouvelle version installée. » apparaît |
