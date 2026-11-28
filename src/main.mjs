@@ -17,7 +17,7 @@
  * visée au doigt, confirmation de la réinitialisation ; modules en .mjs.
  * Phase 6 : une tactique reçue par un lien de partage (« #tactique=… ») s'ouvre au lancement ;
  * calques de lecture du terrain (tiers, couloirs, demi-espaces, zone 14) ; zones surlignées ; mode
- * présentation « vestiaire » ; taille du terrain en AR.
+ * présentation « vestiaire » ; taille du terrain en AR ; rotation du terrain posé (deux doigts, boutons).
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -72,6 +72,7 @@ import { ArSession, AR_ERROR_REASONS, hasWebGpuXrBinding, RENDERING_APIS } from 
 import { createArView } from './ar-view.mjs';
 import { SurfacePlacement } from './ar-surface.mjs';
 import { createArSizeControl } from './ar-size.mjs';
+import { ROTATION_STEP, TwistGesture } from './ar-gestures.mjs';
 import { createReticle } from './reticle.mjs';
 import { createRenderLoop } from './render-loop.mjs';
 import { PointOfView } from './point-of-view.mjs';
@@ -112,7 +113,7 @@ const STARTUP_ERROR_MESSAGES = Object.freeze({
 const PLACEMENT_HINTS = Object.freeze({
   searching: 'Visez la table : un cercle doré apparaît sur la surface détectée.',
   surface: 'Touchez l’écran pour poser le terrain sur le cercle.',
-  placed: 'Terrain posé. Tournez autour ; « Déplacer le terrain » pour le poser ailleurs.',
+  placed: 'Terrain posé. Tournez autour ; deux doigts ou ⟲ ⟳ le font pivoter ; « Déplacer le terrain » pour le poser ailleurs.',
   'in-front': 'Détection des surfaces indisponible : terrain placé devant vous.',
 });
 
@@ -823,6 +824,7 @@ function setUpArSession(sceneContext, arView, arState, renderMode, { interaction
   const enterButton = document.getElementById('enter-ar');
   const exitButton = document.getElementById('exit-ar');
   const moveButton = document.getElementById('move-pitch');
+  const rotateButtons = [document.getElementById('rotate-pitch-left'), document.getElementById('rotate-pitch-right')];
   const toolbar = document.getElementById('tactical-toolbar');
   const resetButton = document.getElementById('reset-view');
   const message = document.getElementById('ar-message');
@@ -836,7 +838,25 @@ function setUpArSession(sceneContext, arView, arState, renderMode, { interaction
 
   // Toucher sur l'écran pendant la session : WebXR le signale par l'événement select. Tant que le
   // terrain n'est pas posé, il sert à le poser ; ensuite, à l'interaction tactique (sprint 5).
+  // Rotation du terrain posé (phase 6) : deux doigts qui tournent, ou les boutons ⟲ et ⟳ (15°).
+  const twist = new TwistGesture({ onRotate: (radians) => arView.rotateBy(radians) });
+  const pointerEvents = {
+    pointerdown: (event) => twist.down(event),
+    pointermove: (event) => twist.move(event),
+    pointerup: (event) => twist.up(event),
+    pointercancel: (event) => twist.up(event),
+  };
+  rotateButtons.forEach((button, index) => button.addEventListener('click', () => {
+    if (arView.rotateBy(index === 0 ? ROTATION_STEP : -ROTATION_STEP)) {
+      hint.flash(`Terrain pivoté de 15° ${index === 0 ? 'vers la gauche' : 'vers la droite'}.`, 'info');
+    }
+  }));
+
   const onSelect = (event) => {
+    // Les doigts d'un geste de rotation ne sélectionnent ni ne déplacent rien.
+    if (twist.suppressesSelect()) {
+      return;
+    }
     const route = routeXrSelect(arState.placement);
     if (route === SELECT_ROUTES.PLACEMENT) {
       arState.placement.requestPlacement();
@@ -855,6 +875,7 @@ function setUpArSession(sceneContext, arView, arState, renderMode, { interaction
     placement.on('statechange', ({ state }) => {
       document.body.dataset.placement = state;
       moveButton.hidden = state !== 'placed';
+      rotateButtons.forEach((button) => { button.hidden = state !== 'placed'; });
       // Formations et outils tactiques servent sur le terrain posé, pas pendant la visée.
       const pitchShown = placement.pitchReady;
       workspaces.setUnavailable(pitchShown ? [] : ['formations', 'tactics', 'animation']);
@@ -870,6 +891,7 @@ function setUpArSession(sceneContext, arView, arState, renderMode, { interaction
     interaction.setEnabled(false);
     placement.start();
     session.addEventListener('select', onSelect);
+    for (const [type, listener] of Object.entries(pointerEvents)) window.addEventListener(type, listener, true);
 
     document.body.dataset.xr = 'active';
     enterButton.hidden = true;
@@ -883,6 +905,8 @@ function setUpArSession(sceneContext, arView, arState, renderMode, { interaction
   // saisie AR se tait et lâche la session ; la tactique, elle, est gardée pour la vue 3D.
   arSession.on('sessionend', ({ session }) => {
     session?.removeEventListener('select', onSelect);
+    for (const [type, listener] of Object.entries(pointerEvents)) window.removeEventListener(type, listener, true);
+    rotateButtons.forEach((button) => { button.hidden = true; });
     arState.tacticalInput?.stop();
     arState.tacticalInput = null;
     arState.placement?.stop();

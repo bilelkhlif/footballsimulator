@@ -1,6 +1,7 @@
 /**
  * Tests de bout en bout de la pose du terrain en AR (phase 6), avec l'émulateur IWER : taille du
- * terrain choisie avant l'entrée en AR, changée après la pose, puis vue 3D rendue à l'échelle 1.
+ * terrain choisie avant l'entrée en AR, changée après la pose, puis vue 3D rendue à l'échelle 1 ;
+ * rotation du terrain posé.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -120,6 +121,80 @@ async function testArPitchSize(browser, url, record) {
 }
 
 /**
+ * Rotation du terrain posé : boutons visibles seulement une fois le terrain posé ; ⟳ et ⟲ le font
+ * pivoter de 15° sur place ; un joueur touché puis déplacé en AR arrive juste, dans le repère du
+ * terrain tourné ; « Déplacer le terrain » puis une nouvelle pose repartent face à l'utilisateur.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @param {(name: string, status: string, detail?: string) => void} record
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Tests de bout en bout — rotation du terrain en AR
+ */
+async function testArPitchRotation(browser, url, record) {
+  const name = 'AR (IWER) : rotation du terrain posé par les boutons, tactique juste dans le repère tourné';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const opened = await openAr(context, url);
+    if (!opened) {
+      record(name, 'ignoré', 'émulateur indisponible (réseau ?)');
+      return;
+    }
+    const { page, errors } = opened;
+    const problems = [];
+    await page.evaluate(() => {
+      const half = -(35 * Math.PI) / 360;
+      window.__footballSimulator.xrDevice.quaternion.set(Math.sin(half), 0, 0, Math.cos(half));
+    });
+    await clickUi(page, '#enter-ar');
+    await page.waitForFunction(() => window.__footballSimulator.placement?.state === 'surface', null, { timeout: 15000 });
+    if (await page.isVisible('#rotate-pitch-left')) problems.push('boutons de rotation visibles avant la pose');
+    await page.mouse.click(640, 380);
+    await page.waitForFunction(() => window.__footballSimulator.placement?.state === 'placed', null, { timeout: 15000 });
+    const read = () => page.evaluate(async () => {
+      const THREE = await import('three');
+      const { pitchGroup } = window.__footballSimulator;
+      return { yaw: new THREE.Euler().setFromQuaternion(pitchGroup.quaternion, 'YXZ').y, position: pitchGroup.position.toArray() };
+    });
+    const placed = await read();
+    await page.click('#rotate-pitch-right');
+    await page.click('#rotate-pitch-right');
+    const turned = await read();
+    const delta = Math.atan2(Math.sin(turned.yaw - placed.yaw), Math.cos(turned.yaw - placed.yaw));
+    if (Math.abs(delta + Math.PI / 6) > 1e-6) problems.push(`rotation de ${(delta * 180 / Math.PI).toFixed(2)}° au lieu de -30°`);
+    if (turned.position.some((value, index) => Math.abs(value - placed.position[index]) > 1e-9)) problems.push('le terrain a bougé en tournant');
+    // Déplacement d'un joueur au toucher, dans le terrain tourné.
+    const target = await page.evaluate(() => window.__aim.player('red'));
+    const spot = await page.evaluate(() => window.__aim.spot([[-0.05, 0.05], [-0.08, -0.04], [0.02, 0.08]]));
+    if (target && spot) {
+      await page.mouse.click(target.x, target.y);
+      await page.waitForTimeout(150);
+      await page.mouse.click(spot.sx, spot.sy);
+      await page.waitForTimeout(500);
+      const placedPlayer = await page.evaluate((number) => window.__footballSimulator.board.getPlayerPosition('red', number), target.number);
+      const gap = Math.hypot(placedPlayer.x - spot.x, placedPlayer.z - spot.z) * 1000;
+      if (gap > 1) problems.push(`joueur placé à ${gap.toFixed(2)} mm du point touché`);
+    } else {
+      problems.push('joueur ou point du terrain introuvable à l\'écran');
+    }
+    await page.click('#move-pitch');
+    await page.waitForFunction(() => window.__footballSimulator.placement?.state !== 'placed', null, { timeout: 15000 });
+    await page.waitForFunction(() => window.__footballSimulator.placement?.state === 'surface', null, { timeout: 15000 });
+    await page.mouse.click(640, 380);
+    await page.waitForFunction(() => window.__footballSimulator.placement?.state === 'placed', null, { timeout: 15000 });
+    const replaced = await page.evaluate(() => window.__footballSimulator.arView.yaw);
+    if (replaced !== 0) problems.push('une nouvelle pose garde la rotation précédente');
+    await clickUi(page, '#exit-ar');
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || 'deux pas de 15° sur place, déplacement au toucher exact, nouvelle pose face à l\'utilisateur');
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Parcours de la pose du terrain en AR.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
@@ -131,4 +206,5 @@ async function testArPitchSize(browser, url, record) {
  */
 export async function runArPlacementTests(browser, url, record) {
   await testArPitchSize(browser, url, record);
+  await testArPitchRotation(browser, url, record);
 }

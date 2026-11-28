@@ -250,6 +250,8 @@ dd { margin: 0; font-weight: 600; }
 /* Taille du terrain en AR (phase 6) : trois choix empilés, lisibles à 250 px. */
 .segmented--stack { grid-template-columns: minmax(0, 1fr); }
 .ar-size .segmented { margin-top: 8px; }
+/* Boutons de rotation du terrain posé (phase 6) : carrés de 46 px, icône seule. */
+.button--icon { width: 46px; padding: 0; flex: none; }
 .appearance .panel-note { margin-top: 10px; }
 a.button { text-decoration: none; }
 

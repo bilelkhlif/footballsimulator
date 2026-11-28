@@ -168,3 +168,33 @@ test('taille en AR : échelle appliquée avant et après la pose, plateau relev�
   assert.equal(arView.scale, 1 / 0.6, 'le choix est gardé pour la session suivante');
   assert.throws(() => arView.setScale(0), RangeError);
 });
+
+test('rotation du terrain posé : ajoutée à la pose et à l\'ancre, sans déplacer le terrain ; nouvelle pose face à l\'utilisateur', () => {
+  const { pitchGroup, arView } = createScene();
+  arView.enter();
+  assert.equal(arView.rotateBy(0.3), false, 'pas encore posé : rien ne tourne');
+  const placement = computeSurfacePlacement({ x: 0, y: 0.72, z: -0.9 }, VIEWER.position);
+  arView.placeAt(placement);
+  const before = pitchGroup.position.clone();
+  assert.equal(arView.rotateBy(Math.PI / 12), true);
+  const euler = new THREE.Euler().setFromQuaternion(pitchGroup.quaternion, 'YXZ');
+  assert.ok(Math.abs(euler.y - (placement.rotationY + Math.PI / 12)) < 1e-9);
+  assert.ok(Math.abs(euler.x) < 1e-12 && Math.abs(euler.z) < 1e-12, 'le terrain reste à plat');
+  assert.ok(pitchGroup.position.equals(before), 'il tourne sur place');
+  // L'ancre recale le terrain : la rotation ajoutée est gardée.
+  const anchorYaw = 0.4;
+  arView.followAnchor({ position: { x: 0.2, y: 0.72, z: -1 }, orientation: { x: 0, y: Math.sin(anchorYaw / 2), z: 0, w: Math.cos(anchorYaw / 2) } });
+  const anchored = new THREE.Euler().setFromQuaternion(pitchGroup.quaternion, 'YXZ');
+  assert.ok(Math.abs(anchored.y - (anchorYaw + Math.PI / 12)) < 1e-9);
+  // Ancre penchée : la rotation se fait autour de l'axe du terrain, sans le décoller de son plan.
+  const tilt = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.2, 0, 0));
+  arView.followAnchor({ position: { x: 0, y: 0.7, z: -1 }, orientation: { x: tilt.x, y: tilt.y, z: tilt.z, w: tilt.w } });
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(pitchGroup.quaternion);
+  const anchorUp = new THREE.Vector3(0, 1, 0).applyQuaternion(tilt);
+  assert.ok(up.distanceTo(anchorUp) < 1e-9, 'la normale du terrain reste celle de l\'ancre');
+  arView.liftPitch();
+  arView.placeAt(placement);
+  assert.equal(arView.yaw, 0, 'nouvelle pose : face à l\'utilisateur');
+  arView.exit();
+  assert.equal(pitchGroup.quaternion.w, 1);
+});

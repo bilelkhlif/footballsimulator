@@ -8,7 +8,9 @@
  *
  * Phase 6 : en AR, le terrain peut être agrandi (scale : 1 pour la table, jusqu'au sol) avant ou
  * après la pose. Le plateau grandit avec lui : sa pose est relevée d'autant pour qu'il repose sur
- * la surface au lieu de s'y enfoncer. La vue 3D garde toujours l'échelle 1.
+ * la surface au lieu de s'y enfoncer. La vue 3D garde toujours l'échelle 1. Le terrain posé peut
+ * aussi tourner sur lui-même (rotateBy) : un angle ajouté à la pose, ou à celle de l'ancre, sans
+ * déplacer l'ancre ; une nouvelle pose repart face à l'utilisateur.
  *
  * Ce module ne parle pas à WebXR : il reçoit des poses (position et orientation) et les applique
  * aux objets three.js. C'est src/ar-surface.mjs qui lit le hit test et les ancres.
@@ -37,6 +39,24 @@ export function createArView({ scene, table, pitchGroup, controls, reticle = nul
   /** Échelle du terrain en AR (phase 6), et dernière pose reçue, sans le relèvement dû à l'échelle. */
   let scale = 1;
   const pose = { x: 0, y: 0, z: 0, hasPose: false };
+  /** Rotation ajoutée par l'utilisateur autour de l'axe vertical (phase 6), en radians. */
+  let yaw = 0;
+  /** Orientation reçue (pose ou ancre), sans la rotation ajoutée. */
+  const baseQuaternion = { x: 0, y: 0, z: 0, w: 1 };
+
+  /**
+   * Oriente le terrain : orientation reçue, puis la rotation ajoutée, autour de son axe vertical.
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Réalité augmentée — rotation du terrain posé
+   */
+  function applyOrientation() {
+    const { x, y, z, w } = baseQuaternion;
+    const s = Math.sin(yaw / 2);
+    const c = Math.cos(yaw / 2);
+    // q = base × rotation(y, yaw) : la rotation se fait dans le repère du terrain posé.
+    pitchGroup.quaternion.set(x * c - z * s, y * c + w * s, z * c + x * s, w * c - y * s);
+  }
 
   /**
    * Applique l'échelle et la position de base au terrain : le plateau, épaissi par l'échelle,
@@ -63,6 +83,7 @@ export function createArView({ scene, table, pitchGroup, controls, reticle = nul
     pitchGroup.quaternion.set(0, 0, 0, 1);
     pitchGroup.scale.setScalar(1);
     pose.hasPose = false;
+    yaw = 0;
   }
 
   return {
@@ -74,6 +95,26 @@ export function createArView({ scene, table, pitchGroup, controls, reticle = nul
     /** Vrai tant que le terrain attend sa pose. */
     get needsPlacement() {
       return needsPlacement;
+    },
+
+    /** Rotation ajoutée au terrain posé, en radians (0 : face à l'utilisateur à la pose). */
+    get yaw() {
+      return yaw;
+    },
+
+    /**
+     * Fait tourner le terrain posé sur lui-même, autour de son axe vertical (phase 6). Sans effet
+     * tant qu'il n'est pas posé.
+     * @param {number} radians angle ajouté, positif dans le sens inverse des aiguilles d'une montre vu du dessus
+     * @returns {boolean} vrai si le terrain a tourné
+     */
+    rotateBy(radians) {
+      if (!isActive || needsPlacement || !Number.isFinite(radians)) {
+        return false;
+      }
+      yaw = Math.atan2(Math.sin(yaw + radians), Math.cos(yaw + radians));
+      applyOrientation();
+      return true;
     },
 
     /** Échelle du terrain en AR (1 : terrain de table de 60 cm). */
@@ -148,7 +189,10 @@ export function createArView({ scene, table, pitchGroup, controls, reticle = nul
     placeAt({ position, rotationY }) {
       Object.assign(pose, { x: position.x, y: position.y, z: position.z, hasPose: true });
       applyScaleAndPosition();
-      pitchGroup.rotation.set(0, rotationY, 0);
+      // Nouvelle pose : face à l'utilisateur, sans la rotation ajoutée à la pose précédente.
+      yaw = 0;
+      Object.assign(baseQuaternion, { x: 0, y: Math.sin(rotationY / 2), z: 0, w: Math.cos(rotationY / 2) });
+      applyOrientation();
       pitchGroup.visible = true;
       needsPlacement = false;
       this.showReticle(null);
@@ -162,7 +206,8 @@ export function createArView({ scene, table, pitchGroup, controls, reticle = nul
     followAnchor({ position, orientation }) {
       Object.assign(pose, { x: position.x, y: position.y, z: position.z, hasPose: true });
       applyScaleAndPosition();
-      pitchGroup.quaternion.set(orientation.x, orientation.y, orientation.z, orientation.w);
+      Object.assign(baseQuaternion, { x: orientation.x, y: orientation.y, z: orientation.z, w: orientation.w });
+      applyOrientation();
     },
 
     /**

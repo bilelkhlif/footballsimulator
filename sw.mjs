@@ -31,7 +31,7 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 /** Empreinte du contenu de la coquille, écrite par « npm run shell-version » (tests/shell-version.mjs). */
-const SHELL_VERSION = '2cf0beca892e13fa';
+const SHELL_VERSION = 'b3ad7c12f0d4e4a3';
 const CACHE_PREFIX = 'football-simulator-';
 const CACHE_NAME = `${CACHE_PREFIX}${SHELL_VERSION}`;
 
@@ -63,6 +63,7 @@ const APP_SHELL = [
   './src/ar-placement.mjs',
   './src/ar-view.mjs',
   './src/ar-size.mjs',
+  './src/ar-gestures.mjs',
   './src/render-loop.mjs',
   './src/point-of-view.mjs',
   './src/webgpu.mjs',
