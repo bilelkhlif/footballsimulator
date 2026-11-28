@@ -95,6 +95,8 @@ Sous les mesures, la rubrique **Hors-jeu** donne, pour chaque équipe qui attaqu
 
 ![Le panneau des formations sur le terrain posé : Bleus en 4-4-2, Rouges en 4-3-3](images/sprint4-ar-formations.jpg)
 
+**Calques du terrain.** Dans la carte **Analyse tactique**, quatre boutons affichent des repères sur le gazon : **Tiers** (deux lignes, tous les 35 m), **Cinq couloirs** (dans le prolongement des surfaces de but et de réparation), **Demi-espaces** (les deux couloirs entre l'axe et les ailes, surlignés) et **Zone 14** (devant la surface adverse, à la couleur de l'équipe qui attaque ce but). Un second toucher masque le calque. Les calques ne changent pas la tactique et ne s'annulent pas : ce sont des repères d'affichage, comme les lignes de hors-jeu.
+
 ## 6. Déplacer un joueur ou le ballon
 
 L'outil **« Déplacer »** (icône en croix) est actif au départ. Ses commandes se trouvent dans **Outils tactiques** ; le bouton du mode actif au bord du terrain ouvre aussi cet espace.

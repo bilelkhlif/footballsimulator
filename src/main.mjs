@@ -15,7 +15,8 @@
  * Retours d'évaluation : règles des flèches vérifiées avant toute action (src/arrow-rules.mjs),
  * barre d'outils à icônes, aide au premier lancement, bouton « Abandonner », raccourcis clavier,
  * visée au doigt, confirmation de la réinitialisation ; modules en .mjs.
- * Phase 6 : une tactique reçue par un lien de partage (« #tactique=… ») s'ouvre au lancement.
+ * Phase 6 : une tactique reçue par un lien de partage (« #tactique=… ») s'ouvre au lancement ;
+ * calques de lecture du terrain (tiers, couloirs, demi-espaces, zone 14).
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -33,6 +34,7 @@ import { createFormationPanel } from './formation-panel.mjs';
 import { createAnalysisPanel } from './analysis-panel.mjs';
 import { OffsideLayer } from './offside-layer.mjs';
 import { MarkingLayer } from './marking-layer.mjs';
+import { PitchZonesLayer } from './pitch-zones-layer.mjs';
 import { followTeamKits } from './team-kits-view.mjs';
 import { createTeamPanel } from './team-panel.mjs';
 import { buildScenarioState, loadScenarioLibrary } from './scenarios.mjs';
@@ -257,7 +259,9 @@ async function init(renderMode) {
   const offsideLayer = new OffsideLayer({ pitchGroup, board });
   // Marquages individuels : traits replacés à chaque image (tâche de la boucle de rendu).
   const markingLayer = new MarkingLayer({ pitchGroup, board, teamGroups });
-  createAnalysisPanel({ root: document.getElementById('analysis-panel'), board, teams: Object.values(TEAMS), offsideLayer });
+  // Calques de lecture du terrain (phase 6) : tiers, couloirs, demi-espaces, zone 14, masqués au départ.
+  const pitchZones = new PitchZonesLayer({ pitchGroup, board });
+  createAnalysisPanel({ root: document.getElementById('analysis-panel'), board, teams: Object.values(TEAMS), offsideLayer, pitchZones });
   // Noms et maillots des équipes : une commande annulable ; un refus est expliqué dans le bandeau.
   createTeamPanel({
     root: document.getElementById('team-panel'),
@@ -602,7 +606,7 @@ async function init(renderMode) {
   return {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
     sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer,
-    pointOfView, sharedLink,
+    pointOfView, sharedLink, pitchZones,
     get diagnostics() { return diagnostics; },
   };
 }
@@ -985,7 +989,7 @@ async function start() {
   }
   const {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer, sharedLink,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer, sharedLink, pitchZones,
   } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
   const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding, workspaces, navigation });
@@ -1009,6 +1013,7 @@ async function start() {
     offsideLayer,
     markingLayer,
     sharedLink,
+    pitchZones,
     xrDevice: emulator?.xrDevice ?? null,
     get placement() {
       return arState.placement;

@@ -317,6 +317,12 @@ a.button { text-decoration: none; }
 .saved-tactics__transfer { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .summary-card .saved-tactics__actions .button, .summary-card .saved-tactics__transfer .button { margin-top: 0; }
 .offside-summary h4 { margin: 0 0 4px; font-size: .875rem; }
+/* Calques du terrain (phase 6) : deux boutons par rangée, même à 250 px de large. */
+.pitch-layers { margin-top: 12px; }
+.pitch-layers h4 { margin: 0 0 6px; font-size: .875rem; }
+.pitch-layers__buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.summary-card .pitch-layers__buttons .button { margin-top: 0; min-width: 0; padding-inline: 8px; }
+.pitch-layers .muted { margin: 6px 0 0; font-size: .75rem; }
 .offside-summary p { margin: 0 0 6px; font-size: .8125rem; line-height: 1.4; }
 .phase-button[aria-pressed="true"] { font-weight: 700; border-style: solid; border-color: var(--team-color); background: var(--surface-pressed); }
 .positions { border-top: 1px solid var(--border); padding-top: 15px; }
