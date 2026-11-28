@@ -156,3 +156,45 @@ test('corner offensif contre une défense en zone : trois cibles, trois courses,
   const rest = Object.entries(data.players).filter(([key, [x]]) => key.startsWith('blue:') && key !== 'blue:1' && x <= 10);
   assert.equal(rest.length, 3);
 });
+
+test('coup franc contre un mur et une défense en zone : mur à 9,15 m vers le premier poteau, ligne en zone, Bleus en jeu', () => {
+  const { data, state } = load('coup-franc-mur-defense-en-zone');
+  const [ballX, ballZ] = data.ball;
+  const toGoal = Math.hypot(52.5 - ballX, ballZ);
+  assert.ok(Math.abs(ballZ) > 20.16 && 52.5 - ballX <= 35, 'coup franc excentré, dans le dernier tiers : un centre est possible');
+  assert.ok(toGoal > 25 && toGoal < 40, `à ${toGoal.toFixed(1)} m du but`);
+  const red = Object.fromEntries(Object.entries(data.players).filter(([key]) => key.startsWith('red:')));
+  // Mur : à 9,15 m au moins du ballon (loi 13), à moins de 1,5 m de la droite ballon → premier poteau.
+  const nearPost = [52.5, Math.sign(ballZ) * 3.66];
+  const [dx, dz] = [nearPost[0] - ballX, nearPost[1] - ballZ];
+  const length = Math.hypot(dx, dz);
+  const wall = Object.entries(red).filter(([, [x, z]]) => {
+    const along = ((x - ballX) * dx + (z - ballZ) * dz) / length;
+    const across = Math.abs((x - ballX) * dz - (z - ballZ) * dx) / length;
+    return along > 0 && along < 12 && across < 1.5;
+  });
+  assert.equal(wall.length, 2, `mur de deux : ${wall.map(([key]) => key).join(', ')}`);
+  for (const [key, [x, z]] of wall) assert.ok(Math.hypot(x - ballX, z - ballZ) >= 9.15, `${key} à 9,15 m au moins`);
+  // Défense en zone : aucun marquage ; une ligne de cinq à la même hauteur, au bord de la surface.
+  assert.equal(data.markings, undefined);
+  const lineX = red['red:2'][0];
+  const line = Object.values(red).filter(([x]) => Math.abs(x - lineX) < 0.01);
+  assert.equal(line.length, 5);
+  assert.ok(Math.abs(52.5 - lineX - 16) <= 1, 'ligne au bord de la surface de réparation');
+  assert.ok(52.5 - red['red:9'][0] <= 5.5 && red['red:9'][1] > 0, 'un Rouge au premier poteau, dans la surface de but');
+  // Hors-jeu : au départ, aucun Bleu n'est plus près du but que l'avant-dernier Rouge (la ligne).
+  for (const [key, [x]] of Object.entries(data.players).filter(([k]) => k.startsWith('blue:'))) {
+    assert.ok(x <= lineX, `${key} en jeu`);
+  }
+  // Le centre arrive entre le point de penalty et la surface de but ; le 9 y arrive et tire, cadré.
+  const cross = data.arrows.find((a) => a.kind === 'cross');
+  const fromGoalLine = 52.5 - cross.to[0];
+  assert.ok(fromGoalLine > 5.5 && fromGoalLine < 11 && Math.abs(cross.to[1]) <= 9.16);
+  const shot = data.arrows.find((a) => a.kind === 'shot');
+  assert.deepEqual(shot.from, cross.to);
+  assert.ok(shot.to[0] === 52.5 && Math.abs(shot.to[1]) < 3.66, 'tir entre les poteaux');
+  assert.equal(state.keyframes.length, 4);
+  assert.ok(state.keyframes.every((keyframe) => keyframe.note), 'une note de l\'entraîneur par image');
+  const arrival = state.keyframes[2];
+  assert.equal(carrier(arrival).key, 'blue:9', 'le 9 est le plus près du ballon à l\'arrivée du centre');
+});

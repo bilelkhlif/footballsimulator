@@ -1,7 +1,7 @@
 /**
  * Tests de bout en bout de la phase 6 B, « le regard de l'entraîneur », dans Chrome avec WebGPU :
  * calques de lecture du terrain (tiers, cinq couloirs, demi-espaces, zone 14), notes des images clés,
- * zones surlignées.
+ * zones surlignées, situation du coup franc contre un mur et une défense en zone.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -201,6 +201,50 @@ async function testHighlightedZone(browser, url, record) {
 }
 
 /**
+ * Coup franc contre un mur et une défense en zone : la situation se charge depuis sa carte, se
+ * joue avec ses notes affichées, et s'annule.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @param {(name: string, status: string, detail?: string) => void} record
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Tests de bout en bout — situation du coup franc
+ */
+async function testFreeKickScenario(browser, url, record) {
+  const name = 'Situation : coup franc contre un mur et une défense en zone, chargée, jouée avec ses notes, annulée';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    const before = await page.evaluate(() => JSON.stringify(window.__footballSimulator.board.snapshot()));
+    const selector = '[data-load-scenario="coup-franc-mur-defense-en-zone"]';
+    await page.waitForSelector(selector, { state: 'attached', timeout: 10000 });
+    await clickUi(page, selector);
+    const problems = [];
+    const loaded = await page.evaluate(() => ({
+      arrows: window.__footballSimulator.board.getArrows().map(({ kind }) => kind),
+      keyframes: window.__footballSimulator.sequence.length,
+      wall: ['red:7', 'red:8'].map((key) => window.__footballSimulator.board.snapshot().players[key]),
+      markings: window.__footballSimulator.board.getMarkings().length,
+    }));
+    if (loaded.arrows.join(',') !== 'cross,run,run,run,run,shot' || loaded.keyframes !== 4 || loaded.markings !== 0) problems.push(`chargé : ${JSON.stringify(loaded)}`);
+    await clickUi(page, '[data-sequence="play"]');
+    await page.waitForFunction(() => document.getElementById('sequence-note').textContent.includes('mur de deux'));
+    await page.waitForFunction(() => document.getElementById('sequence-note').textContent.includes('premier poteau'), null, { timeout: 8000 });
+    await page.evaluate(() => document.activeElement?.blur());
+    await page.keyboard.press('Control+z');
+    await page.waitForTimeout(300);
+    const after = await page.evaluate(() => JSON.stringify(window.__footballSimulator.board.snapshot()));
+    if (after !== before) problems.push('Ctrl+Z ne rend pas le tableau de départ');
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || 'centre, quatre courses et tir ; notes lues pendant la lecture');
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Parcours du regard de l'entraîneur.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
@@ -214,4 +258,5 @@ export async function runCoachViewTests(browser, url, record) {
   await testPitchLayers(browser, url, record);
   await testKeyframeNotes(browser, url, record);
   await testHighlightedZone(browser, url, record);
+  await testFreeKickScenario(browser, url, record);
 }
