@@ -8,7 +8,8 @@
  * place d'une autre), puis ouverte.
  *
  * Phase 6 : chaque tactique enregistrée peut être renommée, dans sa ligne de la liste, et
- * dupliquée, pour en essayer une variante sans toucher à l'original.
+ * dupliquée, pour en essayer une variante sans toucher à l'original, et supprimée, après une
+ * confirmation dans la ligne elle-même.
  *
  * Le panneau ne connaît ni IndexedDB ni le tableau tactique : il passe par la bibliothèque
  * (src/tactic-library.mjs) pour enregistrer et relire, par src/tactic-file.mjs pour écrire et
@@ -220,13 +221,82 @@ export function createSavedTacticsPanel({
     duplicateButton.textContent = 'Dupliquer';
     duplicateButton.setAttribute('aria-label', `Dupliquer la tactique : ${entry.name}`);
     duplicateButton.addEventListener('click', () => duplicateEntry(entry, duplicateButton));
-    actions.append(openButton, exportButton, renameButton, duplicateButton);
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'button button--secondary button--danger';
+    deleteButton.dataset.deleteTactic = entry.id;
+    deleteButton.textContent = 'Supprimer';
+    deleteButton.setAttribute('aria-label', `Supprimer la tactique : ${entry.name}`);
+    deleteButton.addEventListener('click', () => confirmDelete(item, entry));
+    actions.append(openButton, exportButton, renameButton, duplicateButton, deleteButton);
     item.append(name, savedAt, actions);
     return item;
   };
 
   /** Met le focus sur un bouton d'une ligne après un rafraîchissement de la liste. */
   const focusInList = (selector) => list.querySelector(selector)?.focus();
+
+  /**
+   * Supprimer (phase 6) : la ligne demande confirmation, dans le panneau (pas de fenêtre du
+   * navigateur, qui bloquerait la page et n'existe pas en AR). « Garder » ou Échap rend la ligne ;
+   * « Supprimer définitivement » retire la tactique, puis le focus passe à la ligne suivante, ou au
+   * champ du nom s'il n'en reste aucune.
+   */
+  const confirmDelete = (item, entry) => {
+    const box = document.createElement('div');
+    box.className = 'saved-tactics__confirm';
+    box.setAttribute('role', 'group');
+    const question = document.createElement('p');
+    question.id = `saved-tactic-confirm-${entry.id}`;
+    question.textContent = `Supprimer « ${entry.name} » de cet appareil ? La tactique en cours ne change pas.`;
+    box.setAttribute('aria-labelledby', question.id);
+    const confirm = document.createElement('button');
+    confirm.type = 'button';
+    confirm.className = 'button button--danger';
+    confirm.dataset.confirmDelete = entry.id;
+    confirm.textContent = 'Supprimer définitivement';
+    const keep = document.createElement('button');
+    keep.type = 'button';
+    keep.className = 'button button--secondary';
+    keep.dataset.keepTactic = entry.id;
+    keep.textContent = 'Garder';
+    const buttons = document.createElement('div');
+    buttons.className = 'saved-tactics__actions';
+    buttons.append(keep, confirm);
+    box.append(question, buttons);
+    const previous = [...item.children];
+    item.replaceChildren(box);
+    // « Garder » a le focus : Entrée par mégarde ne supprime rien.
+    keep.focus();
+
+    /** Rend la ligne d'origine, focus sur son bouton « Supprimer ». */
+    const close = () => {
+      item.replaceChildren(...previous);
+      item.querySelector('[data-delete-tactic]')?.focus();
+    };
+    keep.addEventListener('click', close);
+    box.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+      }
+    });
+    confirm.addEventListener('click', async () => {
+      confirm.disabled = true;
+      const index = [...list.children].indexOf(item);
+      const result = await library.remove(entry.id);
+      if (!result.ok) {
+        confirm.disabled = false;
+        tell('invalid', describeSaveError(result));
+        return;
+      }
+      await refresh();
+      const next = list.children[Math.min(index, list.children.length - 1)];
+      (next?.querySelector('[data-open-tactic]') ?? input).focus();
+      tell('success', `Tactique « ${entry.name} » supprimée de cet appareil.`);
+    });
+  };
 
   /**
    * Dupliquer (phase 6) : la copie arrive en tête de liste, et le focus va sur son bouton

@@ -190,8 +190,10 @@ function createTacticId() {
  *   get: (id: string) => Promise<{name: string, tactic: object}|null>,
  *   rename: (id: string, name: string) => Promise<{ok: true, entry: {id: string, name: string, savedAt: number}}|{ok: false, reason: string, name?: string}>,
  *   duplicate: (id: string) => Promise<{ok: true, entry: {id: string, name: string, savedAt: number}}|{ok: false, reason: string}>,
+ *   remove: (id: string) => Promise<{ok: true, entry: {id: string, name: string, savedAt: number}}|{ok: false, reason: string}>,
  * }}
- * Depuis la phase 6, une tactique enregistrée peut être renommée (rename) et dupliquée (duplicate).
+ * Depuis la phase 6, une tactique enregistrée peut être renommée (rename), dupliquée (duplicate)
+ * et supprimée (remove).
  * @responsable Iyed Rachdi
  * @date 2026-11-26
  * @role Persistance — tactiques enregistrées
@@ -306,6 +308,23 @@ export function createTacticLibrary(store, { now = () => Date.now(), createId = 
         const copy = { id: createId(), name, savedAt: now(), tactic: structuredClone(entry.tactic) };
         const saved = await writeEntries([...entries, copy]);
         return saved ? { ok: true, entry: summarize(copy) } : { ok: false, reason: SAVE_ERRORS.STORAGE };
+      });
+    },
+
+    // Supprimer (phase 6) : retire une seule entrée ; les autres sont réécrites telles quelles. La
+    // confirmation est demandée avant, par le panneau : la bibliothèque ne garde pas de corbeille.
+    remove(id) {
+      return serial(async () => {
+        const entries = await readForUpdate('suppression');
+        if (!entries) {
+          return { ok: false, reason: SAVE_ERRORS.STORAGE };
+        }
+        const entry = entries.find((candidate) => candidate.id === id);
+        if (!entry) {
+          return { ok: false, reason: SAVE_ERRORS.NOT_FOUND };
+        }
+        const saved = await writeEntries(entries.filter((candidate) => candidate.id !== id));
+        return saved ? { ok: true, entry: summarize(entry) } : { ok: false, reason: SAVE_ERRORS.STORAGE };
       });
     },
 

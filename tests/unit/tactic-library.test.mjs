@@ -210,3 +210,26 @@ test('dupliquer : refus d\'une tactique absente, d\'une bibliothèque pleine et 
   const broken = createTacticLibrary(createMemoryStore({ failRead: true }));
   assert.equal((await broken.duplicate('t1')).reason, SAVE_ERRORS.STORAGE);
 });
+
+test('supprimer : une seule tactique retirée, les autres intactes ; refus d\'une tactique absente ou d\'un stockage illisible', async () => {
+  const store = createMemoryStore();
+  let id = 0;
+  const library = createTacticLibrary(store, { createId: () => `t${(id += 1)}` });
+  const { board, sequence } = createEditedTactic();
+  const tactic = captureTactic(board, sequence);
+  await library.save('Bloc bas', tactic);
+  await library.save('Pressing haut', tactic);
+  const removed = await library.remove('t1');
+  assert.equal(removed.ok, true);
+  assert.equal(removed.entry.name, 'Bloc bas');
+  assert.deepEqual((await library.list()).tactics.map(({ name }) => name), ['Pressing haut']);
+  assert.equal(await library.get('t1'), null);
+  assert.deepEqual((await library.get('t2')).tactic, tactic);
+  const writes = store.writes;
+  assert.equal((await library.remove('t1')).reason, SAVE_ERRORS.NOT_FOUND);
+  assert.equal(store.writes, writes);
+  // Le nom libéré peut servir de nouveau.
+  assert.equal((await library.save('Bloc bas', tactic)).ok, true);
+  const broken = createTacticLibrary(createMemoryStore({ failRead: true }));
+  assert.equal((await broken.remove('t2')).reason, SAVE_ERRORS.STORAGE);
+});

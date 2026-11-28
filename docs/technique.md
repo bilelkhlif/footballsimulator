@@ -129,7 +129,7 @@ Le diagramme UML de déploiement complet est dans [uml.md](uml.md).
 | Équipes | `team-colors.mjs`, `team-identity.mjs`, `team-kits-view.mjs`, `team-panel.mjs` | Noms et maillots, contraste vérifié pour les daltoniens, gardien distinct ; l'identité est dans `TacticsBoard`, modifiée par `ChangeTeamIdentityCommand` |
 | Marquage | `marking-layer.mjs` | Traits défenseur → attaquant, tâche de la boucle de rendu ; l'état est dans `TacticsBoard`, modifié par `MarkPlayerCommand` |
 | Situations | `scenarios.mjs`, `scenario-panel.mjs`, `scenarios/*.json` | Bibliothèque de situations de jeu, vérifiées, chargées par `LoadScenarioCommand` |
-| Persistance | `tactic-storage.mjs`, `tactic-library.mjs`, `tactic-file.mjs`, `saved-tactics-panel.mjs` | Tactique en cours enregistrée dans IndexedDB 0,4 s après chaque changement et à la page masquée, vérifiée puis rétablie au lancement ; tactiques nommées par l'entraîneur (enregistrer, ouvrir, renommer, dupliquer), sous une autre clé du même magasin ; export et import en fichier JSON |
+| Persistance | `tactic-storage.mjs`, `tactic-library.mjs`, `tactic-file.mjs`, `saved-tactics-panel.mjs` | Tactique en cours enregistrée dans IndexedDB 0,4 s après chaque changement et à la page masquée, vérifiée puis rétablie au lancement ; tactiques nommées par l'entraîneur (enregistrer, ouvrir, renommer, dupliquer, supprimer après une confirmation dans le panneau), sous une autre clé du même magasin ; export et import en fichier JSON |
 | Partagé | `config.mjs`, `events.mjs` | Constantes ; émetteur d'événements |
 
 Le rôle de chaque fichier, avec les raisons des choix, est dans [guide-du-code.md](guide-du-code.md)

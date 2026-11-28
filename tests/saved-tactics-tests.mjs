@@ -1,6 +1,6 @@
 /**
  * Tests de bout en bout du panneau « Tactiques enregistrées » (phase 6), dans Chrome, avec le vrai
- * IndexedDB : renommer et dupliquer une tactique enregistrée, par les vrais boutons du panneau.
+ * IndexedDB : renommer, dupliquer et supprimer une tactique enregistrée, par les vrais boutons du panneau.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -167,6 +167,60 @@ async function testDuplicateTactic(browser, url, record) {
 }
 
 /**
+ * Supprimer : la confirmation reste dans le panneau, sans fenêtre du navigateur ; « Garder » et
+ * Échap ne suppriment rien ; « Supprimer définitivement » retire la tactique, même après un
+ * rechargement, et le focus passe à la ligne suivante.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @param {(name: string, status: string, detail?: string) => void} record
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Tests de bout en bout — supprimer une tactique enregistrée
+ */
+async function testDeleteTactic(browser, url, record) {
+  const name = 'Tactiques enregistrées : supprimer après confirmation dans le panneau, Garder et Échap sans effet';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    const dialogs = [];
+    page.on('dialog', async (dialog) => {
+      dialogs.push(dialog.type());
+      await dialog.dismiss();
+    });
+    await saveCurrentTactic(page, 'Bloc bas');
+    await saveCurrentTactic(page, 'Pressing haut');
+    const id = await page.$eval('.saved-tactics__item:has(strong[title="Pressing haut"])', (item) => item.dataset.savedTactic);
+    const problems = [];
+    await clickUi(page, `[data-delete-tactic="${id}"]`);
+    if (!(await page.evaluate(() => document.activeElement?.matches('[data-keep-tactic]')))) problems.push('« Garder » n\'a pas le focus');
+    await page.click(`[data-keep-tactic="${id}"]`);
+    await clickUi(page, `[data-delete-tactic="${id}"]`);
+    await page.keyboard.press('Escape');
+    const panelOpen = await page.evaluate(() => document.body.dataset.panelOpen);
+    if (panelOpen !== 'true') problems.push('Échap a fermé le panneau au lieu de la confirmation');
+    if ((await listedNames(page)).length !== 2) problems.push('« Garder » ou Échap a supprimé une tactique');
+    await clickUi(page, `[data-delete-tactic="${id}"]`);
+    await page.click(`[data-confirm-delete="${id}"]`);
+    await page.waitForFunction(() => document.querySelectorAll('.saved-tactics__item').length === 1);
+    const focused = await page.evaluate(() => document.activeElement?.closest('.saved-tactics__item')?.querySelector('strong')?.textContent ?? null);
+    if (focused !== 'Bloc bas') problems.push(`focus après suppression : ${focused}`);
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForSelector('body.is-ready', { timeout: 20000 });
+    await openWorkspace(page, 'home');
+    await page.waitForSelector('.saved-tactics__item', { state: 'attached' });
+    const after = await listedNames(page);
+    if (JSON.stringify(after) !== JSON.stringify(['Bloc bas'])) problems.push(`après rechargement : ${after.join(', ')}`);
+    if (dialogs.length) problems.push(`fenêtre du navigateur ouverte : ${dialogs.join(', ')}`);
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || '« Pressing haut » supprimée, « Bloc bas » gardée');
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Parcours du panneau « Tactiques enregistrées ».
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
@@ -179,4 +233,5 @@ async function testDuplicateTactic(browser, url, record) {
 export async function runSavedTacticsTests(browser, url, record) {
   await testRenameTactic(browser, url, record);
   await testDuplicateTactic(browser, url, record);
+  await testDeleteTactic(browser, url, record);
 }
