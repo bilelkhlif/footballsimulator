@@ -1,6 +1,7 @@
 /**
  * Tests de bout en bout du panneau « Tactiques enregistrées » (phase 6), dans Chrome, avec le vrai
- * IndexedDB : renommer, dupliquer et supprimer une tactique enregistrée, par les vrais boutons du panneau.
+ * IndexedDB : renommer, dupliquer, supprimer et partager par un lien une tactique enregistrée, par
+ * les vrais boutons du panneau.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -221,6 +222,91 @@ async function testDeleteTactic(browser, url, record) {
 }
 
 /**
+ * Forme canonique d'une valeur JSON : clés triées à chaque niveau, -0 écrit 0. Deux tactiques
+ * égales ont la même forme, quel que soit l'ordre de leurs champs.
+ * @param {unknown} value
+ * @returns {string}
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Tests de bout en bout — outillage des tactiques enregistrées
+ */
+function canonical(value) {
+  /** Copie aux clés triées. */
+  const sort = (item) => {
+    if (Array.isArray(item)) return item.map(sort);
+    if (item && typeof item === 'object') return Object.fromEntries(Object.keys(item).sort().map((key) => [key, sort(item[key])]));
+    return item;
+  };
+  return JSON.stringify(sort(JSON.parse(JSON.stringify(value))));
+}
+
+/**
+ * Lien de partage : « Lien de partage » copie dans le presse-papiers une adresse de l'application
+ * dont le fragment contient la tactique en cours ; le lien est aussi affiché, et « Partager » d'une
+ * tactique enregistrée donne le lien de celle-ci. Aucune requête ne part avec la tactique.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @param {(name: string, status: string, detail?: string) => void} record
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Tests de bout en bout — lien de partage d'une tactique
+ */
+async function testShareLink(browser, url, record) {
+  const name = 'Tactiques enregistrées : lien de partage copié, tactique dans le fragment, sans serveur';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(url).origin });
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    const requests = [];
+    page.on('request', (request) => requests.push(request.url()));
+    const expected = await page.evaluate(() => {
+      const { board, sequence } = window.__footballSimulator;
+      board.setFormation('red', '4-3-3');
+      board.setPlayerPosition('red', 10, { x: -0.05, z: 0.06 });
+      sequence.add({ players: board.snapshot().players, ball: board.getBallPosition() });
+      return board.snapshot();
+    });
+    const problems = [];
+    await openWorkspace(page, 'home');
+    await page.fill('[data-tactic-name]', 'Contre rouge');
+    await clickUi(page, '[data-share-current-tactic]');
+    await page.waitForFunction(() => document.querySelector('[data-share-link]')?.value.includes('#tactique='));
+    const link = await page.$eval('[data-share-link]', (field) => field.value);
+    const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+    if (clipboard !== link) problems.push('le presse-papiers ne contient pas le lien affiché');
+    const parsed = new URL(link);
+    if (parsed.search !== '' || parsed.pathname !== new URL(url).pathname) problems.push(`adresse inattendue : ${parsed.origin}${parsed.pathname}${parsed.search}`);
+    const decoded = await page.evaluate(async (hash) => {
+      const share = await import(new URL('src/tactic-share.mjs', document.baseURI).href);
+      const reference = window.__footballSimulator.board.snapshot();
+      return share.decodeSharedTactic(share.readSharePayload(hash), reference);
+    }, parsed.hash);
+    if (!decoded.ok || decoded.name !== 'Contre rouge') problems.push(`lien illisible : ${decoded.error ?? decoded.name}`);
+    else if (canonical(decoded.tactic.board) !== canonical(expected) || decoded.tactic.keyframes.length !== 1) problems.push('le lien ne contient pas la tactique en cours');
+    const payload = parsed.hash.slice('#tactique='.length);
+    if (requests.some((request) => request.includes(payload.slice(0, 40)))) problems.push('la tactique est partie dans une requête');
+    // « Partager » d'une tactique enregistrée.
+    await saveCurrentTactic(page, 'Contre rouge');
+    const id = await page.$eval('.saved-tactics__item', (item) => item.dataset.savedTactic);
+    await page.evaluate(() => window.__footballSimulator.board.reset());
+    await clickUi(page, `[data-share-tactic="${id}"]`);
+    await page.waitForFunction((previous) => document.querySelector('[data-share-link]')?.value !== previous, link);
+    const savedLink = await page.$eval('[data-share-link]', (field) => field.value);
+    const savedDecoded = await page.evaluate(async (hash) => {
+      const share = await import(new URL('src/tactic-share.mjs', document.baseURI).href);
+      return share.decodeSharedTactic(share.readSharePayload(hash), window.__footballSimulator.board.snapshot());
+    }, new URL(savedLink).hash);
+    if (!savedDecoded.ok || canonical(savedDecoded.tactic.board) !== canonical(expected)) problems.push('« Partager » ne donne pas la tactique enregistrée');
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || `lien de ${link.length} caractères`);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Parcours du panneau « Tactiques enregistrées ».
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
@@ -234,4 +320,5 @@ export async function runSavedTacticsTests(browser, url, record) {
   await testRenameTactic(browser, url, record);
   await testDuplicateTactic(browser, url, record);
   await testDeleteTactic(browser, url, record);
+  await testShareLink(browser, url, record);
 }

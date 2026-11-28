@@ -224,6 +224,7 @@ Ouvrez **Accueil** : la carte **Tactiques enregistrées** garde vos tactiques su
 - **Renommer** transforme la ligne en champ, prérempli avec le nom actuel. Entrée ou « Valider » garde le nouveau nom ; Échap ou « Annuler » rend la ligne telle quelle. Un nom vide ou déjà pris est refusé, avec un message.
 - **Dupliquer** garde une copie de la tactique, nommée « Pressing haut (copie) », pour en essayer une variante sans toucher à l'original ; le focus va sur « Renommer » de la copie.
 - **Supprimer** demande confirmation dans la ligne même : « Supprimer définitivement » retire la tactique de l'appareil, « Garder » ou Échap la laisse. La suppression ne s'annule pas ; la tactique en cours, elle, ne change pas.
+- **Partager** (une tactique enregistrée) ou **Lien de partage** (la tactique en cours) copie un lien à coller dans un message. Le lien contient toute la tactique, compressée dans l'adresse elle-même : aucun serveur ne la reçoit. Il reste affiché dans le champ « Lien », avec « Copier le lien » si le navigateur a refusé la copie.
 - **Exporter** télécharge la tactique en fichier JSON ; **Importer un JSON** l'ouvre sur un autre appareil, sous un nom libre.
 
 ## 13. Mesurer la fluidité

@@ -9,7 +9,8 @@
  *
  * Phase 6 : chaque tactique enregistrée peut être renommée, dans sa ligne de la liste, et
  * dupliquée, pour en essayer une variante sans toucher à l'original, et supprimée, après une
- * confirmation dans la ligne elle-même.
+ * confirmation dans la ligne elle-même. « Partager » et « Lien de partage » copient un lien qui
+ * contient toute la tactique, compressée dans l'adresse (src/tactic-share.mjs), sans serveur.
  *
  * Le panneau ne connaît ni IndexedDB ni le tableau tactique : il passe par la bibliothèque
  * (src/tactic-library.mjs) pour enregistrer et relire, par src/tactic-file.mjs pour écrire et
@@ -24,6 +25,7 @@ import {
 import {
   createTacticFile, MAX_TACTIC_FILE_BYTES, parseTacticFile, serializeTacticFile, tacticFileName, uniqueTacticName,
 } from './tactic-file.mjs';
+import { createShareUrl, encodeSharedTactic, MAX_SHARE_PAYLOAD_LENGTH } from './tactic-share.mjs';
 
 /** Format de la date d'enregistrement affichée dans la liste. */
 const SAVED_AT_FORMAT = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
@@ -52,6 +54,33 @@ export function describeSaveError({ reason, name }) {
     default:
       return 'Enregistrement impossible : le stockage de cet appareil est indisponible.';
   }
+}
+
+/**
+ * Longueur d'un lien, en clair : « Lien de 3 412 caractères ».
+ * @param {number} length nombre de caractères
+ * @returns {string}
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Interface HTML — tactiques enregistrées
+ */
+export function formatLength(length) {
+  return `Lien de ${length.toLocaleString('fr-FR')} caractère${length > 1 ? 's' : ''}`;
+}
+
+/**
+ * Copie un texte dans le presse-papiers du navigateur.
+ * @param {string} text
+ * @returns {Promise<void>} rejetée si le navigateur refuse
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Interface HTML — tactiques enregistrées
+ */
+export function writeClipboard(text) {
+  if (!navigator.clipboard?.writeText) {
+    return Promise.reject(new Error('presse-papiers indisponible'));
+  }
+  return navigator.clipboard.writeText(text);
 }
 
 /**
@@ -89,14 +118,17 @@ export function downloadTextFile(fileName, text, type = 'application/json') {
  * @param {(feedback: {kind: string, message: string}) => void} [options.onFeedback] message bref
  *   sur le terrain
  * @param {(fileName: string, text: string) => void} [options.download] téléchargement (doublure)
+ * @param {() => string} [options.getAppUrl] adresse de la page, base des liens de partage
+ * @param {(text: string) => Promise<void>} [options.copyText] copie dans le presse-papiers (doublure)
  * @returns {{refresh: () => Promise<void>, ready: Promise<void>, input: HTMLInputElement,
- *   importFile: (file: File) => Promise<boolean>}}
+ *   importFile: (file: File) => Promise<boolean>, shareTactic: (name: string, tactic: object) => Promise<string|null>}}
  * @responsable Iyed Rachdi
  * @date 2026-11-26
  * @role Interface HTML — tactiques enregistrées
  */
 export function createSavedTacticsPanel({
   root, library, capture, getReference, open, onFeedback = () => {}, download = downloadTextFile,
+  getAppUrl = () => window.location.href, copyText = writeClipboard,
 }) {
   const form = document.createElement('form');
   form.className = 'saved-tactics__form';
@@ -139,12 +171,40 @@ export function createSavedTacticsPanel({
   fileInput.dataset.tacticFile = '';
   transfer.append(exportCurrent, importButton, fileInput);
 
+  // Lien de partage (phase 6) : pour la tactique en cours, puis affiché dans un champ à copier.
+  const shareCurrent = document.createElement('button');
+  shareCurrent.type = 'button';
+  shareCurrent.className = 'button button--secondary';
+  shareCurrent.dataset.shareCurrentTactic = '';
+  shareCurrent.textContent = 'Lien de partage';
+  shareCurrent.title = 'Copier un lien qui contient la tactique en cours et sa séquence, sans serveur';
+  transfer.prepend(shareCurrent);
+  const shareBox = document.createElement('div');
+  shareBox.className = 'saved-tactics__share';
+  shareBox.hidden = true;
+  const shareLabel = document.createElement('label');
+  const shareTitle = document.createElement('span');
+  shareLabel.append(shareTitle);
+  const shareField = document.createElement('input');
+  shareField.type = 'url';
+  shareField.readOnly = true;
+  shareField.dataset.shareLink = '';
+  shareLabel.append(shareField);
+  const shareCopy = document.createElement('button');
+  shareCopy.type = 'button';
+  shareCopy.className = 'button button--secondary';
+  shareCopy.dataset.copyShareLink = '';
+  shareCopy.textContent = 'Copier le lien';
+  const shareNote = document.createElement('p');
+  shareNote.className = 'panel-note';
+  shareBox.append(shareLabel, shareCopy, shareNote);
+
   const status = document.createElement('p');
   status.className = 'muted';
   status.setAttribute('role', 'status');
   const list = document.createElement('ul');
   list.className = 'saved-tactics__list';
-  root.append(form, transfer, status, list);
+  root.append(form, transfer, shareBox, status, list);
 
   /** Affiche un message dans le panneau et sur le terrain. */
   const tell = (kind, message) => {
@@ -157,6 +217,53 @@ export function createSavedTacticsPanel({
     const file = createTacticFile({ name, tactic });
     download(tacticFileName(file.name), serializeTacticFile(file));
     tell('success', `Tactique « ${file.name} » exportée en JSON, avec sa séquence.`);
+  };
+
+  /**
+   * Lien de partage (phase 6) : la tactique est compressée dans l'adresse, le lien est copié dans
+   * le presse-papiers quand le navigateur l'autorise, et toujours affiché dans un champ à copier.
+   */
+  const shareTactic = async (name, tactic) => {
+    const payload = await encodeSharedTactic({ name, tactic });
+    if (payload.length > MAX_SHARE_PAYLOAD_LENGTH) {
+      shareBox.hidden = true;
+      tell('invalid', 'Tactique trop lourde pour un lien : exportez-la en JSON.');
+      return null;
+    }
+    const link = createShareUrl(getAppUrl(), payload);
+    shareTitle.textContent = `Lien de « ${normalizeTacticName(name) || CURRENT_TACTIC_NAME} »`;
+    shareField.value = link;
+    shareNote.textContent = `${formatLength(link.length)}. La tactique est dans le lien lui-même : aucun serveur ne la reçoit.`;
+    shareBox.hidden = false;
+    const copied = await copyLink(link);
+    if (!copied) {
+      shareField.focus();
+      shareField.select();
+    }
+    tell('success', copied
+      ? `Lien de « ${normalizeTacticName(name) || CURRENT_TACTIC_NAME} » copié : collez-le dans un message.`
+      : 'Lien prêt : copiez-le depuis le champ « Lien ».');
+    return link;
+  };
+
+  /** Copie un texte dans le presse-papiers ; rend faux si le navigateur le refuse. */
+  const copyLink = async (text) => {
+    try {
+      await copyText(text);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  /** Partage une tactique de la liste, relue dans le stockage au moment du clic. */
+  const shareEntry = async ({ id, name }) => {
+    const saved = await library.get(id);
+    if (!saved) {
+      tell('invalid', `La tactique « ${name} » est illisible sur cet appareil.`);
+      return;
+    }
+    await shareTactic(saved.name, saved.tactic);
   };
 
   /** Ouvre une tactique de la liste, relue dans le stockage au moment du clic. */
@@ -228,7 +335,14 @@ export function createSavedTacticsPanel({
     deleteButton.textContent = 'Supprimer';
     deleteButton.setAttribute('aria-label', `Supprimer la tactique : ${entry.name}`);
     deleteButton.addEventListener('click', () => confirmDelete(item, entry));
-    actions.append(openButton, exportButton, renameButton, duplicateButton, deleteButton);
+    const shareButton = document.createElement('button');
+    shareButton.type = 'button';
+    shareButton.className = 'button button--secondary';
+    shareButton.dataset.shareTactic = entry.id;
+    shareButton.textContent = 'Partager';
+    shareButton.setAttribute('aria-label', `Copier un lien de partage de la tactique : ${entry.name}`);
+    shareButton.addEventListener('click', () => shareEntry(entry));
+    actions.append(openButton, shareButton, exportButton, renameButton, duplicateButton, deleteButton);
     item.append(name, savedAt, actions);
     return item;
   };
@@ -460,6 +574,23 @@ export function createSavedTacticsPanel({
   exportCurrent.addEventListener('click', () => {
     exportTactic(normalizeTacticName(input.value) || CURRENT_TACTIC_NAME, capture());
   });
+  shareCurrent.addEventListener('click', async () => {
+    shareCurrent.disabled = true;
+    try {
+      await shareTactic(normalizeTacticName(input.value) || CURRENT_TACTIC_NAME, capture());
+    } finally {
+      shareCurrent.disabled = false;
+    }
+  });
+  shareCopy.addEventListener('click', async () => {
+    if (await copyLink(shareField.value)) {
+      tell('success', 'Lien copié : collez-le dans un message.');
+    } else {
+      shareField.focus();
+      shareField.select();
+      tell('info', 'Copie refusée par le navigateur : le lien est sélectionné, copiez-le à la main.');
+    }
+  });
   importButton.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', async () => {
     const [file] = fileInput.files ?? [];
@@ -473,5 +604,5 @@ export function createSavedTacticsPanel({
     }
   });
 
-  return { refresh, ready: refresh(), input, importFile };
+  return { refresh, ready: refresh(), input, importFile, shareTactic };
 }

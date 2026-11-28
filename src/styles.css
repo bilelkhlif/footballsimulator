@@ -304,6 +304,11 @@ a.button { text-decoration: none; }
 .button--danger:hover:not(:disabled) { background: var(--danger-strong); filter: brightness(1.12); }
 .button--secondary.button--danger { background: var(--danger-soft); color: var(--ink); border-color: var(--danger-line); }
 .button--secondary.button--danger:hover:not(:disabled) { background: var(--danger-soft); filter: none; border-color: var(--invalid); }
+.saved-tactics__share { display: grid; gap: 6px; margin-top: 10px; padding: 10px; border: 1px solid var(--accent-line); border-radius: var(--radius-md); background: var(--accent-soft); }
+.saved-tactics__share label { display: grid; gap: 3px; min-width: 0; font-size: .8125rem; font-weight: 500; }
+.saved-tactics__share input { min-height: 40px; min-width: 0; width: 100%; padding: 6px 8px; font: inherit; font-size: .75rem; color: var(--ink); background: var(--surface-card); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); }
+.summary-card .saved-tactics__share .button { margin-top: 0; justify-self: start; }
+.saved-tactics__share .panel-note { margin: 0; }
 .saved-tactics__confirm { display: grid; gap: 4px; }
 .saved-tactics__confirm p { margin: 0; font-size: .875rem; overflow-wrap: anywhere; }
 .saved-tactics__rename { display: grid; gap: 4px; }

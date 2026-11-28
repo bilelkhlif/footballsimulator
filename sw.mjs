@@ -31,7 +31,7 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 /** Empreinte du contenu de la coquille, écrite par « npm run shell-version » (tests/shell-version.mjs). */
-const SHELL_VERSION = 'c8d04a44a71e40ab';
+const SHELL_VERSION = '2f0465b5307d2dc9';
 const CACHE_PREFIX = 'football-simulator-';
 const CACHE_NAME = `${CACHE_PREFIX}${SHELL_VERSION}`;
 
@@ -106,6 +106,7 @@ const APP_SHELL = [
   './src/tactic-storage.mjs',
   './src/tactic-library.mjs',
   './src/tactic-file.mjs',
+  './src/tactic-share.mjs',
   './src/saved-tactics-panel.mjs',
   './src/theme.mjs',
   './src/vendor/three-r187/build/three.webgpu.js',
