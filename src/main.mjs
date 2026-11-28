@@ -17,7 +17,8 @@
  * visée au doigt, confirmation de la réinitialisation ; modules en .mjs.
  * Phase 6 : une tactique reçue par un lien de partage (« #tactique=… ») s'ouvre au lancement ;
  * calques de lecture du terrain (tiers, couloirs, demi-espaces, zone 14) ; zones surlignées ; mode
- * présentation « vestiaire » ; taille du terrain en AR ; rotation du terrain posé (deux doigts, boutons).
+ * présentation « vestiaire » ; taille du terrain en AR ; rotation du terrain posé (deux doigts, boutons) ;
+ * rendu suspendu quand l'onglet est masqué.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -75,6 +76,7 @@ import { createArSizeControl } from './ar-size.mjs';
 import { ROTATION_STEP, TwistGesture } from './ar-gestures.mjs';
 import { createReticle } from './reticle.mjs';
 import { createRenderLoop } from './render-loop.mjs';
+import { attachRenderSuspension } from './render-suspension.mjs';
 import { PointOfView } from './point-of-view.mjs';
 import { followPlayerAppearances } from './player-appearance-view.mjs';
 import { createPlayerCustomizationPanel } from './player-customization-panel.mjs';
@@ -662,7 +664,7 @@ async function init(renderMode) {
   });
 
   // setAnimationLoop plutôt que requestAnimationFrame : la même boucle sert en session WebXR.
-  await renderer.setAnimationLoop(createRenderLoop({
+  const renderLoop = createRenderLoop({
     renderer,
     scene,
     camera,
@@ -671,12 +673,16 @@ async function init(renderMode) {
     getArPlacement: () => arState.placement,
     tasks,
     getViewCamera: () => pointOfView.viewCamera,
-  }));
+  });
+  await renderer.setAnimationLoop(renderLoop);
+  // Onglet masqué (phase 6) : plus aucune image calculée ; au retour, la boucle et la lecture de la
+  // séquence reprennent là où elles en étaient.
+  const renderSuspension = attachRenderSuspension({ renderer, loop: renderLoop, target: document, player: sequencePlayer });
   document.body.classList.add('is-ready');
   return {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
     sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer,
-    pointOfView, sharedLink, pitchZones, zoneLayer, presentation,
+    pointOfView, sharedLink, pitchZones, zoneLayer, presentation, renderSuspension,
     get diagnostics() { return diagnostics; },
   };
 }
@@ -1082,7 +1088,7 @@ async function start() {
   }
   const {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer, sharedLink, pitchZones, zoneLayer, presentation,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer, sharedLink, pitchZones, zoneLayer, presentation, renderSuspension,
   } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
   const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding, workspaces, navigation });
@@ -1109,6 +1115,7 @@ async function start() {
     pitchZones,
     zoneLayer,
     presentation,
+    renderSuspension,
     xrDevice: emulator?.xrDevice ?? null,
     get placement() {
       return arState.placement;

@@ -185,6 +185,7 @@ Bon à savoir :
 - Tracez d'abord les passes et les courses : les flèches montrent le plan, et la séquence joue les déplacements.
 - Pendant la lecture, vous pouvez tourner autour de la table : l'action reste sur le terrain.
 - Déplacer un joueur pendant la lecture l'arrête, et chacun rejoint la place enregistrée.
+- Si vous changez d'onglet ou mettez l'application en arrière-plan, le terrain cesse d'être dessiné (économie de batterie) ; à votre retour, tout est à sa place et la lecture reprend où elle en était.
 - La séquence et ses notes sont gardées avec la tactique : sauvegarde automatique, tactiques enregistrées, fichier JSON et lien de partage.
 
 ## 10. Quitter l'AR

@@ -1,6 +1,7 @@
 /**
  * Tests de bout en bout de la PWA (phase 6), dans Chrome, avec le vrai Service Worker : page
- * hors-ligne dédiée à l'analyse de match, à la racine et sous un sous-chemin comme GitHub Pages.
+ * hors-ligne dédiée à l'analyse de match, à la racine et sous un sous-chemin comme GitHub Pages ;
+ * rendu suspendu quand l'onglet est masqué.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -72,6 +73,82 @@ async function testVisualizerOfflinePage(browser, url, label, record) {
 }
 
 /**
+ * Rendu suspendu : onglet masqué (visibilitychange), plus aucune image rendue ; au retour, les
+ * images reprennent, la lecture de la séquence repart au même instant et la tactique est intacte.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @param {(name: string, status: string, detail?: string) => void} record
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Tests de bout en bout — rendu suspendu quand l'onglet est masqué
+ */
+async function testRenderSuspension(browser, url, record) {
+  const name = 'Onglet masqué : aucune image rendue, puis reprise du rendu et de la lecture sans perte d\'état';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    await context.addInitScript(skipOnboarding);
+    // Visibilité de la page pilotable par le test : l'onglet sans interface reste « visible » sinon.
+    await context.addInitScript(() => {
+      let state = 'visible';
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => state === 'hidden' });
+      window.__setVisibility = (next) => {
+        state = next;
+        document.dispatchEvent(new Event('visibilitychange'));
+      };
+    });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto(`${url}?debug`, { waitUntil: 'load' });
+    await page.waitForSelector('body.is-ready', { timeout: 20000 });
+    const problems = [];
+    const before = await page.evaluate(() => {
+      const { board, sequence, sequencePlayer } = window.__footballSimulator;
+      sequence.add({ players: board.snapshot().players, ball: board.getBallPosition() });
+      board.setBallPosition({ x: 0.2, z: 0.05 });
+      sequence.add({ players: board.snapshot().players, ball: board.getBallPosition() });
+      sequencePlayer.setSpeed(0.5);
+      sequencePlayer.play();
+      return JSON.stringify(board.snapshot());
+    });
+    // Les premières images suivent la compilation des shaders : on attend que la lecture ait avancé.
+    const started = await page.waitForFunction(() => window.__footballSimulator.sequencePlayer.cursor > 0.1, null, { timeout: 10000 })
+      .then(() => true).catch(() => false);
+    if (!started) problems.push('la lecture n\'avance pas avant le masquage');
+    const frames = () => page.evaluate(() => window.__footballSimulator.renderer.info.render.calls);
+    const hidden = await page.evaluate(() => {
+      window.__setVisibility('hidden');
+      const app = window.__footballSimulator;
+      return { suspended: app.renderSuspension.suspended, state: app.sequencePlayer.state, cursor: app.sequencePlayer.cursor };
+    });
+    const frozenAt = await frames();
+    await page.waitForTimeout(700);
+    const frozen = await frames();
+    if (!hidden.suspended || frozen !== frozenAt) problems.push(`images rendues onglet masqué : ${frozen - frozenAt}`);
+    if (hidden.state !== 'paused') problems.push(`lecture pas mise en pause (${hidden.state})`);
+    await page.evaluate(() => window.__setVisibility('visible'));
+    await page.waitForTimeout(150);
+    const resumed = await page.evaluate(() => {
+      const app = window.__footballSimulator;
+      return { state: app.sequencePlayer.state, cursor: app.sequencePlayer.cursor, snapshot: JSON.stringify(app.board.snapshot()) };
+    });
+    const after = await frames();
+    if (!(after > frozen)) problems.push('le rendu ne reprend pas');
+    if (resumed.state !== 'playing' || resumed.cursor < hidden.cursor || resumed.cursor > hidden.cursor + 0.2) {
+      problems.push(`lecture : ${resumed.state}, curseur ${hidden.cursor.toFixed(3)} → ${resumed.cursor.toFixed(3)}`);
+    }
+    if (resumed.snapshot !== before) problems.push('la tactique a changé');
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || `0 image en 700 ms masqué, ${after - frozen} images après le retour, lecture reprise à ${hidden.cursor.toFixed(2)}`);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Parcours PWA de la phase 6.
  * @param {import('playwright-core').Browser} browser
  * @param {{root: string, subPath: string}} urls adresses à la racine et sous un sous-chemin
@@ -84,4 +161,5 @@ async function testVisualizerOfflinePage(browser, url, label, record) {
 export async function runPwaPhase6Tests(browser, { root, subPath }, record) {
   await testVisualizerOfflinePage(browser, root, 'racine', record);
   await testVisualizerOfflinePage(browser, subPath, 'sous-chemin', record);
+  await testRenderSuspension(browser, root, record);
 }
