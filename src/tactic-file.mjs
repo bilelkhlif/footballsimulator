@@ -104,6 +104,9 @@ function rebuildTactic({ board, keyframes }) {
     clean.appearances = Object.fromEntries(Object.entries(board.appearances)
       .map(([key, { hair, color, skin }]) => [key, skin === undefined ? { hair, color } : { hair, color, skin }]));
   }
+  if (board.zones !== undefined) {
+    clean.zones = board.zones.map(({ id, from, to }) => ({ id, from: copyPoint(from), to: copyPoint(to) }));
+  }
   if (board.identities !== undefined) {
     clean.identities = Object.fromEntries(Object.entries(board.identities).map(([teamId, { name, kit }]) => [teamId, { name, kit }]));
   }

@@ -16,6 +16,8 @@
  *   un joueur pour une course) → arrow-end → toucher l'arrivée → la flèche est tracée, puis
  *   arrow-start pour la suivante. Toucher de nouveau le départ annule le tracé. Un départ ou une
  *   arrivée refusés laissent l'état inchangé et expliquent pourquoi.
+ * - « zone » (phase 6) : arrow-start → toucher un coin du rectangle → arrow-end → toucher le coin
+ *   opposé → la zone est surlignée (AddZoneCommand), puis arrow-start pour la suivante.
  * - « disabled » : interaction coupée, en AR tant que le terrain n'est pas posé.
  *
  * Pendant le choix d'une destination (selected, arrow-end), le rayon survolé (souris, doigt posé,
@@ -33,11 +35,16 @@
 import * as THREE from 'three';
 import { EventEmitter } from './events.mjs';
 import { findTargetOnRay, intersectPitchPlane, pickTarget } from './raycasting.mjs';
-import { ARROW_KINDS, BALL_MARGIN, clampToBoard, isOnBoard, PLAYER_MARGIN } from './tactics-board.mjs';
+import {
+  ARROW_KINDS, BALL_MARGIN, clampToBoard, isOnBoard, MIN_ZONE_SIZE, PITCH_HALF_EXTENTS, PLAYER_MARGIN, zoneProblem,
+} from './tactics-board.mjs';
+import { PITCH_SCALE } from './config.mjs';
 import {
   BALL_ARROW_KINDS, readTacticalState, resolveArrowEnd, resolveArrowStart, sameTarget, targetLabel,
 } from './arrow-rules.mjs';
-import { AddArrowCommand, MarkPlayerCommand, MoveBallCommand, MovePlayerCommand } from './commands.mjs';
+import {
+  AddArrowCommand, AddZoneCommand, MarkPlayerCommand, MoveBallCommand, MovePlayerCommand,
+} from './commands.mjs';
 
 export { sameTarget, targetLabel as selectionLabel } from './arrow-rules.mjs';
 
@@ -45,6 +52,7 @@ export { sameTarget, targetLabel as selectionLabel } from './arrow-rules.mjs';
 export const INTERACTION_MODES = Object.freeze({
   MOVE: 'move', PASS: ARROW_KINDS.PASS, RUN: ARROW_KINDS.RUN, DRIBBLE: ARROW_KINDS.DRIBBLE, CROSS: ARROW_KINDS.CROSS, SHOT: ARROW_KINDS.SHOT,
   MARK: 'mark',
+  ZONE: 'zone',
 });
 
 /** États de la machine à états. */
@@ -101,6 +109,22 @@ export function ofLabel(target) {
 }
 
 /**
+ * Ramène un point sur le terrain, lignes comprises : un coin de zone posé sur la bande de gazon
+ * s'arrête à la ligne de touche ou de but.
+ * @param {{x: number, z: number}} point
+ * @returns {{x: number, z: number}}
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Interaction tactique — zones surlignées
+ */
+export function clampToPitch({ x, z }) {
+  return {
+    x: Math.min(PITCH_HALF_EXTENTS.x, Math.max(-PITCH_HALF_EXTENTS.x, x)),
+    z: Math.min(PITCH_HALF_EXTENTS.z, Math.max(-PITCH_HALF_EXTENTS.z, z)),
+  };
+}
+
+/**
  * Met la première lettre d'un texte en majuscule.
  * @param {string} text
  * @returns {string}
@@ -121,6 +145,9 @@ function capitalize(text) {
  * @role Interaction tactique — retours à l'utilisateur
  */
 export function describeDraft({ kind, actor, passer }) {
+  if (kind === INTERACTION_MODES.ZONE) {
+    return 'Zone : touchez le coin opposé du rectangle ; le même coin abandonne.';
+  }
   if (kind === INTERACTION_MODES.MARK) {
     return `Marquage ${ofLabel(actor)} : touchez l’adversaire qu’il prend en charge.`;
   }
@@ -416,6 +443,9 @@ export class TacticalInteraction extends EventEmitter {
     if (this.#mode === INTERACTION_MODES.MARK) {
       return this.#tapInMarkMode(raycaster);
     }
+    if (this.#mode === INTERACTION_MODES.ZONE) {
+      return this.#tapInZoneMode(raycaster);
+    }
     return this.#mode === INTERACTION_MODES.MOVE ? this.#tapInMoveMode(raycaster) : this.#tapInArrowMode(raycaster);
   }
 
@@ -434,6 +464,15 @@ export class TacticalInteraction extends EventEmitter {
     }
     this.#pitchGroup.updateMatrixWorld(true);
     const { target, point } = this.#aim(raycaster);
+    if (this.#draft?.kind === INTERACTION_MODES.ZONE) {
+      // Zone : le coin visé, ramené sur les lignes s'il est sur la bande de gazon.
+      const corner = point && isOnBoard(point) ? clampToPitch(point) : null;
+      const problem = corner ? zoneProblem({ from: this.#draft.start, to: corner }) : MESSAGES.outside;
+      this.#setHover(corner, {
+        valid: problem === null, cancel: false, reason: problem ? 'zone' : null, message: problem, receiver: null,
+      });
+      return;
+    }
     if (this.#draft) {
       const decision = resolveArrowEnd({ draft: this.#draft, target, point }, this.rulesState);
       const end = decision.ok || !decision.cancel ? decision.end ?? null : null;
@@ -592,6 +631,56 @@ export class TacticalInteraction extends EventEmitter {
       ? `Marquage retiré : ${targetLabel(draft.actor)} ne marque plus ${targetLabel(target)}.`
       : `${capitalize(targetLabel(draft.actor))} marque ${targetLabel(target)}.`;
     return this.#feedback('mark', 'success', message);
+  }
+
+  /**
+   * Toucher en mode « zone » (phase 6) : un coin, puis le coin opposé du rectangle à surligner, par
+   * une commande annulable. Les joueurs ne comptent pas : c'est le point du gazon qui sert. Un coin
+   * posé sur la bande de gazon est ramené sur les lignes ; toucher de nouveau le premier coin
+   * abandonne.
+   * @param {THREE.Raycaster} raycaster
+   * @returns {{action: string, message?: string}}
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Interaction tactique — zones surlignées
+   */
+  #tapInZoneMode(raycaster) {
+    const { point } = this.#aim(raycaster);
+    if (!point) {
+      return this.#feedback('invalid', 'invalid', MESSAGES.missed);
+    }
+    if (!isOnBoard(point)) {
+      return this.#feedback('invalid', 'invalid', MESSAGES.outside);
+    }
+    const corner = clampToPitch(point);
+    if (!this.#draft) {
+      this.#draft = { kind: INTERACTION_MODES.ZONE, start: corner, actor: { type: 'zone' }, passer: null };
+      this.#hover = null;
+      this.#notify();
+      return this.#feedback('arrow-start', 'info', describeDraft(this.#draft));
+    }
+    const { start } = this.#draft;
+    if (Math.hypot(corner.x - start.x, corner.z - start.z) < MIN_ZONE_SIZE / 2) {
+      this.#clearDraft();
+      this.#notify();
+      return this.#feedback('cancel', 'info', MESSAGES.draftCancelled);
+    }
+    const problem = zoneProblem({ from: start, to: corner });
+    if (problem) {
+      return this.#feedback('invalid', 'invalid', problem);
+    }
+    this.#clearDraft();
+    try {
+      this.#history.execute(new AddZoneCommand({ board: this.#board, zone: { from: start, to: corner } }));
+    } catch (error) {
+      // Zone en double, ou trop de zones : refus du tableau, expliqué, rien n'entre dans l'historique.
+      this.#notify();
+      return this.#feedback('invalid', 'invalid', error.message);
+    }
+    this.#notify();
+    const width = Math.abs(corner.x - start.x) / PITCH_SCALE;
+    const depth = Math.abs(corner.z - start.z) / PITCH_SCALE;
+    return this.#feedback('zone', 'success', `Zone de ${Math.round(width)} × ${Math.round(depth)} m surlignée.`);
   }
 
   /**

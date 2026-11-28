@@ -1,7 +1,7 @@
 /**
  * Raccourcis clavier de la vue 3D (sur ordinateur, ou tablette avec clavier).
  *
- * - D, P, C : outils Déplacer, Passe, Course ;
+ * - D, P, C : outils Déplacer, Passe, Course ; Z (phase 6) : zone surlignée ;
  * - Échap : abandonne la sélection ou le tracé en cours, ferme un panneau ouvert ;
  * - Ctrl+Z (Cmd+Z sur Mac) : annuler ; Ctrl+Y ou Ctrl+Maj+Z : rétablir.
  *
@@ -13,7 +13,7 @@
  */
 
 /** Touche de chaque outil. */
-export const MODE_KEYS = Object.freeze({ d: 'move', p: 'pass', c: 'run', b: 'dribble', x: 'cross', t: 'shot', m: 'mark' });
+export const MODE_KEYS = Object.freeze({ d: 'move', p: 'pass', c: 'run', b: 'dribble', x: 'cross', t: 'shot', m: 'mark', z: 'zone' });
 
 /**
  * Traduit un appui de touche en action, ou null s'il n'en déclenche aucune.

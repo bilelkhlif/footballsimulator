@@ -1,10 +1,11 @@
 /**
  * Tests de bout en bout de la phase 6 B, « le regard de l'entraîneur », dans Chrome avec WebGPU :
- * calques de lecture du terrain (tiers, cinq couloirs, demi-espaces, zone 14), notes des images clés.
+ * calques de lecture du terrain (tiers, cinq couloirs, demi-espaces, zone 14), notes des images clés,
+ * zones surlignées.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { clickUi } from './workspace-test-helpers.mjs';
+import { clickUi, installAimTools } from './workspace-test-helpers.mjs';
 
 /** Contexte de bureau, comme les autres parcours. */
 const DESKTOP = { viewport: { width: 1280, height: 800 } };
@@ -145,6 +146,61 @@ async function testKeyframeNotes(browser, url, record) {
 }
 
 /**
+ * Zone surlignée : l'outil « Zone » de la barre, deux clics sur le gazon, la zone listée dans sa
+ * carte, dessinée en 3D, annulable par Ctrl+Z, retirée par « Retirer », puis gardée au rechargement.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @param {(name: string, status: string, detail?: string) => void} record
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Tests de bout en bout — zones surlignées
+ */
+async function testHighlightedZone(browser, url, record) {
+  const name = 'Zone surlignée : deux clics sur le terrain, listée, dessinée, annulable, retirée, gardée au rechargement';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    await context.addInitScript(installAimTools);
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    await clickUi(page, '[data-mode="zone"]');
+    await page.evaluate(() => document.activeElement?.blur());
+    const problems = [];
+    // Le panneau se replie : le terrain est entier pour viser.
+    await page.keyboard.press('Escape');
+    const corners = await page.evaluate(async () => ({
+      a: await window.__aim.spot([[0.04, -0.06], [0.05, -0.07], [0.03, -0.05]]),
+      b: await window.__aim.spot([[0.16, 0.05], [0.15, 0.06], [0.17, 0.04]]),
+    }));
+    if (!corners.a || !corners.b) throw new Error('coins de zone introuvables à l\'écran');
+    await page.mouse.click(corners.a.sx, corners.a.sy);
+    await page.mouse.move(corners.b.sx, corners.b.sy, { steps: 4 });
+    const preview = await page.evaluate(() => window.__footballSimulator.zoneLayer.previewVisible);
+    if (!preview) problems.push('pas d\'aperçu de la zone pendant le tracé');
+    await page.mouse.click(corners.b.sx, corners.b.sy);
+    const drawn = await page.evaluate(() => ({ zones: window.__footballSimulator.board.getZones(), count: window.__footballSimulator.zoneLayer.count }));
+    if (drawn.zones.length !== 1 || drawn.count !== 1) problems.push(`zones après deux clics : ${drawn.zones.length}, dessinées : ${drawn.count}`);
+    const listed = await page.$$eval('#zone-panel [data-zone]', (items) => items.map((item) => item.textContent));
+    if (listed.length !== 1 || !/m · tiers/.test(listed[0])) problems.push(`liste : ${listed.join(' | ')}`);
+    await page.keyboard.press('Control+z');
+    if ((await page.evaluate(() => window.__footballSimulator.board.getZones().length)) !== 0) problems.push('Ctrl+Z ne retire pas la zone');
+    await page.keyboard.press('Control+y');
+    await clickUi(page, '#zone-panel [data-remove-zone]');
+    if ((await page.evaluate(() => window.__footballSimulator.board.getZones().length)) !== 0) problems.push('« Retirer » ne retire pas la zone');
+    await page.keyboard.press('Control+z');
+    await page.waitForTimeout(800);
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForSelector('body.is-ready', { timeout: 20000 });
+    const kept = await page.evaluate(() => window.__footballSimulator.board.getZones());
+    if (kept.length !== 1 || JSON.stringify(kept) !== JSON.stringify(drawn.zones)) problems.push('zone perdue au rechargement');
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || listed[0]);
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Parcours du regard de l'entraîneur.
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
@@ -157,4 +213,5 @@ async function testKeyframeNotes(browser, url, record) {
 export async function runCoachViewTests(browser, url, record) {
   await testPitchLayers(browser, url, record);
   await testKeyframeNotes(browser, url, record);
+  await testHighlightedZone(browser, url, record);
 }

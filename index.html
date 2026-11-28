@@ -52,6 +52,7 @@
     <symbol id="i-dribble" viewBox="0 0 24 24"><circle cx="5.5" cy="18.5" r="2.4"/><path d="M7.6 16.4c1.9-.6 1.6-3 3.4-3.7s1.8-3.2 3.6-3.9c1.3-.5 2.6-1.5 4.2-3.6"/><path d="M13.6 5H19v5.4"/></symbol>
     <symbol id="i-cross" viewBox="0 0 24 24"><path d="M4 20V4"/><path d="M4 6c6-1.5 11 1.5 13.5 9"/><path d="M13.4 13.6 17.6 15.6l1.6-4.4"/></symbol>
     <symbol id="i-shot" viewBox="0 0 24 24"><path d="M15 4.5h5.5v9H15"/><circle cx="4.8" cy="19.2" r="2.2"/><path d="M6.8 17.2 15.5 9"/><path d="M10.8 8.8h4.9v4.9"/></symbol>
+    <symbol id="i-zone" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1.5" stroke-dasharray="3 2.2"/><path d="M8 10h8v4H8z" opacity=".45"/></symbol>
     <symbol id="i-mark" viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="7" r="3"/><path d="M8.4 15.2 15.6 8.8" stroke-dasharray="2.4 2"/></symbol>
     <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
     <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
@@ -155,6 +156,9 @@
             <button class="tool tool--mark" type="button" data-mode="mark" aria-pressed="false" aria-keyshortcuts="M" title="Marquage individuel : un défenseur, puis l'adversaire qu'il marque (M)">
               <svg class="icon" aria-hidden="true"><use href="#i-mark"/></svg><span class="tool__label">Marquage</span>
             </button>
+            <button class="tool tool--zone" type="button" data-mode="zone" aria-pressed="false" aria-keyshortcuts="Z" title="Surligner une zone : deux coins opposés du rectangle (Z)">
+              <svg class="icon" aria-hidden="true"><use href="#i-zone"/></svg><span class="tool__label">Zone</span>
+            </button>
           </div>
           <div class="toolbar__group toolbar__group--history" role="group" aria-label="Historique">
             <button class="tool" type="button" data-action="undo" aria-keyshortcuts="Control+Z" disabled>
@@ -169,7 +173,8 @@
           </div>
         </div>
 
-          <div class="tool-guide"><h3>Un geste à la fois</h3><p><strong>Déplacer</strong> · un joueur ou le ballon, puis sa destination.</p><p><strong>Passe</strong> · le ballon ou son porteur, puis un partenaire ou un espace libre.</p><p><strong>Course</strong> · un joueur, puis son arrivée.</p><p><strong>Dribble</strong> · le porteur, puis l’endroit où il emmène le ballon.</p><p><strong>Centre</strong> · le ballon dans un couloir du dernier tiers, puis un point de la surface.</p><p><strong>Tir</strong> · le ballon, puis le but, entre les poteaux.</p><p><strong>Marquage</strong> · un défenseur, puis l’adversaire qu’il prend en charge ; la même paire retire le marquage.</p><p class="muted">Un aperçu rouge explique une action refusée. Échap ou Abandonner annule le geste en cours.</p></div>
+          <div class="tool-guide"><h3>Un geste à la fois</h3><p><strong>Déplacer</strong> · un joueur ou le ballon, puis sa destination.</p><p><strong>Passe</strong> · le ballon ou son porteur, puis un partenaire ou un espace libre.</p><p><strong>Course</strong> · un joueur, puis son arrivée.</p><p><strong>Dribble</strong> · le porteur, puis l’endroit où il emmène le ballon.</p><p><strong>Centre</strong> · le ballon dans un couloir du dernier tiers, puis un point de la surface.</p><p><strong>Tir</strong> · le ballon, puis le but, entre les poteaux.</p><p><strong>Marquage</strong> · un défenseur, puis l’adversaire qu’il prend en charge ; la même paire retire le marquage.</p><p><strong>Zone</strong> · un coin, puis le coin opposé : le rectangle est surligné sur le terrain.</p><p class="muted">Un aperçu rouge explique une action refusée. Échap ou Abandonner annule le geste en cours.</p></div>
+          <div class="summary-card zone-card"><h3>Zones surlignées</h3><div id="zone-panel"></div></div>
         </section>
 
         <section data-workspace-panel="animation" aria-label="Animation et séquences" hidden>
@@ -223,7 +228,7 @@
       </section></div>
           <div class="summary-card appearance"><h3 id="theme-title">Apparence</h3><div class="segmented" role="group" aria-labelledby="theme-title"><button type="button" class="segmented__option" data-theme-choice="auto" aria-pressed="true">Auto</button><button type="button" class="segmented__option" data-theme-choice="light" aria-pressed="false">Clair</button><button type="button" class="segmented__option" data-theme-choice="dark" aria-pressed="false">Sombre</button></div><p id="theme-status" class="panel-note" role="status">Automatique : comme le système.</p></div>
           <button class="button button--secondary rail-preference" type="button" data-expand-rail aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-panel"/></svg>Afficher les libellés du rail</button>
-          <h3>Raccourcis clavier</h3><dl class="shortcut-list"><div><dt>Déplacer</dt><dd><kbd>D</kbd></dd></div><div><dt>Passe</dt><dd><kbd>P</kbd></dd></div><div><dt>Course</dt><dd><kbd>C</kbd></dd></div><div><dt>Abandonner / fermer</dt><dd><kbd>Échap</kbd></dd></div><div><dt>Annuler</dt><dd><kbd>Ctrl Z</kbd></dd></div><div><dt>Rétablir</dt><dd><kbd>Ctrl Y</kbd> ou <kbd>Ctrl Maj Z</kbd></dd></div></dl><p class="panel-note">Sur Mac, utilisez Cmd à la place de Ctrl. Tab parcourt les commandes ; les flèches parcourent le rail.</p><p id="motion-preference" class="panel-note"></p>
+          <h3>Raccourcis clavier</h3><dl class="shortcut-list"><div><dt>Déplacer</dt><dd><kbd>D</kbd></dd></div><div><dt>Passe</dt><dd><kbd>P</kbd></dd></div><div><dt>Course</dt><dd><kbd>C</kbd></dd></div><div><dt>Zone</dt><dd><kbd>Z</kbd></dd></div><div><dt>Abandonner / fermer</dt><dd><kbd>Échap</kbd></dd></div><div><dt>Annuler</dt><dd><kbd>Ctrl Z</kbd></dd></div><div><dt>Rétablir</dt><dd><kbd>Ctrl Y</kbd> ou <kbd>Ctrl Maj Z</kbd></dd></div></dl><p class="panel-note">Sur Mac, utilisez Cmd à la place de Ctrl. Tab parcourt les commandes ; les flèches parcourent le rail.</p><p id="motion-preference" class="panel-note"></p>
         </section>
       </div>
       <button class="workspace-panel__back" type="button" data-workspace-close>Retour au terrain</button>

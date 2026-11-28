@@ -328,6 +328,11 @@ a.button { text-decoration: none; }
 @media (max-width: 699px) and (orientation: portrait) { .sequence-note { left: 15px; right: 15px; max-width: none; bottom: calc(var(--nav-height) + var(--mobile-panel) + 120px); font-size: .875rem; } }
 /* Calques du terrain (phase 6) : deux boutons par rangée, même à 250 px de large. */
 .pitch-layers { margin-top: 12px; }
+/* Zones surlignées (phase 6) : une ligne par zone, le bouton « Retirer » à droite. */
+.zone-list { display: grid; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.zone-list__item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--raised); font-size: .8125rem; overflow-wrap: anywhere; }
+.summary-card .zone-list .button { margin-top: 0; }
+.tool--zone[aria-pressed="true"] .icon { color: var(--gold); }
 .pitch-layers h4 { margin: 0 0 6px; font-size: .875rem; }
 .pitch-layers__buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .summary-card .pitch-layers__buttons .button { margin-top: 0; min-width: 0; padding-inline: 8px; }

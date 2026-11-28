@@ -22,7 +22,7 @@ import { checkKitContrast, KIT_PALETTE } from './team-colors.mjs';
 import { MAX_KEYFRAMES, normalizeKeyframeNote } from './tactical-sequence.mjs';
 import { isValidAppearance } from './player-appearance.mjs';
 import {
-  ARROW_KINDS, BALL_MARGIN, isOnBoard, isOnPitch, MIN_ARROW_LENGTH, normalizeTeamName, PLAYER_MARGIN,
+  ARROW_KINDS, BALL_MARGIN, isOnBoard, isOnPitch, MAX_ZONES, MIN_ARROW_LENGTH, normalizeTeamName, PLAYER_MARGIN, zoneProblem,
 } from './tactics-board.mjs';
 
 /** Version du format enregistré : à incrémenter si sa forme change, l'ancienne est alors ignorée. */
@@ -119,6 +119,26 @@ function isArrowValid(arrow) {
 }
 
 /**
+ * Vrai si les zones surlignées ont une forme que le tableau tactique accepterait : liste d'au plus
+ * MAX_ZONES rectangles rangés (coin min, coin max), sur le terrain, assez grands, identifiants
+ * entiers positifs distincts.
+ * @param {unknown} zones
+ * @returns {boolean}
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Persistance — zones surlignées
+ */
+function areZonesValid(zones) {
+  return Array.isArray(zones) && zones.length <= MAX_ZONES
+    && zones.every((zone) => isRecord(zone) && hasExactKeys(zone, ['id', 'from', 'to'])
+      && Number.isInteger(zone.id) && zone.id > 0
+      && isRecord(zone.from) && isRecord(zone.to)
+      && zone.from.x <= zone.to.x && zone.from.z <= zone.to.z
+      && zoneProblem(zone) === null)
+    && new Set(zones.map(({ id }) => id)).size === zones.length;
+}
+
+/**
  * Vérifie une tactique enregistrée, par rapport à l'instantané d'un tableau de référence (mêmes
  * équipes, mêmes joueurs). Aucune exception : une donnée douteuse est simplement refusée.
  * @param {unknown} data tactique lue dans IndexedDB
@@ -171,6 +191,11 @@ export function isValidTactic(data, reference) {
   }
   if (!Array.isArray(arrows) || !arrows.every(isArrowValid)
     || new Set(arrows.map(({ id }) => id)).size !== arrows.length) {
+    return false;
+  }
+  // Zones surlignées (phase 6) : absentes d'une tactique plus ancienne ou sans zone ; sinon au plus
+  // MAX_ZONES rectangles rangés, que le tableau accepterait, aux identifiants distincts.
+  if (data.board.zones !== undefined && !areZonesValid(data.board.zones)) {
     return false;
   }
   // Note de l'entraîneur (phase 6) : absente d'une image sans note ou d'une tactique plus

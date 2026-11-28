@@ -269,7 +269,8 @@ export class TacticalView {
     const start = this.#draftStart;
     this.#startMarker.visible = Boolean(start);
     this.#receiverRing.visible = false;
-    if (!start || !hover || verdict?.cancel) {
+    // Une zone (phase 6) n'a pas de flèche d'aperçu : src/zone-layer.mjs dessine son rectangle.
+    if (!start || !hover || verdict?.cancel || this.#draftKind === 'zone') {
       this.#preview.hide();
       this.#endMarker.visible = false;
       if (start) {

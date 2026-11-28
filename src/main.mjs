@@ -16,7 +16,7 @@
  * barre d'outils à icônes, aide au premier lancement, bouton « Abandonner », raccourcis clavier,
  * visée au doigt, confirmation de la réinitialisation ; modules en .mjs.
  * Phase 6 : une tactique reçue par un lien de partage (« #tactique=… ») s'ouvre au lancement ;
- * calques de lecture du terrain (tiers, couloirs, demi-espaces, zone 14).
+ * calques de lecture du terrain (tiers, couloirs, demi-espaces, zone 14) ; zones surlignées.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -35,6 +35,8 @@ import { createAnalysisPanel } from './analysis-panel.mjs';
 import { OffsideLayer } from './offside-layer.mjs';
 import { MarkingLayer } from './marking-layer.mjs';
 import { PitchZonesLayer } from './pitch-zones-layer.mjs';
+import { ZoneLayer } from './zone-layer.mjs';
+import { createZonePanel } from './zone-panel.mjs';
 import { followTeamKits } from './team-kits-view.mjs';
 import { createTeamPanel } from './team-panel.mjs';
 import { buildScenarioState, loadScenarioLibrary } from './scenarios.mjs';
@@ -280,6 +282,8 @@ async function init(renderMode) {
   // Interaction tactique (sprint 5) : un seul rayon, orienté par la souris, le doigt ou l'AR.
   const interaction = new TacticalInteraction({ board, history, pitchGroup, getHitboxes: () => tacticalView.hitboxes });
   tacticalView.bindInteraction(interaction);
+  // Zones surlignées (phase 6) : rectangles du tableau et aperçu du tracé en cours.
+  const zoneLayer = new ZoneLayer({ pitchGroup, board, interaction });
   const raycaster = new Raycaster();
   new PointerInput({
     element: renderer.domElement,
@@ -293,6 +297,9 @@ async function init(renderMode) {
   // Bandeau d'aide : l'aide de l'état courant, et quelques instants le retour de chaque geste.
   const hint = createHintController(document.getElementById('hint'));
   interaction.on('feedback', ({ kind, message }) => hint.flash(message, kind));
+  createZonePanel({
+    root: document.getElementById('zone-panel'), board, history, onFeedback: ({ kind, message }) => hint.flash(message, kind),
+  });
   const toolbar = createTacticalToolbar({
     root: document.getElementById('tactical-toolbar'),
     interaction,
@@ -570,6 +577,7 @@ async function init(renderMode) {
     { update: (time, frame) => arState.tacticalInput?.update(frame) },
     sequencePlayer,
     tacticalView,
+    zoneLayer,
     markingLayer,
     ...teamMeshes,
     // Après les pions : le point de vue masque l'instance du joueur regardé et place sa caméra.
@@ -608,7 +616,7 @@ async function init(renderMode) {
   return {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
     sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer,
-    pointOfView, sharedLink, pitchZones,
+    pointOfView, sharedLink, pitchZones, zoneLayer,
     get diagnostics() { return diagnostics; },
   };
 }
@@ -991,7 +999,7 @@ async function start() {
   }
   const {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer, sharedLink, pitchZones,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer, sharedLink, pitchZones, zoneLayer,
   } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
   const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding, workspaces, navigation });
@@ -1016,6 +1024,7 @@ async function start() {
     markingLayer,
     sharedLink,
     pitchZones,
+    zoneLayer,
     xrDevice: emulator?.xrDevice ?? null,
     get placement() {
       return arState.placement;

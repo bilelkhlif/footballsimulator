@@ -138,6 +138,8 @@ Passes longues, en retrait, centres et courses croisées restent possibles. Pour
 
 ![Une passe dorée du n° 6 au n° 11 des Bleus, une course en tirets blancs, le n° 9 sélectionné avec un anneau doré, et la barre d'outils](images/sprint5-tactique.jpg)
 
+**Surligner une zone.** L'outil **Zone** (touche Z) surligne un rectangle du terrain : touchez un coin, puis le coin opposé ; l'aperçu doré suit le doigt ou la souris, et devient rouge si la zone est trop petite (moins de 2 m de côté). Un coin posé derrière une ligne est ramené sur la ligne ; toucher de nouveau le premier coin abandonne. La carte **Zones surlignées**, sous la barre d'outils, liste les zones avec leurs mesures réelles et leur place (tiers et couloir) ; **Retirer** en efface une. Huit zones au plus ; elles sont annulables et gardées avec la tactique.
+
 ## 8. Annuler, rétablir, réinitialiser
 
 Ces commandes se trouvent dans **Outils tactiques**. Les raccourcis restent disponibles dans tous les espaces.
@@ -200,7 +202,7 @@ Au clavier :
 | Touche | Action |
 | --- | --- |
 | D, P, C | Outils Déplacer, Passe, Course |
-| B, X, T, M | Outils Dribble, Centre, Tir, Marquage |
+| B, X, T, M, Z | Outils Dribble, Centre, Tir, Marquage, Zone |
 | Échap | Abandonner la sélection ou le tracé, fermer un panneau |
 | Ctrl+Z (Cmd+Z sur Mac) | Annuler |
 | Ctrl+Y, ou Ctrl+Maj+Z | Rétablir |
