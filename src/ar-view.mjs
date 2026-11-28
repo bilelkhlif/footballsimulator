@@ -6,12 +6,16 @@
  * (sprint 3), ou devant l'utilisateur quand l'appareil n'a pas de hit test (sprint 2). Une fois
  * ancré, il suit la pose de son ancre. À la sortie, la vue 3D est restaurée telle qu'au départ.
  *
+ * Phase 6 : en AR, le terrain peut être agrandi (scale : 1 pour la table, jusqu'au sol) avant ou
+ * après la pose. Le plateau grandit avec lui : sa pose est relevée d'autant pour qu'il repose sur
+ * la surface au lieu de s'y enfoncer. La vue 3D garde toujours l'échelle 1.
+ *
  * Ce module ne parle pas à WebXR : il reçoit des poses (position et orientation) et les applique
  * aux objets three.js. C'est src/ar-surface.mjs qui lit le hit test et les ancres.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
-import { computePitchPlacement } from './ar-placement.mjs';
+import { computePitchPlacement, SURFACE_OFFSET } from './ar-placement.mjs';
 
 /**
  * Crée la vue AR de la scène.
@@ -30,6 +34,23 @@ export function createArView({ scene, table, pitchGroup, controls, reticle = nul
   let isActive = false;
   let needsPlacement = false;
   let savedBackground = null;
+  /** Échelle du terrain en AR (phase 6), et dernière pose reçue, sans le relèvement dû à l'échelle. */
+  let scale = 1;
+  const pose = { x: 0, y: 0, z: 0, hasPose: false };
+
+  /**
+   * Applique l'échelle et la position de base au terrain : le plateau, épaissi par l'échelle,
+   * reste posé sur la surface.
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Réalité augmentée — taille du terrain posé
+   */
+  function applyScaleAndPosition() {
+    pitchGroup.scale.setScalar(scale);
+    if (pose.hasPose) {
+      pitchGroup.position.set(pose.x, pose.y + (scale - 1) * SURFACE_OFFSET, pose.z);
+    }
+  }
 
   /**
    * Remet le terrain au centre de la scène, à plat, comme dans la vue 3D.
@@ -40,6 +61,8 @@ export function createArView({ scene, table, pitchGroup, controls, reticle = nul
   function resetPitchPose() {
     pitchGroup.position.set(0, 0, 0);
     pitchGroup.quaternion.set(0, 0, 0, 1);
+    pitchGroup.scale.setScalar(1);
+    pose.hasPose = false;
   }
 
   return {
@@ -51,6 +74,26 @@ export function createArView({ scene, table, pitchGroup, controls, reticle = nul
     /** Vrai tant que le terrain attend sa pose. */
     get needsPlacement() {
       return needsPlacement;
+    },
+
+    /** Échelle du terrain en AR (1 : terrain de table de 60 cm). */
+    get scale() {
+      return scale;
+    },
+
+    /**
+     * Change l'échelle du terrain en AR (phase 6), avant ou après la pose : appliquée tout de
+     * suite pendant une session, gardée pour la suivante sinon.
+     * @param {number} value échelle strictement positive
+     */
+    setScale(value) {
+      if (!Number.isFinite(value) || value <= 0) {
+        throw new RangeError(`Échelle invalide : ${value}`);
+      }
+      scale = value;
+      if (isActive) {
+        applyScaleAndPosition();
+      }
     },
 
     /**
@@ -67,6 +110,8 @@ export function createArView({ scene, table, pitchGroup, controls, reticle = nul
       controls.enabled = false; // le téléphone déplace la caméra, plus la souris ni le doigt
       pitchGroup.visible = false; // masqué jusqu'à sa pose
       needsPlacement = true;
+      pose.hasPose = false;
+      pitchGroup.scale.setScalar(scale);
     },
 
     /**
@@ -101,7 +146,8 @@ export function createArView({ scene, table, pitchGroup, controls, reticle = nul
      * @param {{position: {x: number, y: number, z: number}, rotationY: number}} placement
      */
     placeAt({ position, rotationY }) {
-      pitchGroup.position.set(position.x, position.y, position.z);
+      Object.assign(pose, { x: position.x, y: position.y, z: position.z, hasPose: true });
+      applyScaleAndPosition();
       pitchGroup.rotation.set(0, rotationY, 0);
       pitchGroup.visible = true;
       needsPlacement = false;
@@ -114,7 +160,8 @@ export function createArView({ scene, table, pitchGroup, controls, reticle = nul
      * @param {{position: {x: number, y: number, z: number}, orientation: {x: number, y: number, z: number, w: number}}} anchorTransform
      */
     followAnchor({ position, orientation }) {
-      pitchGroup.position.set(position.x, position.y, position.z);
+      Object.assign(pose, { x: position.x, y: position.y, z: position.z, hasPose: true });
+      applyScaleAndPosition();
       pitchGroup.quaternion.set(orientation.x, orientation.y, orientation.z, orientation.w);
     },
 

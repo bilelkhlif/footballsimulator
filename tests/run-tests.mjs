@@ -27,6 +27,7 @@ import { runSafeAreaReviewTests } from './safe-area-review-tests.mjs';
 import { runCoachingWorkflowTests } from './coaching-workflow-tests.mjs';
 import { runSavedTacticsTests } from './saved-tactics-tests.mjs';
 import { runCoachViewTests } from './coach-view-tests.mjs';
+import { runArPlacementTests } from './ar-placement-tests.mjs';
 import { runServiceWorkerMediaTests } from './service-worker-media-tests.mjs';
 import { testMatchVisualizer } from './visualizer-tests.mjs';
 import { testVisualizerGpuReset, testVisualizerModes } from './visualizer-modes-tests.mjs';
@@ -2446,6 +2447,7 @@ async function main() {
     await testEmulator(browser, root.url);
     await testArSession(browser, root.url);
     await testArSession(browser, root.url, { webglTest: true });
+    await runArPlacementTests(browser, root.url, record);
     await runCoachingWorkflowTests(browser, root.url, record);
   } finally {
     await browser.close();

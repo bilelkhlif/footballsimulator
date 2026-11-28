@@ -81,6 +81,8 @@ Sans ce réglage, l'application affiche le badge « AR : réglage WebGPU à acti
 
 Tournez autour de la table : vous voyez la tactique sous tous les angles, et le terrain ne bouge pas. Pour le poser ailleurs, touchez **« Déplacer le terrain »**, puis recommencez à l'étape 2.
 
+**Taille du terrain.** Dans **Réalité augmentée**, la carte **Taille du terrain** propose **Table · 60 cm**, **Grande table · 1 m** et **Sol · 2 m** (pour travailler debout autour, avec l'équipe). Choisissez-la avant d'entrer en AR, ou pendant la session, avant ou après la pose : le terrain posé grandit ou rapetisse sur place, sans quitter la surface. La tactique ne change pas, et le choix est gardé pour la fois suivante. Pour le sol, visez le sol à 1,5 m environ.
+
 ## 5. Choisir les formations
 
 Ouvrez **Équipes et formations**, ou touchez la pastille d'une équipe en haut de l'écran. La carte **Équipes**, en haut de l'espace, donne à chaque équipe un nom (24 caractères au plus, différent de l'adversaire) et un maillot. Les couleurs proposées sont vérifiées en vision normale et pour les trois daltonismes : un maillot trop proche de l'adversaire, ou qui se fondrait dans le gazon, est refusé, et l'aide dit pour quelle vision. Le gardien porte automatiquement une couleur distincte des deux équipes et de l'autre gardien. Le nom choisi remplace « Bleus » ou « Rouges » dans tous les messages ; le changement est annulable.

@@ -17,7 +17,7 @@
  * visée au doigt, confirmation de la réinitialisation ; modules en .mjs.
  * Phase 6 : une tactique reçue par un lien de partage (« #tactique=… ») s'ouvre au lancement ;
  * calques de lecture du terrain (tiers, couloirs, demi-espaces, zone 14) ; zones surlignées ; mode
- * présentation « vestiaire ».
+ * présentation « vestiaire » ; taille du terrain en AR.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -71,6 +71,7 @@ import { registerServiceWorker, setUpInstallButton, watchForUpdates, watchNetwor
 import { ArSession, AR_ERROR_REASONS, hasWebGpuXrBinding, RENDERING_APIS } from './xr-session.mjs';
 import { createArView } from './ar-view.mjs';
 import { SurfacePlacement } from './ar-surface.mjs';
+import { createArSizeControl } from './ar-size.mjs';
 import { createReticle } from './reticle.mjs';
 import { createRenderLoop } from './render-loop.mjs';
 import { PointOfView } from './point-of-view.mjs';
@@ -589,6 +590,14 @@ async function init(renderMode) {
       resize();
       resetView();
     },
+  });
+
+  // Taille du terrain en AR (phase 6) : table, grande table ou sol ; la vue 3D reste à l'échelle 1.
+  createArSizeControl({
+    buttons: document.querySelectorAll('[data-ar-size]'),
+    arView,
+    storage: readLocalStorage(),
+    onChange: ({ label }) => hint.flash(`Terrain en AR : ${label.toLowerCase()}.`, 'info'),
   });
 
   // Session AR en cours : pose du terrain et saisie tactique, lues à chaque image.
