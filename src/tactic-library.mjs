@@ -30,6 +30,9 @@ export const MAX_SAVED_TACTICS = 50;
 /** Longueur maximale du nom d'une tactique, en caractères. */
 export const MAX_TACTIC_NAME_LENGTH = 40;
 
+/** Nom donné à une tactique importée dont le fichier n'a pas de nom utilisable. */
+export const DEFAULT_IMPORTED_NAME = 'Tactique importée';
+
 /** Raisons d'un enregistrement refusé, pour le message affiché. */
 export const SAVE_ERRORS = Object.freeze({
   EMPTY_NAME: 'empty-name',
@@ -77,6 +80,49 @@ export function normalizeTacticName(name) {
  */
 function nameKey(name) {
   return name.toLocaleLowerCase('fr');
+}
+
+/**
+ * Nom libre pour une tactique importée : le nom du fichier s'il n'est pas pris, sinon
+ * « Nom (2) », « Nom (3) »…, sans tenir compte de la casse et sans dépasser la longueur maximale.
+ * Une tactique déjà enregistrée n'est donc jamais remplacée par un import.
+ * @param {string} name nom lu dans le fichier
+ * @param {string[]} takenNames noms des tactiques déjà enregistrées
+ * @returns {string}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Persistance — fichier JSON d'une tactique
+ */
+export function uniqueTacticName(name, takenNames) {
+  const base = normalizeTacticName(name) || DEFAULT_IMPORTED_NAME;
+  const taken = new Set(takenNames.map((other) => other.toLocaleLowerCase('fr')));
+  if (!taken.has(base.toLocaleLowerCase('fr'))) {
+    return base;
+  }
+  for (let index = 2; ; index += 1) {
+    const suffix = ` (${index})`;
+    const candidate = `${base.slice(0, MAX_TACTIC_NAME_LENGTH - suffix.length).trimEnd()}${suffix}`;
+    if (!taken.has(candidate.toLocaleLowerCase('fr'))) {
+      return candidate;
+    }
+  }
+}
+
+/** Mention ajoutée au nom d'une copie. */
+export const COPY_SUFFIX = ' (copie)';
+
+/**
+ * Nom proposé pour la copie d'une tactique : « Pressing haut (copie) ». Un nom long est raccourci
+ * pour que la mention tienne dans la longueur maximale.
+ * @param {string} name nom de la tactique copiée
+ * @returns {string}
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Persistance — tactiques enregistrées
+ */
+export function copyName(name) {
+  const base = normalizeTacticName(name) || DEFAULT_IMPORTED_NAME;
+  return `${base.slice(0, MAX_TACTIC_NAME_LENGTH - COPY_SUFFIX.length).trimEnd()}${COPY_SUFFIX}`;
 }
 
 /**
@@ -143,8 +189,9 @@ function createTacticId() {
  *   save: (name: string, tactic: object) => Promise<{ok: true, entry: {id: string, name: string, savedAt: number}}|{ok: false, reason: string, name?: string}>,
  *   get: (id: string) => Promise<{name: string, tactic: object}|null>,
  *   rename: (id: string, name: string) => Promise<{ok: true, entry: {id: string, name: string, savedAt: number}}|{ok: false, reason: string, name?: string}>,
+ *   duplicate: (id: string) => Promise<{ok: true, entry: {id: string, name: string, savedAt: number}}|{ok: false, reason: string}>,
  * }}
- * Depuis la phase 6, une tactique enregistrée peut être renommée (rename).
+ * Depuis la phase 6, une tactique enregistrée peut être renommée (rename) et dupliquée (duplicate).
  * @responsable Iyed Rachdi
  * @date 2026-11-26
  * @role Persistance — tactiques enregistrées
@@ -237,6 +284,28 @@ export function createTacticLibrary(store, { now = () => Date.now(), createId = 
         const renamed = { ...entry, name: cleanName };
         const saved = await writeEntries(entries.map((candidate) => (candidate.id === id ? renamed : candidate)));
         return saved ? { ok: true, entry: summarize(renamed) } : { ok: false, reason: SAVE_ERRORS.STORAGE };
+      });
+    },
+
+    // Dupliquer (phase 6) : une nouvelle entrée, avec la même tactique, nommée « Nom (copie) » (ou
+    // « Nom (copie) (2) »… si ce nom est pris) et datée du moment de la copie. L'original ne change pas.
+    duplicate(id) {
+      return serial(async () => {
+        const entries = await readForUpdate('copie');
+        if (!entries) {
+          return { ok: false, reason: SAVE_ERRORS.STORAGE };
+        }
+        const entry = entries.find((candidate) => candidate.id === id);
+        if (!entry) {
+          return { ok: false, reason: SAVE_ERRORS.NOT_FOUND };
+        }
+        if (entries.length >= MAX_SAVED_TACTICS) {
+          return { ok: false, reason: SAVE_ERRORS.FULL };
+        }
+        const name = uniqueTacticName(copyName(entry.name), entries.map((candidate) => candidate.name));
+        const copy = { id: createId(), name, savedAt: now(), tactic: structuredClone(entry.tactic) };
+        const saved = await writeEntries([...entries, copy]);
+        return saved ? { ok: true, entry: summarize(copy) } : { ok: false, reason: SAVE_ERRORS.STORAGE };
       });
     },
 

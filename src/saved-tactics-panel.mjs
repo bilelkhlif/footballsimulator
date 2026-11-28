@@ -7,7 +7,8 @@
  * fichier JSON : la tactique importée est vérifiée, enregistrée sous un nom libre (jamais à la
  * place d'une autre), puis ouverte.
  *
- * Phase 6 : chaque tactique enregistrée peut être renommée, dans sa ligne de la liste.
+ * Phase 6 : chaque tactique enregistrée peut être renommée, dans sa ligne de la liste, et
+ * dupliquée, pour en essayer une variante sans toucher à l'original.
  *
  * Le panneau ne connaît ni IndexedDB ni le tableau tactique : il passe par la bibliothèque
  * (src/tactic-library.mjs) pour enregistrer et relire, par src/tactic-file.mjs pour écrire et
@@ -212,13 +213,40 @@ export function createSavedTacticsPanel({
     renameButton.textContent = 'Renommer';
     renameButton.setAttribute('aria-label', `Renommer la tactique : ${entry.name}`);
     renameButton.addEventListener('click', () => startRename(item, entry));
-    actions.append(openButton, exportButton, renameButton);
+    const duplicateButton = document.createElement('button');
+    duplicateButton.type = 'button';
+    duplicateButton.className = 'button button--secondary';
+    duplicateButton.dataset.duplicateTactic = entry.id;
+    duplicateButton.textContent = 'Dupliquer';
+    duplicateButton.setAttribute('aria-label', `Dupliquer la tactique : ${entry.name}`);
+    duplicateButton.addEventListener('click', () => duplicateEntry(entry, duplicateButton));
+    actions.append(openButton, exportButton, renameButton, duplicateButton);
     item.append(name, savedAt, actions);
     return item;
   };
 
   /** Met le focus sur un bouton d'une ligne après un rafraîchissement de la liste. */
   const focusInList = (selector) => list.querySelector(selector)?.focus();
+
+  /**
+   * Dupliquer (phase 6) : la copie arrive en tête de liste, et le focus va sur son bouton
+   * « Renommer », pour lui donner tout de suite son propre nom.
+   */
+  const duplicateEntry = async (entry, button) => {
+    button.disabled = true;
+    try {
+      const result = await library.duplicate(entry.id);
+      if (!result.ok) {
+        tell('invalid', describeSaveError(result));
+        return;
+      }
+      await refresh();
+      focusInList(`[data-rename-tactic="${CSS.escape(result.entry.id)}"]`);
+      tell('success', `Copie « ${result.entry.name} » enregistrée : « Renommer » lui donne son propre nom.`);
+    } finally {
+      button.disabled = false;
+    }
+  };
 
   /**
    * Renommer (phase 6) : la ligne devient un petit formulaire, prérempli avec le nom actuel.

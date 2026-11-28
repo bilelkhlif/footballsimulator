@@ -1,6 +1,6 @@
 /**
  * Tests de bout en bout du panneau « Tactiques enregistrées » (phase 6), dans Chrome, avec le vrai
- * IndexedDB : renommer une tactique enregistrée, par les vrais boutons du panneau.
+ * IndexedDB : renommer et dupliquer une tactique enregistrée, par les vrais boutons du panneau.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -123,6 +123,50 @@ async function testRenameTactic(browser, url, record) {
 }
 
 /**
+ * Dupliquer : la copie, nommée « Nom (copie) », s'ouvre sur la même tactique que l'original ;
+ * le focus va sur son bouton « Renommer ».
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @param {(name: string, status: string, detail?: string) => void} record
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Tests de bout en bout — dupliquer une tactique enregistrée
+ */
+async function testDuplicateTactic(browser, url, record) {
+  const name = 'Tactiques enregistrées : dupliquer, copie identique ouverte, focus sur « Renommer »';
+  const context = await browser.newContext(DESKTOP);
+  try {
+    const { page, errors } = await openApp(context, `${url}?debug`);
+    const original = await page.evaluate(() => {
+      const { board } = window.__footballSimulator;
+      board.setFormation('blue', '3-5-2');
+      board.setPlayerPosition('blue', 9, { x: 0.1, z: 0.03 });
+      return board.snapshot();
+    });
+    await saveCurrentTactic(page, 'Bloc haut');
+    const id = await page.$eval('.saved-tactics__item', (item) => item.dataset.savedTactic);
+    await clickUi(page, `[data-duplicate-tactic="${id}"]`);
+    await page.waitForFunction(() => [...document.querySelectorAll('.saved-tactics__item strong')].some((element) => element.textContent === 'Bloc haut (copie)'));
+    const problems = [];
+    const copyId = await page.$eval('.saved-tactics__item:has(strong[title="Bloc haut (copie)"])', (item) => item.dataset.savedTactic);
+    const focused = await page.evaluate(() => document.activeElement?.dataset.renameTactic ?? null);
+    if (focused !== copyId) problems.push('le focus ne va pas sur « Renommer » de la copie');
+    await page.evaluate(() => window.__footballSimulator.board.reset());
+    await clickUi(page, `[data-open-tactic="${copyId}"]`);
+    await page.waitForFunction(() => window.__footballSimulator.board.getFormation('blue').name === '3-5-2');
+    const opened = await page.evaluate(() => window.__footballSimulator.board.snapshot());
+    if (JSON.stringify(opened) !== JSON.stringify(original)) problems.push('la copie ouverte diffère de l\'original');
+    if (JSON.stringify((await listedNames(page)).sort()) !== JSON.stringify(['Bloc haut', 'Bloc haut (copie)'])) problems.push('liste inattendue');
+    problems.push(...errors);
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || '« Bloc haut (copie) » rouvre le 3-5-2 et le n° 9 déplacé');
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await context.close();
+  }
+}
+
+/**
  * Parcours du panneau « Tactiques enregistrées ».
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
@@ -134,4 +178,5 @@ async function testRenameTactic(browser, url, record) {
  */
 export async function runSavedTacticsTests(browser, url, record) {
   await testRenameTactic(browser, url, record);
+  await testDuplicateTactic(browser, url, record);
 }

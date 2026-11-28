@@ -16,7 +16,7 @@ import {
 import { DEFAULT_FORMATIONS } from '../../src/config.mjs';
 import { captureTactic, isValidTactic, TACTIC_KEY } from '../../src/tactic-storage.mjs';
 import {
-  createTacticLibrary, LIBRARY_FORMAT_VERSION, LIBRARY_KEY, MAX_SAVED_TACTICS, normalizeTacticName, readLibraryEntries, SAVE_ERRORS,
+  copyName, createTacticLibrary, LIBRARY_FORMAT_VERSION, LIBRARY_KEY, MAX_SAVED_TACTICS, normalizeTacticName, readLibraryEntries, SAVE_ERRORS,
 } from '../../src/tactic-library.mjs';
 
 /**
@@ -173,4 +173,40 @@ test('renommer : refus d\'un nom vide, d\'un nom déjà pris, d\'une tactique ab
   assert.equal(store.writes, writes, 'aucun refus n\'écrit dans le stockage');
   const broken = createTacticLibrary(createMemoryStore({ failRead: true }));
   assert.equal((await broken.rename('t1', 'Autre')).reason, SAVE_ERRORS.STORAGE);
+});
+
+test('dupliquer : copie complète sous « Nom (copie) », datée de la copie, l\'original inchangé', async () => {
+  const store = createMemoryStore();
+  let time = 100;
+  let id = 0;
+  const library = createTacticLibrary(store, { now: () => (time += 100), createId: () => `t${(id += 1)}` });
+  const { board, sequence } = createEditedTactic();
+  const tactic = captureTactic(board, sequence);
+  await library.save('Pressing haut', tactic);
+  assert.deepEqual(await library.duplicate('t1'), { ok: true, entry: { id: 't2', name: 'Pressing haut (copie)', savedAt: 300 } });
+  assert.deepEqual(await library.duplicate('t1'), { ok: true, entry: { id: 't3', name: 'Pressing haut (copie) (2)', savedAt: 400 } });
+  assert.deepEqual((await library.get('t2')).tactic, tactic);
+  assert.deepEqual(await library.get('t1'), { name: 'Pressing haut', tactic });
+  // La copie est indépendante : renommer l'une ne touche pas l'autre.
+  await library.rename('t2', 'Pressing médian');
+  assert.deepEqual((await library.list()).tactics.map(({ name }) => name), ['Pressing haut (copie) (2)', 'Pressing médian', 'Pressing haut']);
+  assert.equal(copyName('x'.repeat(40)).length, 40);
+  assert.ok(copyName('x'.repeat(40)).endsWith(' (copie)'));
+});
+
+test('dupliquer : refus d\'une tactique absente, d\'une bibliothèque pleine et d\'un stockage illisible', async () => {
+  const store = createMemoryStore();
+  let id = 0;
+  const library = createTacticLibrary(store, { createId: () => `t${(id += 1)}` });
+  const { board, sequence } = createEditedTactic();
+  const tactic = captureTactic(board, sequence);
+  assert.equal((await library.duplicate('t1')).reason, SAVE_ERRORS.NOT_FOUND);
+  for (let i = 0; i < MAX_SAVED_TACTICS; i += 1) {
+    await library.save(`Tactique ${i}`, tactic);
+  }
+  const writes = store.writes;
+  assert.equal((await library.duplicate('t1')).reason, SAVE_ERRORS.FULL);
+  assert.equal(store.writes, writes);
+  const broken = createTacticLibrary(createMemoryStore({ failRead: true }));
+  assert.equal((await broken.duplicate('t1')).reason, SAVE_ERRORS.STORAGE);
 });
