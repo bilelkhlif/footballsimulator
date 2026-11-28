@@ -468,6 +468,8 @@ async function init(renderMode) {
     history,
     board,
     onFeedback: ({ kind, message }) => hint.flash(message, kind),
+    // Légende de la lecture (phase 6) : note de l'entraîneur de l'image clé la plus proche.
+    caption: document.getElementById('sequence-note'),
   });
 
   // Sauvegarde automatique : la tactique du dernier lancement est rétablie, une fois la scène et

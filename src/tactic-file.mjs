@@ -110,7 +110,10 @@ function rebuildTactic({ board, keyframes }) {
   return {
     version: TACTIC_FORMAT_VERSION,
     board: clean,
-    keyframes: keyframes.map(({ players, ball }) => ({ players: copyPlayers(players), ball: copyPoint(ball) })),
+    // Note de l'entraîneur (phase 6) : copiée seulement si l'image en a une.
+    keyframes: keyframes.map(({ players, ball, note }) => (note === undefined
+      ? { players: copyPlayers(players), ball: copyPoint(ball) }
+      : { players: copyPlayers(players), ball: copyPoint(ball), note })),
   };
 }
 

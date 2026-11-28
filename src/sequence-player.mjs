@@ -18,8 +18,10 @@
  * scène rejoint alors l'état du tableau. Il ne peut donc pas y avoir de conflit avec les commandes.
  *
  * Événement :
- * - statechange : { state, ended, step, steps, speed } au lancement, à la pause, à l'arrêt, à la fin
- *   et à chaque nouvelle étape.
+ * - statechange : { state, ended, step, steps, speed, keyframe } au lancement, à la pause, à
+ *   l'arrêt, à la fin, à chaque nouvelle étape et quand l'image clé la plus proche change. Depuis la
+ *   phase 6, keyframe (à partir de 1) est l'image clé la plus proche du curseur : sa note de
+ *   l'entraîneur est affichée pendant la lecture, et change à mi-chemin entre deux images.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -53,6 +55,8 @@ export class SequencePlayer extends EventEmitter {
   #lastTime = null;
   #ended = false;
   #step = -1;
+  /** Image clé la plus proche du curseur (à partir de 0), ou -1 hors lecture. */
+  #nearest = -1;
   /** @type {Float64Array[]|null} une ligne par image clé : x, z de chaque objet, dans l'ordre de #targets */
   #frames = null;
 
@@ -246,6 +250,7 @@ export class SequencePlayer extends EventEmitter {
     this.#cursor = 0;
     this.#ended = false;
     this.#step = -1;
+    this.#nearest = -1;
   }
 
   /**
@@ -268,8 +273,10 @@ export class SequencePlayer extends EventEmitter {
       position.x = from[x] * keep + to[x] * eased;
       position.z = from[x + 1] * keep + to[x + 1] * eased;
     }
-    if (step !== this.#step) {
+    const nearest = Math.round(this.#cursor);
+    if (step !== this.#step || nearest !== this.#nearest) {
       this.#step = step;
+      this.#nearest = nearest;
       this.#notify();
     }
   }
@@ -288,6 +295,7 @@ export class SequencePlayer extends EventEmitter {
       step: Math.max(0, this.#step) + 1,
       steps,
       speed: this.#speed,
+      keyframe: this.#state === PLAYBACK_STATES.STOPPED ? 0 : Math.max(0, this.#nearest) + 1,
     });
   }
 }

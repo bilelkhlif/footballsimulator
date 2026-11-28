@@ -157,6 +157,7 @@ Ouvrez **Animation et séquences**. Le principe est celui d'un dessin animé : v
 3. Touchez **« Lecture »** : l'action se joue. Le même bouton devient « Pause ».
 4. **« Recommencer »** revient au début ; **0,5×**, **1×** et **2×** règlent la vitesse.
 5. **« Effacer »** vide la séquence ; « Annuler » la rétablit.
+6. **Notes de l'entraîneur** : sous les boutons, un champ par image clé reçoit une phrase, par exemple « Le 6 décroche entre les centraux » (120 caractères au plus). Entrée ou un toucher ailleurs l'enregistre ; Échap rend la note d'avant ; « Annuler » défait une note comme toute action. Pendant la lecture, la note de l'image la plus proche s'affiche sur le terrain, au-dessus de la barre du bas ; elle change à mi-chemin entre deux images.
 
 **Situations de jeu.** Dans l'espace Animation et séquences, la carte **Situations de jeu** propose des actions toutes prêtes : chaque carte donne le thème, le titre et le principe. **Charger** place les deux équipes, le ballon, les flèches, les marquages et les images clés de la situation ; « Lecture » la joue. Les noms et maillots de vos équipes sont gardés, et le chargement s'annule comme toute action.
 
@@ -178,7 +179,7 @@ Bon à savoir :
 - Tracez d'abord les passes et les courses : les flèches montrent le plan, et la séquence joue les déplacements.
 - Pendant la lecture, vous pouvez tourner autour de la table : l'action reste sur le terrain.
 - Déplacer un joueur pendant la lecture l'arrête, et chacun rejoint la place enregistrée.
-- La séquence n'est pas gardée quand la page est rechargée.
+- La séquence et ses notes sont gardées avec la tactique : sauvegarde automatique, tactiques enregistrées, fichier JSON et lien de partage.
 
 ## 10. Quitter l'AR
 

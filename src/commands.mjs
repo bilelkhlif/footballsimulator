@@ -861,6 +861,69 @@ export class AddKeyframeCommand extends Command {
 }
 
 /**
+ * Écrire, changer ou effacer la note de l'entraîneur d'une image clé (phase 6). Les places de
+ * l'image ne changent pas. Annulable : l'annulation rend la note d'avant.
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Logique métier — patron Command : notes des images clés
+ */
+export class EditKeyframeNoteCommand extends Command {
+  #sequence;
+  #index;
+  #note;
+  #previous = '';
+
+  /**
+   * @param {object} options
+   * @param {import('./tactical-sequence.mjs').TacticalSequence} options.sequence
+   * @param {number} options.index position de l'image clé, à partir de 0
+   * @param {string} options.note nouvelle note ; vide pour l'effacer
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : notes des images clés
+   */
+  constructor({ sequence, index, note }) {
+    super();
+    this.#sequence = sequence;
+    this.#index = index;
+    this.#note = note;
+  }
+
+  /**
+   * Libellé : « Note de l'image clé 2 ».
+   * @returns {string}
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : notes des images clés
+   */
+  get label() {
+    return `Note de l’image clé ${this.#index + 1}`;
+  }
+
+  /**
+   * Garde la note d'avant, puis écrit la nouvelle. Sans effet si elle est identique.
+   * @returns {boolean}
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : notes des images clés
+   */
+  execute() {
+    this.#previous = this.#sequence.noteAt(this.#index);
+    return this.#sequence.setNote(this.#index, this.#note);
+  }
+
+  /**
+   * Rend la note d'avant.
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : notes des images clés
+   */
+  undo() {
+    this.#sequence.setNote(this.#index, this.#previous);
+  }
+}
+
+/**
  * Effacer la séquence (sprint 6, BF9), de façon annulable.
  * @responsable Bilel Khlif
  * @date 2026-11-16

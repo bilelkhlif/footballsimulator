@@ -317,6 +317,15 @@ a.button { text-decoration: none; }
 .saved-tactics__transfer { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .summary-card .saved-tactics__actions .button, .summary-card .saved-tactics__transfer .button { margin-top: 0; }
 .offside-summary h4 { margin: 0 0 4px; font-size: .875rem; }
+/* Notes des images clés (phase 6) : un champ par image, pleine largeur, dans le panneau de la séquence. */
+.keyframe-notes { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.keyframe-notes label { display: grid; gap: 3px; min-width: 0; font-size: .8125rem; font-weight: 550; }
+.keyframe-notes input { min-height: 40px; min-width: 0; padding: 6px 8px; font: inherit; font-weight: 400; color: var(--ink); background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+/* Légende de la lecture : au-dessus de la barre du bas, centrée sur le terrain, lisible en AR. */
+.sequence-note { position: absolute; z-index: 6; left: calc(var(--rail) + var(--panel-space) + 28px); right: max(28px, env(safe-area-inset-right)); bottom: calc(max(22px, env(safe-area-inset-bottom)) + 76px); justify-self: center; width: fit-content; max-width: min(640px, calc(100% - var(--rail) - var(--panel-space) - 56px)); margin: 0 auto; display: flex; gap: 10px; align-items: baseline; padding: 10px 16px; border: 1px solid var(--accent-line); border-radius: var(--radius-lg); background: var(--surface-glass-strong); box-shadow: var(--shadow-md); color: var(--ink); font-size: .9375rem; line-height: 1.45; overflow-wrap: anywhere; pointer-events: none; }
+.sequence-note[hidden] { display: none; }
+.sequence-note strong { flex: none; color: var(--accent); font-size: .8125rem; }
+@media (max-width: 699px) and (orientation: portrait) { .sequence-note { left: 15px; right: 15px; max-width: none; bottom: calc(var(--nav-height) + var(--mobile-panel) + 120px); font-size: .875rem; } }
 /* Calques du terrain (phase 6) : deux boutons par rangée, même à 250 px de large. */
 .pitch-layers { margin-top: 12px; }
 .pitch-layers h4 { margin: 0 0 6px; font-size: .875rem; }

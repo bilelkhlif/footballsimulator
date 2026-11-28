@@ -187,8 +187,9 @@
           <button class="tool" type="button" data-speed="2" aria-pressed="false">2×</button>
           <button class="tool" type="button" data-sequence="clear" disabled>Effacer</button>
         </div>
+        <ol class="keyframe-notes" data-keyframe-notes aria-label="Notes de l’entraîneur, une par image clé" hidden></ol>
           <div class="summary-card scenario-card-host"><h3>Situations de jeu</h3><div id="scenario-panel"></div></div>
-          <p class="panel-note">La séquence et son historique sont conservés quand vous changez d’espace. Une modification du tableau arrête la lecture et retrouve la tactique.</p>
+          <p class="panel-note">Une note par image clé s’affiche sur le terrain pendant la lecture. La séquence et son historique sont conservés quand vous changez d’espace. Une modification du tableau arrête la lecture et retrouve la tactique.</p>
         </section>
 
         <section data-workspace-panel="ar" aria-label="Réalité augmentée" hidden>
@@ -252,6 +253,7 @@
         <div><dt>Mémoire GPU</dt><dd data-field="memory">–</dd></div>
       </dl>
     </aside>
+    <p id="sequence-note" class="sequence-note" role="status" aria-live="polite" hidden><strong data-caption-step></strong><span data-caption-text></span></p>
     <div class="global-notices"><p id="ar-message" class="notice" role="alert" hidden></p><p id="update-notice" class="notice notice--info" role="status" hidden>Nouvelle version installée.<button id="reload-app" class="button button--small" type="button">Recharger</button></p></div>
 
     <footer class="bottombar">

@@ -19,7 +19,7 @@
  */
 import { FORMATIONS, PHASES } from './formations.mjs';
 import { checkKitContrast, KIT_PALETTE } from './team-colors.mjs';
-import { MAX_KEYFRAMES } from './tactical-sequence.mjs';
+import { MAX_KEYFRAMES, normalizeKeyframeNote } from './tactical-sequence.mjs';
 import { isValidAppearance } from './player-appearance.mjs';
 import {
   ARROW_KINDS, BALL_MARGIN, isOnBoard, isOnPitch, MIN_ARROW_LENGTH, normalizeTeamName, PLAYER_MARGIN,
@@ -173,9 +173,13 @@ export function isValidTactic(data, reference) {
     || new Set(arrows.map(({ id }) => id)).size !== arrows.length) {
     return false;
   }
+  // Note de l'entraîneur (phase 6) : absente d'une image sans note ou d'une tactique plus
+  // ancienne ; sinon un texte déjà nettoyé, non vide.
   return Array.isArray(data.keyframes) && data.keyframes.length <= MAX_KEYFRAMES
     && data.keyframes.every((keyframe) => isRecord(keyframe)
-      && arePlayersValid(keyframe.players, playerKeys) && isOnBoard(keyframe.ball, BALL_MARGIN));
+      && arePlayersValid(keyframe.players, playerKeys) && isOnBoard(keyframe.ball, BALL_MARGIN)
+      && (keyframe.note === undefined || (typeof keyframe.note === 'string' && keyframe.note.length > 0
+        && normalizeKeyframeNote(keyframe.note) === keyframe.note)));
 }
 
 /**

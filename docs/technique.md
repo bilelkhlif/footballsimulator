@@ -117,7 +117,7 @@ Le diagramme UML de déploiement complet est dans [uml.md](uml.md).
 | Assemblage | `main.mjs` | Crée la scène, le tableau, l'historique, la session AR, la PWA, puis lance la boucle |
 | Rendu | `webgpu.mjs`, `webgl-test-mode.mjs`, `scene.mjs`, `render-loop.mjs`, `theme.mjs` | Moteur, caméra, lumières, boucle unique, thèmes clair et sombre |
 | Modèle 3D | `pitch.mjs`, `players.mjs`, `team.mjs`, `ball.mjs`, `reticle.mjs`, `tactical-arrows.mjs` | Terrain, joueurs instanciés, ballon, réticule TSL, flèches |
-| État tactique | `tactics-board.mjs`, `tactical-sequence.mjs`, `formations.mjs`, `arrow-rules.mjs` | Source de vérité : places, formations, flèches, images clés |
+| État tactique | `tactics-board.mjs`, `tactical-sequence.mjs`, `formations.mjs`, `arrow-rules.mjs` | Source de vérité : places, formations, flèches, images clés et leur note facultative (champ `note`, 120 caractères, écrit par `EditKeyframeNoteCommand`, vérifié par `isValidTactic`) |
 | Actions | `commands.mjs` | Toute modification de l'état, annulable |
 | Interaction | `pointer-input.mjs`, `xr-input.mjs`, `raycasting.mjs`, `tactical-interaction.mjs`, `keyboard-shortcuts.mjs` | Un geste devient un rayon, puis une commande |
 | Vue | `tactical-view.mjs`, `formation-transition.mjs`, `sequence-player.mjs` | La scène suit l'état |

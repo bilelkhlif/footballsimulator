@@ -7,8 +7,12 @@
  * images clés sont ajoutées et effacées par des commandes annulables (src/commands.mjs), comme les
  * autres actions.
  *
+ * Phase 6 : chaque image clé peut porter une note de l'entraîneur (« Le 6 décroche entre les
+ * centraux »), affichée pendant la lecture. La note est facultative : une image sans note n'a pas
+ * de champ « note », et une séquence enregistrée avant la phase 6 reste valable.
+ *
  * Événement :
- * - change : { length } après chaque ajout, retrait ou effacement.
+ * - change : { length } après chaque ajout, retrait, effacement ou changement de note.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -16,6 +20,25 @@ import { EventEmitter } from './events.mjs';
 
 /** Nombre maximal d'images clés d'une séquence. */
 export const MAX_KEYFRAMES = 12;
+
+/** Longueur maximale de la note d'une image clé, en caractères : une phrase lisible sur le terrain. */
+export const MAX_NOTE_LENGTH = 120;
+
+/**
+ * Note d'image clé nettoyée : caractères de contrôle retirés, espaces resserrés, longueur bornée.
+ * Rend une chaîne vide si rien ne reste (pas de note).
+ * @param {unknown} note
+ * @returns {string}
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Logique métier — séquence animée : notes de l'entraîneur
+ */
+export function normalizeKeyframeNote(note) {
+  if (typeof note !== 'string') {
+    return '';
+  }
+  return note.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, MAX_NOTE_LENGTH).trim();
+}
 
 /**
  * Copie profonde d'une image clé.
@@ -25,11 +48,17 @@ export const MAX_KEYFRAMES = 12;
  * @date 2026-11-16
  * @role Logique métier — séquence animée (BF9)
  */
-function copyKeyframe({ players, ball }) {
-  return {
+function copyKeyframe({ players, ball, note }) {
+  const copy = {
     players: Object.fromEntries(Object.entries(players).map(([key, { x, z }]) => [key, { x, z }])),
     ball: { x: ball.x, z: ball.z },
   };
+  // Note de l'entraîneur (phase 6) : gardée seulement si elle n'est pas vide.
+  const clean = normalizeKeyframeNote(note);
+  if (clean) {
+    copy.note = clean;
+  }
+  return copy;
 }
 
 /**
@@ -116,6 +145,59 @@ export class TacticalSequence extends EventEmitter {
   restore(keyframes) {
     this.#keyframes = keyframes.map(copyKeyframe);
     this.#notify();
+  }
+
+  /**
+   * Note de l'entraîneur d'une image clé, ou chaîne vide si elle n'en a pas.
+   * @param {number} index position de l'image, à partir de 0
+   * @returns {string}
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — séquence animée : notes de l'entraîneur
+   */
+  noteAt(index) {
+    return this.#require(index).note ?? '';
+  }
+
+  /**
+   * Écrit (ou efface, avec une note vide) la note d'une image clé ; les places ne changent pas.
+   * @param {number} index position de l'image, à partir de 0
+   * @param {string} note texte libre, nettoyé par normalizeKeyframeNote
+   * @returns {boolean} faux si la note ne change pas
+   * @throws {RangeError} si l'image n'existe pas
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — séquence animée : notes de l'entraîneur
+   */
+  setNote(index, note) {
+    const keyframe = this.#require(index);
+    const clean = normalizeKeyframeNote(note);
+    if (clean === (keyframe.note ?? '')) {
+      return false;
+    }
+    if (clean) {
+      keyframe.note = clean;
+    } else {
+      delete keyframe.note;
+    }
+    this.#notify();
+    return true;
+  }
+
+  /**
+   * Image clé à une position ; erreur si elle n'existe pas.
+   * @param {number} index
+   * @returns {object}
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — séquence animée : notes de l'entraîneur
+   */
+  #require(index) {
+    const keyframe = Number.isInteger(index) ? this.#keyframes[index] : undefined;
+    if (!keyframe) {
+      throw new RangeError(`Image clé inconnue : ${index}`);
+    }
+    return keyframe;
   }
 
   /**

@@ -17,14 +17,15 @@
  *     "keyframes": [{ "players": { "blue:10": [-15, 12] }, "ball": [-15, 12] }, …] }
  *
  * Chaque image clé ne cite que ce qui bouge depuis la précédente ; la première image de la séquence
- * est la situation de départ. Les flèches respectent les règles des flèches (src/arrow-rules.mjs) :
+ * est la situation de départ. Depuis la phase 6, une image peut porter une note de l'entraîneur
+ * (« note », et « startNote » pour l'image de départ), affichée pendant la lecture. Les flèches respectent les règles des flèches (src/arrow-rules.mjs) :
  * un centre part d'un couloir du dernier tiers, un tir vise le but.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { PITCH_SCALE } from './config.mjs';
 import { FORMATIONS, PHASES } from './formations.mjs';
-import { MAX_KEYFRAMES } from './tactical-sequence.mjs';
+import { MAX_KEYFRAMES, MAX_NOTE_LENGTH, normalizeKeyframeNote } from './tactical-sequence.mjs';
 import { ARROW_KINDS, BALL_MARGIN, isOnBoard, PLAYER_MARGIN, TacticsBoard } from './tactics-board.mjs';
 import { validateArrow } from './arrow-rules.mjs';
 
@@ -98,6 +99,12 @@ export function validateScenario(data) {
   const checkBall = (ball, where) => {
     if (ball !== undefined && (!isRealPoint(ball) || !isOnBoard(fromRealMeters(ball), BALL_MARGIN))) fail(`${where} : ballon hors du plateau.`);
   };
+  /** Vérifie une note d'image clé (phase 6) : facultative, un texte déjà propre et assez court. */
+  const checkNote = (note, where) => {
+    if (note !== undefined && (typeof note !== 'string' || !note || normalizeKeyframeNote(note) !== note)) {
+      fail(`${where} : note invalide (texte de 1 à ${MAX_NOTE_LENGTH} caractères).`);
+    }
+  };
   checkPlayers(data.players, 'Départ');
   checkBall(data.ball, 'Départ');
   if (data.arrows !== undefined && !Array.isArray(data.arrows)) fail('Flèches : liste attendue.');
@@ -132,9 +139,11 @@ export function validateScenario(data) {
       data.keyframes.forEach((keyframe, index) => {
         checkPlayers(keyframe?.players, `Image ${index + 2}`);
         checkBall(keyframe?.ball, `Image ${index + 2}`);
+        checkNote(keyframe?.note, `Image ${index + 2}`);
       });
     }
   }
+  checkNote(data.startNote, 'Départ');
   return { ok: errors.length === 0, errors };
 }
 
@@ -164,12 +173,13 @@ export function buildScenarioState(data) {
     board.setMarking({ teamId: dTeam, number: Number(dNumber) }, { teamId: aTeam, number: Number(aNumber) });
   }
   const start = board.snapshot();
-  const keyframes = [{ players: start.players, ball: start.ball }];
+  const keyframes = [{ players: start.players, ball: start.ball, ...(data.startNote ? { note: data.startNote } : {}) }];
   for (const step of data.keyframes ?? []) {
     const previous = keyframes.at(-1);
     const players = { ...previous.players };
     for (const [key, point] of Object.entries(step.players ?? {})) players[key] = fromRealMeters(point);
-    keyframes.push({ players, ball: step.ball ? fromRealMeters(step.ball) : previous.ball });
+    // La note (phase 6) est propre à chaque image : elle ne se reporte pas sur la suivante.
+    keyframes.push({ players, ball: step.ball ? fromRealMeters(step.ball) : previous.ball, ...(step.note ? { note: step.note } : {}) });
   }
   return { board: start, keyframes: data.keyframes?.length ? keyframes : [] };
 }
