@@ -114,7 +114,7 @@ Le diagramme UML de déploiement complet est dans [uml.md](uml.md).
 
 | Couche | Fichiers | Rôle |
 | --- | --- | --- |
-| Assemblage | `main.mjs` | Crée la scène, le tableau, l'historique, la session AR, la PWA, puis lance la boucle |
+| Assemblage | `main.mjs`, `selected-player-actions.mjs` | Crée la scène, le tableau, l'historique, la session AR, la PWA, puis lance la boucle ; le câblage des actions du joueur sélectionné (« Point de vue », « Personnaliser le joueur ») est extrait dans son propre module |
 | Rendu | `webgpu.mjs`, `webgl-test-mode.mjs`, `scene.mjs`, `render-loop.mjs`, `render-suspension.mjs`, `theme.mjs` | Moteur, caméra, lumières, boucle unique, thèmes clair et sombre ; onglet masqué (`visibilitychange`, hors session AR) : boucle retirée (`setAnimationLoop(null)`), lecture de la séquence mise en pause puis reprise au même instant |
 | Modèle 3D | `pitch.mjs`, `players.mjs`, `team.mjs`, `ball.mjs`, `reticle.mjs`, `tactical-arrows.mjs` | Terrain, joueurs instanciés, ballon, réticule TSL, flèches |
 | État tactique | `tactics-board.mjs`, `tactical-sequence.mjs`, `formations.mjs`, `arrow-rules.mjs` | Source de vérité : places, formations, flèches, images clés et leur note facultative (champ `note`, 120 caractères, écrit par `EditKeyframeNoteCommand`, vérifié par `isValidTactic`) |

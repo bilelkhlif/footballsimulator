@@ -31,7 +31,7 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 /** Empreinte du contenu de la coquille, écrite par « npm run shell-version » (tests/shell-version.mjs). */
-const SHELL_VERSION = 'fa29b97859c31f29';
+const SHELL_VERSION = 'af317fb3b1567c60';
 const CACHE_PREFIX = 'football-simulator-';
 const CACHE_NAME = `${CACHE_PREFIX}${SHELL_VERSION}`;
 
@@ -54,6 +54,7 @@ const APP_SHELL = [
   './src/player-appearance.mjs',
   './src/player-appearance-view.mjs',
   './src/player-customization-panel.mjs',
+  './src/selected-player-actions.mjs',
   './src/team.mjs',
   './src/ball.mjs',
   './src/xr-support.mjs',

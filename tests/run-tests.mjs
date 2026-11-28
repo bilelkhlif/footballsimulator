@@ -29,6 +29,7 @@ import { runSavedTacticsTests } from './saved-tactics-tests.mjs';
 import { runCoachViewTests } from './coach-view-tests.mjs';
 import { runArPlacementTests } from './ar-placement-tests.mjs';
 import { runPwaPhase6Tests } from './pwa-phase6-tests.mjs';
+import { runSelectedPlayerTests } from './selected-player-tests.mjs';
 import { runServiceWorkerMediaTests } from './service-worker-media-tests.mjs';
 import { testMatchVisualizer } from './visualizer-tests.mjs';
 import { testVisualizerGpuReset, testVisualizerModes } from './visualizer-modes-tests.mjs';
@@ -2415,6 +2416,7 @@ async function main() {
     await testPhaseToggle(browser, root.url);
     await testAnalysisAndOffside(browser, root.url);
     await runCoachViewTests(browser, root.url, record);
+    await runSelectedPlayerTests(browser, root.url, record);
     await testShotArrow(browser, root.url);
     await testTeamIdentity(browser, root.url);
     await testScenarioLibrary(browser, root.url);
