@@ -23,7 +23,9 @@
 import { EventEmitter } from './events.mjs';
 import { getFormation, PHASES } from './formations.mjs';
 import { computeTeamTargets } from './formation-transition.mjs';
-import { BALL_RADIUS, BOARD_LENGTH, BOARD_WIDTH, DEFAULT_KITS, PITCH_LENGTH, PITCH_WIDTH, PLAYER_SIZE, TEAMS } from './config.mjs';
+import {
+  BALL_RADIUS, BOARD_LENGTH, BOARD_WIDTH, DEFAULT_KITS, PITCH_LENGTH, PITCH_SCALE, PITCH_WIDTH, PLAYER_SIZE, TEAMS,
+} from './config.mjs';
 import { checkKitContrast, goalkeeperKit, KIT_PALETTE } from './team-colors.mjs';
 import {
   copyAppearance, DEFAULT_APPEARANCE, isValidAppearance, sameAppearance,
@@ -77,6 +79,46 @@ export const MIN_ARROW_LENGTH = 0.02;
 
 /** Tolérance des comparaisons de positions, en mètres. */
 const EPSILON = 1e-9;
+
+/** Côté minimal d'une zone surlignée (phase 6), en mètres de maquette : 2 m sur un vrai terrain. */
+export const MIN_ZONE_SIZE = 2 * PITCH_SCALE;
+
+/** Nombre maximal de zones surlignées à la fois : au-delà, le terrain ne se lit plus. */
+export const MAX_ZONES = 8;
+
+/**
+ * Zone surlignée rangée : coins bas (min) et haut (max), quel que soit l'ordre des deux touchers.
+ * @param {{from: {x: number, z: number}, to: {x: number, z: number}}} zone deux coins opposés
+ * @returns {{from: {x: number, z: number}, to: {x: number, z: number}}}
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Logique métier — zones surlignées
+ */
+export function normalizeZone({ from, to }) {
+  return {
+    from: { x: Math.min(from.x, to.x), z: Math.min(from.z, to.z) },
+    to: { x: Math.max(from.x, to.x), z: Math.max(from.z, to.z) },
+  };
+}
+
+/**
+ * Raison du refus d'une zone, ou null si elle est acceptable : coins sur le terrain (lignes
+ * comprises) et côtés d'au moins MIN_ZONE_SIZE.
+ * @param {{from: {x: number, z: number}, to: {x: number, z: number}}} zone
+ * @returns {string|null}
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Logique métier — zones surlignées
+ */
+export function zoneProblem({ from, to }) {
+  if (!isOnPitch(from) || !isOnPitch(to)) {
+    return 'Une zone se trace sur le terrain, entre les lignes.';
+  }
+  if (Math.abs(to.x - from.x) < MIN_ZONE_SIZE - EPSILON || Math.abs(to.z - from.z) < MIN_ZONE_SIZE - EPSILON) {
+    return 'Zone trop petite : au moins 2 m de côté sur le terrain réel.';
+  }
+  return null;
+}
 
 /**
  * Indique si une place est sur le plateau, avec une marge au bord.
@@ -237,6 +279,14 @@ export class TacticsBoard extends EventEmitter {
    * @type {Map<string, {hair: string, color: string}>}
    */
   #appearances = new Map();
+
+  /**
+   * Zones surlignées par l'entraîneur (phase 6) : rectangles du terrain, dans l'ordre du tracé.
+   * @type {Array<{id: number, from: {x: number, z: number}, to: {x: number, z: number}}>}
+   */
+  #zones = [];
+
+  #nextZoneId = 1;
 
   #teams;
   #initialState;
@@ -492,6 +542,68 @@ export class TacticsBoard extends EventEmitter {
   }
 
   /**
+   * Zones surlignées, dans l'ordre du tracé (phase 6).
+   * @returns {Array<{id: number, from: {x: number, z: number}, to: {x: number, z: number}}>} copies
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — zones surlignées
+   */
+  getZones() {
+    return this.#zones.map(({ id, from, to }) => ({ id, from: copyPosition(from), to: copyPosition(to) }));
+  }
+
+  /**
+   * Surligne une zone rectangulaire du terrain, donnée par deux coins opposés. Les coins doivent être
+   * sur le terrain, les côtés d'au moins 2 m réels, et la zone ne doit pas doubler une zone déjà
+   * tracée ; MAX_ZONES au plus. Un identifiant est attribué, sauf s'il est fourni (rétablissement).
+   * @param {{from: {x: number, z: number}, to: {x: number, z: number}, id?: number}} zone
+   * @returns {{id: number, from: {x: number, z: number}, to: {x: number, z: number}}} la zone ajoutée, rangée
+   * @throws {RangeError} si la zone est refusée
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — zones surlignées
+   */
+  addZone({ from, to, id }) {
+    const problem = zoneProblem({ from, to });
+    if (problem) {
+      throw new RangeError(problem);
+    }
+    if (this.#zones.length >= MAX_ZONES) {
+      throw new RangeError(`${MAX_ZONES} zones au plus : retirez-en une avant d’en tracer une autre.`);
+    }
+    if (id !== undefined && this.#zones.some((zone) => zone.id === id)) {
+      throw new RangeError(`Zone déjà présente : ${id}`);
+    }
+    const clean = normalizeZone({ from, to });
+    if (this.#zones.some((zone) => samePosition(zone.from, clean.from) && samePosition(zone.to, clean.to))) {
+      throw new RangeError('Cette zone est déjà surlignée.');
+    }
+    const zone = { id: id ?? this.#nextZoneId, ...clean };
+    this.#nextZoneId = Math.max(this.#nextZoneId, zone.id + 1);
+    this.#zones.push(zone);
+    this.emit('change', { type: 'zones' });
+    return { id: zone.id, from: copyPosition(zone.from), to: copyPosition(zone.to) };
+  }
+
+  /**
+   * Retire une zone surlignée.
+   * @param {number} id
+   * @returns {boolean} vrai si la zone existait
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — zones surlignées
+   */
+  removeZone(id) {
+    const index = this.#zones.findIndex((zone) => zone.id === id);
+    if (index === -1) {
+      return false;
+    }
+    this.#zones.splice(index, 1);
+    this.emit('change', { type: 'zones' });
+    return true;
+  }
+
+  /**
    * Identité d'une équipe : son nom, son maillot, et celui de son gardien, choisi pour rester
    * distinct des deux maillots de champ, du gazon et de l'autre gardien, pour tout le monde.
    * @param {string} teamId
@@ -722,6 +834,8 @@ export class TacticsBoard extends EventEmitter {
       ...(this.#appearances.size
         ? { appearances: Object.fromEntries([...this.#appearances].map(([key, appearance]) => [key, copyAppearance(appearance)])) }
         : {}),
+      // Zones surlignées (phase 6) : aucune clé sans zone, pour la même raison.
+      ...(this.#zones.length ? { zones: this.getZones() } : {}),
     };
   }
 
@@ -766,6 +880,9 @@ export class TacticsBoard extends EventEmitter {
       this.#appearances = appearances;
       this.emit('appearancechange', {});
     }
+    // Zones surlignées : celles de l'instantané ; aucune dans une tactique plus ancienne.
+    this.#zones = (snapshot.zones ?? []).map(({ id, from, to }) => ({ id, from: copyPosition(from), to: copyPosition(to) }));
+    this.#nextZoneId = Math.max(this.#nextZoneId, ...this.#zones.map(({ id }) => id + 1));
     this.emit('change', { type: 'restore' });
   }
 

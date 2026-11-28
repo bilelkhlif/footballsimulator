@@ -25,6 +25,8 @@ import { runWorkspaceTests, verifyArWorkspaces } from './workspace-tests.mjs';
 import { runFinalUxReviewTests } from './final-ux-review-tests.mjs';
 import { runSafeAreaReviewTests } from './safe-area-review-tests.mjs';
 import { runCoachingWorkflowTests } from './coaching-workflow-tests.mjs';
+import { runSavedTacticsTests } from './saved-tactics-tests.mjs';
+import { runCoachViewTests } from './coach-view-tests.mjs';
 import { runServiceWorkerMediaTests } from './service-worker-media-tests.mjs';
 import { testMatchVisualizer } from './visualizer-tests.mjs';
 import { testVisualizerGpuReset, testVisualizerModes } from './visualizer-modes-tests.mjs';
@@ -1681,8 +1683,9 @@ async function testTacticalMobile(browser, url) {
         overflow: document.documentElement.scrollWidth > window.innerWidth,
       };
     });
-    // Sept outils (Déplacer, Passe, Course, Dribble, Centre, Tir, Marquage) et trois actions d'historique.
-    const layoutOk = layout.count === 10 && layout.inside && layout.minHeight >= 44 && layout.labelsFit && !layout.overflow;
+    // Huit outils (Déplacer, Passe, Course, Dribble, Centre, Tir, Marquage et, depuis la phase 6,
+    // Zone) et trois actions d'historique.
+    const layoutOk = layout.count === 11 && layout.inside && layout.minHeight >= 44 && layout.labelsFit && !layout.overflow;
     record(`${name} : barre d'outils entière, ${layout.count} boutons de ${layout.minHeight} px de haut, libellés lisibles`, layoutOk ? 'ok' : 'échec',
       `dans l'écran : ${layout.inside}, libellés entiers : ${layout.labelsFit}, débordement : ${layout.overflow}`);
 
@@ -2406,8 +2409,10 @@ async function main() {
     await testFormationButtons(browser, root.url);
     await testReducedMotion(browser, root.url);
     await testTacticAutosave(browser, root.url);
+    await runSavedTacticsTests(browser, root.url, record);
     await testPhaseToggle(browser, root.url);
     await testAnalysisAndOffside(browser, root.url);
+    await runCoachViewTests(browser, root.url, record);
     await testShotArrow(browser, root.url);
     await testTeamIdentity(browser, root.url);
     await testScenarioLibrary(browser, root.url);

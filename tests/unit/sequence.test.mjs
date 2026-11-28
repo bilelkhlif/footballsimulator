@@ -8,9 +8,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { MAX_KEYFRAMES, TacticalSequence } from '../../src/tactical-sequence.mjs';
+import {
+  MAX_KEYFRAMES, MAX_NOTE_LENGTH, normalizeKeyframeNote, TacticalSequence,
+} from '../../src/tactical-sequence.mjs';
 import { PLAYBACK_STATES, SequencePlayer, STEP_DURATION_MS } from '../../src/sequence-player.mjs';
-import { AddKeyframeCommand, ClearSequenceCommand, CommandHistory, MovePlayerCommand } from '../../src/commands.mjs';
+import {
+  AddKeyframeCommand, ClearSequenceCommand, CommandHistory, EditKeyframeNoteCommand, MovePlayerCommand,
+} from '../../src/commands.mjs';
+import { captureTactic, isValidTactic } from '../../src/tactic-storage.mjs';
+import { createTacticFile, parseTacticFile, serializeTacticFile } from '../../src/tactic-file.mjs';
 import { TacticsBoard } from '../../src/tactics-board.mjs';
 import { describeSequence, formatSpeed } from '../../src/sequence-panel.mjs';
 import { DEFAULT_FORMATIONS } from '../../src/config.mjs';
@@ -170,4 +176,61 @@ test('panneau : état écrit en clair et vitesse à la française', () => {
   assert.equal(describeSequence({ length: 3, state: 'stopped' }), '3 images clés : « Lecture » joue l’action.');
   assert.equal(describeSequence({ length: 3, state: 'playing', step: 2, steps: 2, speed: 2 }), 'Lecture : étape 2 sur 2, vitesse 2×.');
   assert.match(describeSequence({ length: 3, state: 'paused', ended: true }), /^Fin de l’action/);
+});
+
+test('notes de l\'entraîneur : écrites, changées et effacées par une commande annulable, places intactes', () => {
+  const { history, sequence } = createSetup();
+  const places = JSON.stringify(sequence.keyframes.map(({ players, ball }) => ({ players, ball })));
+  assert.equal(sequence.noteAt(1), '');
+  assert.equal(Object.hasOwn(sequence.keyframes[1], 'note'), false, 'sans note, pas de champ');
+  assert.equal(history.execute(new EditKeyframeNoteCommand({ sequence, index: 1, note: '  Le 6   décroche\nentre les centraux ' })), true);
+  assert.equal(sequence.noteAt(1), 'Le 6 décroche entre les centraux');
+  assert.equal(history.undoLabel, 'Note de l’image clé 2');
+  assert.equal(history.execute(new EditKeyframeNoteCommand({ sequence, index: 1, note: 'Le 6 décroche entre les centraux' })), false, 'note identique : rien à garder');
+  history.execute(new EditKeyframeNoteCommand({ sequence, index: 1, note: '' }));
+  assert.equal(sequence.noteAt(1), '');
+  history.undo();
+  assert.equal(sequence.noteAt(1), 'Le 6 décroche entre les centraux');
+  history.undo();
+  assert.equal(sequence.noteAt(1), '');
+  assert.equal(JSON.stringify(sequence.keyframes.map(({ players, ball }) => ({ players, ball }))), places, 'les places ne bougent pas');
+  assert.throws(() => sequence.setNote(7, 'x'), RangeError);
+  assert.equal(normalizeKeyframeNote(`${'a'.repeat(200)}`).length, MAX_NOTE_LENGTH);
+  assert.equal(normalizeKeyframeNote('\u0007 ok \t'), 'ok');
+  assert.equal(normalizeKeyframeNote(42), '');
+});
+
+test('notes : gardées avec la tactique, vérifiées, et valables en fichier ; une note invalide est refusée', () => {
+  const { board, sequence } = createSetup();
+  sequence.setNote(0, 'Relance courte du gardien');
+  const tactic = captureTactic(board, sequence);
+  assert.ok(isValidTactic(tactic, board.snapshot()));
+  const parsed = parseTacticFile(serializeTacticFile(createTacticFile({ name: 'Relance', tactic })), board.snapshot());
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.tactic.keyframes[0].note, 'Relance courte du gardien');
+  assert.equal(Object.hasOwn(parsed.tactic.keyframes[1], 'note'), false);
+  const restored = new TacticalSequence();
+  restored.restore(parsed.tactic.keyframes);
+  assert.equal(restored.noteAt(0), 'Relance courte du gardien');
+  for (const note of ['', '  espaces ', 42, 'x'.repeat(MAX_NOTE_LENGTH + 1)]) {
+    const bad = structuredClone(tactic);
+    bad.keyframes[0].note = note;
+    assert.equal(isValidTactic(bad, board.snapshot()), false, JSON.stringify(note).slice(0, 20));
+  }
+});
+
+test('lecture : l\'image clé la plus proche est signalée, pour afficher sa note, et change à mi-chemin', () => {
+  const { player } = createSetup();
+  const seen = [];
+  player.on('statechange', ({ keyframe }) => seen.push(keyframe));
+  player.play();
+  player.update(0);
+  player.update(STEP_DURATION_MS * 0.4);
+  player.update(STEP_DURATION_MS * 0.6);
+  player.update(STEP_DURATION_MS * 1.6);
+  player.update(STEP_DURATION_MS * 3);
+  assert.deepEqual([...new Set(seen)], [1, 2, 3]);
+  assert.equal(seen.at(-1), 3, 'en fin de lecture : la dernière image');
+  player.stop();
+  assert.equal(seen.at(-1), 0, 'arrêt : aucune image');
 });

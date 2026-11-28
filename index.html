@@ -52,6 +52,8 @@
     <symbol id="i-dribble" viewBox="0 0 24 24"><circle cx="5.5" cy="18.5" r="2.4"/><path d="M7.6 16.4c1.9-.6 1.6-3 3.4-3.7s1.8-3.2 3.6-3.9c1.3-.5 2.6-1.5 4.2-3.6"/><path d="M13.6 5H19v5.4"/></symbol>
     <symbol id="i-cross" viewBox="0 0 24 24"><path d="M4 20V4"/><path d="M4 6c6-1.5 11 1.5 13.5 9"/><path d="M13.4 13.6 17.6 15.6l1.6-4.4"/></symbol>
     <symbol id="i-shot" viewBox="0 0 24 24"><path d="M15 4.5h5.5v9H15"/><circle cx="4.8" cy="19.2" r="2.2"/><path d="M6.8 17.2 15.5 9"/><path d="M10.8 8.8h4.9v4.9"/></symbol>
+    <symbol id="i-present" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M12 16v4M8 20h8M8.5 12.5l2.5-2.5 2 2 3-3.5"/></symbol>
+    <symbol id="i-zone" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1.5" stroke-dasharray="3 2.2"/><path d="M8 10h8v4H8z" opacity=".45"/></symbol>
     <symbol id="i-mark" viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="7" r="3"/><path d="M8.4 15.2 15.6 8.8" stroke-dasharray="2.4 2"/></symbol>
     <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
     <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
@@ -117,7 +119,7 @@
           <p class="panel-intro">Votre terrain, toutes vos idées.</p><p class="muted">Tournez la vue, placez vos joueurs et construisez votre prochaine action.</p>
           <div class="summary-card"><h3>En place</h3><dl class="summary-list"><div><dt>Équipe bleue</dt><dd data-formation-summary="blue"></dd></div><div><dt>Équipe rouge</dt><dd data-formation-summary="red"></dd></div><div><dt>Flèches tactiques</dt><dd data-arrow-count>0</dd></div></dl></div>
           <div class="summary-card"><h3>Sélection</h3><p data-selection-summary>Aucune sélection</p><p class="muted">Touchez un joueur ou le ballon sur le terrain pour afficher sa position.</p></div>
-          <div class="summary-card saved-tactics"><h3>Tactiques enregistrées</h3><div id="saved-tactics-panel"></div><p class="panel-note">Gardées sur cet appareil, même après la fermeture de l’application : formations, places, flèches, marquages, équipes et séquence. Exportez-les en fichier JSON pour les passer à un autre appareil.</p></div>
+          <div class="summary-card saved-tactics"><h3>Tactiques enregistrées</h3><div id="saved-tactics-panel"></div><p class="panel-note">Gardées sur cet appareil, même après la fermeture de l’application : formations, places, flèches, marquages, équipes et séquence. Partagez-les par un lien, qui contient toute la tactique sans passer par un serveur, ou exportez-les en fichier JSON.</p></div>
           <button class="button button--secondary" type="button" data-workspace="tactics"><svg class="icon" aria-hidden="true"><use href="#i-pass"/></svg>Ouvrir les outils tactiques</button>
           <p class="panel-note">Glissez pour tourner · molette ou pincement pour zoomer. Les commandes de vue restent au bord du terrain.</p>
         </section>
@@ -126,7 +128,7 @@
           <p class="panel-intro">Chaque équipe, son organisation.</p><p class="muted">Choisissez une formation. Les joueurs rejoignent leurs places ; le changement reste annulable.</p>
           <div class="summary-card team-card"><h3>Équipes</h3><div id="team-panel"></div><p class="muted">Maillots vérifiés en vision normale et pour les trois daltonismes ; le gardien porte une couleur distincte.</p></div>
           <div id="formation-panel" class="formation-panel" hidden></div>
-          <div class="summary-card analysis-card"><h3>Analyse tactique</h3><div id="analysis-panel"></div><p class="muted">Mesures en mètres réels, sur un terrain de 105 × 68 m, sans le gardien. Les lignes se lisent sur le terrain, d'après la disposition en place.</p></div>
+          <div class="summary-card analysis-card"><h3>Analyse tactique</h3><div id="analysis-panel"></div><p class="muted">Mesures en mètres réels, sur un terrain de 105 × 68 m, sans le gardien. Les lignes et les calques se lisent sur le terrain, d'après la disposition en place.</p></div>
           <details class="positions"><summary>Positions des 22 joueurs</summary><p class="muted">Coordonnées de la maquette, en mètres. Déplacez les joueurs directement sur le terrain.</p><table><caption class="sr-only">Positions actuelles des joueurs</caption><thead><tr><th scope="col">Joueur</th><th scope="col">x (m)</th><th scope="col">z (m)</th></tr></thead><tbody id="player-positions"></tbody></table></details>
         </section>
 
@@ -155,6 +157,9 @@
             <button class="tool tool--mark" type="button" data-mode="mark" aria-pressed="false" aria-keyshortcuts="M" title="Marquage individuel : un défenseur, puis l'adversaire qu'il marque (M)">
               <svg class="icon" aria-hidden="true"><use href="#i-mark"/></svg><span class="tool__label">Marquage</span>
             </button>
+            <button class="tool tool--zone" type="button" data-mode="zone" aria-pressed="false" aria-keyshortcuts="Z" title="Surligner une zone : deux coins opposés du rectangle (Z)">
+              <svg class="icon" aria-hidden="true"><use href="#i-zone"/></svg><span class="tool__label">Zone</span>
+            </button>
           </div>
           <div class="toolbar__group toolbar__group--history" role="group" aria-label="Historique">
             <button class="tool" type="button" data-action="undo" aria-keyshortcuts="Control+Z" disabled>
@@ -169,7 +174,8 @@
           </div>
         </div>
 
-          <div class="tool-guide"><h3>Un geste à la fois</h3><p><strong>Déplacer</strong> · un joueur ou le ballon, puis sa destination.</p><p><strong>Passe</strong> · le ballon ou son porteur, puis un partenaire ou un espace libre.</p><p><strong>Course</strong> · un joueur, puis son arrivée.</p><p><strong>Dribble</strong> · le porteur, puis l’endroit où il emmène le ballon.</p><p><strong>Centre</strong> · le ballon dans un couloir du dernier tiers, puis un point de la surface.</p><p><strong>Tir</strong> · le ballon, puis le but, entre les poteaux.</p><p><strong>Marquage</strong> · un défenseur, puis l’adversaire qu’il prend en charge ; la même paire retire le marquage.</p><p class="muted">Un aperçu rouge explique une action refusée. Échap ou Abandonner annule le geste en cours.</p></div>
+          <div class="tool-guide"><h3>Un geste à la fois</h3><p><strong>Déplacer</strong> · un joueur ou le ballon, puis sa destination.</p><p><strong>Passe</strong> · le ballon ou son porteur, puis un partenaire ou un espace libre.</p><p><strong>Course</strong> · un joueur, puis son arrivée.</p><p><strong>Dribble</strong> · le porteur, puis l’endroit où il emmène le ballon.</p><p><strong>Centre</strong> · le ballon dans un couloir du dernier tiers, puis un point de la surface.</p><p><strong>Tir</strong> · le ballon, puis le but, entre les poteaux.</p><p><strong>Marquage</strong> · un défenseur, puis l’adversaire qu’il prend en charge ; la même paire retire le marquage.</p><p><strong>Zone</strong> · un coin, puis le coin opposé : le rectangle est surligné sur le terrain.</p><p class="muted">Un aperçu rouge explique une action refusée. Échap ou Abandonner annule le geste en cours.</p></div>
+          <div class="summary-card zone-card"><h3>Zones surlignées</h3><div id="zone-panel"></div></div>
         </section>
 
         <section data-workspace-panel="animation" aria-label="Animation et séquences" hidden>
@@ -187,8 +193,9 @@
           <button class="tool" type="button" data-speed="2" aria-pressed="false">2×</button>
           <button class="tool" type="button" data-sequence="clear" disabled>Effacer</button>
         </div>
+        <ol class="keyframe-notes" data-keyframe-notes aria-label="Notes de l’entraîneur, une par image clé" hidden></ol>
           <div class="summary-card scenario-card-host"><h3>Situations de jeu</h3><div id="scenario-panel"></div></div>
-          <p class="panel-note">La séquence et son historique sont conservés quand vous changez d’espace. Une modification du tableau arrête la lecture et retrouve la tactique.</p>
+          <p class="panel-note">Une note par image clé s’affiche sur le terrain pendant la lecture. La séquence et son historique sont conservés quand vous changez d’espace. Une modification du tableau arrête la lecture et retrouve la tactique.</p>
         </section>
 
         <section data-workspace-panel="ar" aria-label="Réalité augmentée" hidden>
@@ -203,7 +210,7 @@
           <p class="panel-intro">Les outils en complément.</p>
           <div class="overflow-links"><button class="button button--secondary" type="button" data-workspace="ar"><svg class="icon" aria-hidden="true"><use href="#i-ar"/></svg>Réalité augmentée</button><button class="button button--secondary" type="button" data-workspace="settings"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>Réglages et aide</button></div>
           <div class="summary-card"><h3>Application et connexion</h3><p id="connection-summary" role="status">En ligne</p><p id="offline-cache-status" class="muted" role="status">Préparation de l’accès hors ligne…</p><button id="install-app" class="button button--secondary" type="button" hidden><svg class="icon" aria-hidden="true"><use href="#i-install"/></svg><span class="button__label">Installer l’application</span></button><p class="panel-note">L’installation est proposée ici lorsque le navigateur la rend disponible.</p></div>
-          <div class="summary-card"><h3>Performances</h3><button id="diagnostics-toggle" class="button button--secondary" type="button" aria-pressed="false" aria-controls="diagnostics"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>Afficher les diagnostics</button><p class="panel-note">Images par seconde, temps de rendu et état de la session, sans recharger le terrain.</p></div>
+          <div class="summary-card"><h3>Présentation</h3><button id="presentation-open" class="button button--secondary" type="button" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-present"/></svg>Mode présentation</button><p class="panel-note">Pour l’équipe, sur un écran : interface masquée, numéros agrandis, plein écran. Espace joue la séquence ; Échap rend l’interface.</p></div><div class="summary-card"><h3>Performances</h3><button id="diagnostics-toggle" class="button button--secondary" type="button" aria-pressed="false" aria-controls="diagnostics"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>Afficher les diagnostics</button><p class="panel-note">Images par seconde, temps de rendu et état de la session, sans recharger le terrain.</p></div>
           <div class="summary-card match-analysis"><h3>Analyse de match (IA) <span class="beta-badge">Bêta</span></h3><p class="muted">Une vidéo de match annotée, avec le terrain 3D inséré dans l’image : démonstration sans serveur, ou vos propres vidéos avec le serveur d’analyse local.</p><a id="match-analysis-link" class="button button--secondary" href="visualizer.html" target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-sequence"/></svg>Ouvrir l’analyse de match</a><p class="muted">S’ouvre dans un nouvel onglet : la tactique en cours reste ici.</p></div>
         </section>
 
@@ -222,7 +229,7 @@
       </section></div>
           <div class="summary-card appearance"><h3 id="theme-title">Apparence</h3><div class="segmented" role="group" aria-labelledby="theme-title"><button type="button" class="segmented__option" data-theme-choice="auto" aria-pressed="true">Auto</button><button type="button" class="segmented__option" data-theme-choice="light" aria-pressed="false">Clair</button><button type="button" class="segmented__option" data-theme-choice="dark" aria-pressed="false">Sombre</button></div><p id="theme-status" class="panel-note" role="status">Automatique : comme le système.</p></div>
           <button class="button button--secondary rail-preference" type="button" data-expand-rail aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-panel"/></svg>Afficher les libellés du rail</button>
-          <h3>Raccourcis clavier</h3><dl class="shortcut-list"><div><dt>Déplacer</dt><dd><kbd>D</kbd></dd></div><div><dt>Passe</dt><dd><kbd>P</kbd></dd></div><div><dt>Course</dt><dd><kbd>C</kbd></dd></div><div><dt>Abandonner / fermer</dt><dd><kbd>Échap</kbd></dd></div><div><dt>Annuler</dt><dd><kbd>Ctrl Z</kbd></dd></div><div><dt>Rétablir</dt><dd><kbd>Ctrl Y</kbd> ou <kbd>Ctrl Maj Z</kbd></dd></div></dl><p class="panel-note">Sur Mac, utilisez Cmd à la place de Ctrl. Tab parcourt les commandes ; les flèches parcourent le rail.</p><p id="motion-preference" class="panel-note"></p>
+          <h3>Raccourcis clavier</h3><dl class="shortcut-list"><div><dt>Déplacer</dt><dd><kbd>D</kbd></dd></div><div><dt>Passe</dt><dd><kbd>P</kbd></dd></div><div><dt>Course</dt><dd><kbd>C</kbd></dd></div><div><dt>Zone</dt><dd><kbd>Z</kbd></dd></div><div><dt>Abandonner / fermer</dt><dd><kbd>Échap</kbd></dd></div><div><dt>Présentation : lecture / pause</dt><dd><kbd>Espace</kbd></dd></div><div><dt>Annuler</dt><dd><kbd>Ctrl Z</kbd></dd></div><div><dt>Rétablir</dt><dd><kbd>Ctrl Y</kbd> ou <kbd>Ctrl Maj Z</kbd></dd></div></dl><p class="panel-note">Sur Mac, utilisez Cmd à la place de Ctrl. Tab parcourt les commandes ; les flèches parcourent le rail.</p><p id="motion-preference" class="panel-note"></p>
         </section>
       </div>
       <button class="workspace-panel__back" type="button" data-workspace-close>Retour au terrain</button>
@@ -252,6 +259,8 @@
         <div><dt>Mémoire GPU</dt><dd data-field="memory">–</dd></div>
       </dl>
     </aside>
+    <p id="sequence-note" class="sequence-note" role="status" aria-live="polite" hidden><strong data-caption-step></strong><span data-caption-text></span></p>
+    <button id="presentation-exit" class="presentation-exit chip-button ui-surface" type="button" aria-keyshortcuts="Escape" hidden><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg><span>Quitter la présentation</span></button>
     <div class="global-notices"><p id="ar-message" class="notice" role="alert" hidden></p><p id="update-notice" class="notice notice--info" role="status" hidden>Nouvelle version installée.<button id="reload-app" class="button button--small" type="button">Recharger</button></p></div>
 
     <footer class="bottombar">

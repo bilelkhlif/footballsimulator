@@ -7,6 +7,11 @@
  * fichier JSON : la tactique importée est vérifiée, enregistrée sous un nom libre (jamais à la
  * place d'une autre), puis ouverte.
  *
+ * Phase 6 : chaque tactique enregistrée peut être renommée, dans sa ligne de la liste, et
+ * dupliquée, pour en essayer une variante sans toucher à l'original, et supprimée, après une
+ * confirmation dans la ligne elle-même. « Partager » et « Lien de partage » copient un lien qui
+ * contient toute la tactique, compressée dans l'adresse (src/tactic-share.mjs), sans serveur.
+ *
  * Le panneau ne connaît ni IndexedDB ni le tableau tactique : il passe par la bibliothèque
  * (src/tactic-library.mjs) pour enregistrer et relire, par src/tactic-file.mjs pour écrire et
  * vérifier les fichiers, et par l'action `open` pour rétablir une tactique, qui crée une commande
@@ -20,6 +25,9 @@ import {
 import {
   createTacticFile, MAX_TACTIC_FILE_BYTES, parseTacticFile, serializeTacticFile, tacticFileName, uniqueTacticName,
 } from './tactic-file.mjs';
+import {
+  createShareUrl, decodeSharedTactic, encodeSharedTactic, MAX_SHARE_PAYLOAD_LENGTH,
+} from './tactic-share.mjs';
 
 /** Format de la date d'enregistrement affichée dans la liste. */
 const SAVED_AT_FORMAT = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
@@ -43,9 +51,38 @@ export function describeSaveError({ reason, name }) {
       return `Une tactique s’appelle déjà « ${name} » : choisissez un autre nom.`;
     case SAVE_ERRORS.FULL:
       return `Limite de ${MAX_SAVED_TACTICS} tactiques enregistrées atteinte sur cet appareil.`;
+    case SAVE_ERRORS.NOT_FOUND:
+      return 'Cette tactique n’est plus enregistrée sur cet appareil.';
     default:
       return 'Enregistrement impossible : le stockage de cet appareil est indisponible.';
   }
+}
+
+/**
+ * Longueur d'un lien, en clair : « Lien de 3 412 caractères ».
+ * @param {number} length nombre de caractères
+ * @returns {string}
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Interface HTML — tactiques enregistrées
+ */
+export function formatLength(length) {
+  return `Lien de ${length.toLocaleString('fr-FR')} caractère${length > 1 ? 's' : ''}`;
+}
+
+/**
+ * Copie un texte dans le presse-papiers du navigateur.
+ * @param {string} text
+ * @returns {Promise<void>} rejetée si le navigateur refuse
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Interface HTML — tactiques enregistrées
+ */
+export function writeClipboard(text) {
+  if (!navigator.clipboard?.writeText) {
+    return Promise.reject(new Error('presse-papiers indisponible'));
+  }
+  return navigator.clipboard.writeText(text);
 }
 
 /**
@@ -83,14 +120,18 @@ export function downloadTextFile(fileName, text, type = 'application/json') {
  * @param {(feedback: {kind: string, message: string}) => void} [options.onFeedback] message bref
  *   sur le terrain
  * @param {(fileName: string, text: string) => void} [options.download] téléchargement (doublure)
+ * @param {() => string} [options.getAppUrl] adresse de la page, base des liens de partage
+ * @param {(text: string) => Promise<void>} [options.copyText] copie dans le presse-papiers (doublure)
  * @returns {{refresh: () => Promise<void>, ready: Promise<void>, input: HTMLInputElement,
- *   importFile: (file: File) => Promise<boolean>}}
+ *   importFile: (file: File) => Promise<boolean>, importShared: (payload: string) => Promise<boolean>,
+ *   shareTactic: (name: string, tactic: object) => Promise<string|null>}}
  * @responsable Iyed Rachdi
  * @date 2026-11-26
  * @role Interface HTML — tactiques enregistrées
  */
 export function createSavedTacticsPanel({
   root, library, capture, getReference, open, onFeedback = () => {}, download = downloadTextFile,
+  getAppUrl = () => window.location.href, copyText = writeClipboard,
 }) {
   const form = document.createElement('form');
   form.className = 'saved-tactics__form';
@@ -133,12 +174,40 @@ export function createSavedTacticsPanel({
   fileInput.dataset.tacticFile = '';
   transfer.append(exportCurrent, importButton, fileInput);
 
+  // Lien de partage (phase 6) : pour la tactique en cours, puis affiché dans un champ à copier.
+  const shareCurrent = document.createElement('button');
+  shareCurrent.type = 'button';
+  shareCurrent.className = 'button button--secondary';
+  shareCurrent.dataset.shareCurrentTactic = '';
+  shareCurrent.textContent = 'Lien de partage';
+  shareCurrent.title = 'Copier un lien qui contient la tactique en cours et sa séquence, sans serveur';
+  transfer.prepend(shareCurrent);
+  const shareBox = document.createElement('div');
+  shareBox.className = 'saved-tactics__share';
+  shareBox.hidden = true;
+  const shareLabel = document.createElement('label');
+  const shareTitle = document.createElement('span');
+  shareLabel.append(shareTitle);
+  const shareField = document.createElement('input');
+  shareField.type = 'url';
+  shareField.readOnly = true;
+  shareField.dataset.shareLink = '';
+  shareLabel.append(shareField);
+  const shareCopy = document.createElement('button');
+  shareCopy.type = 'button';
+  shareCopy.className = 'button button--secondary';
+  shareCopy.dataset.copyShareLink = '';
+  shareCopy.textContent = 'Copier le lien';
+  const shareNote = document.createElement('p');
+  shareNote.className = 'panel-note';
+  shareBox.append(shareLabel, shareCopy, shareNote);
+
   const status = document.createElement('p');
   status.className = 'muted';
   status.setAttribute('role', 'status');
   const list = document.createElement('ul');
   list.className = 'saved-tactics__list';
-  root.append(form, transfer, status, list);
+  root.append(form, transfer, shareBox, status, list);
 
   /** Affiche un message dans le panneau et sur le terrain. */
   const tell = (kind, message) => {
@@ -151,6 +220,53 @@ export function createSavedTacticsPanel({
     const file = createTacticFile({ name, tactic });
     download(tacticFileName(file.name), serializeTacticFile(file));
     tell('success', `Tactique « ${file.name} » exportée en JSON, avec sa séquence.`);
+  };
+
+  /**
+   * Lien de partage (phase 6) : la tactique est compressée dans l'adresse, le lien est copié dans
+   * le presse-papiers quand le navigateur l'autorise, et toujours affiché dans un champ à copier.
+   */
+  const shareTactic = async (name, tactic) => {
+    const payload = await encodeSharedTactic({ name, tactic });
+    if (payload.length > MAX_SHARE_PAYLOAD_LENGTH) {
+      shareBox.hidden = true;
+      tell('invalid', 'Tactique trop lourde pour un lien : exportez-la en JSON.');
+      return null;
+    }
+    const link = createShareUrl(getAppUrl(), payload);
+    shareTitle.textContent = `Lien de « ${normalizeTacticName(name) || CURRENT_TACTIC_NAME} »`;
+    shareField.value = link;
+    shareNote.textContent = `${formatLength(link.length)}. La tactique est dans le lien lui-même : aucun serveur ne la reçoit.`;
+    shareBox.hidden = false;
+    const copied = await copyLink(link);
+    if (!copied) {
+      shareField.focus();
+      shareField.select();
+    }
+    tell('success', copied
+      ? `Lien de « ${normalizeTacticName(name) || CURRENT_TACTIC_NAME} » copié : collez-le dans un message.`
+      : 'Lien prêt : copiez-le depuis le champ « Lien ».');
+    return link;
+  };
+
+  /** Copie un texte dans le presse-papiers ; rend faux si le navigateur le refuse. */
+  const copyLink = async (text) => {
+    try {
+      await copyText(text);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  /** Partage une tactique de la liste, relue dans le stockage au moment du clic. */
+  const shareEntry = async ({ id, name }) => {
+    const saved = await library.get(id);
+    if (!saved) {
+      tell('invalid', `La tactique « ${name} » est illisible sur cet appareil.`);
+      return;
+    }
+    await shareTactic(saved.name, saved.tactic);
   };
 
   /** Ouvre une tactique de la liste, relue dans le stockage au moment du clic. */
@@ -201,9 +317,191 @@ export function createSavedTacticsPanel({
     exportButton.textContent = 'Exporter';
     exportButton.setAttribute('aria-label', `Exporter en JSON la tactique : ${entry.name}`);
     exportButton.addEventListener('click', () => exportEntry(entry));
-    actions.append(openButton, exportButton);
+    const renameButton = document.createElement('button');
+    renameButton.type = 'button';
+    renameButton.className = 'button button--secondary';
+    renameButton.dataset.renameTactic = entry.id;
+    renameButton.textContent = 'Renommer';
+    renameButton.setAttribute('aria-label', `Renommer la tactique : ${entry.name}`);
+    renameButton.addEventListener('click', () => startRename(item, entry));
+    const duplicateButton = document.createElement('button');
+    duplicateButton.type = 'button';
+    duplicateButton.className = 'button button--secondary';
+    duplicateButton.dataset.duplicateTactic = entry.id;
+    duplicateButton.textContent = 'Dupliquer';
+    duplicateButton.setAttribute('aria-label', `Dupliquer la tactique : ${entry.name}`);
+    duplicateButton.addEventListener('click', () => duplicateEntry(entry, duplicateButton));
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'button button--secondary button--danger';
+    deleteButton.dataset.deleteTactic = entry.id;
+    deleteButton.textContent = 'Supprimer';
+    deleteButton.setAttribute('aria-label', `Supprimer la tactique : ${entry.name}`);
+    deleteButton.addEventListener('click', () => confirmDelete(item, entry));
+    const shareButton = document.createElement('button');
+    shareButton.type = 'button';
+    shareButton.className = 'button button--secondary';
+    shareButton.dataset.shareTactic = entry.id;
+    shareButton.textContent = 'Partager';
+    shareButton.setAttribute('aria-label', `Copier un lien de partage de la tactique : ${entry.name}`);
+    shareButton.addEventListener('click', () => shareEntry(entry));
+    actions.append(openButton, shareButton, exportButton, renameButton, duplicateButton, deleteButton);
     item.append(name, savedAt, actions);
     return item;
+  };
+
+  /** Met le focus sur un bouton d'une ligne après un rafraîchissement de la liste. */
+  const focusInList = (selector) => list.querySelector(selector)?.focus();
+
+  /**
+   * Supprimer (phase 6) : la ligne demande confirmation, dans le panneau (pas de fenêtre du
+   * navigateur, qui bloquerait la page et n'existe pas en AR). « Garder » ou Échap rend la ligne ;
+   * « Supprimer définitivement » retire la tactique, puis le focus passe à la ligne suivante, ou au
+   * champ du nom s'il n'en reste aucune.
+   */
+  const confirmDelete = (item, entry) => {
+    const box = document.createElement('div');
+    box.className = 'saved-tactics__confirm';
+    box.setAttribute('role', 'group');
+    const question = document.createElement('p');
+    question.id = `saved-tactic-confirm-${entry.id}`;
+    question.textContent = `Supprimer « ${entry.name} » de cet appareil ? La tactique en cours ne change pas.`;
+    box.setAttribute('aria-labelledby', question.id);
+    const confirm = document.createElement('button');
+    confirm.type = 'button';
+    confirm.className = 'button button--danger';
+    confirm.dataset.confirmDelete = entry.id;
+    confirm.textContent = 'Supprimer définitivement';
+    const keep = document.createElement('button');
+    keep.type = 'button';
+    keep.className = 'button button--secondary';
+    keep.dataset.keepTactic = entry.id;
+    keep.textContent = 'Garder';
+    const buttons = document.createElement('div');
+    buttons.className = 'saved-tactics__actions';
+    buttons.append(keep, confirm);
+    box.append(question, buttons);
+    const previous = [...item.children];
+    item.replaceChildren(box);
+    // « Garder » a le focus : Entrée par mégarde ne supprime rien.
+    keep.focus();
+
+    /** Rend la ligne d'origine, focus sur son bouton « Supprimer ». */
+    const close = () => {
+      item.replaceChildren(...previous);
+      item.querySelector('[data-delete-tactic]')?.focus();
+    };
+    keep.addEventListener('click', close);
+    box.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+      }
+    });
+    confirm.addEventListener('click', async () => {
+      confirm.disabled = true;
+      const index = [...list.children].indexOf(item);
+      const result = await library.remove(entry.id);
+      if (!result.ok) {
+        confirm.disabled = false;
+        tell('invalid', describeSaveError(result));
+        return;
+      }
+      await refresh();
+      const next = list.children[Math.min(index, list.children.length - 1)];
+      (next?.querySelector('[data-open-tactic]') ?? input).focus();
+      tell('success', `Tactique « ${entry.name} » supprimée de cet appareil.`);
+    });
+  };
+
+  /**
+   * Dupliquer (phase 6) : la copie arrive en tête de liste, et le focus va sur son bouton
+   * « Renommer », pour lui donner tout de suite son propre nom.
+   */
+  const duplicateEntry = async (entry, button) => {
+    button.disabled = true;
+    try {
+      const result = await library.duplicate(entry.id);
+      if (!result.ok) {
+        tell('invalid', describeSaveError(result));
+        return;
+      }
+      await refresh();
+      focusInList(`[data-rename-tactic="${CSS.escape(result.entry.id)}"]`);
+      tell('success', `Copie « ${result.entry.name} » enregistrée : « Renommer » lui donne son propre nom.`);
+    } finally {
+      button.disabled = false;
+    }
+  };
+
+  /**
+   * Renommer (phase 6) : la ligne devient un petit formulaire, prérempli avec le nom actuel.
+   * Entrée valide, Échap ou « Annuler » rend la ligne telle quelle. Un nom vide ou déjà pris est
+   * refusé sans fermer le formulaire.
+   */
+  const startRename = (item, entry) => {
+    const renameForm = document.createElement('form');
+    renameForm.className = 'saved-tactics__rename';
+    renameForm.noValidate = true;
+    const renameLabel = document.createElement('label');
+    renameLabel.textContent = 'Nouveau nom';
+    const renameInput = document.createElement('input');
+    renameInput.type = 'text';
+    renameInput.maxLength = MAX_TACTIC_NAME_LENGTH;
+    renameInput.autocomplete = 'off';
+    renameInput.value = entry.name;
+    renameInput.dataset.renameInput = entry.id;
+    renameLabel.append(renameInput);
+    const confirm = document.createElement('button');
+    confirm.type = 'submit';
+    confirm.className = 'button button--primary';
+    confirm.dataset.confirmRename = entry.id;
+    confirm.textContent = 'Valider';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'button button--secondary';
+    cancel.textContent = 'Annuler';
+    const buttons = document.createElement('div');
+    buttons.className = 'saved-tactics__actions';
+    buttons.append(confirm, cancel);
+    renameForm.append(renameLabel, buttons);
+    const previous = [...item.children];
+    item.replaceChildren(renameForm);
+    renameInput.focus();
+    renameInput.select();
+
+    /** Rend la ligne d'origine, focus sur son bouton « Renommer ». */
+    const close = () => {
+      item.replaceChildren(...previous);
+      item.querySelector('[data-rename-tactic]')?.focus();
+    };
+    cancel.addEventListener('click', close);
+    renameInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+      }
+    });
+    renameForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      confirm.disabled = true;
+      try {
+        const result = await library.rename(entry.id, renameInput.value);
+        if (!result.ok) {
+          tell('invalid', describeSaveError(result));
+          renameInput.focus();
+          return;
+        }
+        await refresh();
+        focusInList(`[data-rename-tactic="${CSS.escape(entry.id)}"]`);
+        tell('success', result.entry.name === entry.name
+          ? `La tactique garde son nom « ${entry.name} ».`
+          : `Tactique « ${entry.name} » renommée « ${result.entry.name} ».`);
+      } finally {
+        confirm.disabled = false;
+      }
+    });
   };
 
   /** Relit la bibliothèque et redessine la liste. */
@@ -238,14 +536,21 @@ export function createSavedTacticsPanel({
       tell('invalid', 'Fichier illisible : rien n’a été modifié.');
       return false;
     }
-    const parsed = parseTacticFile(text, getReference());
+    return openReceived(parseTacticFile(text, getReference()), 'importée');
+  };
+
+  /**
+   * Tactique reçue (fichier ou lien), déjà lue : refusée avec son message, ou ouverte d'abord
+   * (vérifiée une seconde fois par `open`), puis enregistrée sous un nom libre : jamais à la place
+   * d'une autre. Rien n'est enregistré si l'ouverture échoue. Rend vrai si la tactique a été ouverte.
+   */
+  const openReceived = async (parsed, verb) => {
     if (!parsed.ok) {
       tell('invalid', parsed.error);
       return false;
     }
     const listing = await library.list();
     const name = uniqueTacticName(parsed.name, listing.tactics.map((entry) => entry.name));
-    // Ouverte d'abord (vérifiée une seconde fois par `open`) : rien n'est enregistré si elle échoue.
     if (!open(name, parsed.tactic)) {
       tell('invalid', 'Tactique incompatible avec le terrain en cours : rien n’a été modifié.');
       return false;
@@ -253,10 +558,17 @@ export function createSavedTacticsPanel({
     const saved = listing.ok ? await library.save(name, parsed.tactic) : { ok: false, reason: SAVE_ERRORS.STORAGE };
     await refresh();
     tell(saved.ok ? 'success' : 'info', saved.ok
-      ? `Tactique « ${name} » importée, enregistrée et ouverte : « Annuler » rend la précédente.`
-      : `Tactique « ${name} » importée et ouverte, mais non enregistrée. ${describeSaveError(saved)}`);
+      ? `Tactique « ${name} » ${verb}, enregistrée et ouverte : « Annuler » rend la précédente.`
+      : `Tactique « ${name} » ${verb} et ouverte, mais non enregistrée. ${describeSaveError(saved)}`);
     return true;
   };
+
+  /**
+   * Ouvre une tactique reçue par un lien de partage (phase 6) : contenu du fragment « #tactique= »,
+   * vérifié comme un fichier importé (isValidTactic contre le tableau en cours), puis enregistré
+   * sous un nom libre. Rend vrai si la tactique a été ouverte.
+   */
+  const importShared = async (payload) => openReceived(await decodeSharedTactic(payload, getReference()), 'reçue par lien');
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -279,6 +591,23 @@ export function createSavedTacticsPanel({
   exportCurrent.addEventListener('click', () => {
     exportTactic(normalizeTacticName(input.value) || CURRENT_TACTIC_NAME, capture());
   });
+  shareCurrent.addEventListener('click', async () => {
+    shareCurrent.disabled = true;
+    try {
+      await shareTactic(normalizeTacticName(input.value) || CURRENT_TACTIC_NAME, capture());
+    } finally {
+      shareCurrent.disabled = false;
+    }
+  });
+  shareCopy.addEventListener('click', async () => {
+    if (await copyLink(shareField.value)) {
+      tell('success', 'Lien copié : collez-le dans un message.');
+    } else {
+      shareField.focus();
+      shareField.select();
+      tell('info', 'Copie refusée par le navigateur : le lien est sélectionné, copiez-le à la main.');
+    }
+  });
   importButton.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', async () => {
     const [file] = fileInput.files ?? [];
@@ -292,5 +621,5 @@ export function createSavedTacticsPanel({
     }
   });
 
-  return { refresh, ready: refresh(), input, importFile };
+  return { refresh, ready: refresh(), input, importFile, importShared, shareTactic };
 }

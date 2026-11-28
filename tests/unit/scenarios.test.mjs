@@ -137,3 +137,17 @@ test('scenarios/ : chaque situation livrée est valide, se construit et a un ide
     buildScenarioState(data);
   }
 });
+
+test('notes de l\'entraîneur dans une situation : propres à chaque image, vérifiées, gardées au chargement', () => {
+  const data = { ...minimalScenario(), startNote: 'Le 6 reçoit dos au jeu', keyframes: [{ players: { 'blue:8': [5, -10] }, ball: [5, -10], note: 'Le 8 se retourne' }, { ball: [10, -8] }] };
+  assert.ok(validateScenario(data).ok, validateScenario(data).errors.join(' | '));
+  const state = buildScenarioState(data);
+  assert.deepEqual(state.keyframes.map((keyframe) => keyframe.note ?? null), ['Le 6 reçoit dos au jeu', 'Le 8 se retourne', null]);
+  const board = new TacticsBoard(DEFAULT_FORMATIONS);
+  const sequence = new TacticalSequence();
+  new CommandHistory().execute(new LoadScenarioCommand({ board, sequence, title: data.title, state }));
+  assert.equal(sequence.noteAt(1), 'Le 8 se retourne');
+  for (const bad of [{ startNote: '' }, { startNote: '  x ' }, { keyframes: [{ note: 'x'.repeat(200) }] }, { keyframes: [{ note: 3 }] }]) {
+    assert.equal(validateScenario({ ...minimalScenario(), ...bad }).ok, false, JSON.stringify(bad).slice(0, 40));
+  }
+});

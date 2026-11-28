@@ -19,8 +19,9 @@ Football Simulator pose un mini-terrain de football en 3D sur votre table, à tr
 9. [Animer une action](#9-animer-une-action)
 10. [Quitter l'AR](#10-quitter-lar)
 11. [Sans AR : la vue 3D](#11-sans-ar--la-vue-3d)
-12. [Mesurer la fluidité](#12-mesurer-la-fluidité)
-13. [En cas de problème](#13-en-cas-de-problème)
+12. [Garder vos tactiques](#12-garder-vos-tactiques)
+13. [Mesurer la fluidité](#13-mesurer-la-fluidité)
+14. [En cas de problème](#14-en-cas-de-problème)
 
 ---
 
@@ -94,6 +95,8 @@ Sous les mesures, la rubrique **Hors-jeu** donne, pour chaque équipe qui attaqu
 
 ![Le panneau des formations sur le terrain posé : Bleus en 4-4-2, Rouges en 4-3-3](images/sprint4-ar-formations.jpg)
 
+**Calques du terrain.** Dans la carte **Analyse tactique**, quatre boutons affichent des repères sur le gazon : **Tiers** (deux lignes, tous les 35 m), **Cinq couloirs** (dans le prolongement des surfaces de but et de réparation), **Demi-espaces** (les deux couloirs entre l'axe et les ailes, surlignés) et **Zone 14** (devant la surface adverse, à la couleur de l'équipe qui attaque ce but). Un second toucher masque le calque. Les calques ne changent pas la tactique et ne s'annulent pas : ce sont des repères d'affichage, comme les lignes de hors-jeu.
+
 ## 6. Déplacer un joueur ou le ballon
 
 L'outil **« Déplacer »** (icône en croix) est actif au départ. Ses commandes se trouvent dans **Outils tactiques** ; le bouton du mode actif au bord du terrain ouvre aussi cet espace.
@@ -135,6 +138,8 @@ Passes longues, en retrait, centres et courses croisées restent possibles. Pour
 
 ![Une passe dorée du n° 6 au n° 11 des Bleus, une course en tirets blancs, le n° 9 sélectionné avec un anneau doré, et la barre d'outils](images/sprint5-tactique.jpg)
 
+**Surligner une zone.** L'outil **Zone** (touche Z) surligne un rectangle du terrain : touchez un coin, puis le coin opposé ; l'aperçu doré suit le doigt ou la souris, et devient rouge si la zone est trop petite (moins de 2 m de côté). Un coin posé derrière une ligne est ramené sur la ligne ; toucher de nouveau le premier coin abandonne. La carte **Zones surlignées**, sous la barre d'outils, liste les zones avec leurs mesures réelles et leur place (tiers et couloir) ; **Retirer** en efface une. Huit zones au plus ; elles sont annulables et gardées avec la tactique.
+
 ## 8. Annuler, rétablir, réinitialiser
 
 Ces commandes se trouvent dans **Outils tactiques**. Les raccourcis restent disponibles dans tous les espaces.
@@ -154,8 +159,9 @@ Ouvrez **Animation et séquences**. Le principe est celui d'un dessin animé : v
 3. Touchez **« Lecture »** : l'action se joue. Le même bouton devient « Pause ».
 4. **« Recommencer »** revient au début ; **0,5×**, **1×** et **2×** règlent la vitesse.
 5. **« Effacer »** vide la séquence ; « Annuler » la rétablit.
+6. **Notes de l'entraîneur** : sous les boutons, un champ par image clé reçoit une phrase, par exemple « Le 6 décroche entre les centraux » (120 caractères au plus). Entrée ou un toucher ailleurs l'enregistre ; Échap rend la note d'avant ; « Annuler » défait une note comme toute action. Pendant la lecture, la note de l'image la plus proche s'affiche sur le terrain, au-dessus de la barre du bas ; elle change à mi-chemin entre deux images.
 
-**Situations de jeu.** Dans l'espace Animation et séquences, la carte **Situations de jeu** propose des actions toutes prêtes : chaque carte donne le thème, le titre et le principe. **Charger** place les deux équipes, le ballon, les flèches, les marquages et les images clés de la situation ; « Lecture » la joue. Les noms et maillots de vos équipes sont gardés, et le chargement s'annule comme toute action.
+**Situations de jeu.** Dans l'espace Animation et séquences, la carte **Situations de jeu** propose des actions toutes prêtes : chaque carte donne le thème, le titre et le principe. **Charger** place les deux équipes, le ballon, les flèches, les marquages et les images clés de la situation ; « Lecture » la joue. Les noms et maillots de vos équipes sont gardés, et le chargement s'annule comme toute action. Six situations sont proposées : contre-attaque en trois passes, relance courte à trois avec pivot, pressing haut en 4-4-2, dédoublement et centre en retrait, corner offensif contre une défense en zone, et coup franc excentré contre un mur de deux et une défense en zone (mur à 9,15 m sur la ligne du premier poteau, ligne de cinq au bord de la surface, attaquants en jeu au départ). Leurs images clés portent des notes, lues pendant la lecture.
 
 La ligne du haut du panneau indique où vous en êtes, par exemple « Lecture : étape 1 sur 2, vitesse 1×. »
 
@@ -175,7 +181,7 @@ Bon à savoir :
 - Tracez d'abord les passes et les courses : les flèches montrent le plan, et la séquence joue les déplacements.
 - Pendant la lecture, vous pouvez tourner autour de la table : l'action reste sur le terrain.
 - Déplacer un joueur pendant la lecture l'arrête, et chacun rejoint la place enregistrée.
-- La séquence n'est pas gardée quand la page est rechargée.
+- La séquence et ses notes sont gardées avec la tactique : sauvegarde automatique, tactiques enregistrées, fichier JSON et lien de partage.
 
 ## 10. Quitter l'AR
 
@@ -191,15 +197,18 @@ il ne recouvre pas les commandes de vue. La croix ou **Retour au terrain** repli
 Le bouton Retour du navigateur le replie aussi ; Avancer peut le rouvrir. Sur ordinateur,
 **Afficher les libellés du rail** développe la navigation pendant la session.
 
+**Mode présentation (vestiaire).** Dans **Plus d'outils**, le bouton **Mode présentation** passe en présentation : l'interface disparaît, le terrain occupe tout l'écran (en plein écran si le navigateur l'accepte) et les numéros au-dessus des joueurs sont agrandis, lisibles du fond de la pièce. Vous pouvez toujours tourner et zoomer la vue, mais aucun clic ne déplace un joueur. **Espace** lance ou met en pause la séquence, avec ses notes en grand. **Échap** ou « Quitter la présentation » rend l'interface, avec la tactique inchangée.
+
 Au clavier :
 
 | Touche | Action |
 | --- | --- |
 | D, P, C | Outils Déplacer, Passe, Course |
-| B, X, T, M | Outils Dribble, Centre, Tir, Marquage |
+| B, X, T, M, Z | Outils Dribble, Centre, Tir, Marquage, Zone |
 | Échap | Abandonner la sélection ou le tracé, fermer un panneau |
 | Ctrl+Z (Cmd+Z sur Mac) | Annuler |
 | Ctrl+Y, ou Ctrl+Maj+Z | Rétablir |
+| Espace (en présentation) | Lancer ou mettre en pause la séquence |
 | Tab, puis Entrée ou Espace | Atteindre et activer chaque bouton |
 | Flèches, Début, Fin dans le rail | Déplacer le focus entre les espaces |
 
@@ -214,7 +223,20 @@ Au clavier :
   </tr>
 </table>
 
-## 12. Mesurer la fluidité
+## 12. Garder vos tactiques
+
+Ouvrez **Accueil** : la carte **Tactiques enregistrées** garde vos tactiques sur l'appareil, même après la fermeture de l'application. Chaque tactique garde les formations, les places, les flèches, les marquages, les noms et maillots des équipes, l'apparence des joueurs et la séquence.
+
+- **Enregistrer** : donnez un nom à la tactique en cours, puis touchez « Enregistrer ». Deux tactiques ne peuvent pas porter le même nom.
+- **Ouvrir** remplace la tactique en cours ; « Annuler » rend la précédente.
+- **Renommer** transforme la ligne en champ, prérempli avec le nom actuel. Entrée ou « Valider » garde le nouveau nom ; Échap ou « Annuler » rend la ligne telle quelle. Un nom vide ou déjà pris est refusé, avec un message.
+- **Dupliquer** garde une copie de la tactique, nommée « Pressing haut (copie) », pour en essayer une variante sans toucher à l'original ; le focus va sur « Renommer » de la copie.
+- **Supprimer** demande confirmation dans la ligne même : « Supprimer définitivement » retire la tactique de l'appareil, « Garder » ou Échap la laisse. La suppression ne s'annule pas ; la tactique en cours, elle, ne change pas.
+- **Partager** (une tactique enregistrée) ou **Lien de partage** (la tactique en cours) copie un lien à coller dans un message. Le lien contient toute la tactique, compressée dans l'adresse elle-même : aucun serveur ne la reçoit. Il reste affiché dans le champ « Lien », avec « Copier le lien » si le navigateur a refusé la copie.
+- **Ouvrir un lien reçu** : touchez le lien. L'application s'ouvre sur la tactique partagée, après l'avoir vérifiée, et l'enregistre sous son nom, ou sous « Nom (2) » si vous avez déjà une tactique de ce nom : rien n'est remplacé. « Annuler » rend la tactique d'avant. Un lien abîmé ou incomplet est refusé, sans rien changer.
+- **Exporter** télécharge la tactique en fichier JSON ; **Importer un JSON** l'ouvre sur un autre appareil, sous un nom libre.
+
+## 13. Mesurer la fluidité
 
 Ouvrez **Plus d'outils**, puis **Afficher les diagnostics**, sans recharger le terrain.
 Le paramètre `?diagnostics` reste accepté. Un panneau affiche les images par seconde, la durée
@@ -226,7 +248,7 @@ au moins 30 images par seconde ; une mesure sur PC ne valide pas cet objectif su
 
 *Capture prise sur un ordinateur : les valeurs d'un téléphone seront plus basses.*
 
-## 13. En cas de problème
+## 14. En cas de problème
 
 | Message ou symptôme | Que faire |
 | --- | --- |

@@ -30,12 +30,16 @@ export const MAX_SAVED_TACTICS = 50;
 /** Longueur maximale du nom d'une tactique, en caractères. */
 export const MAX_TACTIC_NAME_LENGTH = 40;
 
+/** Nom donné à une tactique importée dont le fichier n'a pas de nom utilisable. */
+export const DEFAULT_IMPORTED_NAME = 'Tactique importée';
+
 /** Raisons d'un enregistrement refusé, pour le message affiché. */
 export const SAVE_ERRORS = Object.freeze({
   EMPTY_NAME: 'empty-name',
   DUPLICATE: 'duplicate',
   FULL: 'full',
   STORAGE: 'storage',
+  NOT_FOUND: 'not-found',
 });
 
 /**
@@ -76,6 +80,49 @@ export function normalizeTacticName(name) {
  */
 function nameKey(name) {
   return name.toLocaleLowerCase('fr');
+}
+
+/**
+ * Nom libre pour une tactique importée : le nom du fichier s'il n'est pas pris, sinon
+ * « Nom (2) », « Nom (3) »…, sans tenir compte de la casse et sans dépasser la longueur maximale.
+ * Une tactique déjà enregistrée n'est donc jamais remplacée par un import.
+ * @param {string} name nom lu dans le fichier
+ * @param {string[]} takenNames noms des tactiques déjà enregistrées
+ * @returns {string}
+ * @responsable Iyed Rachdi
+ * @date 2026-11-26
+ * @role Persistance — fichier JSON d'une tactique
+ */
+export function uniqueTacticName(name, takenNames) {
+  const base = normalizeTacticName(name) || DEFAULT_IMPORTED_NAME;
+  const taken = new Set(takenNames.map((other) => other.toLocaleLowerCase('fr')));
+  if (!taken.has(base.toLocaleLowerCase('fr'))) {
+    return base;
+  }
+  for (let index = 2; ; index += 1) {
+    const suffix = ` (${index})`;
+    const candidate = `${base.slice(0, MAX_TACTIC_NAME_LENGTH - suffix.length).trimEnd()}${suffix}`;
+    if (!taken.has(candidate.toLocaleLowerCase('fr'))) {
+      return candidate;
+    }
+  }
+}
+
+/** Mention ajoutée au nom d'une copie. */
+export const COPY_SUFFIX = ' (copie)';
+
+/**
+ * Nom proposé pour la copie d'une tactique : « Pressing haut (copie) ». Un nom long est raccourci
+ * pour que la mention tienne dans la longueur maximale.
+ * @param {string} name nom de la tactique copiée
+ * @returns {string}
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Persistance — tactiques enregistrées
+ */
+export function copyName(name) {
+  const base = normalizeTacticName(name) || DEFAULT_IMPORTED_NAME;
+  return `${base.slice(0, MAX_TACTIC_NAME_LENGTH - COPY_SUFFIX.length).trimEnd()}${COPY_SUFFIX}`;
 }
 
 /**
@@ -141,7 +188,12 @@ function createTacticId() {
  *   list: () => Promise<{ok: boolean, tactics: Array<{id: string, name: string, savedAt: number}>}>,
  *   save: (name: string, tactic: object) => Promise<{ok: true, entry: {id: string, name: string, savedAt: number}}|{ok: false, reason: string, name?: string}>,
  *   get: (id: string) => Promise<{name: string, tactic: object}|null>,
+ *   rename: (id: string, name: string) => Promise<{ok: true, entry: {id: string, name: string, savedAt: number}}|{ok: false, reason: string, name?: string}>,
+ *   duplicate: (id: string) => Promise<{ok: true, entry: {id: string, name: string, savedAt: number}}|{ok: false, reason: string}>,
+ *   remove: (id: string) => Promise<{ok: true, entry: {id: string, name: string, savedAt: number}}|{ok: false, reason: string}>,
  * }}
+ * Depuis la phase 6, une tactique enregistrée peut être renommée (rename), dupliquée (duplicate)
+ * et supprimée (remove).
  * @responsable Iyed Rachdi
  * @date 2026-11-26
  * @role Persistance — tactiques enregistrées
@@ -159,6 +211,17 @@ export function createTacticLibrary(store, { now = () => Date.now(), createId = 
   const readEntries = async () => readLibraryEntries(await store.load(LIBRARY_KEY, { strict: true }));
   /** Résumé affichable d'une entrée, sans la tactique. */
   const summarize = ({ id, name, savedAt }) => ({ id, name, savedAt });
+  /** Écrit la bibliothèque complète ; rend faux si le stockage refuse l'écriture. */
+  const writeEntries = (entries) => store.save({ version: LIBRARY_FORMAT_VERSION, tactics: entries }, LIBRARY_KEY);
+  /** Lit les entrées pour les modifier ; rend null si le stockage est illisible (rien n'est écrit). */
+  const readForUpdate = async (action) => {
+    try {
+      return await readEntries();
+    } catch (error) {
+      console.warn(`Tactiques enregistrées illisibles : ${action} abandonné.`, error);
+      return null;
+    }
+  };
 
   return {
     list() {
@@ -193,7 +256,74 @@ export function createTacticLibrary(store, { now = () => Date.now(), createId = 
           return { ok: false, reason: SAVE_ERRORS.FULL };
         }
         const entry = { id: createId(), name: cleanName, savedAt: now(), tactic };
-        const saved = await store.save({ version: LIBRARY_FORMAT_VERSION, tactics: [...entries, entry] }, LIBRARY_KEY);
+        const saved = await writeEntries([...entries, entry]);
+        return saved ? { ok: true, entry: summarize(entry) } : { ok: false, reason: SAVE_ERRORS.STORAGE };
+      });
+    },
+
+    // Renommer (phase 6) : même règle de nom qu'à l'enregistrement ; la tactique, son identifiant et
+    // sa date ne changent pas. Seule la casse d'un même nom peut changer sans conflit avec lui-même.
+    rename(id, name) {
+      return serial(async () => {
+        const cleanName = normalizeTacticName(name);
+        if (!cleanName) {
+          return { ok: false, reason: SAVE_ERRORS.EMPTY_NAME };
+        }
+        const entries = await readForUpdate('renommage');
+        if (!entries) {
+          return { ok: false, reason: SAVE_ERRORS.STORAGE };
+        }
+        const entry = entries.find((candidate) => candidate.id === id);
+        if (!entry) {
+          return { ok: false, reason: SAVE_ERRORS.NOT_FOUND };
+        }
+        if (entries.some((other) => other.id !== id && nameKey(other.name) === nameKey(cleanName))) {
+          return { ok: false, reason: SAVE_ERRORS.DUPLICATE, name: cleanName };
+        }
+        if (entry.name === cleanName) {
+          return { ok: true, entry: summarize(entry) };
+        }
+        const renamed = { ...entry, name: cleanName };
+        const saved = await writeEntries(entries.map((candidate) => (candidate.id === id ? renamed : candidate)));
+        return saved ? { ok: true, entry: summarize(renamed) } : { ok: false, reason: SAVE_ERRORS.STORAGE };
+      });
+    },
+
+    // Dupliquer (phase 6) : une nouvelle entrée, avec la même tactique, nommée « Nom (copie) » (ou
+    // « Nom (copie) (2) »… si ce nom est pris) et datée du moment de la copie. L'original ne change pas.
+    duplicate(id) {
+      return serial(async () => {
+        const entries = await readForUpdate('copie');
+        if (!entries) {
+          return { ok: false, reason: SAVE_ERRORS.STORAGE };
+        }
+        const entry = entries.find((candidate) => candidate.id === id);
+        if (!entry) {
+          return { ok: false, reason: SAVE_ERRORS.NOT_FOUND };
+        }
+        if (entries.length >= MAX_SAVED_TACTICS) {
+          return { ok: false, reason: SAVE_ERRORS.FULL };
+        }
+        const name = uniqueTacticName(copyName(entry.name), entries.map((candidate) => candidate.name));
+        const copy = { id: createId(), name, savedAt: now(), tactic: structuredClone(entry.tactic) };
+        const saved = await writeEntries([...entries, copy]);
+        return saved ? { ok: true, entry: summarize(copy) } : { ok: false, reason: SAVE_ERRORS.STORAGE };
+      });
+    },
+
+    // Supprimer (phase 6) : retire une seule entrée ; les autres sont réécrites telles quelles. La
+    // confirmation est demandée avant, par le panneau : la bibliothèque ne garde pas de corbeille.
+    remove(id) {
+      return serial(async () => {
+        const entries = await readForUpdate('suppression');
+        if (!entries) {
+          return { ok: false, reason: SAVE_ERRORS.STORAGE };
+        }
+        const entry = entries.find((candidate) => candidate.id === id);
+        if (!entry) {
+          return { ok: false, reason: SAVE_ERRORS.NOT_FOUND };
+        }
+        const saved = await writeEntries(entries.filter((candidate) => candidate.id !== id));
         return saved ? { ok: true, entry: summarize(entry) } : { ok: false, reason: SAVE_ERRORS.STORAGE };
       });
     },

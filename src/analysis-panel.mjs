@@ -3,12 +3,15 @@
  * profondeur, distance entre les lignes, surface occupée), et la ligne de hors-jeu de chaque équipe
  * qui attaque, recalculées à chaque changement du tableau tactique. Observateur (patron Observer) :
  * il lit le tableau et ne le modifie jamais. Un bouton affiche les lignes de hors-jeu sur le terrain.
+ * Phase 6 : des boutons à bascule affichent les calques de lecture du terrain (tiers, cinq
+ * couloirs, demi-espaces, zone 14).
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { measureTeam } from './tactical-metrics.mjs';
 import { computeOffside, describeOffside } from './offside.mjs';
 import { teamName } from './team-identity.mjs';
+import { PITCH_LAYER_LABELS } from './pitch-zones.mjs';
 
 /** Lignes du tableau : clé de la mesure, libellé, unité. */
 export const METRIC_ROWS = Object.freeze([
@@ -39,12 +42,14 @@ export function formatMetric(value, unit) {
  * @param {import('./tactics-board.mjs').TacticsBoard} options.board
  * @param {Array<{id: string, label: string}>} options.teams équipes (config.TEAMS)
  * @param {{visible: boolean}} [options.offsideLayer] lignes de hors-jeu en 3D, affichées par le bouton
+ * @param {import('./pitch-zones-layer.mjs').PitchZonesLayer} [options.pitchZones] calques de lecture
+ *   du terrain (phase 6), un bouton à bascule chacun
  * @returns {{render: () => void, dispose: () => void}}
  * @responsable Iyed Rachdi
  * @date 2026-11-25
  * @role Interface HTML — panneau d'analyse tactique
  */
-export function createAnalysisPanel({ root, board, teams, offsideLayer = null }) {
+export function createAnalysisPanel({ root, board, teams, offsideLayer = null, pitchZones = null }) {
   const table = document.createElement('table');
   table.className = 'analysis-table';
   const caption = document.createElement('caption');
@@ -108,6 +113,37 @@ export function createAnalysisPanel({ root, board, teams, offsideLayer = null })
     offside.append(toggle);
   }
   root.append(offside);
+
+  // Calques de lecture du terrain (phase 6) : un bouton à bascule par calque, d'après son affichage réel.
+  if (pitchZones) {
+    const zones = document.createElement('div');
+    zones.className = 'pitch-layers';
+    const zonesHeading = document.createElement('h4');
+    zonesHeading.id = 'pitch-layers-title';
+    zonesHeading.textContent = 'Calques du terrain';
+    const group = document.createElement('div');
+    group.className = 'pitch-layers__buttons';
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-labelledby', zonesHeading.id);
+    for (const layer of pitchZones.layers) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'button button--secondary button--small';
+      button.dataset.pitchLayer = layer;
+      button.textContent = PITCH_LAYER_LABELS[layer] ?? layer;
+      button.setAttribute('aria-pressed', String(pitchZones.isVisible(layer)));
+      button.addEventListener('click', () => {
+        pitchZones.setVisible(layer, !pitchZones.isVisible(layer));
+        button.setAttribute('aria-pressed', String(pitchZones.isVisible(layer)));
+      });
+      group.append(button);
+    }
+    const legend = document.createElement('p');
+    legend.className = 'muted';
+    legend.textContent = 'Tiers de 35 m ; couloirs dans le prolongement des surfaces ; zone 14 devant la surface adverse, à la couleur de l’équipe qui attaque.';
+    zones.append(zonesHeading, group, legend);
+    root.append(zones);
+  }
 
   /** Recalcule et affiche les mesures des deux équipes. */
   const render = () => {

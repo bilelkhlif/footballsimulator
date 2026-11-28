@@ -40,6 +40,7 @@ const ARROW_START_HINTS = Object.freeze({
   cross: 'Centre : touchez le ballon ou son porteur, dans un couloir près de la surface.',
   shot: 'Tir : touchez le ballon ou le tireur.',
   mark: 'Marquage : touchez le défenseur, puis l’adversaire qu’il prend en charge.',
+  zone: 'Zone : touchez un coin du rectangle à surligner, sur le terrain.',
 });
 
 /**

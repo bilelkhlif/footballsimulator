@@ -15,6 +15,9 @@
  * Retours d'évaluation : règles des flèches vérifiées avant toute action (src/arrow-rules.mjs),
  * barre d'outils à icônes, aide au premier lancement, bouton « Abandonner », raccourcis clavier,
  * visée au doigt, confirmation de la réinitialisation ; modules en .mjs.
+ * Phase 6 : une tactique reçue par un lien de partage (« #tactique=… ») s'ouvre au lancement ;
+ * calques de lecture du terrain (tiers, couloirs, demi-espaces, zone 14) ; zones surlignées ; mode
+ * présentation « vestiaire ».
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -32,6 +35,10 @@ import { createFormationPanel } from './formation-panel.mjs';
 import { createAnalysisPanel } from './analysis-panel.mjs';
 import { OffsideLayer } from './offside-layer.mjs';
 import { MarkingLayer } from './marking-layer.mjs';
+import { PitchZonesLayer } from './pitch-zones-layer.mjs';
+import { ZoneLayer } from './zone-layer.mjs';
+import { createZonePanel } from './zone-panel.mjs';
+import { PresentationMode } from './presentation-mode.mjs';
 import { followTeamKits } from './team-kits-view.mjs';
 import { createTeamPanel } from './team-panel.mjs';
 import { buildScenarioState, loadScenarioLibrary } from './scenarios.mjs';
@@ -55,6 +62,7 @@ import {
 } from './tactic-storage.mjs';
 import { createTacticLibrary } from './tactic-library.mjs';
 import { createSavedTacticsPanel } from './saved-tactics-panel.mjs';
+import { readSharePayload } from './tactic-share.mjs';
 import { SequencePlayer } from './sequence-player.mjs';
 import { createSequencePanel } from './sequence-panel.mjs';
 import { installEmulatorIfRequested } from './dev-emulator.mjs';
@@ -255,7 +263,9 @@ async function init(renderMode) {
   const offsideLayer = new OffsideLayer({ pitchGroup, board });
   // Marquages individuels : traits replacés à chaque image (tâche de la boucle de rendu).
   const markingLayer = new MarkingLayer({ pitchGroup, board, teamGroups });
-  createAnalysisPanel({ root: document.getElementById('analysis-panel'), board, teams: Object.values(TEAMS), offsideLayer });
+  // Calques de lecture du terrain (phase 6) : tiers, couloirs, demi-espaces, zone 14, masqués au départ.
+  const pitchZones = new PitchZonesLayer({ pitchGroup, board });
+  createAnalysisPanel({ root: document.getElementById('analysis-panel'), board, teams: Object.values(TEAMS), offsideLayer, pitchZones });
   // Noms et maillots des équipes : une commande annulable ; un refus est expliqué dans le bandeau.
   createTeamPanel({
     root: document.getElementById('team-panel'),
@@ -274,6 +284,8 @@ async function init(renderMode) {
   // Interaction tactique (sprint 5) : un seul rayon, orienté par la souris, le doigt ou l'AR.
   const interaction = new TacticalInteraction({ board, history, pitchGroup, getHitboxes: () => tacticalView.hitboxes });
   tacticalView.bindInteraction(interaction);
+  // Zones surlignées (phase 6) : rectangles du tableau et aperçu du tracé en cours.
+  const zoneLayer = new ZoneLayer({ pitchGroup, board, interaction });
   const raycaster = new Raycaster();
   new PointerInput({
     element: renderer.domElement,
@@ -287,6 +299,9 @@ async function init(renderMode) {
   // Bandeau d'aide : l'aide de l'état courant, et quelques instants le retour de chaque geste.
   const hint = createHintController(document.getElementById('hint'));
   interaction.on('feedback', ({ kind, message }) => hint.flash(message, kind));
+  createZonePanel({
+    root: document.getElementById('zone-panel'), board, history, onFeedback: ({ kind, message }) => hint.flash(message, kind),
+  });
   const toolbar = createTacticalToolbar({
     root: document.getElementById('tactical-toolbar'),
     interaction,
@@ -407,6 +422,7 @@ async function init(renderMode) {
   });
   // Une session AR ferme le point de vue : la vue appartient alors au téléphone.
   renderer.xr.addEventListener?.('sessionstart', () => {
+    presentation.exit();
     pointOfView.exit();
     customization.cancel();
     refreshPointOfViewButton();
@@ -415,6 +431,44 @@ async function init(renderMode) {
   renderer.xr.addEventListener?.('sessionend', () => {
     refreshPointOfViewButton();
     refreshCustomizeButton();
+  });
+
+  // Mode présentation « vestiaire » (phase 6) : interface masquée, numéros agrandis, plein écran ;
+  // la tactique ne peut pas être modifiée par mégarde. Échap ou le bouton de sortie le quittent.
+  const presentation = new PresentationMode({
+    root: document.body,
+    teamGroups,
+    interaction,
+    fullscreen: {
+      request: () => document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }),
+      exit: () => document.exitFullscreen?.(),
+      isActive: () => Boolean(document.fullscreenElement),
+    },
+  });
+  // Ouverte depuis l'espace Plus d'outils : les commandes de vue gardent leur largeur.
+  const presentationOpen = document.getElementById('presentation-open');
+  const presentationExit = document.getElementById('presentation-exit');
+  /** Ouvre la présentation, en refermant le panneau, le point de vue et le geste en cours. */
+  const openPresentation = () => {
+    pointOfView.exit();
+    customization.cancel();
+    cancelDraft();
+    navigation.close();
+    presentation.enter();
+  };
+  presentationOpen.addEventListener('click', openPresentation);
+  presentationExit.addEventListener('click', () => presentation.exit());
+  document.addEventListener('fullscreenchange', () => presentation.onFullscreenChange());
+  presentation.on('change', ({ active }) => {
+    presentationOpen.setAttribute('aria-pressed', String(active));
+    presentationExit.hidden = !active;
+    if (active) {
+      presentationExit.focus();
+    } else {
+      // Le panneau a été refermé à l'entrée : le focus revient à l'espace Plus d'outils, d'où elle s'ouvre.
+      document.getElementById('more-toggle')?.focus();
+      hint.flash('Fin de la présentation : la tactique est inchangée.', 'info');
+    }
   });
 
   // Aide au premier lancement, rouverte par « ? ».
@@ -430,15 +484,17 @@ async function init(renderMode) {
   attachKeyboardShortcuts({
     target: window,
     actions: {
+      // Pendant la présentation, la tactique ne change pas : outils, annuler et rétablir attendent.
       mode: (mode) => {
+        if (presentation.active) return;
         toolbar.disarmReset();
         interaction.setMode(mode);
       },
-      undo: toolbar.undo,
-      redo: toolbar.redo,
+      undo: () => !presentation.active && toolbar.undo(),
+      redo: () => !presentation.active && toolbar.redo(),
       // Échap : point de vue (le curseur verrouillé est rendu par le navigateur au premier Échap),
       // personnalisation (annulée), confirmation, geste, guide de prise en main, puis panneau de l'espace.
-      cancel: () => pointOfView.exit() || customization.cancel() || toolbar.disarmReset() || cancelDraft() || closeOnboarding(onboarding) || navigation.close(),
+      cancel: () => presentation.exit() || pointOfView.exit() || customization.cancel() || toolbar.disarmReset() || cancelDraft() || closeOnboarding(onboarding) || navigation.close(),
     },
   });
 
@@ -462,6 +518,15 @@ async function init(renderMode) {
     history,
     board,
     onFeedback: ({ kind, message }) => hint.flash(message, kind),
+    // Légende de la lecture (phase 6) : note de l'entraîneur de l'image clé la plus proche.
+    caption: document.getElementById('sequence-note'),
+  });
+  // En présentation, Espace lance ou met en pause la séquence, devant l'équipe.
+  window.addEventListener('keydown', (event) => {
+    if (!presentation.active || event.key !== ' ' || event.repeat || event.target?.closest?.('input, textarea, select, button')) return;
+    event.preventDefault();
+    if (sequencePlayer.state === 'playing') sequencePlayer.pause();
+    else if (!sequencePlayer.play()) hint.flash('Enregistrez au moins deux images clés pour jouer une action.', 'info');
   });
 
   // Sauvegarde automatique : la tactique du dernier lancement est rétablie, une fois la scène et
@@ -479,7 +544,7 @@ async function init(renderMode) {
   // Tactiques enregistrées (phase 5) : l'entraîneur nomme la tactique en cours et la garde sur
   // l'appareil ; l'ouverture est vérifiée contre le tableau, puis passe par une commande annulable.
   // Export et import en fichier JSON : un fichier importé est vérifié contre le tableau en cours.
-  createSavedTacticsPanel({
+  const savedTactics = createSavedTacticsPanel({
     root: document.getElementById('saved-tactics-panel'),
     library: createTacticLibrary(tacticStore),
     capture: () => captureTactic(board, sequence),
@@ -539,6 +604,11 @@ async function init(renderMode) {
   if (autosave.restored) {
     hint.flash('Tactique précédente rétablie. « Réinitialiser » repart des formations de départ.', 'info');
   }
+  // Lien de partage (phase 6) : une tactique reçue dans l'adresse s'ouvre après la sauvegarde
+  // automatique, par une commande annulable ; « Annuler » rend la tactique rétablie juste avant.
+  // Le lancement ne l'attend pas : la promesse est exposée aux tests (?debug).
+  const sharedLink = openSharedLink(savedTactics);
+  window.addEventListener('hashchange', () => openSharedLink(savedTactics));
 
   // Mode diagnostic à la demande : ?diagnostics ou l'espace Plus d'outils, sans rechargement.
   let diagnostics = isDiagnosticsRequested()
@@ -557,6 +627,7 @@ async function init(renderMode) {
     { update: (time, frame) => arState.tacticalInput?.update(frame) },
     sequencePlayer,
     tacticalView,
+    zoneLayer,
     markingLayer,
     ...teamMeshes,
     // Après les pions : le point de vue masque l'instance du joueur regardé et place sa caméra.
@@ -595,7 +666,7 @@ async function init(renderMode) {
   return {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
     sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer,
-    pointOfView,
+    pointOfView, sharedLink, pitchZones, zoneLayer, presentation,
     get diagnostics() { return diagnostics; },
   };
 }
@@ -614,6 +685,26 @@ function readLocalStorage() {
   } catch {
     return null;
   }
+}
+
+/**
+ * Ouvre la tactique d'un lien de partage (« #tactique=… » dans l'adresse), puis retire le fragment
+ * de l'adresse sans recharger la page : un rechargement ou un favori ne rouvre pas le lien une
+ * seconde fois. Sans fragment de partage, rien ne se passe.
+ * @param {ReturnType<typeof createSavedTacticsPanel>} savedTactics panneau des tactiques enregistrées
+ * @returns {Promise<boolean>} vrai si une tactique a été ouverte
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Orchestration — ouverture d'un lien de partage
+ */
+async function openSharedLink(savedTactics) {
+  const payload = readSharePayload(window.location.hash);
+  if (payload === null) {
+    return false;
+  }
+  window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
+  await savedTactics.ready;
+  return savedTactics.importShared(payload);
 }
 
 /**
@@ -958,7 +1049,7 @@ async function start() {
   }
   const {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer, sharedLink, pitchZones, zoneLayer, presentation,
   } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
   const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding, workspaces, navigation });
@@ -981,6 +1072,10 @@ async function start() {
     autosave,
     offsideLayer,
     markingLayer,
+    sharedLink,
+    pitchZones,
+    zoneLayer,
+    presentation,
     xrDevice: emulator?.xrDevice ?? null,
     get placement() {
       return arState.placement;

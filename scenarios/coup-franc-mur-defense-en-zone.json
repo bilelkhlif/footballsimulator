@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "id": "coup-franc-mur-defense-en-zone",
+  "title": "Coup franc excentré contre un mur et une défense en zone",
+  "theme": "Coup de pied arrêté",
+  "description": "Coup franc côté droit, à 28 m du but et 24 m de l'axe. Les Rouges forment un mur de deux joueurs à 9,15 m, sur la ligne du ballon au premier poteau (les pions sont un peu écartés pour rester lisibles), et défendent en zone, sans marquage individuel : une ligne de cinq au bord de la surface, un joueur au premier poteau dans la surface de but, un à l'entrée de la surface pour le second ballon et un attaquant resté haut pour la contre-attaque. Les Bleus partent alignés juste derrière la ligne rouge, hors-jeu évité. Au départ du ballon, la ligne rouge recule ; quatre Bleus attaquent l'espace entre la ligne et le gardien. Le centre rentrant arrive entre le point de penalty et la surface de but : le 9 coupe au premier poteau et dévie de la tête vers le second.",
+  "formations": { "blue": "4-3-3", "red": "4-4-2" },
+  "phases": { "blue": "possession", "red": "defense" },
+  "players": {
+    "blue:10": [23.3, 25],
+    "blue:8": [22.5, 21.5],
+    "blue:9": [35.5, 5],
+    "blue:4": [35.5, -1],
+    "blue:5": [35.5, 10],
+    "blue:11": [35.5, -6],
+    "blue:7": [35.5, -12],
+    "blue:6": [29, -2],
+    "blue:2": [6, 12],
+    "blue:3": [-6, -8],
+    "red:1": [51.5, 1],
+    "red:7": [31.5, 17.4],
+    "red:8": [32.9, 19.4],
+    "red:2": [36.5, 13],
+    "red:4": [36.5, 7.5],
+    "red:5": [36.5, 2],
+    "red:3": [36.5, -3.5],
+    "red:6": [36.5, -9],
+    "red:9": [48.5, 4.5],
+    "red:10": [31, 2],
+    "red:11": [-2, -12]
+  },
+  "ball": [24.5, 24],
+  "arrows": [
+    { "kind": "cross", "team": "blue", "from": [24.5, 24], "to": [46.5, 3] },
+    { "kind": "run", "from": [35.5, 5], "to": [46.5, 3] },
+    { "kind": "run", "from": [35.5, -1], "to": [44, -2] },
+    { "kind": "run", "from": [35.5, 10], "to": [42, 7] },
+    { "kind": "run", "from": [35.5, -6], "to": [47, -5] },
+    { "kind": "shot", "team": "blue", "from": [46.5, 3], "to": [52.5, -2] }
+  ],
+  "startNote": "Coup franc à 28 m : mur de deux, ligne rouge en zone au bord de la surface.",
+  "keyframes": [
+    {
+      "players": {
+        "blue:9": [41, 4], "blue:4": [40, -1.5], "blue:5": [39, 8.5], "blue:11": [41, -5.5],
+        "red:2": [39.5, 12], "red:4": [39.5, 7], "red:5": [39.5, 2], "red:3": [39.5, -3], "red:6": [39.5, -8.5]
+      },
+      "ball": [35, 15],
+      "note": "Le ballon part : la ligne recule, quatre Bleus attaquent l'espace devant le gardien."
+    },
+    {
+      "players": {
+        "blue:9": [46.5, 3], "blue:4": [44, -2], "blue:5": [42, 7], "blue:11": [47, -5],
+        "red:9": [48, 4.8], "red:1": [51.2, 1.5], "red:5": [44.5, 1.5]
+      },
+      "ball": [46.5, 3],
+      "note": "Le 9 coupe au premier poteau, devant le joueur en zone."
+    },
+    {
+      "players": { "red:1": [51.5, -0.5] },
+      "ball": [52.5, -2],
+      "note": "Déviation de la tête vers le second poteau."
+    }
+  ]
+}

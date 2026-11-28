@@ -31,7 +31,7 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 /** Empreinte du contenu de la coquille, écrite par « npm run shell-version » (tests/shell-version.mjs). */
-const SHELL_VERSION = '64c87c5131b046b2';
+const SHELL_VERSION = '4f9acdb2260f86d6';
 const CACHE_PREFIX = 'football-simulator-';
 const CACHE_NAME = `${CACHE_PREFIX}${SHELL_VERSION}`;
 
@@ -76,7 +76,12 @@ const APP_SHELL = [
   './src/analysis-panel.mjs',
   './src/offside.mjs',
   './src/offside-layer.mjs',
+  './src/pitch-zones.mjs',
+  './src/pitch-zones-layer.mjs',
   './src/marking-layer.mjs',
+  './src/zone-layer.mjs',
+  './src/zone-panel.mjs',
+  './src/presentation-mode.mjs',
   './src/team-kits-view.mjs',
   './src/team-panel.mjs',
   './src/scenarios.mjs',
@@ -87,6 +92,7 @@ const APP_SHELL = [
   './scenarios/pressing-haut-4-4-2.json',
   './scenarios/dedoublement-centre-en-retrait.json',
   './scenarios/corner-offensif-defense-en-zone.json',
+  './scenarios/coup-franc-mur-defense-en-zone.json',
   './src/commands.mjs',
   './src/raycasting.mjs',
   './src/tactical-interaction.mjs',
@@ -106,6 +112,7 @@ const APP_SHELL = [
   './src/tactic-storage.mjs',
   './src/tactic-library.mjs',
   './src/tactic-file.mjs',
+  './src/tactic-share.mjs',
   './src/saved-tactics-panel.mjs',
   './src/theme.mjs',
   './src/vendor/three-r187/build/three.webgpu.js',

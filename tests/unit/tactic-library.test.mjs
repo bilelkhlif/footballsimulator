@@ -16,7 +16,7 @@ import {
 import { DEFAULT_FORMATIONS } from '../../src/config.mjs';
 import { captureTactic, isValidTactic, TACTIC_KEY } from '../../src/tactic-storage.mjs';
 import {
-  createTacticLibrary, LIBRARY_FORMAT_VERSION, LIBRARY_KEY, MAX_SAVED_TACTICS, normalizeTacticName, readLibraryEntries, SAVE_ERRORS,
+  copyName, createTacticLibrary, LIBRARY_FORMAT_VERSION, LIBRARY_KEY, MAX_SAVED_TACTICS, normalizeTacticName, readLibraryEntries, SAVE_ERRORS,
 } from '../../src/tactic-library.mjs';
 
 /**
@@ -141,4 +141,95 @@ test('données invalides : autre format ignoré, entrées mal formées ou en dou
   assert.deepEqual(entries, [good]);
   assert.equal(LIBRARY_KEY !== TACTIC_KEY, true);
   assert.equal(normalizeTacticName(` ${'x'.repeat(60)} `).length, 40);
+});
+test('renommer : nouveau nom nettoyé, même tactique, même date ; seule la casse du même nom peut changer', async () => {
+  const store = createMemoryStore();
+  let id = 0;
+  const library = createTacticLibrary(store, { now: () => 500, createId: () => `t${(id += 1)}` });
+  const { board, sequence } = createEditedTactic();
+  const tactic = captureTactic(board, sequence);
+  await library.save('Bloc bas', tactic);
+  await library.save('Pressing haut', tactic);
+  assert.deepEqual(await library.rename('t1', '  Bloc   médian '), { ok: true, entry: { id: 't1', name: 'Bloc médian', savedAt: 500 } });
+  assert.deepEqual((await library.get('t1')).tactic, tactic, 'la tactique elle-même ne change pas');
+  assert.deepEqual(await library.rename('t1', 'BLOC MÉDIAN'), { ok: true, entry: { id: 't1', name: 'BLOC MÉDIAN', savedAt: 500 } });
+  const writes = store.writes;
+  assert.deepEqual(await library.rename('t1', 'BLOC MÉDIAN'), { ok: true, entry: { id: 't1', name: 'BLOC MÉDIAN', savedAt: 500 } });
+  assert.equal(store.writes, writes, 'un nom inchangé n\'écrit rien');
+  assert.deepEqual((await library.list()).tactics.map(({ name }) => name).sort(), ['BLOC MÉDIAN', 'Pressing haut']);
+});
+
+test('renommer : refus d\'un nom vide, d\'un nom déjà pris, d\'une tactique absente et d\'un stockage illisible', async () => {
+  const store = createMemoryStore();
+  let id = 0;
+  const library = createTacticLibrary(store, { createId: () => `t${(id += 1)}` });
+  const { board, sequence } = createEditedTactic();
+  await library.save('Bloc bas', captureTactic(board, sequence));
+  await library.save('Pressing haut', captureTactic(board, sequence));
+  const writes = store.writes;
+  assert.equal((await library.rename('t1', '   ')).reason, SAVE_ERRORS.EMPTY_NAME);
+  assert.deepEqual(await library.rename('t1', 'pressing HAUT'), { ok: false, reason: SAVE_ERRORS.DUPLICATE, name: 'pressing HAUT' });
+  assert.equal((await library.rename('inconnue', 'Autre')).reason, SAVE_ERRORS.NOT_FOUND);
+  assert.equal(store.writes, writes, 'aucun refus n\'écrit dans le stockage');
+  const broken = createTacticLibrary(createMemoryStore({ failRead: true }));
+  assert.equal((await broken.rename('t1', 'Autre')).reason, SAVE_ERRORS.STORAGE);
+});
+
+test('dupliquer : copie complète sous « Nom (copie) », datée de la copie, l\'original inchangé', async () => {
+  const store = createMemoryStore();
+  let time = 100;
+  let id = 0;
+  const library = createTacticLibrary(store, { now: () => (time += 100), createId: () => `t${(id += 1)}` });
+  const { board, sequence } = createEditedTactic();
+  const tactic = captureTactic(board, sequence);
+  await library.save('Pressing haut', tactic);
+  assert.deepEqual(await library.duplicate('t1'), { ok: true, entry: { id: 't2', name: 'Pressing haut (copie)', savedAt: 300 } });
+  assert.deepEqual(await library.duplicate('t1'), { ok: true, entry: { id: 't3', name: 'Pressing haut (copie) (2)', savedAt: 400 } });
+  assert.deepEqual((await library.get('t2')).tactic, tactic);
+  assert.deepEqual(await library.get('t1'), { name: 'Pressing haut', tactic });
+  // La copie est indépendante : renommer l'une ne touche pas l'autre.
+  await library.rename('t2', 'Pressing médian');
+  assert.deepEqual((await library.list()).tactics.map(({ name }) => name), ['Pressing haut (copie) (2)', 'Pressing médian', 'Pressing haut']);
+  assert.equal(copyName('x'.repeat(40)).length, 40);
+  assert.ok(copyName('x'.repeat(40)).endsWith(' (copie)'));
+});
+
+test('dupliquer : refus d\'une tactique absente, d\'une bibliothèque pleine et d\'un stockage illisible', async () => {
+  const store = createMemoryStore();
+  let id = 0;
+  const library = createTacticLibrary(store, { createId: () => `t${(id += 1)}` });
+  const { board, sequence } = createEditedTactic();
+  const tactic = captureTactic(board, sequence);
+  assert.equal((await library.duplicate('t1')).reason, SAVE_ERRORS.NOT_FOUND);
+  for (let i = 0; i < MAX_SAVED_TACTICS; i += 1) {
+    await library.save(`Tactique ${i}`, tactic);
+  }
+  const writes = store.writes;
+  assert.equal((await library.duplicate('t1')).reason, SAVE_ERRORS.FULL);
+  assert.equal(store.writes, writes);
+  const broken = createTacticLibrary(createMemoryStore({ failRead: true }));
+  assert.equal((await broken.duplicate('t1')).reason, SAVE_ERRORS.STORAGE);
+});
+
+test('supprimer : une seule tactique retirée, les autres intactes ; refus d\'une tactique absente ou d\'un stockage illisible', async () => {
+  const store = createMemoryStore();
+  let id = 0;
+  const library = createTacticLibrary(store, { createId: () => `t${(id += 1)}` });
+  const { board, sequence } = createEditedTactic();
+  const tactic = captureTactic(board, sequence);
+  await library.save('Bloc bas', tactic);
+  await library.save('Pressing haut', tactic);
+  const removed = await library.remove('t1');
+  assert.equal(removed.ok, true);
+  assert.equal(removed.entry.name, 'Bloc bas');
+  assert.deepEqual((await library.list()).tactics.map(({ name }) => name), ['Pressing haut']);
+  assert.equal(await library.get('t1'), null);
+  assert.deepEqual((await library.get('t2')).tactic, tactic);
+  const writes = store.writes;
+  assert.equal((await library.remove('t1')).reason, SAVE_ERRORS.NOT_FOUND);
+  assert.equal(store.writes, writes);
+  // Le nom libéré peut servir de nouveau.
+  assert.equal((await library.save('Bloc bas', tactic)).ok, true);
+  const broken = createTacticLibrary(createMemoryStore({ failRead: true }));
+  assert.equal((await broken.remove('t2')).reason, SAVE_ERRORS.STORAGE);
 });

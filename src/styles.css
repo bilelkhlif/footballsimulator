@@ -290,17 +290,60 @@ a.button { text-decoration: none; }
 .saved-tactics__form input { min-height: 40px; min-width: 0; padding: 6px 8px; font: inherit; color: var(--ink); background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .saved-tactics__list { display: grid; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
 /* Une tactique par carte, en trois rangées : le nom sur une ligne (points de suspension s'il est
-   long), la date, puis les deux boutons côte à côte sur toute la largeur. Le panneau ne fait que
-   250 à 316 px : nom et boutons sur une même rangée ne laissaient au nom qu'une colonne de
-   quelques pixels. */
+   long), la date, puis les boutons sur toute la largeur. Le panneau ne fait que 250 à 316 px :
+   nom et boutons sur une même rangée ne laissaient au nom qu'une colonne de quelques pixels.
+   Phase 6 : les boutons (ouvrir, exporter, renommer…) passent à la ligne d'eux-mêmes, au moins
+   5,5 rem chacun, et se partagent la largeur de leur rangée. */
 .saved-tactics__item { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--raised); }
 .saved-tactics__item strong { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .9375rem; }
 .saved-tactics__item .muted { font-size: .8125rem; }
-.saved-tactics__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
-.saved-tactics__actions .button { min-width: 0; padding-inline: 10px; }
+.saved-tactics__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.saved-tactics__actions .button { flex: 1 1 5.5rem; min-width: 0; min-height: 40px; padding-inline: 10px; }
+/* Action destructrice (phase 6) : contour rouge en secondaire, fond rouge pour la confirmation. */
+.button--danger { background: var(--danger-strong); color: #fff; border-color: var(--danger-line); }
+.button--danger:hover:not(:disabled) { background: var(--danger-strong); filter: brightness(1.12); }
+.button--secondary.button--danger { background: var(--danger-soft); color: var(--ink); border-color: var(--danger-line); }
+.button--secondary.button--danger:hover:not(:disabled) { background: var(--danger-soft); filter: none; border-color: var(--invalid); }
+.saved-tactics__share { display: grid; gap: 6px; margin-top: 10px; padding: 10px; border: 1px solid var(--accent-line); border-radius: var(--radius-md); background: var(--accent-soft); }
+.saved-tactics__share label { display: grid; gap: 3px; min-width: 0; font-size: .8125rem; font-weight: 500; }
+.saved-tactics__share input { min-height: 40px; min-width: 0; width: 100%; padding: 6px 8px; font: inherit; font-size: .75rem; color: var(--ink); background: var(--surface-card); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); }
+.summary-card .saved-tactics__share .button { margin-top: 0; justify-self: start; }
+.saved-tactics__share .panel-note { margin: 0; }
+.saved-tactics__confirm { display: grid; gap: 4px; }
+.saved-tactics__confirm p { margin: 0; font-size: .875rem; overflow-wrap: anywhere; }
+.saved-tactics__rename { display: grid; gap: 4px; }
+.saved-tactics__rename label { display: grid; gap: 3px; font-size: .8125rem; font-weight: 500; }
+.saved-tactics__rename input { min-height: 40px; min-width: 0; padding: 6px 8px; font: inherit; color: var(--ink); background: var(--surface-card); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); }
 .saved-tactics__transfer { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .summary-card .saved-tactics__actions .button, .summary-card .saved-tactics__transfer .button { margin-top: 0; }
 .offside-summary h4 { margin: 0 0 4px; font-size: .875rem; }
+/* Notes des images clés (phase 6) : un champ par image, pleine largeur, dans le panneau de la séquence. */
+.keyframe-notes { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.keyframe-notes label { display: grid; gap: 3px; min-width: 0; font-size: .8125rem; font-weight: 550; }
+.keyframe-notes input { min-height: 40px; min-width: 0; padding: 6px 8px; font: inherit; font-weight: 400; color: var(--ink); background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+/* Légende de la lecture : au-dessus de la barre du bas, centrée sur le terrain, lisible en AR. */
+.sequence-note { position: absolute; z-index: 6; left: calc(var(--rail) + var(--panel-space) + 28px); right: max(28px, env(safe-area-inset-right)); bottom: calc(max(22px, env(safe-area-inset-bottom)) + 76px); justify-self: center; width: fit-content; max-width: min(640px, calc(100% - var(--rail) - var(--panel-space) - 56px)); margin: 0 auto; display: flex; gap: 10px; align-items: baseline; padding: 10px 16px; border: 1px solid var(--accent-line); border-radius: var(--radius-lg); background: var(--surface-glass-strong); box-shadow: var(--shadow-md); color: var(--ink); font-size: .9375rem; line-height: 1.45; overflow-wrap: anywhere; pointer-events: none; }
+.sequence-note[hidden] { display: none; }
+.sequence-note strong { flex: none; color: var(--accent); font-size: .8125rem; }
+@media (max-width: 699px) and (orientation: portrait) { .sequence-note { left: 15px; right: 15px; max-width: none; bottom: calc(var(--nav-height) + var(--mobile-panel) + 120px); font-size: .875rem; } }
+/* Calques du terrain (phase 6) : deux boutons par rangée, même à 250 px de large. */
+.pitch-layers { margin-top: 12px; }
+/* Zones surlignées (phase 6) : une ligne par zone, le bouton « Retirer » à droite. */
+.zone-list { display: grid; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.zone-list__item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--raised); font-size: .8125rem; overflow-wrap: anywhere; }
+.summary-card .zone-list .button { margin-top: 0; }
+.tool--zone[aria-pressed="true"] .icon { color: var(--gold); }
+/* Mode présentation (phase 6) : seul le terrain reste, avec la légende de la lecture et une sortie discrète. */
+.presentation-exit[hidden] { display: none !important; }
+body[data-presentation="on"] #overlay > :not(.presentation-exit):not(#sequence-note) { display: none !important; }
+body[data-presentation="on"] .presentation-exit { display: flex; position: absolute; z-index: 30; top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); opacity: .55; transition: opacity var(--dur-fast) var(--ease-out); }
+body[data-presentation="on"] .presentation-exit:hover, body[data-presentation="on"] .presentation-exit:focus-visible { opacity: 1; }
+body[data-presentation="on"] .sequence-note { left: 28px; right: 28px; bottom: max(28px, env(safe-area-inset-bottom)); max-width: min(900px, calc(100% - 56px)); font-size: 1.25rem; padding: 14px 22px; }
+body[data-presentation="on"] #scene-container { inset: 0; }
+.pitch-layers h4 { margin: 0 0 6px; font-size: .875rem; }
+.pitch-layers__buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.summary-card .pitch-layers__buttons .button { margin-top: 0; min-width: 0; padding-inline: 8px; }
+.pitch-layers .muted { margin: 6px 0 0; font-size: .75rem; }
 .offside-summary p { margin: 0 0 6px; font-size: .8125rem; line-height: 1.4; }
 .phase-button[aria-pressed="true"] { font-weight: 700; border-style: solid; border-color: var(--team-color); background: var(--surface-pressed); }
 .positions { border-top: 1px solid var(--border); padding-top: 15px; }

@@ -26,7 +26,11 @@
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
 import { isValidTactic, TACTIC_FORMAT_VERSION } from './tactic-storage.mjs';
-import { MAX_TACTIC_NAME_LENGTH, normalizeTacticName } from './tactic-library.mjs';
+import { DEFAULT_IMPORTED_NAME, normalizeTacticName, uniqueTacticName } from './tactic-library.mjs';
+
+// Nom libre d'une tactique importée : défini avec la bibliothèque depuis la phase 6 (dupliquer
+// s'en sert aussi), et toujours proposé ici pour les modules qui l'importaient de ce fichier.
+export { DEFAULT_IMPORTED_NAME, uniqueTacticName };
 
 /** Identifiant du format, écrit dans chaque fichier exporté. */
 export const TACTIC_FILE_FORMAT = 'football-simulator/tactique';
@@ -36,9 +40,6 @@ export const TACTIC_FILE_VERSION = 1;
 
 /** Taille maximale d'un fichier importé, en octets : une tactique pleine pèse quelques dizaines de Ko. */
 export const MAX_TACTIC_FILE_BYTES = 512 * 1024;
-
-/** Nom donné à une tactique importée dont le fichier n'a pas de nom utilisable. */
-export const DEFAULT_IMPORTED_NAME = 'Tactique importée';
 
 /**
  * Vrai si la valeur est un objet simple (ni null, ni tableau).
@@ -103,13 +104,19 @@ function rebuildTactic({ board, keyframes }) {
     clean.appearances = Object.fromEntries(Object.entries(board.appearances)
       .map(([key, { hair, color, skin }]) => [key, skin === undefined ? { hair, color } : { hair, color, skin }]));
   }
+  if (board.zones !== undefined) {
+    clean.zones = board.zones.map(({ id, from, to }) => ({ id, from: copyPoint(from), to: copyPoint(to) }));
+  }
   if (board.identities !== undefined) {
     clean.identities = Object.fromEntries(Object.entries(board.identities).map(([teamId, { name, kit }]) => [teamId, { name, kit }]));
   }
   return {
     version: TACTIC_FORMAT_VERSION,
     board: clean,
-    keyframes: keyframes.map(({ players, ball }) => ({ players: copyPlayers(players), ball: copyPoint(ball) })),
+    // Note de l'entraîneur (phase 6) : copiée seulement si l'image en a une.
+    keyframes: keyframes.map(({ players, ball, note }) => (note === undefined
+      ? { players: copyPlayers(players), ball: copyPoint(ball) }
+      : { players: copyPlayers(players), ball: copyPoint(ball), note })),
   };
 }
 
@@ -193,30 +200,4 @@ export function parseTacticFile(text, reference) {
     return { ok: false, error: 'Tactique incomplète ou corrompue : rien n’a été modifié.' };
   }
   return { ok: true, name: normalizeTacticName(data.name) || DEFAULT_IMPORTED_NAME, tactic: rebuildTactic(data.tactic) };
-}
-
-/**
- * Nom libre pour une tactique importée : le nom du fichier s'il n'est pas pris, sinon
- * « Nom (2) », « Nom (3) »…, sans tenir compte de la casse et sans dépasser la longueur maximale.
- * Une tactique déjà enregistrée n'est donc jamais remplacée par un import.
- * @param {string} name nom lu dans le fichier
- * @param {string[]} takenNames noms des tactiques déjà enregistrées
- * @returns {string}
- * @responsable Iyed Rachdi
- * @date 2026-11-26
- * @role Persistance — fichier JSON d'une tactique
- */
-export function uniqueTacticName(name, takenNames) {
-  const base = normalizeTacticName(name) || DEFAULT_IMPORTED_NAME;
-  const taken = new Set(takenNames.map((other) => other.toLocaleLowerCase('fr')));
-  if (!taken.has(base.toLocaleLowerCase('fr'))) {
-    return base;
-  }
-  for (let index = 2; ; index += 1) {
-    const suffix = ` (${index})`;
-    const candidate = `${base.slice(0, MAX_TACTIC_NAME_LENGTH - suffix.length).trimEnd()}${suffix}`;
-    if (!taken.has(candidate.toLocaleLowerCase('fr'))) {
-      return candidate;
-    }
-  }
 }

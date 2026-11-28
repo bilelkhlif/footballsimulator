@@ -263,6 +263,136 @@ export class AddArrowCommand extends Command {
 }
 
 /**
+ * Surligner une zone rectangulaire du terrain (phase 6). La zone garde le même identifiant quand
+ * elle est rétablie après une annulation.
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Logique métier — patron Command : zones surlignées
+ */
+export class AddZoneCommand extends Command {
+  #board;
+  #zone;
+  #id;
+
+  /**
+   * @param {object} options
+   * @param {import('./tactics-board.mjs').TacticsBoard} options.board
+   * @param {{from: {x: number, z: number}, to: {x: number, z: number}}} options.zone deux coins
+   *   opposés, dans le repère du terrain
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : zones surlignées
+   */
+  constructor({ board, zone }) {
+    super();
+    this.#board = board;
+    this.#zone = { from: { x: zone.from.x, z: zone.from.z }, to: { x: zone.to.x, z: zone.to.z } };
+    this.#id = undefined;
+  }
+
+  /**
+   * Libellé : « Surligner une zone ».
+   * @returns {string}
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : zones surlignées
+   */
+  get label() {
+    return 'Surligner une zone';
+  }
+
+  /**
+   * Identifiant de la zone, connu après la première exécution.
+   * @returns {number|undefined}
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : zones surlignées
+   */
+  get zoneId() {
+    return this.#id;
+  }
+
+  /**
+   * Ajoute la zone au tableau.
+   * @returns {boolean}
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : zones surlignées
+   */
+  execute() {
+    this.#id = this.#board.addZone({ ...this.#zone, id: this.#id }).id;
+    return true;
+  }
+
+  /**
+   * Retire la zone.
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : zones surlignées
+   */
+  undo() {
+    this.#board.removeZone(this.#id);
+  }
+}
+
+/**
+ * Retirer une zone surlignée (phase 6). L'annulation la rétablit, avec son identifiant.
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Logique métier — patron Command : zones surlignées
+ */
+export class RemoveZoneCommand extends Command {
+  #board;
+  #id;
+  #zone = null;
+
+  /**
+   * @param {{board: import('./tactics-board.mjs').TacticsBoard, id: number}} options
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : zones surlignées
+   */
+  constructor({ board, id }) {
+    super();
+    this.#board = board;
+    this.#id = id;
+  }
+
+  /**
+   * Libellé : « Retirer une zone ».
+   * @returns {string}
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : zones surlignées
+   */
+  get label() {
+    return 'Retirer une zone';
+  }
+
+  /**
+   * Garde la zone, puis la retire. Sans effet si elle n'existe pas.
+   * @returns {boolean}
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : zones surlignées
+   */
+  execute() {
+    this.#zone = this.#board.getZones().find((zone) => zone.id === this.#id) ?? null;
+    return this.#zone !== null && this.#board.removeZone(this.#id);
+  }
+
+  /**
+   * Rétablit la zone retirée.
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : zones surlignées
+   */
+  undo() {
+    this.#board.addZone(this.#zone);
+  }
+}
+
+/**
  * Changer la formation d'une équipe (BF4), de façon annulable : l'annulation rétablit la formation
  * et les places exactes d'avant, y compris celles de joueurs déplacés à la main.
  * @responsable Bilel Khlif
@@ -857,6 +987,69 @@ export class AddKeyframeCommand extends Command {
    */
   undo() {
     this.#sequence.removeLast();
+  }
+}
+
+/**
+ * Écrire, changer ou effacer la note de l'entraîneur d'une image clé (phase 6). Les places de
+ * l'image ne changent pas. Annulable : l'annulation rend la note d'avant.
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Logique métier — patron Command : notes des images clés
+ */
+export class EditKeyframeNoteCommand extends Command {
+  #sequence;
+  #index;
+  #note;
+  #previous = '';
+
+  /**
+   * @param {object} options
+   * @param {import('./tactical-sequence.mjs').TacticalSequence} options.sequence
+   * @param {number} options.index position de l'image clé, à partir de 0
+   * @param {string} options.note nouvelle note ; vide pour l'effacer
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : notes des images clés
+   */
+  constructor({ sequence, index, note }) {
+    super();
+    this.#sequence = sequence;
+    this.#index = index;
+    this.#note = note;
+  }
+
+  /**
+   * Libellé : « Note de l'image clé 2 ».
+   * @returns {string}
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : notes des images clés
+   */
+  get label() {
+    return `Note de l’image clé ${this.#index + 1}`;
+  }
+
+  /**
+   * Garde la note d'avant, puis écrit la nouvelle. Sans effet si elle est identique.
+   * @returns {boolean}
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : notes des images clés
+   */
+  execute() {
+    this.#previous = this.#sequence.noteAt(this.#index);
+    return this.#sequence.setNote(this.#index, this.#note);
+  }
+
+  /**
+   * Rend la note d'avant.
+   * @responsable Ghassen588
+   * @date 2026-11-28
+   * @role Logique métier — patron Command : notes des images clés
+   */
+  undo() {
+    this.#sequence.setNote(this.#index, this.#previous);
   }
 }
 
