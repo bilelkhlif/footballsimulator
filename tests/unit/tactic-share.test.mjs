@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { TacticsBoard } from '../../src/tactics-board.mjs';
 import { TacticalSequence, MAX_KEYFRAMES } from '../../src/tactical-sequence.mjs';
 import {
-  AddArrowCommand, AddKeyframeCommand, ChangeFormationCommand, CommandHistory, MovePlayerCommand,
+  AddArrowCommand, AddKeyframeCommand, ChangeFormationCommand, CommandHistory, LoadSavedTacticCommand, MovePlayerCommand,
 } from '../../src/commands.mjs';
 import { DEFAULT_FORMATIONS } from '../../src/config.mjs';
 import { captureTactic } from '../../src/tactic-storage.mjs';
@@ -136,4 +136,24 @@ test('une tactique pleine (12 images clés) tient dans un lien de quelques milli
   const payload = await encodeSharedTactic({ name: 'Séquence complète', tactic: captureTactic(board, sequence) });
   assert.ok(payload.length < 12000, `${payload.length} caractères`);
   assert.equal((await decodeSharedTactic(payload, new TacticsBoard(DEFAULT_FORMATIONS).snapshot())).ok, true);
+});
+
+test('ouvrir un lien d\'une tactique ancienne (sans phases, marquages, identités ni apparences) : rétablie, annulable', async () => {
+  const { board: edited, sequence: editedSequence } = createEditedTactic();
+  const { formations, players, ball, arrows } = edited.snapshot();
+  const oldTactic = { version: 1, board: { formations, players, ball, arrows }, keyframes: editedSequence.keyframes };
+  const payload = await encodeSharedTactic({ name: 'Ancienne', tactic: oldTactic });
+  const board = new TacticsBoard(DEFAULT_FORMATIONS);
+  const sequence = new TacticalSequence();
+  const before = board.snapshot();
+  const decoded = await decodeSharedTactic(payload, board.snapshot());
+  assert.equal(decoded.ok, true);
+  assert.equal(Object.hasOwn(decoded.tactic.board, 'phases'), false, 'un champ absent reste absent');
+  const history = new CommandHistory();
+  history.execute(new LoadSavedTacticCommand({ board, sequence, name: decoded.name, tactic: decoded.tactic }));
+  assert.equal(board.getFormation('blue').name, '3-5-2');
+  assert.equal(board.getPhase('blue'), 'base');
+  assert.equal(sequence.length, 1);
+  history.undo();
+  assert.deepEqual(board.snapshot(), before);
 });

@@ -15,6 +15,7 @@
  * Retours d'évaluation : règles des flèches vérifiées avant toute action (src/arrow-rules.mjs),
  * barre d'outils à icônes, aide au premier lancement, bouton « Abandonner », raccourcis clavier,
  * visée au doigt, confirmation de la réinitialisation ; modules en .mjs.
+ * Phase 6 : une tactique reçue par un lien de partage (« #tactique=… ») s'ouvre au lancement.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -55,6 +56,7 @@ import {
 } from './tactic-storage.mjs';
 import { createTacticLibrary } from './tactic-library.mjs';
 import { createSavedTacticsPanel } from './saved-tactics-panel.mjs';
+import { readSharePayload } from './tactic-share.mjs';
 import { SequencePlayer } from './sequence-player.mjs';
 import { createSequencePanel } from './sequence-panel.mjs';
 import { installEmulatorIfRequested } from './dev-emulator.mjs';
@@ -479,7 +481,7 @@ async function init(renderMode) {
   // Tactiques enregistrées (phase 5) : l'entraîneur nomme la tactique en cours et la garde sur
   // l'appareil ; l'ouverture est vérifiée contre le tableau, puis passe par une commande annulable.
   // Export et import en fichier JSON : un fichier importé est vérifié contre le tableau en cours.
-  createSavedTacticsPanel({
+  const savedTactics = createSavedTacticsPanel({
     root: document.getElementById('saved-tactics-panel'),
     library: createTacticLibrary(tacticStore),
     capture: () => captureTactic(board, sequence),
@@ -539,6 +541,11 @@ async function init(renderMode) {
   if (autosave.restored) {
     hint.flash('Tactique précédente rétablie. « Réinitialiser » repart des formations de départ.', 'info');
   }
+  // Lien de partage (phase 6) : une tactique reçue dans l'adresse s'ouvre après la sauvegarde
+  // automatique, par une commande annulable ; « Annuler » rend la tactique rétablie juste avant.
+  // Le lancement ne l'attend pas : la promesse est exposée aux tests (?debug).
+  const sharedLink = openSharedLink(savedTactics);
+  window.addEventListener('hashchange', () => openSharedLink(savedTactics));
 
   // Mode diagnostic à la demande : ?diagnostics ou l'espace Plus d'outils, sans rechargement.
   let diagnostics = isDiagnosticsRequested()
@@ -595,7 +602,7 @@ async function init(renderMode) {
   return {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
     sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer,
-    pointOfView,
+    pointOfView, sharedLink,
     get diagnostics() { return diagnostics; },
   };
 }
@@ -614,6 +621,26 @@ function readLocalStorage() {
   } catch {
     return null;
   }
+}
+
+/**
+ * Ouvre la tactique d'un lien de partage (« #tactique=… » dans l'adresse), puis retire le fragment
+ * de l'adresse sans recharger la page : un rechargement ou un favori ne rouvre pas le lien une
+ * seconde fois. Sans fragment de partage, rien ne se passe.
+ * @param {ReturnType<typeof createSavedTacticsPanel>} savedTactics panneau des tactiques enregistrées
+ * @returns {Promise<boolean>} vrai si une tactique a été ouverte
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Orchestration — ouverture d'un lien de partage
+ */
+async function openSharedLink(savedTactics) {
+  const payload = readSharePayload(window.location.hash);
+  if (payload === null) {
+    return false;
+  }
+  window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
+  await savedTactics.ready;
+  return savedTactics.importShared(payload);
 }
 
 /**
@@ -958,7 +985,7 @@ async function start() {
   }
   const {
     sceneContext, arView, arState, board, animator, history, interaction, tacticalView, hint, raycaster, refreshGuidance,
-    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer,
+    sequence, sequencePlayer, teamMeshes, onboarding, workspaces, navigation, autosave, offsideLayer, markingLayer, sharedLink,
   } = context;
   emulator?.setCanvas(sceneContext.renderer.domElement);
   const arSession = setUpArSession(sceneContext, arView, arState, renderMode, { interaction, raycaster, hint, refreshGuidance, onboarding, workspaces, navigation });
@@ -981,6 +1008,7 @@ async function start() {
     autosave,
     offsideLayer,
     markingLayer,
+    sharedLink,
     xrDevice: emulator?.xrDevice ?? null,
     get placement() {
       return arState.placement;

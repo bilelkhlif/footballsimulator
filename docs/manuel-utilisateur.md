@@ -225,6 +225,7 @@ Ouvrez **Accueil** : la carte **Tactiques enregistrées** garde vos tactiques su
 - **Dupliquer** garde une copie de la tactique, nommée « Pressing haut (copie) », pour en essayer une variante sans toucher à l'original ; le focus va sur « Renommer » de la copie.
 - **Supprimer** demande confirmation dans la ligne même : « Supprimer définitivement » retire la tactique de l'appareil, « Garder » ou Échap la laisse. La suppression ne s'annule pas ; la tactique en cours, elle, ne change pas.
 - **Partager** (une tactique enregistrée) ou **Lien de partage** (la tactique en cours) copie un lien à coller dans un message. Le lien contient toute la tactique, compressée dans l'adresse elle-même : aucun serveur ne la reçoit. Il reste affiché dans le champ « Lien », avec « Copier le lien » si le navigateur a refusé la copie.
+- **Ouvrir un lien reçu** : touchez le lien. L'application s'ouvre sur la tactique partagée, après l'avoir vérifiée, et l'enregistre sous son nom, ou sous « Nom (2) » si vous avez déjà une tactique de ce nom : rien n'est remplacé. « Annuler » rend la tactique d'avant. Un lien abîmé ou incomplet est refusé, sans rien changer.
 - **Exporter** télécharge la tactique en fichier JSON ; **Importer un JSON** l'ouvre sur un autre appareil, sous un nom libre.
 
 ## 13. Mesurer la fluidité

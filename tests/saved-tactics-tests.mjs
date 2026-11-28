@@ -1,7 +1,7 @@
 /**
  * Tests de bout en bout du panneau « Tactiques enregistrées » (phase 6), dans Chrome, avec le vrai
- * IndexedDB : renommer, dupliquer, supprimer et partager par un lien une tactique enregistrée, par
- * les vrais boutons du panneau.
+ * IndexedDB : renommer, dupliquer, supprimer et partager par un lien une tactique enregistrée, puis
+ * ouvrir ce lien sur un autre appareil, par les vrais boutons du panneau.
  *
  * Assistance à l'implémentation : voir ATTRIBUTION.md (§4).
  */
@@ -307,6 +307,74 @@ async function testShareLink(browser, url, record) {
 }
 
 /**
+ * Ouvrir un lien partagé, sur un autre appareil (contexte neuf) : la tactique s'ouvre par une
+ * commande annulable, est enregistrée sous un nom libre (« Nom (2) » si le nom est pris), et le
+ * fragment quitte l'adresse ; un lien abîmé est refusé sans rien changer.
+ * @param {import('playwright-core').Browser} browser
+ * @param {string} url
+ * @param {(name: string, status: string, detail?: string) => void} record
+ * @responsable Ghassen588
+ * @date 2026-11-28
+ * @role Tests de bout en bout — ouvrir un lien de partage
+ */
+async function testOpenSharedLink(browser, url, record) {
+  const name = 'Lien partagé : ouvert sur un autre appareil, vérifié, enregistré sous un nom libre, annulable';
+  const sender = await browser.newContext(DESKTOP);
+  const receiver = await browser.newContext(DESKTOP);
+  try {
+    const { page: source } = await openApp(sender, `${url}?debug`);
+    const shared = await source.evaluate(async () => {
+      const { board, sequence } = window.__footballSimulator;
+      board.setFormation('blue', '4-2-3-1');
+      board.setPlayerPosition('blue', 7, { x: 0.15, z: -0.12 });
+      sequence.add({ players: board.snapshot().players, ball: board.getBallPosition() });
+      const share = await import(new URL('src/tactic-share.mjs', document.baseURI).href);
+      const storage = await import(new URL('src/tactic-storage.mjs', document.baseURI).href);
+      const payload = await share.encodeSharedTactic({ name: 'Bloc médian', tactic: storage.captureTactic(board, sequence) });
+      return { payload, snapshot: board.snapshot() };
+    });
+    const { page, errors } = await openApp(receiver, `${url}?debug`);
+    await saveCurrentTactic(page, 'Bloc médian');
+    const before = await page.evaluate(() => window.__footballSimulator.board.snapshot());
+    const problems = [];
+    // Lien abîmé, collé dans l'adresse de l'application déjà ouverte (hashchange) : refusé, rien ne change.
+    await page.goto(`${url}?debug#tactique=1.${shared.payload.slice(2, 40)}`, { waitUntil: 'load' });
+    await page.waitForFunction(() => document.getElementById('hint').textContent.includes('Lien de partage'));
+    const refused = await page.evaluate(() => ({ snapshot: window.__footballSimulator.board.snapshot(), hint: document.getElementById('hint').textContent }));
+    if (canonical(refused.snapshot) !== canonical(before)) problems.push('un lien abîmé a changé la tactique');
+    if (!refused.hint.includes('Lien de partage')) problems.push(`refus non expliqué : « ${refused.hint} »`);
+    // Lien valide, ouvert au lancement d'une page neuve.
+    await page.goto('about:blank');
+    await page.goto(`${url}?debug#tactique=${shared.payload}`, { waitUntil: 'load' });
+    await page.waitForSelector('body.is-ready', { timeout: 20000 });
+    const opened = await page.evaluate(async () => {
+      const app = window.__footballSimulator;
+      const result = await app.sharedLink;
+      return { result, snapshot: app.board.snapshot(), canUndo: app.history.canUndo, keyframes: app.sequence.length, hash: window.location.hash, search: window.location.search, hint: document.getElementById('hint').textContent };
+    });
+    if (!opened.result) problems.push('le lien n\'a pas été ouvert');
+    if (canonical(opened.snapshot) !== canonical(shared.snapshot) || opened.keyframes !== 1) problems.push('la tactique ouverte diffère de celle partagée');
+    if (!opened.canUndo) problems.push('l\'ouverture n\'est pas annulable');
+    if (opened.hash !== '' || opened.search !== '?debug') problems.push(`adresse après ouverture : ${opened.search}${opened.hash.slice(0, 20)}`);
+    if (!opened.hint.includes('Bloc médian (2)')) problems.push(`message : « ${opened.hint} »`);
+    await openWorkspace(page, 'home');
+    await page.waitForFunction(() => document.querySelectorAll('.saved-tactics__item').length === 2);
+    const names = (await listedNames(page)).sort();
+    if (JSON.stringify(names) !== JSON.stringify(['Bloc médian', 'Bloc médian (2)'])) problems.push(`liste : ${names.join(', ')}`);
+    await page.evaluate(() => window.__footballSimulator.history.undo());
+    const undone = await page.evaluate(() => window.__footballSimulator.board.snapshot());
+    if (canonical(undone) !== canonical(before)) problems.push('« Annuler » ne rend pas la tactique précédente');
+    problems.push(...errors.filter((error) => !error.includes('Lien de partage')));
+    record(name, problems.length ? 'échec' : 'ok', problems.join(' | ') || '4-2-3-1 reçu, enregistré sous « Bloc médian (2) », annulé');
+  } catch (error) {
+    record(name, 'échec', error.message.split('\n')[0]);
+  } finally {
+    await sender.close();
+    await receiver.close();
+  }
+}
+
+/**
  * Parcours du panneau « Tactiques enregistrées ».
  * @param {import('playwright-core').Browser} browser
  * @param {string} url
@@ -321,4 +389,5 @@ export async function runSavedTacticsTests(browser, url, record) {
   await testDuplicateTactic(browser, url, record);
   await testDeleteTactic(browser, url, record);
   await testShareLink(browser, url, record);
+  await testOpenSharedLink(browser, url, record);
 }

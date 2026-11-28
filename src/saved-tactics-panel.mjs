@@ -25,7 +25,9 @@ import {
 import {
   createTacticFile, MAX_TACTIC_FILE_BYTES, parseTacticFile, serializeTacticFile, tacticFileName, uniqueTacticName,
 } from './tactic-file.mjs';
-import { createShareUrl, encodeSharedTactic, MAX_SHARE_PAYLOAD_LENGTH } from './tactic-share.mjs';
+import {
+  createShareUrl, decodeSharedTactic, encodeSharedTactic, MAX_SHARE_PAYLOAD_LENGTH,
+} from './tactic-share.mjs';
 
 /** Format de la date d'enregistrement affichée dans la liste. */
 const SAVED_AT_FORMAT = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
@@ -121,7 +123,8 @@ export function downloadTextFile(fileName, text, type = 'application/json') {
  * @param {() => string} [options.getAppUrl] adresse de la page, base des liens de partage
  * @param {(text: string) => Promise<void>} [options.copyText] copie dans le presse-papiers (doublure)
  * @returns {{refresh: () => Promise<void>, ready: Promise<void>, input: HTMLInputElement,
- *   importFile: (file: File) => Promise<boolean>, shareTactic: (name: string, tactic: object) => Promise<string|null>}}
+ *   importFile: (file: File) => Promise<boolean>, importShared: (payload: string) => Promise<boolean>,
+ *   shareTactic: (name: string, tactic: object) => Promise<string|null>}}
  * @responsable Iyed Rachdi
  * @date 2026-11-26
  * @role Interface HTML — tactiques enregistrées
@@ -533,14 +536,21 @@ export function createSavedTacticsPanel({
       tell('invalid', 'Fichier illisible : rien n’a été modifié.');
       return false;
     }
-    const parsed = parseTacticFile(text, getReference());
+    return openReceived(parseTacticFile(text, getReference()), 'importée');
+  };
+
+  /**
+   * Tactique reçue (fichier ou lien), déjà lue : refusée avec son message, ou ouverte d'abord
+   * (vérifiée une seconde fois par `open`), puis enregistrée sous un nom libre : jamais à la place
+   * d'une autre. Rien n'est enregistré si l'ouverture échoue. Rend vrai si la tactique a été ouverte.
+   */
+  const openReceived = async (parsed, verb) => {
     if (!parsed.ok) {
       tell('invalid', parsed.error);
       return false;
     }
     const listing = await library.list();
     const name = uniqueTacticName(parsed.name, listing.tactics.map((entry) => entry.name));
-    // Ouverte d'abord (vérifiée une seconde fois par `open`) : rien n'est enregistré si elle échoue.
     if (!open(name, parsed.tactic)) {
       tell('invalid', 'Tactique incompatible avec le terrain en cours : rien n’a été modifié.');
       return false;
@@ -548,10 +558,17 @@ export function createSavedTacticsPanel({
     const saved = listing.ok ? await library.save(name, parsed.tactic) : { ok: false, reason: SAVE_ERRORS.STORAGE };
     await refresh();
     tell(saved.ok ? 'success' : 'info', saved.ok
-      ? `Tactique « ${name} » importée, enregistrée et ouverte : « Annuler » rend la précédente.`
-      : `Tactique « ${name} » importée et ouverte, mais non enregistrée. ${describeSaveError(saved)}`);
+      ? `Tactique « ${name} » ${verb}, enregistrée et ouverte : « Annuler » rend la précédente.`
+      : `Tactique « ${name} » ${verb} et ouverte, mais non enregistrée. ${describeSaveError(saved)}`);
     return true;
   };
+
+  /**
+   * Ouvre une tactique reçue par un lien de partage (phase 6) : contenu du fragment « #tactique= »,
+   * vérifié comme un fichier importé (isValidTactic contre le tableau en cours), puis enregistré
+   * sous un nom libre. Rend vrai si la tactique a été ouverte.
+   */
+  const importShared = async (payload) => openReceived(await decodeSharedTactic(payload, getReference()), 'reçue par lien');
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -604,5 +621,5 @@ export function createSavedTacticsPanel({
     }
   });
 
-  return { refresh, ready: refresh(), input, importFile, shareTactic };
+  return { refresh, ready: refresh(), input, importFile, importShared, shareTactic };
 }
